@@ -1,4 +1,4 @@
-name: Back Up Saturn Production
+name: Back Up Saturn Environments
 
 on:
   schedule:
@@ -8,22 +8,33 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: saturn-production-backup
-  cancel-in-progress: false
-
 jobs:
   backup:
-    name: Back up database and object storage
+    name: Back up ${{ matrix.environment }} data
     if: github.repository == 'saturnrobotics/carbon'
-    runs-on: [self-hosted, linux, x64, saturn-production]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - environment: staging
+            runner: saturn-staging
+            current_release: /opt/carbon-staging/releases/current
+            backup_root: /mnt/carbon-staging-backups
+          - environment: production
+            runner: saturn-production
+            current_release: /opt/carbon/releases/current
+            backup_root: /mnt/carbon-backups
+    runs-on: [self-hosted, linux, x64, "${{ matrix.runner }}"]
     timeout-minutes: 60
+    concurrency:
+      group: saturn-${{ matrix.environment }}-backup
+      cancel-in-progress: false
     env:
-      CURRENT_RELEASE: /opt/carbon/releases/current
-      BACKUP_ROOT: /mnt/carbon-backups
+      CURRENT_RELEASE: ${{ matrix.current_release }}
+      BACKUP_ROOT: ${{ matrix.backup_root }}
 
     steps:
-      - name: Verify backup destination
+      - name: Verify isolated backup destination
         shell: bash
         run: |
           set -euo pipefail
@@ -32,7 +43,7 @@ jobs:
           mountpoint -q "$BACKUP_ROOT"
           docker info >/dev/null
 
-      - name: Back up production data
+      - name: Back up database and object storage
         id: backup
         shell: bash
         run: |

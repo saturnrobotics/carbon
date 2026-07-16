@@ -17,6 +17,11 @@ applying migrations before application rollout.
 - [x] Migrate an existing stack before rolling new application tasks.
 - [x] Wait for ERP/MES container health and HTTP health endpoints.
 - [x] Add a scheduled backup workflow with archive verification.
+- [x] Add an isolated staging deployment with its own runner, stack, data,
+      configuration, releases, images, secrets, URLs, and backups.
+- [x] Gate production on successful staging and pass the exact staging SHA into
+      the production deployment.
+- [x] Factor staging and production through one reusable deployment workflow.
 - [x] Add guarded Make targets for feature creation, production pull requests,
       upstream synchronization, protected merges, and deployed-commit tags.
 - [x] Document branch protection, runner hardening, VPN policy, TLS, migrations,
@@ -27,13 +32,16 @@ applying migrations before application rollout.
 - [ ] Set `saturn/main` as the fork's default branch.
 - [ ] Create the protected `production` GitHub Environment.
 - [ ] Apply the documented GitHub rulesets to `main` and `saturn/main`.
-- [ ] Install a dedicated runner with the `saturn-production` label inside the
-      VPN.
+- [ ] Provision separate staging and production hosts/VMs inside the VPN.
+- [ ] Install dedicated runners with the `saturn-staging` and
+      `saturn-production` labels; never colocate the labels.
 - [ ] Select and configure the private TLS model; install its CA on the runner.
-- [ ] Mount external backup storage at `/mnt/carbon-backups`.
-- [ ] Create `/etc/carbon/production.env` with mode `600`.
-- [ ] Initialize Docker Swarm and production Docker secrets.
-- [ ] Run and verify the first production deployment.
+- [ ] Mount separate external backup storage at `/mnt/carbon-staging-backups`
+      and `/mnt/carbon-backups`.
+- [ ] Create `/etc/carbon/staging.env` and `/etc/carbon/production.env` with mode
+      `600` and distinct hosts, URLs, and integration credentials.
+- [ ] Initialize independent Docker Swarms and Docker secrets.
+- [ ] Run and verify the first staging → approval → production promotion.
 - [ ] Restore a generated backup into an isolated environment and record the
       recovery result.
 

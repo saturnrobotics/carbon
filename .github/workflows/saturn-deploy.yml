@@ -1,0 +1,167 @@
+name: Deploy Saturn Environment
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: "GitHub Environment and deployment name"
+        required: true
+        type: string
+      runner-label:
+        description: "Dedicated self-hosted runner label"
+        required: true
+        type: string
+      release-root:
+        description: "Immutable release directory root"
+        required: true
+        type: string
+      config-file:
+        description: "Protected environment configuration file"
+        required: true
+        type: string
+      backup-root:
+        description: "Externally mounted backup directory"
+        required: true
+        type: string
+      expected-stack:
+        description: "Required STACK_NAME in the protected configuration"
+        required: true
+        type: string
+      sha:
+        description: "Exact saturn/main commit to deploy"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: saturn-${{ inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy ${{ inputs.environment }}
+    runs-on: [self-hosted, linux, x64, "${{ inputs.runner-label }}"]
+    environment:
+      name: ${{ inputs.environment }}
+    timeout-minutes: 120
+    env:
+      DEPLOY_SHA: ${{ inputs.sha }}
+      RELEASE_ROOT: ${{ inputs.release-root }}
+      CONFIG_FILE: ${{ inputs.config-file }}
+      BACKUP_ROOT: ${{ inputs.backup-root }}
+      EXPECTED_STACK: ${{ inputs.expected-stack }}
+      DEPLOY_ENVIRONMENT: ${{ inputs.environment }}
+
+    steps:
+      - name: Verify deployment request
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = "saturnrobotics/carbon"
+          [[ "$DEPLOY_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$DEPLOY_ENVIRONMENT" =~ ^(staging|production)$ ]]
+
+      - name: Checkout exact commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.sha }}
+          fetch-depth: 0
+
+      - name: Verify SHA belongs to saturn/main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin refs/heads/saturn/main:refs/remotes/origin/saturn/main
+          git merge-base --is-ancestor "$DEPLOY_SHA" refs/remotes/origin/saturn/main
+
+      - name: Verify isolated environment host
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -r "$CONFIG_FILE"
+          test "$(stat -c '%a' "$CONFIG_FILE")" = "600"
+          docker info >/dev/null
+          test "$(docker info --format '{{.Swarm.LocalNodeState}}')" = "active"
+          install -d "$RELEASE_ROOT"
+          mountpoint -q "$BACKUP_ROOT"
+
+          stack_name="$(sed -n 's/^STACK_NAME=//p' "$CONFIG_FILE")"
+          test "$stack_name" = "$EXPECTED_STACK"
+
+      - name: Stage immutable release
+        id: release
+        shell: bash
+        run: |
+          set -euo pipefail
+          release_dir="$RELEASE_ROOT/$DEPLOY_SHA"
+          if [ -e "$release_dir" ]; then
+            test -f "$release_dir/.saturn-release-sha"
+            test "$(cat "$release_dir/.saturn-release-sha")" = "$DEPLOY_SHA"
+          else
+            install -d "$release_dir"
+            git archive "$DEPLOY_SHA" | tar -x -C "$release_dir"
+            printf '%s\n' "$DEPLOY_SHA" > "$release_dir/.saturn-release-sha"
+          fi
+
+          deploy_dir="$release_dir/contrib/deploying/simple-docker-caddy"
+          install -m 600 "$CONFIG_FILE" "$deploy_dir/.env"
+          sed -i "s|^CARBON_REPO=.*|CARBON_REPO=$release_dir|" "$deploy_dir/.env"
+          sed -i "s|^CARBON_REGISTRY=.*|CARBON_REGISTRY=|" "$deploy_dir/.env"
+          sed -i "s|^CARBON_IMAGE_ERP=.*|CARBON_IMAGE_ERP=carbon/$DEPLOY_ENVIRONMENT/erp:$DEPLOY_SHA|" "$deploy_dir/.env"
+          sed -i "s|^CARBON_IMAGE_MES=.*|CARBON_IMAGE_MES=carbon/$DEPLOY_ENVIRONMENT/mes:$DEPLOY_SHA|" "$deploy_dir/.env"
+          chmod +x "$deploy_dir/deploy.sh" "$deploy_dir/scripts/backup.sh"
+
+          echo "release_dir=$release_dir" >> "$GITHUB_OUTPUT"
+          echo "deploy_dir=$deploy_dir" >> "$GITHUB_OUTPUT"
+
+      - name: Back up current environment data
+        shell: bash
+        working-directory: ${{ steps.release.outputs.deploy_dir }}
+        run: |
+          set -euo pipefail
+          set -a
+          source ./.env
+          set +a
+
+          if docker service inspect "${STACK_NAME}_postgres" >/dev/null 2>&1; then
+            before="$(find "$BACKUP_ROOT" -mindepth 1 -maxdepth 1 -type d -name 'carbon-*' | sort | tail -1)"
+            BACKUP_DIR="$BACKUP_ROOT" ./scripts/backup.sh
+            after="$(find "$BACKUP_ROOT" -mindepth 1 -maxdepth 1 -type d -name 'carbon-*' | sort | tail -1)"
+            test -n "$after"
+            test "$after" != "$before"
+            test -s "$after/db.sql.gz"
+            test -s "$after/storage.tar.gz"
+            gzip -t "$after/db.sql.gz"
+            tar -tzf "$after/storage.tar.gz" >/dev/null
+          else
+            echo "No existing $DEPLOY_ENVIRONMENT stack; skipping pre-deploy backup."
+          fi
+
+      - name: Build, migrate, and deploy
+        shell: bash
+        working-directory: ${{ steps.release.outputs.deploy_dir }}
+        run: ./deploy.sh up
+
+      - name: Verify environment health
+        shell: bash
+        working-directory: ${{ steps.release.outputs.deploy_dir }}
+        run: |
+          set -euo pipefail
+          set -a
+          source ./.env
+          set +a
+
+          ./deploy.sh status
+          curl --fail --silent --show-error --retry 12 --retry-all-errors \
+            --retry-delay 5 "$ERP_URL/health" >/dev/null
+          curl --fail --silent --show-error --retry 12 --retry-all-errors \
+            --retry-delay 5 "$MES_URL/health" >/dev/null
+
+      - name: Record successful release
+        shell: bash
+        run: |
+          set -euo pipefail
+          ln -sfn "${{ steps.release.outputs.release_dir }}" "$RELEASE_ROOT/current"
+          printf '%s\n' "$DEPLOY_SHA" > "$RELEASE_ROOT/current-sha"

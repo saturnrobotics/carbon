@@ -1,0 +1,24 @@
+name: Deploy Saturn Staging
+run-name: Staging ${{ github.sha }}
+
+on:
+  push:
+    branches: ["saturn/main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy exact SHA to isolated staging
+    if: github.repository == 'saturnrobotics/carbon'
+    uses: ./.github/workflows/saturn-deploy.yml
+    with:
+      environment: staging
+      runner-label: saturn-staging
+      release-root: /opt/carbon-staging/releases
+      config-file: /etc/carbon/staging.env
+      backup-root: /mnt/carbon-staging-backups
+      expected-stack: carbon-staging
+      sha: ${{ github.sha }}

@@ -193,9 +193,10 @@ available memory.
 
 # Saturn Production
 
-Saturn production runs on the server rack behind the company VPN. Production is
-separate from the local development stack: never run `crbn up`, `crbn reset`, or
-development seed commands on the production host.
+Saturn staging and production run on isolated rack hosts behind the company VPN.
+Both are separate from the local development stack: never run `crbn up` or
+`crbn reset` on either environment host, and never run development seed commands
+against production.
 
 ## Branch model
 
@@ -207,8 +208,10 @@ crbnos/carbon:main
 saturnrobotics/carbon:main
         ↓ reviewed integration PR
 saturnrobotics/carbon:saturn/main
-        ↓ successful production workflow
-Saturn production rack
+        ↓ deploy exact commit SHA
+Saturn staging rack environment (isolated data)
+        ↓ successful staging workflow + production approval
+Saturn production rack environment (isolated data)
 ```
 
 - `main` in the Saturn fork remains a clean mirror of upstream Carbon.
@@ -216,7 +219,7 @@ Saturn production rack
 - Set `saturn/main` as the Saturn fork's default branch. This makes new pull
   requests target production intentionally and is required because GitHub only
   runs scheduled workflows, including the daily backup, from the default branch.
-- Create feature branches from `saturn/main` and merge them back through pull
+- Create `feat/*` branches from `saturn/main` and merge them back through pull
   requests.
 - Bring upstream changes into `saturn/main` through a `main` → `saturn/main`
   pull request. Do not automatically merge upstream into production.
@@ -233,10 +236,10 @@ push commits, merge pull requests, or create tags when explicitly invoked.
 ```bash
 make help
 
-# Create feature/my-change from the latest origin/saturn/main.
+# Create feat/my-change from the latest origin/saturn/main.
 make feature NAME=my-change
 
-# Push the current feature branch and open its production PR.
+# Push the current feat/* branch and open its production PR.
 make push-feature
 make feature-pr
 
@@ -248,7 +251,11 @@ make sync-upstream
 make upstream-pr
 
 # Inspect the most recent successful deployment.
+make staging-status
 make production-status
+
+# Manually redeploy the current saturn/main SHA to staging.
+make deploy-staging
 
 # Tag the current successfully deployed saturn/main commit.
 make production-tag TAG=prod-2026.07.16.1
@@ -262,10 +269,14 @@ immutable.
 
 The repository's production workflow is
 [`.github/workflows/saturn-production.yml`](.github/workflows/saturn-production.yml).
-It triggers only for `saturnrobotics/carbon` pushes to `saturn/main` and runs on
-a dedicated runner inside the VPN. The upstream Carbon AWS/Supabase workflows
-are explicitly restricted to `crbnos/carbon` so they cannot deploy the Saturn
-fork.
+The staging workflow
+[`.github/workflows/saturn-staging.yml`](.github/workflows/saturn-staging.yml)
+triggers on `saturnrobotics/carbon:saturn/main` and deploys that exact SHA first.
+Production is triggered only after staging succeeds and uses the same SHA. Both
+call [`.github/workflows/saturn-deploy.yml`](.github/workflows/saturn-deploy.yml)
+so their deployment steps cannot drift. The upstream Carbon AWS/Supabase
+workflows are explicitly restricted to `crbnos/carbon` so they cannot deploy the
+Saturn fork.
 
 ## Protect the production branch
 
@@ -281,25 +292,29 @@ Create a GitHub ruleset for `saturn/main` with:
 - Force pushes and branch deletion blocked.
 - Bypass access limited to an emergency administrator group.
 
-Protect `main` as well so it remains a trustworthy upstream mirror. Create a
-GitHub Environment named `production`, restrict it to `saturn/main`, and require
-an operator approval until the deployment and restore processes have been
-proven. The production job is serialized and cannot be cancelled by a newer
-commit.
+Protect `main` as well so it remains a trustworthy upstream mirror. Create
+GitHub Environments named `staging` and `production`, both restricted to
+`saturn/main`. Require an operator approval on `production`; staging should run
+automatically. Each environment is serialized independently, and active
+migrations cannot be cancelled by a newer commit.
 
 ## Rack and VPN topology
 
-Install the production runner and Docker Swarm manager on a hardened Linux host
-inside the VPN. Give the runner these labels:
+Use separate staging and production hosts or VMs inside the VPN. Each host has
+its own Docker Swarm, runner, network identity, disks, secrets, and ingress.
+This is required by the included single-node stack because each environment's
+Caddy service owns ports 80/443 and its Docker secret names are cluster-global.
+Give the runners these labels:
 
 ```text
+self-hosted, linux, x64, saturn-staging
 self-hosted, linux, x64, saturn-production
 ```
 
-The runner must be dedicated to this repository and must not accept jobs from
-untrusted repositories or pull requests. A self-hosted runner executes workflow
-code with access to Docker and therefore effectively has root-equivalent access
-to the production stack.
+Each runner must be dedicated to this repository and environment and must not
+accept jobs from untrusted repositories or pull requests. A self-hosted runner
+executes workflow code with access to Docker and therefore effectively has
+root-equivalent access to its stack. Never place both labels on the same runner.
 
 Network policy:
 
@@ -323,10 +338,10 @@ approved TLS models:
 3. Use DNS-01 certificate issuance through the DNS provider without exposing
    the rack publicly.
 
-Do not disable TLS verification or use `curl -k`. The deployment runner must
-trust the selected production CA so its post-deploy health checks are meaningful.
+Do not disable TLS verification or use `curl -k`. Each deployment runner must
+trust its environment's CA so post-deploy health checks are meaningful.
 
-## One-time production host setup
+## One-time environment host setup
 
 Install and configure:
 
@@ -334,62 +349,90 @@ Install and configure:
 - Docker Engine with Swarm mode initialized.
 - Git, curl, gzip, tar, OpenSSL, and standard GNU utilities.
 - The dedicated GitHub Actions runner service.
-- A monitored external backup target mounted at `/mnt/carbon-backups`.
+- A monitored external backup target mounted at the environment-specific path.
 
 The runner service account needs access to Docker and write access to:
 
 ```text
-/opt/carbon/releases
-/mnt/carbon-backups
+staging:    /opt/carbon-staging/releases, /mnt/carbon-staging-backups
+production: /opt/carbon/releases,         /mnt/carbon-backups
 ```
 
-Create the production configuration from the example:
+Create separate protected configurations from the example:
 
 ```bash
-sudo install -d -m 755 /etc/carbon /opt/carbon/releases
+sudo install -d -m 755 \
+  /etc/carbon \
+  /opt/carbon-staging/releases \
+  /opt/carbon/releases
+sudo install -m 600 \
+  contrib/deploying/simple-docker-caddy/.env.example \
+  /etc/carbon/staging.env
 sudo install -m 600 \
   contrib/deploying/simple-docker-caddy/.env.example \
   /etc/carbon/production.env
 ```
 
-Edit `/etc/carbon/production.env` with the production hosts, URLs, SMTP
-settings, edition, and capacity settings. The workflow overwrites
+Set `STACK_NAME=carbon-staging` in `/etc/carbon/staging.env` and
+`STACK_NAME=carbon` in `/etc/carbon/production.env`. Give them different ERP,
+MES, API, SMTP sandbox, OAuth callback, and integration settings. The workflow
+refuses to deploy when a file contains the wrong stack name. It overwrites
 `CARBON_REPO`, `CARBON_IMAGE_ERP`, and `CARBON_IMAGE_MES` inside each staged
-release, so production always uses the approved commit SHA.
+release, so both environments use the requested commit SHA.
 
-Initialize Swarm secrets once from a controlled checkout on the rack:
+Initialize Swarm secrets independently on each host from a controlled checkout:
 
 ```bash
 cd contrib/deploying/simple-docker-caddy
 ./deploy.sh init
 ```
 
-Move the resulting protected configuration into
-`/etc/carbon/production.env`, set its mode to `600`, and replace placeholder
-Docker secrets before the first deployment. Never commit the production `.env`
-or copy secret values into GitHub logs. If OAuth credentials are placed in this
-file, treat it as a secret-bearing file and include it in the rotation policy.
+Move the resulting protected configuration to `/etc/carbon/staging.env` on the
+staging host and `/etc/carbon/production.env` on the production host. Set mode
+`600` and replace placeholder Docker secrets independently. Never copy
+production secrets or production Docker volumes into staging. Never commit
+either `.env` or copy secret values into GitHub logs. If OAuth credentials are
+placed in these files, treat them as secret-bearing files and include them in
+the rotation policy.
 
-## Production deployment sequence
+## Staging and production deployment sequence
 
-On each merge to `saturn/main`, the self-hosted workflow:
+On each merge to `saturn/main`:
 
-1. Verifies the repository and exact production ref.
-2. Exports the approved commit into `/opt/carbon/releases/<git-sha>`.
-3. Copies the protected production configuration into that immutable release.
+1. `saturn-staging.yml` sends the exact merge SHA to the staging runner.
+2. Staging deploys using `/etc/carbon/staging.env`, `STACK_NAME=carbon-staging`,
+   staging-only volumes/secrets, and staging-only URLs.
+3. Staging migrations and health checks must succeed.
+4. `saturn-production.yml` receives the triggering staging run's `head_sha`, not
+   the production workflow's default `GITHUB_SHA`.
+5. The protected `production` environment requests operator approval.
+6. Production deploys the exact staging SHA with its independent configuration,
+   database, storage, Redis, secrets, and backup destination.
+
+For each environment, the reusable deployment workflow:
+
+1. Verifies the repository and that the SHA belongs to `saturn/main`.
+2. Exports the commit into that environment's immutable release directory.
+3. Copies that environment's protected configuration into the release.
 4. Tags ERP and MES images with the exact commit SHA.
-5. Requires `/mnt/carbon-backups` to be a mounted external filesystem.
+5. Requires the environment's backup root to be a mounted external filesystem.
 6. Creates a Postgres dump and object-storage archive before an upgrade.
 7. Builds the new images.
 8. On an existing stack, applies forward migrations while the old applications
    remain live.
 9. Deploys and rolls the new ERP/MES tasks.
 10. Waits for container health and checks the ERP and MES `/health` endpoints.
-11. Records the successful release through `/opt/carbon/releases/current` and
-    `/opt/carbon/releases/current-sha`.
+11. Records the successful release through the environment's `current` symlink
+    and `current-sha` file.
 
 The first installation is necessarily different: it creates the data plane,
 then applies migrations, and finally rolls the application tasks.
+
+Initialize staging with test fixtures or a deliberately sanitized production
+snapshot. Never connect staging to production Postgres, storage, Redis, SMTP,
+OAuth secrets, payment credentials, or integration credentials. If production
+data is sanitized into staging, rotate all user sessions/API keys and disable
+outbound customer communications before allowing access.
 
 ## Migration rules
 
@@ -414,12 +457,13 @@ safe only when the migration is backward-compatible.
 
 The deployment workflow takes a backup before every upgrade. The scheduled
 workflow [`.github/workflows/saturn-backup.yml`](.github/workflows/saturn-backup.yml)
-also runs daily at 05:17 UTC and verifies both archives.
+also runs daily at 05:17 UTC on both isolated runners and verifies every archive.
 
-`/mnt/carbon-backups` must be storage outside the production host—for example a
-NAS with snapshots and replication. A directory on the production server's
-system disk is not a backup. Configure retention and a second offsite or
-immutable copy at the storage layer.
+`/mnt/carbon-staging-backups` and `/mnt/carbon-backups` must be distinct storage
+outside their application hosts—for example separate NAS datasets with
+snapshots and replication. A directory on an application server's system disk
+is not a backup. Configure retention and a second offsite or immutable copy at
+the storage layer.
 
 At least quarterly, restore a backup into an isolated non-production stack and
 record:
@@ -437,6 +481,11 @@ Do not test restoration against the production volumes.
 From the active release directory on the rack:
 
 ```bash
+# Staging host
+cd /opt/carbon-staging/releases/current/contrib/deploying/simple-docker-caddy
+./deploy.sh status
+
+# Production host
 cd /opt/carbon/releases/current/contrib/deploying/simple-docker-caddy
 ./deploy.sh status
 ./deploy.sh logs erp
