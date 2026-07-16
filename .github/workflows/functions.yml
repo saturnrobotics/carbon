@@ -12,6 +12,7 @@ on:
 jobs:
   functions:
     name: Deploy Self-Hosted Functions
+    if: github.repository == 'crbnos/carbon'
     runs-on: ubuntu-latest
     strategy:
       matrix:

@@ -1,0 +1,123 @@
+name: Deploy Saturn Production
+
+on:
+  push:
+    branches: ["saturn/main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A production migration or rollout must never be cancelled by a newer commit.
+concurrency:
+  group: saturn-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy on-premises production
+    if: github.repository == 'saturnrobotics/carbon'
+    runs-on: [self-hosted, linux, x64, saturn-production]
+    environment:
+      name: production
+    timeout-minutes: 120
+    env:
+      RELEASE_ROOT: /opt/carbon/releases
+      PRODUCTION_ENV_FILE: /etc/carbon/production.env
+      BACKUP_ROOT: /mnt/carbon-backups
+
+    steps:
+      - name: Verify production ref
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/saturn/main"
+          test "$GITHUB_REPOSITORY" = "saturnrobotics/carbon"
+
+      - name: Checkout approved commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+
+      - name: Verify production host
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -r "$PRODUCTION_ENV_FILE"
+          test "$(stat -c '%a' "$PRODUCTION_ENV_FILE")" = "600"
+          docker info >/dev/null
+          test "$(docker info --format '{{.Swarm.LocalNodeState}}')" = "active"
+          install -d "$RELEASE_ROOT"
+          mountpoint -q "$BACKUP_ROOT"
+
+      - name: Stage immutable release
+        id: release
+        shell: bash
+        run: |
+          set -euo pipefail
+          release_dir="$RELEASE_ROOT/$GITHUB_SHA"
+          test ! -e "$release_dir"
+          install -d "$release_dir"
+          git archive "$GITHUB_SHA" | tar -x -C "$release_dir"
+
+          deploy_dir="$release_dir/contrib/deploying/simple-docker-caddy"
+          install -m 600 "$PRODUCTION_ENV_FILE" "$deploy_dir/.env"
+          sed -i "s|^CARBON_REPO=.*|CARBON_REPO=$release_dir|" "$deploy_dir/.env"
+          sed -i "s|^CARBON_REGISTRY=.*|CARBON_REGISTRY=|" "$deploy_dir/.env"
+          sed -i "s|^CARBON_IMAGE_ERP=.*|CARBON_IMAGE_ERP=carbon/erp:$GITHUB_SHA|" "$deploy_dir/.env"
+          sed -i "s|^CARBON_IMAGE_MES=.*|CARBON_IMAGE_MES=carbon/mes:$GITHUB_SHA|" "$deploy_dir/.env"
+          chmod +x "$deploy_dir/deploy.sh" "$deploy_dir/scripts/backup.sh"
+
+          echo "release_dir=$release_dir" >> "$GITHUB_OUTPUT"
+          echo "deploy_dir=$deploy_dir" >> "$GITHUB_OUTPUT"
+
+      - name: Back up current production data
+        shell: bash
+        working-directory: ${{ steps.release.outputs.deploy_dir }}
+        run: |
+          set -euo pipefail
+          set -a
+          source ./.env
+          set +a
+
+          if docker service inspect "${STACK_NAME}_postgres" >/dev/null 2>&1; then
+            before="$(find "$BACKUP_ROOT" -mindepth 1 -maxdepth 1 -type d -name 'carbon-*' | sort | tail -1)"
+            BACKUP_DIR="$BACKUP_ROOT" ./scripts/backup.sh
+            after="$(find "$BACKUP_ROOT" -mindepth 1 -maxdepth 1 -type d -name 'carbon-*' | sort | tail -1)"
+            test -n "$after"
+            test "$after" != "$before"
+            test -s "$after/db.sql.gz"
+            test -s "$after/storage.tar.gz"
+            gzip -t "$after/db.sql.gz"
+            tar -tzf "$after/storage.tar.gz" >/dev/null
+          else
+            echo "No existing production stack; skipping pre-deploy backup."
+          fi
+
+      - name: Build, migrate, and deploy
+        shell: bash
+        working-directory: ${{ steps.release.outputs.deploy_dir }}
+        run: ./deploy.sh up
+
+      - name: Verify production health
+        shell: bash
+        working-directory: ${{ steps.release.outputs.deploy_dir }}
+        run: |
+          set -euo pipefail
+          set -a
+          source ./.env
+          set +a
+
+          ./deploy.sh status
+          curl --fail --silent --show-error --retry 12 --retry-all-errors \
+            --retry-delay 5 "$ERP_URL/health" >/dev/null
+          curl --fail --silent --show-error --retry 12 --retry-all-errors \
+            --retry-delay 5 "$MES_URL/health" >/dev/null
+
+      - name: Record successful release
+        shell: bash
+        run: |
+          set -euo pipefail
+          ln -sfn "${{ steps.release.outputs.release_dir }}" "$RELEASE_ROOT/current"
+          printf '%s\n' "$GITHUB_SHA" > "$RELEASE_ROOT/current-sha"

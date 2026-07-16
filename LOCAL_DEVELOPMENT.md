@@ -190,3 +190,270 @@ pnpm run lint
 
 Avoid the whole-repository typecheck for routine changes because it can exhaust
 available memory.
+
+# Saturn Production
+
+Saturn production runs on the server rack behind the company VPN. Production is
+separate from the local development stack: never run `crbn up`, `crbn reset`, or
+development seed commands on the production host.
+
+## Branch model
+
+The repositories and branches have distinct responsibilities:
+
+```text
+crbnos/carbon:main
+        ↓ sync the unmodified upstream branch
+saturnrobotics/carbon:main
+        ↓ reviewed integration PR
+saturnrobotics/carbon:saturn/main
+        ↓ successful production workflow
+Saturn production rack
+```
+
+- `main` in the Saturn fork remains a clean mirror of upstream Carbon.
+- `saturn/main` is the protected production integration branch.
+- Set `saturn/main` as the Saturn fork's default branch. This makes new pull
+  requests target production intentionally and is required because GitHub only
+  runs scheduled workflows, including the daily backup, from the default branch.
+- Create feature branches from `saturn/main` and merge them back through pull
+  requests.
+- Bring upstream changes into `saturn/main` through a `main` → `saturn/main`
+  pull request. Do not automatically merge upstream into production.
+- A commit on `saturn/main` expresses production intent. It is confirmed as a
+  production release only after the deployment workflow succeeds.
+
+### Make commands for branch promotion
+
+The root [`Makefile`](Makefile) wraps the routine Git and GitHub CLI operations.
+It assumes `origin` is `saturnrobotics/carbon` and uses `saturn/main` as the
+production branch. The commands are guarded, but they still create branches,
+push commits, merge pull requests, or create tags when explicitly invoked.
+
+```bash
+make help
+
+# Create feature/my-change from the latest origin/saturn/main.
+make feature NAME=my-change
+
+# Push the current feature branch and open its production PR.
+make push-feature
+make feature-pr
+
+# After review, wait for required checks and merge the PR.
+make merge-pr PR=123
+
+# Fast-forward the fork's main mirror, then open the reviewed upstream PR.
+make sync-upstream
+make upstream-pr
+
+# Inspect the most recent successful deployment.
+make production-status
+
+# Tag the current successfully deployed saturn/main commit.
+make production-tag TAG=prod-2026.07.16.1
+```
+
+`production-tag` refuses to tag when the latest successful production workflow
+does not match the current `origin/saturn/main` commit. Production tags are
+annotated and follow `prod-YYYY.MM.DD.N`. Add a GitHub tag ruleset matching
+`prod-*` that blocks deletion, updates, and force pushes so release tags remain
+immutable.
+
+The repository's production workflow is
+[`.github/workflows/saturn-production.yml`](.github/workflows/saturn-production.yml).
+It triggers only for `saturnrobotics/carbon` pushes to `saturn/main` and runs on
+a dedicated runner inside the VPN. The upstream Carbon AWS/Supabase workflows
+are explicitly restricted to `crbnos/carbon` so they cannot deploy the Saturn
+fork.
+
+## Protect the production branch
+
+Create a GitHub ruleset for `saturn/main` with:
+
+- Pull requests required; no direct pushes.
+- At least one approval, with two recommended for database or infrastructure
+  changes.
+- Stale approvals dismissed after new commits.
+- Code-owner review and resolved conversations required.
+- The Lint, Typecheck, Test, and Lingui jobs required.
+- The branch required to be current before merging.
+- Force pushes and branch deletion blocked.
+- Bypass access limited to an emergency administrator group.
+
+Protect `main` as well so it remains a trustworthy upstream mirror. Create a
+GitHub Environment named `production`, restrict it to `saturn/main`, and require
+an operator approval until the deployment and restore processes have been
+proven. The production job is serialized and cannot be cancelled by a newer
+commit.
+
+## Rack and VPN topology
+
+Install the production runner and Docker Swarm manager on a hardened Linux host
+inside the VPN. Give the runner these labels:
+
+```text
+self-hosted, linux, x64, saturn-production
+```
+
+The runner must be dedicated to this repository and must not accept jobs from
+untrusted repositories or pull requests. A self-hosted runner executes workflow
+code with access to Docker and therefore effectively has root-equivalent access
+to the production stack.
+
+Network policy:
+
+- Permit inbound ERP, MES, and API traffic only from approved VPN subnets.
+- Permit SSH only from the management VPN subnet.
+- Do not expose Postgres, Redis, Inngest, Supabase Studio, or the Docker socket.
+- Allow outbound HTTPS for GitHub Actions, container images, email, and required
+  integrations.
+- Apply host firewall rules even if the rack firewall already filters traffic.
+- Keep Supabase Studio disabled unless it is placed behind separate strong
+  authentication and VPN ACLs.
+
+The included Caddy configuration normally obtains public Let's Encrypt
+certificates using inbound ports 80/443. A VPN-only hostname cannot complete a
+public HTTP-01 challenge. Before the first deployment, choose one of these
+approved TLS models:
+
+1. Terminate TLS at an existing VPN ingress/load balancer using the company PKI.
+2. Use an internal CA and install its root certificate on every VPN client and
+   on the production runner.
+3. Use DNS-01 certificate issuance through the DNS provider without exposing
+   the rack publicly.
+
+Do not disable TLS verification or use `curl -k`. The deployment runner must
+trust the selected production CA so its post-deploy health checks are meaningful.
+
+## One-time production host setup
+
+Install and configure:
+
+- A supported Linux distribution with automatic security updates.
+- Docker Engine with Swarm mode initialized.
+- Git, curl, gzip, tar, OpenSSL, and standard GNU utilities.
+- The dedicated GitHub Actions runner service.
+- A monitored external backup target mounted at `/mnt/carbon-backups`.
+
+The runner service account needs access to Docker and write access to:
+
+```text
+/opt/carbon/releases
+/mnt/carbon-backups
+```
+
+Create the production configuration from the example:
+
+```bash
+sudo install -d -m 755 /etc/carbon /opt/carbon/releases
+sudo install -m 600 \
+  contrib/deploying/simple-docker-caddy/.env.example \
+  /etc/carbon/production.env
+```
+
+Edit `/etc/carbon/production.env` with the production hosts, URLs, SMTP
+settings, edition, and capacity settings. The workflow overwrites
+`CARBON_REPO`, `CARBON_IMAGE_ERP`, and `CARBON_IMAGE_MES` inside each staged
+release, so production always uses the approved commit SHA.
+
+Initialize Swarm secrets once from a controlled checkout on the rack:
+
+```bash
+cd contrib/deploying/simple-docker-caddy
+./deploy.sh init
+```
+
+Move the resulting protected configuration into
+`/etc/carbon/production.env`, set its mode to `600`, and replace placeholder
+Docker secrets before the first deployment. Never commit the production `.env`
+or copy secret values into GitHub logs. If OAuth credentials are placed in this
+file, treat it as a secret-bearing file and include it in the rotation policy.
+
+## Production deployment sequence
+
+On each merge to `saturn/main`, the self-hosted workflow:
+
+1. Verifies the repository and exact production ref.
+2. Exports the approved commit into `/opt/carbon/releases/<git-sha>`.
+3. Copies the protected production configuration into that immutable release.
+4. Tags ERP and MES images with the exact commit SHA.
+5. Requires `/mnt/carbon-backups` to be a mounted external filesystem.
+6. Creates a Postgres dump and object-storage archive before an upgrade.
+7. Builds the new images.
+8. On an existing stack, applies forward migrations while the old applications
+   remain live.
+9. Deploys and rolls the new ERP/MES tasks.
+10. Waits for container health and checks the ERP and MES `/health` endpoints.
+11. Records the successful release through `/opt/carbon/releases/current` and
+    `/opt/carbon/releases/current-sha`.
+
+The first installation is necessarily different: it creates the data plane,
+then applies migrations, and finally rolls the application tasks.
+
+## Migration rules
+
+Production migrations are forward-only and append-only:
+
+- Create migrations with `pnpm db:migrate:new <name>`.
+- Never edit or rename a migration already applied to production.
+- Never use a timestamp older than the newest deployed migration.
+- Test against a recent sanitized production snapshot before merging.
+- Use expand/contract changes so the old app remains compatible while the
+  migration runs: add → dual-read/write if necessary → backfill → switch →
+  remove in a later release.
+- Do not combine a destructive schema change and the only compatible app version
+  in one rollout.
+- Never reset, rebuild, or reseed the production database.
+
+Database rollback is not automatic. If an application rollout fails after a
+migration, prefer fixing forward. Redeploying an earlier application image is
+safe only when the migration is backward-compatible.
+
+## Backups and recovery
+
+The deployment workflow takes a backup before every upgrade. The scheduled
+workflow [`.github/workflows/saturn-backup.yml`](.github/workflows/saturn-backup.yml)
+also runs daily at 05:17 UTC and verifies both archives.
+
+`/mnt/carbon-backups` must be storage outside the production host—for example a
+NAS with snapshots and replication. A directory on the production server's
+system disk is not a backup. Configure retention and a second offsite or
+immutable copy at the storage layer.
+
+At least quarterly, restore a backup into an isolated non-production stack and
+record:
+
+- Backup timestamp and size.
+- Database restoration result.
+- Object-storage restoration result.
+- Application login and representative transaction checks.
+- Recovery time and any manual steps.
+
+Do not test restoration against the production volumes.
+
+## Routine operations
+
+From the active release directory on the rack:
+
+```bash
+cd /opt/carbon/releases/current/contrib/deploying/simple-docker-caddy
+./deploy.sh status
+./deploy.sh logs erp
+./deploy.sh logs mes
+./deploy.sh logs postgres
+```
+
+Monitor at minimum:
+
+- ERP, MES, and API uptime and latency.
+- Swarm task restarts and unhealthy containers.
+- CPU, memory, disk, inode, and storage-volume capacity.
+- Postgres connections, locks, replication/PITR status if configured, and slow
+  queries.
+- Backup freshness and archive verification.
+- TLS certificate expiry.
+- GitHub production workflow failures.
+
+Never run `./deploy.sh down --volumes` in production. That option deletes the
+database and storage volumes.
