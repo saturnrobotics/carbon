@@ -231,15 +231,33 @@ cmd_migrate() {
     log "Migrations applied"
 }
 
-# ── up (build + deploy + migrate + roll apps) ───────────────────────────────────
+# ── up (build + migrate + deploy + roll apps) ───────────────────────────────────
 cmd_up() {
     cmd_build
-    cmd_deploy
-    cmd_migrate
     load_env
+
+    # On an existing production stack, migrate while the old application tasks
+    # are still serving traffic. Production migrations must follow the
+    # expand/contract pattern so the old app remains compatible until the new
+    # tasks pass their health checks. A first install has no database/network to
+    # migrate yet, so it must deploy the data plane before applying migrations.
+    if docker service inspect "${STACK_NAME}_postgres" >/dev/null 2>&1; then
+        log "Existing stack detected — migrating before application rollout"
+        cmd_migrate
+        cmd_deploy
+    else
+        log "First deployment detected — creating the data plane before migrations"
+        cmd_deploy
+        cmd_migrate
+    fi
+
+    # Local builds commonly reuse a tag. Force a rollout so Swarm picks up the
+    # image that was just built even when the image name did not change.
     log "Rolling apps now that the schema exists"
     docker service update --force --detach=true "${STACK_NAME}_erp" >/dev/null
     docker service update --force --detach=true "${STACK_NAME}_mes" >/dev/null
+    wait_healthy erp 300
+    wait_healthy mes 300
     log "Stack up. Check: $SCRIPT_NAME status"
 }
 

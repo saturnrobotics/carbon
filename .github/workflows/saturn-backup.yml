@@ -1,0 +1,56 @@
+name: Back Up Saturn Production
+
+on:
+  schedule:
+    - cron: "17 5 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: saturn-production-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    name: Back up database and object storage
+    if: github.repository == 'saturnrobotics/carbon'
+    runs-on: [self-hosted, linux, x64, saturn-production]
+    timeout-minutes: 60
+    env:
+      CURRENT_RELEASE: /opt/carbon/releases/current
+      BACKUP_ROOT: /mnt/carbon-backups
+
+    steps:
+      - name: Verify backup destination
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -L "$CURRENT_RELEASE"
+          test -r "$CURRENT_RELEASE/contrib/deploying/simple-docker-caddy/.env"
+          mountpoint -q "$BACKUP_ROOT"
+          docker info >/dev/null
+
+      - name: Back up production data
+        id: backup
+        shell: bash
+        run: |
+          set -euo pipefail
+          deploy_dir="$CURRENT_RELEASE/contrib/deploying/simple-docker-caddy"
+          before="$(find "$BACKUP_ROOT" -mindepth 1 -maxdepth 1 -type d -name 'carbon-*' | sort | tail -1)"
+          BACKUP_DIR="$BACKUP_ROOT" "$deploy_dir/scripts/backup.sh"
+          after="$(find "$BACKUP_ROOT" -mindepth 1 -maxdepth 1 -type d -name 'carbon-*' | sort | tail -1)"
+          test -n "$after"
+          test "$after" != "$before"
+          echo "backup_dir=$after" >> "$GITHUB_OUTPUT"
+
+      - name: Verify backup archives
+        shell: bash
+        run: |
+          set -euo pipefail
+          backup_dir="${{ steps.backup.outputs.backup_dir }}"
+          test -s "$backup_dir/db.sql.gz"
+          test -s "$backup_dir/storage.tar.gz"
+          gzip -t "$backup_dir/db.sql.gz"
+          tar -tzf "$backup_dir/storage.tar.gz" >/dev/null

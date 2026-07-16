@@ -2,9 +2,9 @@ name: Check Lint and Types
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, "saturn/main"]
   push:
-    branches: [main]
+    branches: [main, "saturn/main"]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

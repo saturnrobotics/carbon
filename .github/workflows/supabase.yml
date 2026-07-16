@@ -8,6 +8,7 @@ on:
 jobs:
   supabase:
     name: Supabase Sync
+    if: github.repository == 'crbnos/carbon'
     runs-on: ubuntu-latest
 
     env:
