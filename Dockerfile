@@ -1,8 +1,9 @@
 # syntax=docker/dockerfile:1
 # Shared build for React Router SSR apps. Build: docker build --build-arg APP=erp -t carbon/erp .
 ARG APP
+ARG NODE_IMAGE_REPOSITORY=docker.io/library/node
 
-FROM node:22 AS deps
+FROM ${NODE_IMAGE_REPOSITORY}:22 AS deps
 WORKDIR /repo
 RUN corepack enable
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc turbo.json lingui.config.js ./
@@ -17,7 +18,7 @@ ARG NODE_OPTIONS="--max-old-space-size=8024"
 ENV NODE_OPTIONS=${NODE_OPTIONS}
 RUN pnpm run build:${APP}
 
-FROM node:22-slim AS runner
+FROM ${NODE_IMAGE_REPOSITORY}:22-slim AS runner
 ARG APP
 WORKDIR /repo
 ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0

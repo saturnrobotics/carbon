@@ -12,7 +12,7 @@ PROD_WORKFLOW ?= saturn-production.yml
 
 .PHONY: help guard-clean guard-gh feature push-feature feature-pr merge-pr \
 	sync-upstream upstream-pr deploy-staging staging-status production-tag \
-	production-status
+	production-status validate-domain-config test-domain-config
 
 help: ## Show the Saturn branch and production commands.
 	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z0-9_-]+:.*## / {printf "  %-20s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -26,6 +26,22 @@ guard-clean:
 guard-gh:
 	@command -v gh >/dev/null || { echo "GitHub CLI (gh) is required." >&2; exit 1; }
 	@gh auth status >/dev/null
+
+validate-domain-config: ## Validate CONFIG_FILE for ENVIRONMENT=staging|production.
+	@test -n "$(ENVIRONMENT)" || { \
+		echo "Usage: make validate-domain-config ENVIRONMENT=staging CONFIG_FILE=/etc/carbon/staging.env" >&2; \
+		exit 1; \
+	}
+	@test -n "$(CONFIG_FILE)" || { \
+		echo "CONFIG_FILE is required." >&2; \
+		exit 1; \
+	}
+	@contrib/deploying/simple-docker-caddy/scripts/validate-saturn-config.sh \
+		"$(ENVIRONMENT)" "$(CONFIG_FILE)"
+
+test-domain-config: ## Test Saturn domain validation with safe generated fixtures.
+	@contrib/deploying/simple-docker-caddy/scripts/test-saturn-config-validator.sh
+	@contrib/deploying/simple-docker-caddy/scripts/test-gcp-stack.sh
 
 feature: guard-clean ## Create feat/NAME from the latest origin/saturn/main.
 	@test -n "$(NAME)" || { echo "Usage: make feature NAME=my-change" >&2; exit 1; }

@@ -1,4 +1,4 @@
-import { DOMAIN, getCookieDomain } from "@carbon/auth";
+import { DOMAIN, shouldUseSecureCookie } from "@carbon/auth";
 import * as cookie from "cookie";
 
 const cookieName = "theme";
@@ -22,12 +22,10 @@ export function getTheme(request: Request): Theme {
 }
 
 export function setTheme(theme: string) {
-  const cookieDomain = getCookieDomain(DOMAIN);
   return cookie.serialize(cookieName, theme, {
     path: "/",
     sameSite: "lax",
-    secure: !!cookieDomain,
-    domain: cookieDomain,
+    secure: shouldUseSecureCookie(DOMAIN),
     maxAge: 31536000
   });
 }

@@ -11,6 +11,14 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  domain-config:
+    name: Domain configuration
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: contrib/deploying/simple-docker-caddy/scripts/test-saturn-config-validator.sh
+      - run: contrib/deploying/simple-docker-caddy/scripts/test-gcp-stack.sh
+
   install:
     name: Install
     runs-on: ubuntu-latest

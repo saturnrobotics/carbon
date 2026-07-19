@@ -15,3 +15,10 @@ export function getCookieDomain(
 
   return host;
 }
+
+export function shouldUseSecureCookie(
+  domain: string | null | undefined,
+  nodeEnv: string | null | undefined = process.env.NODE_ENV
+): boolean {
+  return nodeEnv === "production" || getCookieDomain(domain) !== undefined;
+}

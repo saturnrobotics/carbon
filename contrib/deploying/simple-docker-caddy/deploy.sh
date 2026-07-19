@@ -21,6 +21,7 @@ set -euo pipefail
 readonly SCRIPT_NAME=$(basename "$0")
 readonly HERE=$(cd "$(dirname "$0")" && pwd)
 readonly STACK_FILE="$HERE/docker-compose.prod.yml"
+readonly GCP_STACK_FILE="$HERE/docker-compose.gcp.yml"
 readonly ENV_FILE="$HERE/.env"
 readonly ENV_EXAMPLE="$HERE/.env.example"
 
@@ -48,6 +49,18 @@ load_env() {
     : "${CARBON_REPO:?CARBON_REPO must be set in .env}"
     : "${STACK_NAME:?STACK_NAME must be set in .env}"
     [ -f "$CARBON_REPO/Dockerfile" ] || error "CARBON_REPO=$CARBON_REPO is not a Carbon checkout (no Dockerfile)"
+    TLS_MODE="${TLS_MODE:-public}"
+    case "$TLS_MODE" in
+        public) ;;
+        gcp-dns)
+            : "${CADDY_IMAGE:?CADDY_IMAGE must be set for TLS_MODE=gcp-dns}"
+            : "${GCP_PROJECT:?GCP_PROJECT must be set for TLS_MODE=gcp-dns}"
+            : "${ERP_ACME_CHALLENGE_DOMAIN:?ERP_ACME_CHALLENGE_DOMAIN must be set for TLS_MODE=gcp-dns}"
+            : "${MES_ACME_CHALLENGE_DOMAIN:?MES_ACME_CHALLENGE_DOMAIN must be set for TLS_MODE=gcp-dns}"
+            : "${SUPABASE_ACME_CHALLENGE_DOMAIN:?SUPABASE_ACME_CHALLENGE_DOMAIN must be set for TLS_MODE=gcp-dns}"
+            ;;
+        *) error "TLS_MODE must be 'public' or 'gcp-dns' (found '$TLS_MODE')" ;;
+    esac
 }
 
 swarm_active() { [ "$(docker info --format '{{.Swarm.LocalNodeState}}' 2>/dev/null)" = "active" ]; }
@@ -140,6 +153,8 @@ cmd_init() {
     warn "Next:"
     warn "  1. Edit $ENV_FILE — set CARBON_REPO, the *_HOST/*_URL, ACME_EMAIL, SMTP."
     warn "  2. Set real secrets:  $SCRIPT_NAME secret resend_api_key re_xxx   (then smtp_password)"
+    warn "     For TLS_MODE=gcp-dns, create the ADC credential secret from a file:"
+    warn "       $SCRIPT_NAME secret gcp_application_credentials < /path/to/adc.json"
     warn "  3. $SCRIPT_NAME up"
 }
 
@@ -154,6 +169,13 @@ cmd_build() {
     docker build --build-arg APP=erp -t "$CARBON_IMAGE_ERP" "$CARBON_REPO"
     log "Building mes image ($CARBON_IMAGE_MES)"
     docker build --build-arg APP=mes -t "$CARBON_IMAGE_MES" "$CARBON_REPO"
+    if [ "$TLS_MODE" = "gcp-dns" ]; then
+        log "Building pinned Google Cloud DNS-01 Caddy image ($CADDY_IMAGE)"
+        docker build \
+            -f "$HERE/Dockerfile.caddy-gcp" \
+            -t "$CADDY_IMAGE" \
+            "$HERE"
+    fi
 }
 
 # ── deploy ─────────────────────────────────────────────────────────────────────
@@ -161,13 +183,38 @@ cmd_deploy() {
     require_cmds docker; load_env
     swarm_active || error "swarm not active — run '$SCRIPT_NAME init'"
     # Every external secret must exist or `docker stack deploy` fails cryptically.
-    local s missing=""
-    for s in $ALL_SECRETS; do secret_exists "$s" || missing="$missing $s"; done
+    local required_secrets="$ALL_SECRETS" s missing=""
+    local stack_args=(-c "$STACK_FILE")
+    local rendered_stack=""
+    if [ "$TLS_MODE" = "gcp-dns" ]; then
+        required_secrets="$required_secrets gcp_application_credentials"
+        docker compose version >/dev/null 2>&1 \
+            || error "the Docker Compose plugin is required for TLS_MODE=gcp-dns"
+        rendered_stack=$(mktemp)
+        # Compose understands !override and preserves both TCP/443 and UDP/443.
+        # `docker stack deploy`'s legacy multi-file merge can silently drop TCP/443.
+        if ! docker compose -f "$STACK_FILE" -f "$GCP_STACK_FILE" config \
+            | sed -E \
+                -e '/^name:/d' \
+                -e 's/^([[:space:]]+published:) "([0-9]+)"$/\1 \2/' \
+            > "$rendered_stack"; then
+            rm -f "$rendered_stack"
+            error "failed to render the Google Cloud DNS-01 stack"
+        fi
+        stack_args=(-c "$rendered_stack")
+    fi
+    for s in $required_secrets; do secret_exists "$s" || missing="$missing $s"; done
     [ -z "$missing" ] || error "missing secret(s):${missing} — run '$SCRIPT_NAME init'"
     log "Deploying stack '$STACK_NAME'"
     # --resolve-image never: use the locally built tags as-is for the no-registry path.
     local resolve=never; [ -n "${CARBON_REGISTRY:-}" ] && resolve=always
-    docker stack deploy --detach=true --resolve-image "$resolve" -c "$STACK_FILE" "$STACK_NAME"
+    if docker stack deploy --detach=true --resolve-image "$resolve" "${stack_args[@]}" "$STACK_NAME"; then
+        [ -z "$rendered_stack" ] || rm -f "$rendered_stack"
+    else
+        local status=$?
+        [ -z "$rendered_stack" ] || rm -f "$rendered_stack"
+        return "$status"
+    fi
 }
 
 # Wait until a service has a healthy task. Matches on the exact Swarm service-name

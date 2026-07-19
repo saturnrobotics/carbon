@@ -1,0 +1,36 @@
+# Optional overlay for VPN-only Saturn deployments using Google Cloud DNS.
+# Applied by deploy.sh when TLS_MODE=gcp-dns.
+
+services:
+  caddy:
+    image: ${CADDY_IMAGE}
+    # Restate the complete list. Docker's compose merge otherwise treats the two
+    # published 443 entries as the same unique item and can retain only UDP/443.
+    ports: !override
+      - target: 80
+        published: 80
+        mode: host
+      - target: 443
+        published: 443
+        mode: host
+      - target: 443
+        published: 443
+        protocol: udp
+        mode: host
+    secrets:
+      - gcp_application_credentials
+    environment:
+      GOOGLE_APPLICATION_CREDENTIALS: /run/secrets/gcp_application_credentials
+      GCP_PROJECT: ${GCP_PROJECT}
+      ERP_ACME_CHALLENGE_DOMAIN: ${ERP_ACME_CHALLENGE_DOMAIN}
+      MES_ACME_CHALLENGE_DOMAIN: ${MES_ACME_CHALLENGE_DOMAIN}
+      SUPABASE_ACME_CHALLENGE_DOMAIN: ${SUPABASE_ACME_CHALLENGE_DOMAIN}
+    volumes:
+      - type: bind
+        source: ${CARBON_REPO}/contrib/deploying/simple-docker-caddy/Caddyfile.gcp
+        target: /etc/caddy/Caddyfile
+        read_only: true
+
+secrets:
+  gcp_application_credentials:
+    external: true

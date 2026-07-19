@@ -1,0 +1,14 @@
+ARG CADDY_VERSION=2.11.4
+ARG CADDY_IMAGE_REPOSITORY=docker.io/library/caddy
+
+FROM ${CADDY_IMAGE_REPOSITORY}:${CADDY_VERSION}-builder-alpine AS builder
+
+ARG CADDY_VERSION
+ARG GOOGLE_CLOUD_DNS_MODULE_VERSION=v1.1.0
+
+RUN xcaddy build "v${CADDY_VERSION}" \
+  --with "github.com/caddy-dns/googleclouddns@${GOOGLE_CLOUD_DNS_MODULE_VERSION}"
+
+FROM ${CADDY_IMAGE_REPOSITORY}:${CADDY_VERSION}-alpine
+
+COPY --from=builder /usr/bin/caddy /usr/bin/caddy

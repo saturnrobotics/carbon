@@ -1,12 +1,12 @@
-import { CarbonEdition, DOMAIN } from "@carbon/auth";
 import { Edition, isInternalEmail } from "@carbon/utils";
 import * as cookie from "cookie";
+import { CarbonEdition, DOMAIN } from "../config/env";
 import { getCarbonServiceRole } from "../lib/supabase/client.server";
-import { getCookieDomain } from "../utils/cookie";
+import { shouldUseSecureCookie } from "../utils/cookie";
 
 const cookieName = "companyId";
 const isTestEdition = CarbonEdition === Edition.Test;
-const cookieDomain = isTestEdition ? undefined : getCookieDomain(DOMAIN);
+const secureCookie = !isTestEdition && shouldUseSecureCookie(DOMAIN);
 
 export function getCompanyId(request: Request): string | null {
   const cookieHeader = request.headers.get("Cookie");
@@ -19,14 +19,16 @@ export function setCompanyId(companyId: string | null) {
     return cookie.serialize(cookieName, "", {
       path: "/",
       expires: new Date(0),
-      domain: cookieDomain
+      sameSite: "lax",
+      secure: secureCookie
     });
   }
 
   return cookie.serialize(cookieName, companyId, {
     path: "/",
     maxAge: 31536000, // 1 year
-    domain: cookieDomain
+    sameSite: "lax",
+    secure: secureCookie
   });
 }
 

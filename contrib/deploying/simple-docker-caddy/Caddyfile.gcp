@@ -1,0 +1,55 @@
+# Carbon — VPN-only reverse proxy with Google Cloud DNS-01 issuance.
+# GOOGLE_APPLICATION_CREDENTIALS points to an ADC-compatible Docker secret.
+{
+	email {$ACME_EMAIL}
+	tls_resolvers 1.1.1.1:53 8.8.8.8:53
+	servers {
+		trusted_proxies static private_ranges
+	}
+}
+
+(common) {
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+}
+
+{$ERP_HOST} {
+	import common
+	tls {
+		dns googleclouddns {
+			gcp_project {$GCP_PROJECT}
+		}
+		dns_challenge_override_domain {$ERP_ACME_CHALLENGE_DOMAIN}
+		resolvers 1.1.1.1:53 8.8.8.8:53
+	}
+	reverse_proxy erp:3000
+}
+
+{$MES_HOST} {
+	import common
+	tls {
+		dns googleclouddns {
+			gcp_project {$GCP_PROJECT}
+		}
+		dns_challenge_override_domain {$MES_ACME_CHALLENGE_DOMAIN}
+		resolvers 1.1.1.1:53 8.8.8.8:53
+	}
+	reverse_proxy mes:3000
+}
+
+{$SUPABASE_HOST} {
+	import common
+	tls {
+		dns googleclouddns {
+			gcp_project {$GCP_PROJECT}
+		}
+		dns_challenge_override_domain {$SUPABASE_ACME_CHALLENGE_DOMAIN}
+		resolvers 1.1.1.1:53 8.8.8.8:53
+	}
+	reverse_proxy kong:8000
+}

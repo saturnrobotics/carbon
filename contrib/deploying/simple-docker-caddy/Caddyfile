@@ -51,10 +51,10 @@
 # generate a bcrypt hash with `docker run --rm caddy:2-alpine caddy hash-password`,
 # paste it below, and uncomment this block. Prefer also restricting by source IP.
 #
-# {$STUDIO_HOST} {
-# 	import common
-# 	basic_auth {
-# 		admin <PASTE_BCRYPT_HASH_HERE>
-# 	}
-# 	reverse_proxy studio:3000
-# }
+{$STUDIO_HOST} {
+	import common
+	basic_auth {
+		admin <PASTE_BCRYPT_HASH_HERE>
+	}
+	reverse_proxy studio:3000
+}

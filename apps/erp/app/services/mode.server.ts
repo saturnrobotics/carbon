@@ -1,4 +1,4 @@
-import { DOMAIN, getCookieDomain } from "@carbon/auth";
+import { DOMAIN, shouldUseSecureCookie } from "@carbon/auth";
 import type { Mode } from "@carbon/utils";
 import * as cookie from "cookie";
 
@@ -14,12 +14,10 @@ export function getMode(request: Request): Mode | null {
 }
 
 export function setMode(mode: Mode | "system") {
-  const cookieDomain = getCookieDomain(DOMAIN);
   const cookieOptions: cookie.SerializeOptions = {
     path: "/",
     sameSite: "lax",
-    secure: !!cookieDomain,
-    domain: cookieDomain,
+    secure: shouldUseSecureCookie(DOMAIN),
     maxAge: mode === "system" ? -1 : 31536000
   };
 

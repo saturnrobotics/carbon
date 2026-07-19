@@ -42,7 +42,9 @@ concurrency:
 jobs:
   deploy:
     name: Deploy ${{ inputs.environment }}
-    runs-on: [self-hosted, linux, x64, "${{ inputs.runner-label }}"]
+    # The dedicated environment label supplies isolation. Do not constrain the
+    # runner to x64: the Saturn stack supports native Linux x64 and ARM64 hosts.
+    runs-on: [self-hosted, linux, "${{ inputs.runner-label }}"]
     environment:
       name: ${{ inputs.environment }}
     timeout-minutes: 120
@@ -84,8 +86,15 @@ jobs:
           test "$(stat -c '%a' "$CONFIG_FILE")" = "600"
           docker info >/dev/null
           test "$(docker info --format '{{.Swarm.LocalNodeState}}')" = "active"
+          case "$(docker info --format '{{.Architecture}}')" in
+            x86_64|amd64|aarch64|arm64) ;;
+            *) echo "Unsupported Docker architecture" >&2; exit 1 ;;
+          esac
           install -d "$RELEASE_ROOT"
           mountpoint -q "$BACKUP_ROOT"
+
+          contrib/deploying/simple-docker-caddy/scripts/validate-saturn-config.sh \
+            "$DEPLOY_ENVIRONMENT" "$CONFIG_FILE"
 
           stack_name="$(sed -n 's/^STACK_NAME=//p' "$CONFIG_FILE")"
           test "$stack_name" = "$EXPECTED_STACK"

@@ -11,7 +11,7 @@ import {
   SESSION_SECRET
 } from "../config/env";
 import type { AuthSession, Result } from "../types";
-import { getCookieDomain } from "../utils/cookie";
+import { shouldUseSecureCookie } from "../utils/cookie";
 import { getCurrentPath, isGet, makeRedirectToFromHere } from "../utils/http";
 import { path } from "../utils/path";
 import { refreshAccessToken, verifyAuthSession } from "./auth.server";
@@ -35,7 +35,7 @@ async function assertAuthSession(
 
 export const isTestEdition = CarbonEdition === Edition.Test;
 
-const cookieDomain = isTestEdition ? undefined : getCookieDomain(DOMAIN);
+const secureCookie = !isTestEdition && shouldUseSecureCookie(DOMAIN);
 
 const sessionStorage = createCookieSessionStorage({
   cookie: {
@@ -44,8 +44,7 @@ const sessionStorage = createCookieSessionStorage({
     path: "/",
     sameSite: isTestEdition ? "none" : "lax",
     secrets: [SESSION_SECRET!],
-    secure: !!cookieDomain,
-    domain: cookieDomain
+    secure: secureCookie
   }
 });
 
