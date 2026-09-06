@@ -170,6 +170,10 @@ access runtime secrets and must be trusted.
 
 A daily disk snapshot schedule retains 14 days; daily snapshots of the running
 stack are **crash-consistent**, not coordinated database/storage checkpoints.
+The optional [managed cold backups](backups/README.md) add 90 days of daily
+recovery points, monthly points for one year, external attachment bucket coverage,
+and failure/overdue monitoring. Configure ignored `.local/backups.json` once;
+subsequent `make deploy` runs maintain that setup independently of app releases.
 Pre-deployment snapshots are retained until you deliberately remove them. Neither
 images nor old source releases are pruned automatically. Monitor disk space,
 certificate renewals, snapshots and costs. The VM and data disk have deletion

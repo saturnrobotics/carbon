@@ -347,8 +347,16 @@ def main():
     parser.add_argument("--apply", action="store_true", help="create/update GCP resources and deploy the committed source")
     args = parser.parse_args()
     config = validate(private_json(args.config), private_json(args.secrets))
+    backup_path = args.config.with_name("backups.json")
+    backup_settings = None
+    if backup_path.exists():
+        from backups.setup import configuration, Provisioner
+        backup_settings = private_json(backup_path)
+        backup_config = configuration(config, backup_settings)
     if args.apply:
         deploy(config)
+        if backup_settings is not None:
+            Provisioner(backup_config, backup_path.resolve().parent).provision(backup_settings.get("alert_email", ""))
     else:
         print("Configuration valid. No cloud requests or changes made.")
         print("Apply creates a private VM, NAT, retained data disk and snapshot schedule; sets three DNS-only Tailscale A records; builds, snapshots, migrates and verifies the full stack.")

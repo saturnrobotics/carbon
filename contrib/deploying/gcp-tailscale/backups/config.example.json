@@ -1,0 +1,7 @@
+{
+  "location": "us-central1",
+  "source_buckets": ["example-attachments"],
+  "daily_days": 90,
+  "monthly_days": 366,
+  "alert_email": ""
+}
