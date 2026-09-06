@@ -15292,6 +15292,9 @@ msgstr "Kaynak"
 msgid "Source Analysis"
 msgstr "Kaynak Analizi"
 
+msgid "Source code"
+msgstr ""
+
 msgid "Source Company"
 msgstr "Kaynak Şirketi"
 

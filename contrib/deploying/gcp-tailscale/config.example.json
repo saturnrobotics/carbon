@@ -1,0 +1,16 @@
+{
+  "PROJECT_ID": "your-gcp-project",
+  "REGION": "us-east1",
+  "ZONE": "us-east1-b",
+  "VM_NAME": "carbon",
+  "MACHINE_TYPE": "e2-standard-4",
+  "DATA_DISK_GB": 200,
+  "DNS_ZONE_NAME": "example.com",
+  "ERP_HOST": "erp.hq.example.com",
+  "MES_HOST": "mes.hq.example.com",
+  "SUPABASE_HOST": "api.hq.example.com",
+  "AUTH_ALLOWED_GOOGLE_DOMAIN": "example.com",
+  "ACME_EMAIL": "admin@example.com",
+  "TAILSCALE_HOSTNAME": "carbon",
+  "SOURCE_REPO_URL": "https://github.com/your-organization/carbon"
+}

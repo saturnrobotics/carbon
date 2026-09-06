@@ -1,5 +1,10 @@
 import crypto from "node:crypto";
-import { assertIsPost, error, RATE_LIMIT } from "@carbon/auth";
+import {
+  assertIsPost,
+  error,
+  isAuthProviderEnabled,
+  RATE_LIMIT
+} from "@carbon/auth";
 import {
   createEmailAuthAccount,
   signInWithEmail
@@ -50,6 +55,10 @@ const verifyValidator = z.object({
 });
 
 export async function loader({ request }: LoaderFunctionArgs) {
+  if (!isAuthProviderEnabled("email")) {
+    throw redirect(path.to.login);
+  }
+
   const authSession = await getAuthSession(request);
   if (authSession) {
     throw redirect(path.to.authenticatedRoot);
@@ -75,6 +84,10 @@ export async function action({ request }: ActionFunctionArgs) {
       error(null, "Rate limit exceeded"),
       await flash(request, error(null, "Rate limit exceeded"))
     );
+  }
+
+  if (!isAuthProviderEnabled("email")) {
+    return data(error(null, "Email sign-in is disabled"), { status: 403 });
   }
 
   const validation = await validator(verifyValidator).validate(

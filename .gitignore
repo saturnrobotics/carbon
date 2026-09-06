@@ -45,6 +45,17 @@ packages/database/supabase/seed.sql
 
 .env*.local
 
+# Private self-host inputs, rendered configuration, credentials, state, and backups.
+# Tracked deployment templates must contain only generic examples.
+/contrib/deploying/gcp-tailscale/.local/
+/contrib/deploying/gcp-tailscale/**/__pycache__/
+/contrib/deploying/gcp-tailscale/**/*.py[cod]
+/contrib/deploying/gcp-tailscale/.terraform/
+/contrib/deploying/gcp-tailscale/*.tfstate*
+/contrib/deploying/gcp-tailscale/*.tfplan
+/contrib/deploying/gcp-tailscale/*.tfvars
+/contrib/deploying/gcp-tailscale/*.tfvars.json
+
 # Rust
 **/target/
 **/*.rs.bk

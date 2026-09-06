@@ -15292,6 +15292,9 @@ msgstr "Quelle"
 msgid "Source Analysis"
 msgstr "Quellenanalyse"
 
+msgid "Source code"
+msgstr ""
+
 msgid "Source Company"
 msgstr "Quellunternehmen"
 

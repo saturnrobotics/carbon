@@ -1338,6 +1338,9 @@ msgstr "Размер"
 msgid "Source"
 msgstr "Источник"
 
+msgid "Source code"
+msgstr ""
+
 msgid "Spare Parts"
 msgstr "Запасные части"
 

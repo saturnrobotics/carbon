@@ -8,7 +8,8 @@ import {
   error,
   isAuthProviderEnabled,
   magicLinkValidator,
-  RATE_LIMIT
+  RATE_LIMIT,
+  SOURCE_CODE_URL
 } from "@carbon/auth";
 import {
   logAuthEvent,
@@ -71,6 +72,7 @@ export const meta: MetaFunction = () => {
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const authSession = await getAuthSession(request);
+  const hasEmailAuth = isAuthProviderEnabled("email");
   const hasOutlookAuth = isAuthProviderEnabled("azure");
   const hasGoogleAuth = isAuthProviderEnabled("google");
   const hasPasskeyAuth = isAuthProviderEnabled("passkey");
@@ -82,12 +84,19 @@ export async function loader({ request }: LoaderFunctionArgs) {
     }
     const cookieHeaders = await clearAuthCookies(request);
     return data(
-      { hasOutlookAuth, hasGoogleAuth, hasPasskeyAuth, hasSsoAuth },
+      {
+        hasEmailAuth,
+        hasOutlookAuth,
+        hasGoogleAuth,
+        hasPasskeyAuth,
+        hasSsoAuth
+      },
       { headers: cookieHeaders }
     );
   }
 
   return {
+    hasEmailAuth,
     hasOutlookAuth,
     hasGoogleAuth,
     hasPasskeyAuth,
@@ -111,6 +120,10 @@ export async function action({ request }: ActionFunctionArgs) {
       error(null, "Rate limit exceeded"),
       await flash(request, error(null, "Rate limit exceeded"))
     );
+  }
+
+  if (!isAuthProviderEnabled("email")) {
+    return data(error(null, "Email sign-in is disabled"), { status: 403 });
   }
 
   const validation = await validator(magicLinkValidator).validate(
@@ -275,8 +288,13 @@ export async function action({ request }: ActionFunctionArgs) {
 
 export default function LoginRoute() {
   const { t } = useLingui();
-  const { hasOutlookAuth, hasGoogleAuth, hasPasskeyAuth, hasSsoAuth } =
-    useLoaderData<typeof loader>();
+  const {
+    hasEmailAuth,
+    hasOutlookAuth,
+    hasGoogleAuth,
+    hasPasskeyAuth,
+    hasSsoAuth
+  } = useLoaderData<typeof loader>();
 
   const [searchParams] = useSearchParams();
   const redirectTo = searchParams.get("redirectTo") ?? undefined;
@@ -632,45 +650,49 @@ export default function LoginRoute() {
                 </Button>
               )}
 
-              {(hasGoogleAuth || hasOutlookAuth || hasPasskeyAuth) && (
-                <div className="py-3 w-full">
-                  <Separator />
-                </div>
-              )}
+              {(hasEmailAuth || hasSsoAuth) && (
+                <>
+                  {(hasGoogleAuth || hasOutlookAuth || hasPasskeyAuth) && (
+                    <div className="py-3 w-full">
+                      <Separator />
+                    </div>
+                  )}
 
-              <Input
-                name="email"
-                label=""
-                placeholder={t`Email Address`}
-                autoComplete={hasPasskeyAuth ? "email webauthn" : "email"}
-              />
-
-              <Submit
-                isDisabled={
-                  fetcher.state !== "idle" ||
-                  ssoLoading ||
-                  (!!CLOUDFLARE_TURNSTILE_SITE_KEY && !turnstileToken)
-                }
-                isLoading={fetcher.state === "submitting" || ssoLoading}
-                size="lg"
-                className="w-full"
-                withBlocker={false}
-                variant="secondary"
-              >
-                <Trans>Continue</Trans>
-              </Submit>
-              {!!CLOUDFLARE_TURNSTILE_SITE_KEY && (
-                <div className="w-full flex justify-center">
-                  <Turnstile
-                    siteKey={CLOUDFLARE_TURNSTILE_SITE_KEY}
-                    onSuccess={(token) => setTurnstileToken(token)}
-                    onError={() => setTurnstileToken("")}
-                    onExpire={() => setTurnstileToken("")}
-                    options={{
-                      theme: theme === "dark" ? "dark" : "light"
-                    }}
+                  <Input
+                    name="email"
+                    label=""
+                    placeholder={t`Email Address`}
+                    autoComplete={hasPasskeyAuth ? "email webauthn" : "email"}
                   />
-                </div>
+
+                  <Submit
+                    isDisabled={
+                      fetcher.state !== "idle" ||
+                      ssoLoading ||
+                      (!!CLOUDFLARE_TURNSTILE_SITE_KEY && !turnstileToken)
+                    }
+                    isLoading={fetcher.state === "submitting" || ssoLoading}
+                    size="lg"
+                    className="w-full"
+                    withBlocker={false}
+                    variant="secondary"
+                  >
+                    <Trans>Continue</Trans>
+                  </Submit>
+                  {!!CLOUDFLARE_TURNSTILE_SITE_KEY && (
+                    <div className="w-full flex justify-center">
+                      <Turnstile
+                        siteKey={CLOUDFLARE_TURNSTILE_SITE_KEY}
+                        onSuccess={(token) => setTurnstileToken(token)}
+                        onError={() => setTurnstileToken("")}
+                        onExpire={() => setTurnstileToken("")}
+                        options={{
+                          theme: theme === "dark" ? "dark" : "light"
+                        }}
+                      />
+                    </div>
+                  )}
+                </>
               )}
             </VStack>
           </ValidatedForm>
@@ -685,6 +707,16 @@ export default function LoginRoute() {
               <Trans>Login or create a new account</Trans>
             </p>
           )}
+        {SOURCE_CODE_URL && (
+          <a
+            href={SOURCE_CODE_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="underline"
+          >
+            <Trans>Source code</Trans>
+          </a>
+        )}
         {CONTROLLED_ENVIRONMENT && <ItarLoginDisclaimer />}
         {CarbonEdition !== Edition.Community && (
           <p>

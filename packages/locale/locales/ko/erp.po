@@ -15292,6 +15292,9 @@ msgstr "소스"
 msgid "Source Analysis"
 msgstr "소스 분석"
 
+msgid "Source code"
+msgstr ""
+
 msgid "Source Company"
 msgstr "소스 회사"
 
