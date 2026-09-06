@@ -1338,6 +1338,9 @@ msgstr "Boyut"
 msgid "Source"
 msgstr "Kaynak"
 
+msgid "Source code"
+msgstr ""
+
 msgid "Spare Parts"
 msgstr "Yedek Parçalar"
 

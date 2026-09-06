@@ -1338,6 +1338,9 @@ msgstr "大小"
 msgid "Source"
 msgstr "来源"
 
+msgid "Source code"
+msgstr ""
+
 msgid "Spare Parts"
 msgstr "备件"
 

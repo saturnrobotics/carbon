@@ -1338,6 +1338,9 @@ msgstr "आकार"
 msgid "Source"
 msgstr "स्रोत"
 
+msgid "Source code"
+msgstr ""
+
 msgid "Spare Parts"
 msgstr "स्पेयर पार्ट्स"
 

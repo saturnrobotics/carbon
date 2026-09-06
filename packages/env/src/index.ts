@@ -19,6 +19,7 @@ declare global {
       ONSHAPE_CLIENT_ID: string;
       POSTHOG_API_HOST: string;
       POSTHOG_PROJECT_PUBLIC_KEY: string;
+      SOURCE_CODE_URL: string;
       SUPABASE_URL: string;
       SUPABASE_ANON_KEY: string;
       VERCEL_URL: string;
@@ -58,6 +59,7 @@ declare global {
       SESSION_SECRET: string;
       SESSION_KEY: string;
       SESSION_ERROR_KEY: string;
+      SOURCE_CODE_URL?: string;
       SLACK_CLIENT_ID: string;
       SLACK_CLIENT_SECRET: string;
       SLACK_OAUTH_REDIRECT_URL: string;
@@ -475,6 +477,24 @@ export const LOG_LEVEL = getEnv("LOG_LEVEL", {
   isSecret: false
 });
 
+// Optional public link to the corresponding source for this deployed revision.
+export const SOURCE_CODE_URL = (() => {
+  const value =
+    getEnv("SOURCE_CODE_URL", { isRequired: false, isSecret: false })?.trim() ??
+    "";
+  if (!value) return "";
+
+  try {
+    const url = new URL(value);
+    if (url.protocol === "https:" && !url.username && !url.password) {
+      return url.href;
+    }
+  } catch {
+    // Report the variable name without echoing configuration into logs.
+  }
+  throw new Error("SOURCE_CODE_URL must be an HTTPS URL without credentials");
+})();
+
 export const RATE_LIMIT = parseInt(
   getEnv("RATE_LIMIT", { isRequired: false, isSecret: false }) || "5",
   10
@@ -538,6 +558,7 @@ export function getBrowserEnv() {
     POSTHOG_API_HOST,
     POSTHOG_PROJECT_PUBLIC_KEY,
     QUICKBOOKS_CLIENT_ID,
+    SOURCE_CODE_URL,
     SUPABASE_ANON_KEY,
     SUPABASE_URL,
     VERCEL_ENV,

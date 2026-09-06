@@ -97,6 +97,12 @@ plus webhook/redirect/state secrets), `EXCHANGE_RATES_API_KEY`,
 `CarbonEdition`), `CONTROLLED_ENVIRONMENT` (ITAR flag), `DEFAULT_LANGUAGE`
 (default `en`), `GTM_URL`, `GTM_EVENTS_API_SECRET_KEY`.
 
+**Public source offer** — `SOURCE_CODE_URL` (optional, public HTTPS URL without
+credentials). When set, ERP/MES login pages display a source link. Both root
+loaders explicitly forward it from `getBrowserEnv()`. The private GCP deployment
+sets it to the public fork's exact deployed commit; do not put credentials or
+private deployment configuration in this URL.
+
 **Deployment** — `VERCEL_URL` (required at module load; value unused off-Vercel,
 set to `production` in prod compose), `VERCEL_ENV`, `NODE_ENV`. `ERP_URL` /
 `MES_URL` drive `getAppUrl()` / `getMESUrl()`.

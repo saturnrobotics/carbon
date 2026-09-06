@@ -4,6 +4,7 @@ import {
   error,
   getAppUrl,
   getPermissionCacheKey,
+  isAuthProviderEnabled,
   RESEND_DOMAIN,
   success as successFlash
 } from "@carbon/auth";
@@ -145,6 +146,16 @@ export async function action({ request, params }: ActionFunctionArgs) {
         ["Set-Cookie", sessionCookie],
         ["Set-Cookie", companyIdCookie]
       ]
+    });
+  } else if (!isAuthProviderEnabled("email")) {
+    // Membership is accepted above; authenticate through an enabled provider
+    // instead of generating an email session that this deployment forbids.
+    const search = new URLSearchParams({
+      email: accept.data.email,
+      redirectTo: path.to.api.link(accept.data.companyId)
+    });
+    throw redirect(`${path.to.login}?${search}`, {
+      headers: [["Set-Cookie", setCompanyId(accept.data.companyId)]]
     });
   } else {
     const magicLink = await serviceRole.auth.admin.generateLink({

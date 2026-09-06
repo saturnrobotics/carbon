@@ -6,7 +6,8 @@ import {
   error,
   isAuthProviderEnabled,
   magicLinkValidator,
-  RATE_LIMIT
+  RATE_LIMIT,
+  SOURCE_CODE_URL
 } from "@carbon/auth";
 import {
   logAuthEvent,
@@ -63,6 +64,7 @@ export const meta: MetaFunction = () => {
 };
 
 export async function loader({ request }: LoaderFunctionArgs) {
+  const hasEmailAuth = isAuthProviderEnabled("email");
   const hasOutlookAuth = isAuthProviderEnabled("azure");
   const hasGoogleAuth = isAuthProviderEnabled("google");
   const hasPasskeyAuth = isAuthProviderEnabled("passkey");
@@ -75,12 +77,24 @@ export async function loader({ request }: LoaderFunctionArgs) {
     }
     const cookieHeaders = await clearAuthCookies(request);
     return data(
-      { hasOutlookAuth, hasGoogleAuth, hasPasskeyAuth, hasSsoAuth },
+      {
+        hasEmailAuth,
+        hasOutlookAuth,
+        hasGoogleAuth,
+        hasPasskeyAuth,
+        hasSsoAuth
+      },
       { headers: cookieHeaders }
     );
   }
 
-  return { hasOutlookAuth, hasGoogleAuth, hasPasskeyAuth, hasSsoAuth };
+  return {
+    hasEmailAuth,
+    hasOutlookAuth,
+    hasGoogleAuth,
+    hasPasskeyAuth,
+    hasSsoAuth
+  };
 }
 
 export async function action({ request }: ActionFunctionArgs) {
@@ -98,6 +112,10 @@ export async function action({ request }: ActionFunctionArgs) {
       error(null, "Rate limit exceeded"),
       await flash(request, error(null, "Rate limit exceeded"))
     );
+  }
+
+  if (!isAuthProviderEnabled("email")) {
+    return data(error(null, "Email sign-in is disabled"), { status: 403 });
   }
 
   const validation = await validator(magicLinkValidator).validate(
@@ -184,8 +202,13 @@ export async function action({ request }: ActionFunctionArgs) {
 
 export default function LoginRoute() {
   const { t } = useLingui();
-  const { hasOutlookAuth, hasGoogleAuth, hasPasskeyAuth, hasSsoAuth } =
-    useLoaderData<typeof loader>();
+  const {
+    hasEmailAuth,
+    hasOutlookAuth,
+    hasGoogleAuth,
+    hasPasskeyAuth,
+    hasSsoAuth
+  } = useLoaderData<typeof loader>();
 
   const [searchParams] = useSearchParams();
   const redirectTo = searchParams.get("redirectTo") ?? undefined;
@@ -498,34 +521,48 @@ export default function LoginRoute() {
                 </Button>
               )}
 
-              {(hasGoogleAuth || hasOutlookAuth || hasPasskeyAuth) && (
-                <div className="py-3 w-full">
-                  <Separator />
-                </div>
+              {(hasEmailAuth || hasSsoAuth) && (
+                <>
+                  {(hasGoogleAuth || hasOutlookAuth || hasPasskeyAuth) && (
+                    <div className="py-3 w-full">
+                      <Separator />
+                    </div>
+                  )}
+
+                  <Input
+                    name="email"
+                    label=""
+                    placeholder={t`Email Address`}
+                    autoComplete={hasPasskeyAuth ? "email webauthn" : "email"}
+                  />
+
+                  <Submit
+                    isDisabled={fetcher.state !== "idle" || ssoLoading}
+                    isLoading={fetcher.state === "submitting" || ssoLoading}
+                    size="lg"
+                    className="w-full"
+                    withBlocker={false}
+                    variant="secondary"
+                  >
+                    <Trans>Continue</Trans>
+                  </Submit>
+                </>
               )}
-
-              <Input
-                name="email"
-                label=""
-                placeholder={t`Email Address`}
-                autoComplete={hasPasskeyAuth ? "email webauthn" : "email"}
-              />
-
-              <Submit
-                isDisabled={fetcher.state !== "idle" || ssoLoading}
-                isLoading={fetcher.state === "submitting" || ssoLoading}
-                size="lg"
-                className="w-full"
-                withBlocker={false}
-                variant="secondary"
-              >
-                <Trans>Continue</Trans>
-              </Submit>
             </VStack>
           </ValidatedForm>
         )}
       </div>
       <div className="flex flex-col gap-4 text-sm text-center text-balance text-muted-foreground w-[380px]">
+        {SOURCE_CODE_URL && (
+          <a
+            href={SOURCE_CODE_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="underline"
+          >
+            <Trans>Source code</Trans>
+          </a>
+        )}
         {CONTROLLED_ENVIRONMENT && <ItarLoginDisclaimer />}
         {CarbonEdition !== Edition.Community && (
           <p>

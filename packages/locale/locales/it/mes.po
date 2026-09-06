@@ -1338,6 +1338,9 @@ msgstr "Dimensione"
 msgid "Source"
 msgstr "Origine"
 
+msgid "Source code"
+msgstr ""
+
 msgid "Spare Parts"
 msgstr "Ricambi"
 

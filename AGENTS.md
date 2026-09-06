@@ -2,6 +2,13 @@
 
 Carbon is a manufacturing ERP/MES/QMS. It contains apps for ERP, MES, academy, and starter.
 
+## Public Fork Privacy
+
+- Treat every tracked file and published change as public. Never add private company details to code, comments, documentation, fixtures, screenshots, prompts, plans, run logs, commit messages, issues, or PRs.
+- Use synthetic data and generic examples such as `example.com`. Keep real company/customer/supplier data, internal domains, email addresses, project IDs, tailnet details, credentials, backups, and runtime deployment configuration outside tracked files. Use `contrib/deploying/gcp-tailscale/.local/` for local deployment inputs and artifacts; use the deployment's secret store for credentials.
+- Before staging or publishing, review the actual diff and artifacts for private details. Never force-add ignored private files. Git ignore rules do not protect already tracked files or redact Git history; stop publication and report any exposure without repeating the sensitive value.
+- Preserve upstream copyright, `LICENSE`, `NOTICE` files where present, and enterprise/third-party license boundaries. Keep fork changes public and provide the source for the deployed revision. Follow [public-fork maintenance](docs/public-fork.md) when updating upstream or deploying.
+
 ## Always
 
 - Check the Task Router below before research or coding; a single task may match multiple rows — read all relevant guides.
