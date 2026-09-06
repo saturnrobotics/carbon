@@ -85,6 +85,10 @@ mkdir -p /etc/systemd/system/tailscaled.service.d
 cat > /etc/systemd/system/tailscaled.service.d/carbon.conf <<'EOF'
 [Unit]
 RequiresMountsFor=/var/lib/carbon
+[Service]
+# Bootstrap owns this directory and its persistent-disk symlink. systemd's
+# packaged StateDirectory=tailscale refuses that symlink with status 238.
+StateDirectory=
 EOF
 systemctl daemon-reload
 systemctl enable --now tailscaled.service
