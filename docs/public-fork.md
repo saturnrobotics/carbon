@@ -23,7 +23,7 @@ inputs. Ignore rules cannot remove a file already tracked or erase previous comm
 If private content is found, stop publication and address the exposure privately;
 revoke any exposed credentials and coordinate any necessary history cleanup.
 
-## Upstream updates
+## Upstream updates and local deployment
 
 Keep `origin` pointed at your public fork. Configure the upstream repository once:
 
@@ -32,41 +32,52 @@ git remote add upstream https://github.com/crbnos/carbon.git
 ```
 
 If `upstream` already exists, inspect it with `git remote get-url upstream` before
-changing it. Keep custom features in focused commits and integrate them through the
-fork's `main` branch. Do not reset the fork to upstream or force-push away changes.
-
-For each update, start with a clean checkout of your fork's latest `main`:
+changing it. `saturn/main` is the shared deployment branch. Start feature branches
+there, merge completed and verified features back into it, then merge the latest
+`upstream/main` before deployment. Prefer merges to rewriting the history of a
+shared branch. Do not reset the fork to upstream or force-push away changes.
 
 ```bash
-git switch main
-git pull --ff-only origin main
-bash scripts/sync-upstream.sh
+git switch saturn/main
+bash contrib/deploying/gcp-tailscale/fork.sh feature feature/example
+# Implement, review, verify, and commit the feature.
+bash contrib/deploying/gcp-tailscale/fork.sh finish feature/example
+bash contrib/deploying/gcp-tailscale/fork.sh sync
+# Review the merged result and run the relevant checks.
+make deploy
 ```
 
-The helper fetches `upstream/main`, creates `sync/upstream-<commit>`, and prepares a
-merge with `--no-commit --no-ff`. This deliberately leaves a reviewable pending
-merge even when a fast-forward would otherwise be possible. It does not commit,
-push, deploy, or move `main`. If the upstream revision is already included, it exits
-without creating a branch. See the [Git merge documentation](https://git-scm.com/docs/git-merge).
+The helpers require a clean working tree, preserve normal Git hooks, and stop on
+conflicts. `sync` fetches and merges `upstream/main` directly into `saturn/main`;
+`bash scripts/sync-upstream.sh` is a compatibility entry point for that command.
+There is no unattended merge job. Run `sync` regularly and before deployments.
+The full [branch workflow](../contrib/deploying/gcp-tailscale/WORKFLOW.md) includes
+collaboration, conflict recovery, and step-by-step commands.
 
-Review both upstream release notes and the merge, especially authentication,
-dependencies, migrations, licensing, and the deployment configuration. Resolve
-conflicts while retaining the fork's privacy and access restrictions. For generated
-database types, resolve the schema first, apply pending migrations to a disposable
-development database, and run `pnpm run generate:types`; never hand-edit generated
-types or reset a database to resolve a source conflict.
+`make deploy` runs from the laptop with a clean checkout of `saturn/main`. It
+checks for unmerged upstream commits, publishes the reviewed deployment revision
+to `origin/saturn/main` without force-pushing, and verifies anonymous source access.
+It then uploads a Git archive of the local commit to the deployment host for
+building. Publication is part of this command; inspect committed changes for
+private content before running it. Private runtime configuration is transferred
+separately and must never be part of the Git archive.
 
-Run the checks required by the touched packages' `AGENTS.md` files. At minimum,
-verify the deployment scripts and the Google/domain and VPN access restrictions
-when upstream changes touch them. Commit the reviewed merge, publish the review
-branch to the fork, and merge it through your normal PR process after validation.
-Take a database backup and inspect forward migrations before deploying the resulting
-revision. Keep a private record of the deployed commit and backup. An application
-rollback may also need a compatible database restore.
+Keep deployment-specific changes under `contrib/deploying/gcp-tailscale/` and
+prefer focused additions over edits to upstream root files such as `README.md`.
+The root `Makefile` is a small entry point; put deployment behavior in the
+contributed scripts to reduce recurring upstream merge conflicts.
 
-To stop a pending merge, run `git merge --abort`, then `git switch main`. The helper
-keeps the review branch available; inspect it before deciding whether to remove it.
-It never selects a conflict resolution on your behalf.
+Review upstream release notes and changes to authentication, dependencies,
+migrations, licensing, and deployment configuration. Resolve conflicts while
+retaining privacy and access restrictions. Resolve schema conflicts before
+regenerating database types; never hand-edit generated types or reset a database
+to resolve a source conflict. Follow the relevant package's migration workflow.
+
+Run the checks required by the touched packages' `AGENTS.md` files. Verify the
+Google/domain and VPN restrictions whenever upstream changes touch them. Review
+forward migrations and backups before deployment, and keep a private record of
+the deployed commit and backup. Application rollback may also require a
+compatible database restore.
 
 ## Source availability and licenses
 

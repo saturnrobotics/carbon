@@ -12,11 +12,19 @@ private too. Cloudflare DNS-only A records point to that Tailscale address;
 DNS-01 validation supplies publicly trusted certificates without opening port 80.
 Existing services and records elsewhere in the DNS zone are preserved.
 
-From the repository root, one command after the setup below:
+From a clean, committed `saturn/main` checkout on your laptop, one command after
+the setup below:
 
 ```bash
 make deploy
 ```
+
+The command publishes the exact `saturn/main` commit to the public fork, uploads
+its source directly from your laptop, and builds on the GCP server. It checks that
+the latest `upstream/main` has already been merged. It refuses other branches,
+uncommitted changes, and non-fast-forward pushes. See [the branch workflow](WORKFLOW.md)
+for feature branches and upstream updates. The existing root Makefile is only
+the entry point; keep deployment changes and documentation in this directory.
 
 `make deploy-check` validates configuration offline and makes no cloud requests.
 `make deploy` calls the deployment script with `--apply` and creates billed GCP resources. Defaults are
@@ -112,8 +120,8 @@ it preserves any existing configuration:
    accepted in both `email` and Google's `hd` claim. `SOURCE_REPO_URL` is the public
    GitHub fork. `ACME_EMAIL` is your certificate-expiry contact. Do not commit even
    the non-secret deployment configuration: it includes private company details.
-6. Review, commit and publish the code to your public fork. Deployment requires a
-   clean checkout and verifies that the exact commit is publicly accessible.
+6. Review and commit the code on `saturn/main`. Deployment requires a
+   clean checkout, publishes that branch automatically, and verifies that the exact commit is publicly accessible.
    Only `git archive HEAD` is uploaded and built; ignored local files never enter
    the source archive. Separate private configuration travels through SSH, never
    instance metadata, build arguments, images, or GitHub Actions logs.
@@ -131,10 +139,11 @@ and [the authentication implementation](auth/README.md).
 
 ## Updates, backup and recovery
 
-Use [the upstream integration helper](../../../scripts/sync-upstream.sh) to prepare
-a review branch. Resolve conflicts, run the relevant verification, review privacy
-and licensing, commit and push the changes, then run `make deploy`. Deployment
-never fetches or merges upstream automatically.
+Use [the branch workflow](WORKFLOW.md) to create features from `saturn/main`, merge
+finished features back, and merge the latest `upstream/main`. Resolve conflicts,
+run the relevant verification, review privacy and licensing, then run `make deploy`.
+Deployment fetches upstream to check freshness and publishes `saturn/main`; it
+does not merge unreviewed upstream changes during a rollout.
 
 The script builds the candidate release before stopping the existing stack. It
 then stops all Carbon containers and Docker, takes a **consistent pre-deployment

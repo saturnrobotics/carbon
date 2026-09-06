@@ -18,6 +18,7 @@ import urllib.request
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[2]
+DEPLOY_BRANCH = "saturn/main"
 SECRET_KEYS = {"CLOUDFLARE_API_TOKEN", "TAILSCALE_AUTH_KEY", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "RESEND_API_KEY"}
 CONFIG_KEYS = {"PROJECT_ID", "REGION", "ZONE", "VM_NAME", "MACHINE_TYPE", "DATA_DISK_GB", "DNS_ZONE_NAME", "ERP_HOST", "MES_HOST", "SUPABASE_HOST", "AUTH_ALLOWED_GOOGLE_DOMAIN", "ACME_EMAIL", "TAILSCALE_HOSTNAME", "SOURCE_REPO_URL"}
 
@@ -207,21 +208,59 @@ class Cloudflare:
 
 
 def revision():
+    branch = run(["git", "-C", str(REPO), "branch", "--show-current"], capture=True).strip()
+    if branch != DEPLOY_BRANCH:
+        raise ValueError(f"Deployment uses {DEPLOY_BRANCH}; run git switch {DEPLOY_BRANCH} first")
+    for operation in ("MERGE_HEAD", "CHERRY_PICK_HEAD", "REVERT_HEAD", "rebase-merge", "rebase-apply"):
+        path = run(["git", "-C", str(REPO), "rev-parse", "--git-path", operation], capture=True).strip()
+        if (REPO / path).exists():
+            raise ValueError("Finish or abort the current Git operation before deploying")
     if run(["git", "-C", str(REPO), "status", "--porcelain"], capture=True).strip():
         raise ValueError("Review and commit the source first; deployment uploads only a clean committed checkout")
-    return run(["git", "-C", str(REPO), "rev-parse", "HEAD"], capture=True).strip()
+    return run(["git", "-C", str(REPO), "rev-parse", "refs/heads/" + DEPLOY_BRANCH], capture=True).strip()
+
+
+def publish_source(config, rev):
+    slug = config["SOURCE_REPO_URL"].removeprefix("https://github.com/")
+    allowed = {f"git@github.com:{slug}", f"https://github.com/{slug}", f"ssh://git@github.com/{slug}"}
+    destinations = run(["git", "-C", str(REPO), "remote", "get-url", "--push", "--all", "origin"], capture=True).splitlines()
+    if len(destinations) != 1 or destinations[0].removesuffix(".git") not in allowed:
+        raise ValueError("origin must have one push URL matching SOURCE_REPO_URL; inspect git remote -v")
+    print("Checking that the latest upstream/main is included...", flush=True)
+    run(["git", "-C", str(REPO), "fetch", "--no-tags", "upstream", "refs/heads/main:refs/remotes/upstream/main"])
+    contains = subprocess.run(["git", "-C", str(REPO), "merge-base", "--is-ancestor", "refs/remotes/upstream/main", rev])
+    if contains.returncode != 0:
+        raise ValueError("Merge the latest upstream first: bash contrib/deploying/gcp-tailscale/fork.sh sync; verify and rerun make deploy")
+    print(f"Publishing {DEPLOY_BRANCH} at {rev[:12]}...", flush=True)
+    # Pin the source we upload and publish to the same commit. No force push,
+    # implicit feature-branch publication, local secrets, or GitHub build runner.
+    run(["git", "-C", str(REPO), "push", "--no-follow-tags", "origin", f"{rev}:refs/heads/{DEPLOY_BRANCH}"])
+    print("Verifying public access to the deployed source...", flush=True)
+    for attempt in range(5):
+        try:
+            with urllib.request.urlopen(config["SOURCE_REPO_URL"] + "/tree/" + rev, timeout=30) as response:
+                if response.status != 200:
+                    raise ValueError("GitHub source verification did not return HTTP 200")
+            return
+        except urllib.error.HTTPError as exc:
+            exc.close()
+            if exc.code == 404 and attempt < 4:
+                time.sleep(2)
+                continue
+            raise ValueError(f"GitHub source verification failed (HTTP {exc.code}); confirm SOURCE_REPO_URL is public and contains the pushed commit, then retry") from None
+        except (urllib.error.URLError, TimeoutError):
+            raise ValueError("Could not reach GitHub to verify public source; check your connection and retry") from None
 
 
 def deploy(config):
     rev = revision()
-    # Verify the exact deployed source is publicly obtainable, without credentials.
-    with urllib.request.urlopen(config["SOURCE_REPO_URL"] + "/commit/" + rev + ".patch", timeout=30) as response:
-        if response.status != 200:
-            raise ValueError("Publish the reviewed source commit to the public fork before deployment")
+    publish_source(config, rev)
     config = {**config, "DEPLOY_REVISION": rev, "SOURCE_CODE_URL": config["SOURCE_REPO_URL"] + "/tree/" + rev}
     cf = Cloudflare(config["CLOUDFLARE_API_TOKEN"])
+    print("Checking Cloudflare DNS access...", flush=True)
     cf_zone = cf.zone(config["DNS_ZONE_NAME"])
     cloud = Cloud(config)
+    print("Provisioning the private GCP server...", flush=True)
     cloud.provision()
     for attempt in range(30):
         try:
@@ -291,7 +330,7 @@ def main():
     else:
         print("Configuration valid. No cloud requests or changes made.")
         print("Apply creates a private VM, NAT, retained data disk and snapshot schedule; sets three DNS-only Tailscale A records; builds, snapshots, migrates and verifies the full stack.")
-        print("Run the same command with --apply after reviewing configuration and publishing the source commit.")
+        print("Run make deploy from clean, reviewed saturn/main; it publishes that commit and deploys from this laptop.")
 
 
 if __name__ == "__main__":

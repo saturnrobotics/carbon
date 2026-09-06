@@ -5,7 +5,8 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
-from unittest.mock import patch
+import urllib.error
+from unittest.mock import MagicMock, patch
 
 HERE = Path(__file__).resolve().parent
 spec = importlib.util.spec_from_file_location("deploy", HERE / "deploy.py")
@@ -157,6 +158,83 @@ class DnsTests(unittest.TestCase):
         with patch.object(cf, "call", return_value=[{"type": "A", "content": "100.64.0.1", "proxied": False}]) as api:
             cf.update("zone", "erp.example.com", "100.64.0.1")
             self.assertEqual(api.call_count, 1)
+
+
+class SourceTests(unittest.TestCase):
+    def test_feature_branch_cannot_deploy(self):
+        with patch.object(deploy, "run", return_value="feature/example\n"), patch.object(deploy, "Cloud") as cloud:
+            with self.assertRaisesRegex(ValueError, "git switch saturn/main"):
+                deploy.deploy(fixture())
+            cloud.assert_not_called()
+
+    def test_dirty_integration_branch_cannot_publish(self):
+        with tempfile.TemporaryDirectory() as directory:
+            def git(args, **kwargs):
+                if args[-1] == "--show-current":
+                    return "saturn/main\n"
+                if "--git-path" in args:
+                    return str(Path(directory) / args[-1])
+                return " M file.py\n"
+            with patch.object(deploy, "run", side_effect=git), patch.object(deploy, "publish_source") as publish:
+                with self.assertRaisesRegex(ValueError, "clean committed"):
+                    deploy.deploy(fixture())
+                publish.assert_not_called()
+
+    def source_check(self, *, destination=None, contains=0, http_error=None):
+        config = fixture()
+        slug = config["SOURCE_REPO_URL"].removeprefix("https://github.com/")
+        calls = []
+        def git(args, **kwargs):
+            calls.append(args)
+            if "get-url" in args:
+                return destination if destination is not None else f"git@github.com:{slug}.git\n"
+            return ""
+        response = MagicMock()
+        response.__enter__.return_value.status = 200
+        with patch.object(deploy, "run", side_effect=git), patch.object(deploy.subprocess, "run", return_value=MagicMock(returncode=contains)), patch.object(deploy.urllib.request, "urlopen", return_value=response, side_effect=http_error) as request, patch.object(deploy.time, "sleep"):
+            try:
+                deploy.publish_source(config, "a" * 40)
+            except ValueError as exc:
+                return calls, request, str(exc)
+        return calls, request, None
+
+    def test_publishes_pinned_commit_to_integration_branch_without_force(self):
+        calls, request, error = self.source_check()
+        self.assertIsNone(error)
+        push = next(args for args in calls if "push" in args)
+        self.assertEqual(push[-4:], ["push", "--no-follow-tags", "origin", "a" * 40 + ":refs/heads/saturn/main"])
+        self.assertNotIn("--force", push)
+        self.assertEqual(request.call_args.args[0], fixture()["SOURCE_REPO_URL"] + "/tree/" + "a" * 40)
+        self.assertIsInstance(request.call_args.args[0], str)  # Anonymous, no credential headers.
+
+    def test_wrong_or_multiple_push_destinations_do_not_publish(self):
+        for destination in ("git@github.com:other/private.git\n", "https://user:secret@github.com/test/carbon.git\n", "https://github.com/test/carbon.git\nhttps://github.com/other/carbon.git\n"):
+            with self.subTest(destination=destination):
+                calls, request, error = self.source_check(destination=destination)
+                self.assertIn("origin must", error)
+                self.assertFalse(any("push" in args for args in calls))
+                request.assert_not_called()
+
+    def test_missing_upstream_merge_stops_before_push_or_http(self):
+        calls, request, error = self.source_check(contains=1)
+        self.assertIn("fork.sh sync", error)
+        self.assertFalse(any("push" in args for args in calls))
+        request.assert_not_called()
+
+    def test_source_errors_report_status_without_provider_body(self):
+        for status in (404, 403, 429, 503):
+            with self.subTest(status=status):
+                failure = urllib.error.HTTPError("https://example.com/private", status, "sensitive provider detail", {}, None)
+                _, request, error = self.source_check(http_error=failure)
+                self.assertIn(f"HTTP {status}", error)
+                self.assertNotIn("sensitive", error)
+                self.assertNotIn("example.com/private", error)
+                self.assertEqual(request.call_count, 5 if status == 404 else 1)
+
+    def test_source_connection_error_is_actionable(self):
+        _, _, error = self.source_check(http_error=urllib.error.URLError("private network detail"))
+        self.assertIn("check your connection", error)
+        self.assertNotIn("private network detail", error)
 
 
 if __name__ == "__main__":
