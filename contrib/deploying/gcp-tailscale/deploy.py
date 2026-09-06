@@ -15,6 +15,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+import private_postgres
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[2]
@@ -49,8 +50,9 @@ def private_json(path):
 
 
 def validate(config, secrets):
-    if set(config) - CONFIG_KEYS or set(secrets) - SECRET_KEYS:
+    if set(config) - CONFIG_KEYS - private_postgres.OPTIONAL_KEYS or set(secrets) - SECRET_KEYS:
         raise ValueError("Unknown configuration keys; see config.example.json and secrets.example.json")
+    private_postgres.validate(config)
     for key in CONFIG_KEYS:
         if key not in config:
             raise ValueError(f"Missing {key}")
@@ -129,6 +131,8 @@ class Cloud:
         if not any(nat["name"] == n + "-nat" for nat in nats):
             self.call("compute", "routers", "nats", "create", n + "-nat", "--router", n + "-router", "--region", region, "--nat-all-subnet-ip-ranges", "--auto-allocate-nat-external-ips")
         self.ensure(["firewall-rules"], n + "-iap", ["--network", n + "-vpc", "--direction=INGRESS", "--priority=900", "--action=ALLOW", "--rules=tcp:22", "--source-ranges=35.235.240.0/20", "--target-tags", n])
+        if c.get("POSTGRES_PRIVATE_IP"):
+            self.ensure(["firewall-rules"], n + "-postgres", ["--network", n + "-vpc", "--direction=INGRESS", "--priority=900", "--action=ALLOW", "--rules=tcp:5432", "--source-ranges", ",".join(c["POSTGRES_CLIENT_CIDRS"]), "--target-tags", n])
         self.ensure(["firewall-rules"], n + "-deny-ingress", ["--network", n + "-vpc", "--direction=INGRESS", "--priority=1000", "--action=DENY", "--rules=all", "--source-ranges=0.0.0.0/0", "--target-tags", n])
         self.ensure(["disks"], n + "-data", ["--zone", zone, "--size", str(c["DATA_DISK_GB"]) + "GB", "--type=pd-balanced", "--labels=application=carbon"], ["--zones", zone])
         policies = self.get("compute", "resource-policies", "list", "--regions", region, "--filter", f"name={n}-daily")
@@ -137,10 +141,22 @@ class Cloud:
         disk = self.get("compute", "disks", "describe", n + "-data", "--zone", zone)
         if not any(p.endswith("/" + n + "-daily") for p in disk.get("resourcePolicies", [])):
             self.call("compute", "disks", "add-resource-policies", n + "-data", "--zone", zone, "--resource-policies", n + "-daily")
-        existed = self.ensure(["instances"], n, ["--zone", zone, "--machine-type", c["MACHINE_TYPE"], "--subnet", n + "-subnet", "--no-address", "--no-service-account", "--no-scopes", "--image-family=debian-12", "--image-project=debian-cloud", "--boot-disk-size=50GB", "--disk", f"name={n}-data,device-name=carbon-data,mode=rw,boot=no,auto-delete=no", "--tags", n, "--metadata=enable-oslogin=TRUE,block-project-ssh-keys=TRUE", "--shielded-secure-boot", "--deletion-protection"], ["--zones", zone])
+        private_address = ["--private-network-ip", c["POSTGRES_PRIVATE_IP"]] if c.get("POSTGRES_PRIVATE_IP") else []
+        existed = self.ensure(["instances"], n, ["--zone", zone, "--machine-type", c["MACHINE_TYPE"], "--subnet", n + "-subnet", "--no-address", "--no-service-account", "--no-scopes", "--image-family=debian-12", "--image-project=debian-cloud", "--boot-disk-size=50GB", "--disk", f"name={n}-data,device-name=carbon-data,mode=rw,boot=no,auto-delete=no", "--tags", n, "--metadata=enable-oslogin=TRUE,block-project-ssh-keys=TRUE", "--shielded-secure-boot", "--deletion-protection", *private_address], ["--zones", zone])
         self.check_firewall()
         self.check_vm()
+        if c.get("POSTGRES_PRIVATE_IP"):
+            self.reserve_postgres_address()
         return existed
+
+    def reserve_postgres_address(self):
+        c, n = self.c, self.c["VM_NAME"]
+        self.ensure(["addresses"], n + "-postgres", ["--region", c["REGION"], "--subnet", n + "-subnet", "--addresses", c["POSTGRES_PRIVATE_IP"]], ["--regions", c["REGION"]])
+        address = self.get("compute", "addresses", "describe", n + "-postgres", "--region", c["REGION"])
+        if (address.get("addressType") != "INTERNAL" or address.get("address") != c["POSTGRES_PRIVATE_IP"]
+                or not address.get("subnetwork", "").endswith("/" + n + "-subnet")
+                or any(not user.endswith("/instances/" + n) for user in address.get("users", []))):
+            raise ValueError("Reserved private PostgreSQL address has drifted; review it before deploying")
 
     def check_firewall(self):
         n = self.c["VM_NAME"]
@@ -150,6 +166,8 @@ class Cloud:
             n + "-iap": (900, "allowed", [{"IPProtocol": "tcp", "ports": ["22"]}], ["35.235.240.0/20"]),
             n + "-deny-ingress": (1000, "denied", [{"IPProtocol": "all"}], ["0.0.0.0/0"]),
         }
+        if self.c.get("POSTGRES_PRIVATE_IP"):
+            expected[n + "-postgres"] = (900, "allowed", [{"IPProtocol": "tcp", "ports": ["5432"]}], self.c["POSTGRES_CLIENT_CIDRS"])
         for name, (priority, action, protocol, sources) in expected.items():
             rule = next((r for r in rules if r["name"] == name), {})
             if (rule.get("disabled", False) or rule.get("priority") != priority
@@ -157,7 +175,7 @@ class Cloud:
                     or rule.get("targetTags") != [n] or rule.get("sourceTags")
                     or rule.get("sourceServiceAccounts") or rule.get("targetServiceAccounts")):
                 raise ValueError("Carbon firewall configuration has drifted; review it before deploying")
-        if any(r.get("allowed") and not r.get("disabled", False) and r["name"] != n + "-iap" for r in rules):
+        if any(r.get("allowed") and not r.get("disabled", False) and r["name"] not in expected for r in rules):
             raise ValueError("Unexpected ingress allow rule in the dedicated Carbon network")
 
     def check_vm(self):
@@ -167,6 +185,8 @@ class Cloud:
             raise ValueError("VM must have one network interface and no external IPv4/IPv6 address")
         if not interfaces[0]["network"].endswith("/" + self.c["VM_NAME"] + "-vpc"):
             raise ValueError("Existing VM is not on the dedicated Carbon network")
+        if self.c.get("POSTGRES_PRIVATE_IP") and interfaces[0].get("networkIP") != self.c["POSTGRES_PRIVATE_IP"]:
+            raise ValueError("POSTGRES_PRIVATE_IP must match the existing VM's private network address")
         if not any(d.get("deviceName") == "carbon-data" and not d.get("autoDelete", True)
                    and d.get("source", "").endswith("/" + self.c["VM_NAME"] + "-data") for d in vm.get("disks", [])):
             raise ValueError("VM must have a retained carbon-data disk")

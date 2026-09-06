@@ -19,6 +19,7 @@ import sys
 import time
 
 import yaml
+import private_postgres
 
 
 def write_private(path, content):
@@ -85,6 +86,7 @@ def initialize_secrets(config, directory):
 def render(config, repo, output, state=Path("/var/lib/carbon")):
     """Write concrete Compose JSON, gateway policy and proxy configuration."""
     os.umask(0o077)
+    private_postgres.validate(config)
     repo, output = repo.resolve(), output.resolve()
     names = ("ERP_HOST", "MES_HOST", "SUPABASE_HOST", "AUTH_ALLOWED_GOOGLE_DOMAIN")
     for key in names:
@@ -140,6 +142,7 @@ def render(config, repo, output, state=Path("/var/lib/carbon")):
         service.pop("ports", None)
         service["restart"] = "unless-stopped"
         service["logging"] = {"driver": "json-file", "options": {"max-size": "10m", "max-file": "3"}}
+    private_postgres.configure(config, services["postgres"], output, state)
     directory = state / "secrets"
     initialize_secrets(config, directory)
     for app in ("erp", "mes"):

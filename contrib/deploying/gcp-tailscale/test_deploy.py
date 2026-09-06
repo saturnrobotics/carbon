@@ -27,6 +27,23 @@ class ValidationTests(unittest.TestCase):
     def test_valid_private_configuration(self):
         self.assertEqual(deploy.validate(fixture(), SECRETS)["REGION"], "us-east1")
 
+    def test_optional_private_postgres_configuration(self):
+        config = {**fixture(), "POSTGRES_PRIVATE_IP": "10.73.0.2", "POSTGRES_CLIENT_CIDRS": ["10.81.0.0/26"]}
+        self.assertEqual(deploy.validate(config, SECRETS)["POSTGRES_CLIENT_CIDRS"], ["10.81.0.0/26"])
+        for changes in ({"POSTGRES_PRIVATE_IP": None}, {"POSTGRES_PRIVATE_IP": "100.64.0.1"},
+                        {"POSTGRES_PRIVATE_IP": "127.0.0.1"}, {"POSTGRES_PRIVATE_IP": "203.0.113.1"},
+                        {"POSTGRES_CLIENT_CIDRS": ["10.81.0.0/23"]}, {"POSTGRES_CLIENT_CIDRS": []},
+                        {"POSTGRES_CLIENT_CIDRS": ["0.0.0.0/0"]}, {"POSTGRES_CLIENT_CIDRS": "10.81.0.0/26"},
+                        {"POSTGRES_CLIENT_CIDRS": ["10.81.0.1/26"]}, {"POSTGRES_CLIENT_CIDRS": ["10.81.0.0/26", "10.81.0.1/32"]},
+                        {"POSTGRES_CLIENT_CIDRS": ["198.18.0.0/24"]}, {"POSTGRES_CLIENT_CIDRS": ["::1/128"]}):
+            with self.subTest(changes=changes), self.assertRaises(ValueError):
+                deploy.validate({**config, **changes}, SECRETS)
+        for key in ("POSTGRES_PRIVATE_IP", "POSTGRES_CLIENT_CIDRS"):
+            partial = dict(config)
+            del partial[key]
+            with self.assertRaisesRegex(ValueError, "together"):
+                deploy.validate(partial, SECRETS)
+
     def test_invalid_configuration_fails_closed(self):
         cases = [("REGION", "us-east-1"), ("ZONE", "us-west1-a"), ("ERP_HOST", "erp.other.com"),
                  ("ERP_HOST", "erp.example.com\n{ malicious }"), ("DATA_DISK_GB", 5),
@@ -73,6 +90,61 @@ class ValidationTests(unittest.TestCase):
 
 
 class ProvisioningTests(unittest.TestCase):
+    def private_config(self):
+        return {**fixture(), "POSTGRES_PRIVATE_IP": "10.73.0.2", "POSTGRES_CLIENT_CIDRS": ["10.81.0.0/26"]}
+
+    def test_private_postgres_firewall_does_not_weaken_drift_checks(self):
+        cloud = deploy.Cloud(self.private_config())
+        base = {"network": "/networks/carbon-vpc", "direction": "INGRESS", "targetTags": ["carbon"]}
+        rules = [{**base, "name": "carbon-iap", "priority": 900, "allowed": [{"IPProtocol": "tcp", "ports": ["22"]}], "sourceRanges": ["35.235.240.0/20"]},
+                 {**base, "name": "carbon-deny-ingress", "priority": 1000, "denied": [{"IPProtocol": "all"}], "sourceRanges": ["0.0.0.0/0"]},
+                 {**base, "name": "carbon-postgres", "priority": 900, "allowed": [{"IPProtocol": "tcp", "ports": ["5432"]}], "sourceRanges": ["10.81.0.0/26"]}]
+        with patch.object(cloud, "get", return_value=rules):
+            cloud.check_firewall()
+        for changes in ({"sourceRanges": ["10.0.0.0/8"]}, {"targetTags": []}, {"disabled": True},
+                        {"allowed": [{"IPProtocol": "all"}]}, {"priority": 800}, {"sourceTags": ["other"]}):
+            with patch.object(cloud, "get", return_value=[*rules[:2], {**rules[2], **changes}]), self.assertRaises(ValueError):
+                cloud.check_firewall()
+        with patch.object(cloud, "get", return_value=[*rules, {**base, "name": "extra", "allowed": [{"IPProtocol": "all"}]}]), self.assertRaises(ValueError):
+            cloud.check_firewall()
+        # Removing the config does not silently leave a database firewall open.
+        other = deploy.Cloud(fixture())
+        with patch.object(other, "get", return_value=rules), self.assertRaises(ValueError):
+            other.check_firewall()
+
+    def test_private_postgres_vm_address_must_match(self):
+        cloud = deploy.Cloud(self.private_config())
+        vm = {"networkInterfaces": [{"network": "/networks/carbon-vpc", "networkIP": "10.73.0.2"}], "disks": [{"deviceName": "carbon-data", "autoDelete": False, "source": "/disks/carbon-data"}]}
+        with patch.object(cloud, "get", return_value=vm):
+            cloud.check_vm()
+        vm["networkInterfaces"][0]["networkIP"] = "10.73.0.3"
+        with patch.object(cloud, "get", return_value=vm), self.assertRaisesRegex(ValueError, "must match"):
+            cloud.check_vm()
+
+    def test_private_postgres_address_is_reserved_and_verified(self):
+        cloud = deploy.Cloud(self.private_config())
+        address = {"addressType": "INTERNAL", "address": "10.73.0.2", "subnetwork": "/subnetworks/carbon-subnet", "users": ["/zones/us-east1-b/instances/carbon"]}
+        with patch.object(cloud, "ensure") as ensure, patch.object(cloud, "get", return_value=address):
+            cloud.reserve_postgres_address()
+            self.assertIn("--subnet", ensure.call_args.args[2])
+            self.assertIn("10.73.0.2", ensure.call_args.args[2])
+        for changes in ({"addressType": "EXTERNAL"}, {"address": "10.73.0.3"}, {"subnetwork": "/subnetworks/other"}, {"users": ["/instances/other"]}):
+            with patch.object(cloud, "ensure"), patch.object(cloud, "get", return_value={**address, **changes}), self.assertRaises(ValueError):
+                cloud.reserve_postgres_address()
+
+    def test_provision_creates_only_narrow_private_database_ingress(self):
+        cloud = deploy.Cloud(self.private_config())
+        calls = []
+        with patch.object(cloud, "get", side_effect=lambda *args: {} if args[:3] == ("compute", "disks", "describe") else []), patch.object(cloud, "call", side_effect=lambda *args, **kw: calls.append(args)), patch.object(cloud, "check_vm"), patch.object(cloud, "check_firewall"), patch.object(cloud, "reserve_postgres_address") as reserve:
+            cloud.provision()
+        rule = next(call for call in calls if call[:4] == ("compute", "firewall-rules", "create", "carbon-postgres"))
+        self.assertIn("--rules=tcp:5432", rule)
+        self.assertEqual(rule[rule.index("--source-ranges") + 1], "10.81.0.0/26")
+        self.assertIn("--priority=900", rule)
+        vm = next(call for call in calls if call[:3] == ("compute", "instances", "create"))
+        self.assertEqual(vm[vm.index("--private-network-ip") + 1], "10.73.0.2")
+        reserve.assert_called_once()
+
     def test_new_vm_has_no_public_address_and_retained_disk(self):
         cloud = deploy.Cloud(fixture())
         calls = []

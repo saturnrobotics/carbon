@@ -7,7 +7,7 @@ remain visible during upgrades. Compose is used because its port publishing can
 bind HTTPS specifically to the host's Tailscale address.
 
 The VM has **no public IP**, a dedicated VPC, outbound Cloud NAT, and SSH through
-Google IAP. Only Caddy publishes a port: `TAILSCALE_IP:443`. The database API is
+Google IAP. By default only Caddy publishes a port: `TAILSCALE_IP:443`. The database API is
 private too. Cloudflare DNS-only A records point to that Tailscale address;
 DNS-01 validation supplies publicly trusted certificates without opening port 80.
 Existing services and records elsewhere in the DNS zone are preserved.
@@ -32,6 +32,9 @@ the entry point; keep deployment changes and documentation in this directory.
 disk, Cloud NAT and snapshots. Check your GCP region's costs and quotas. This is
 a single server with planned downtime during updates, not a highly available
 installation.
+
+An optional private PostgreSQL listener supports another backend on a connected
+GCP VPC. See [private database clients](#private-database-clients) below.
 
 ## One-time setup
 
@@ -179,6 +182,57 @@ disk, attach it as `carbon-data`, and boot the matching source release. Restore
 database, files and secrets together; do not downgrade the schema by rerunning
 old migrations. Never run the old and recovered Tailscale identities concurrently.
 Practice this recovery on a separate isolated VM before relying on it.
+
+## Private database clients
+
+To connect another application's backend directly to PostgreSQL, add both fields
+to the ignored `.local/config.json`. These are synthetic examples; use the VM's
+actual internal address and the client's dedicated GCP subnet:
+
+```json
+{
+  "POSTGRES_PRIVATE_IP": "10.73.0.2",
+  "POSTGRES_CLIENT_CIDRS": ["10.81.0.0/26"]
+}
+```
+
+The address must match the existing VM's private NIC address. Deployment reserves
+it as a regional static internal address named `<VM_NAME>-postgres`. Source
+networks must be explicit RFC1918 IPv4 `/24`–`/32` subnets. Deployment adds one
+firewall allow rule for TCP 5432 from exactly these sources to the VM's tag and
+rejects unexpected or broadened firewall rules. It binds PostgreSQL only to the
+configured private address. Omitting both fields preserves the original stack
+without a published PostgreSQL port. Removing previously enabled access requires
+reviewing and deleting its firewall rule; deployment fails if that rule remains.
+
+Configure private routing separately, for example VPC peering plus Cloud Run
+Direct VPC egress on a dedicated client subnet. Routing, client identities,
+database roles and application migrations belong to the client deployment and
+are not created by Carbon's deploy command. Use a restricted login role and
+isolated schema with explicitly reviewed permissions for the other application.
+The private listener admits encrypted, password-authenticated connections only
+to the `postgres` database and rejects access to other databases and replication.
+The HTTPS Supabase API hostname is
+not a PostgreSQL connection endpoint. Do not expose port 5432 publicly or publish
+these credentials to a browser.
+
+PostgreSQL presents a certificate whose IP SAN matches the private address.
+Its private CA and certificate files live under
+`/var/lib/carbon/private-postgres/` on the retained data disk. Copy **only
+`ca.crt`** to the client application's secret/configuration store through an
+authenticated operator connection. Configure its PostgreSQL driver with
+`sslmode=verify-full` and `sslrootcert` pointing to that certificate. Use the
+private IP as the database hostname. Passwords belong in the client's secret
+store. Plaintext connections from the configured client subnets are rejected;
+existing in-container Carbon connections retain their existing behavior.
+
+The 10-year CA remains stable across deployments. Server certificates last 825
+days and renew during deployment when fewer than 30 days remain. Deploy at least
+once during that window or schedule a deployment before expiry. Near CA expiry,
+plan renewal and distribute the replacement trust certificate to clients. Never
+delete TLS state to rotate it implicitly. All database clients share Carbon's
+PostgreSQL service downtime, server resources, and disk snapshot recovery point.
+Their application releases can remain independent of Carbon's releases.
 
 ## Private-network limitations
 

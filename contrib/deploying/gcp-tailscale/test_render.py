@@ -6,6 +6,7 @@ from pathlib import Path
 import subprocess
 import tempfile
 import unittest
+from unittest.mock import patch
 
 import yaml
 
@@ -113,6 +114,48 @@ class PrivateStackTests(unittest.TestCase):
 
     def test_compose_schema(self):
         subprocess.run(["docker", "compose", "--file", str(self.output / "compose.json"), "config", "--quiet"], check=True)
+
+    def test_optional_postgres_listener_uses_verified_private_tls(self):
+        config = {**self.config, "POSTGRES_PRIVATE_IP": "10.73.0.2", "POSTGRES_CLIENT_CIDRS": ["10.81.0.0/26"]}
+        module.render(config, REPO, self.output, self.state)
+        stack = json.loads((self.output / "compose.json").read_text())
+        pg = stack["services"]["postgres"]
+        self.assertEqual(pg["ports"], [{"target": 5432, "published": "5432", "host_ip": "10.73.0.2", "protocol": "tcp"}])
+        self.assertIn("ssl=on", pg["command"])
+        self.assertIn("ssl_min_protocol_version=TLSv1.2", pg["command"])
+        self.assertIn("config_file=/etc/postgresql/postgresql.conf", pg["command"])
+        self.assertEqual(pg["entrypoint"], ["/usr/local/bin/carbon-secrets-entrypoint.sh"])
+        script = (self.output / "private-postgres-entrypoint.sh").read_text()
+        self.assertIn("hostnossl all all 10.81.0.0/26 reject", script)
+        self.assertIn("hostssl postgres all 10.81.0.0/26 scram-sha-256", script)
+        self.assertIn("host all all 10.81.0.0/26 reject", script)
+        self.assertIn("host replication all 10.81.0.0/26 reject", script)
+        self.assertIn("cat /etc/postgresql/pg_hba.conf >>", script)
+        self.assertIn("install -m 600 -o postgres -g postgres", script)
+        self.assertTrue(pg["tmpfs"][0].startswith("/run/carbon-private-postgres:"))
+        mounted = [item.get("source", "") for item in pg["volumes"] if isinstance(item, dict)]
+        self.assertIn(str(self.state / "private-postgres/server.key"), mounted)
+        self.assertFalse(any("ca.key" in item for item in mounted))
+        tls = self.state / "private-postgres"
+        self.assertEqual(tls.stat().st_mode & 0o777, 0o700)
+        before = {path.name: path.read_bytes() for path in tls.iterdir()}
+        for path in tls.iterdir():
+            self.assertEqual(path.stat().st_mode & 0o777, 0o600)
+        subprocess.run(["openssl", "verify", "-CAfile", str(tls / "ca.crt"), "-verify_ip", "10.73.0.2", str(tls / "server.crt")], check=True, capture_output=True)
+        module.render(config, REPO, self.output, self.state)
+        self.assertEqual(before, {path.name: path.read_bytes() for path in tls.iterdir()})
+        subprocess.run(["docker", "compose", "--file", str(self.output / "compose.json"), "config", "--quiet"], check=True)
+        with self.assertRaisesRegex(ValueError, "differs from"):
+            module.render({**config, "POSTGRES_PRIVATE_IP": "10.73.0.3"}, REPO, self.output, self.state)
+        (tls / "ca.key").unlink()
+        with self.assertRaisesRegex(ValueError, "Incomplete"):
+            module.render(config, REPO, self.output, self.state)
+
+    def test_invalid_private_database_network_is_rejected_before_generating_state(self):
+        with patch.object(module.private_postgres, "certificates") as certificates:
+            with self.assertRaises(ValueError):
+                module.render({**self.config, "POSTGRES_PRIVATE_IP": "0.0.0.0", "POSTGRES_CLIENT_CIDRS": ["0.0.0.0/0"]}, REPO, self.output, self.state)
+            certificates.assert_not_called()
 
 
 if __name__ == "__main__":

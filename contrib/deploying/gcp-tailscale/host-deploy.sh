@@ -140,6 +140,11 @@ case "$ACTION" in
     compose exec -T -e "ALLOWED_EMAIL_DOMAIN=$allowed_domain" postgres /usr/local/bin/carbon-secrets-entrypoint.sh sh -c \
       'psql -X -h 127.0.0.1 -U supabase_admin -d postgres -v ON_ERROR_STOP=1 -v allowed_email_domain="$ALLOWED_EMAIL_DOMAIN" -f -' \
       < "$HERE/auth/google-domain-hook.sql"
+    # Preserve independently provisioned client isolation after upstream SQL.
+    # shellcheck disable=SC2016
+    compose exec -T postgres /usr/local/bin/carbon-secrets-entrypoint.sh sh -c \
+      'psql -X -h 127.0.0.1 -U supabase_admin -d postgres -v ON_ERROR_STOP=1 -f -' \
+      < "$HERE/private-client-isolation.sql"
     compose up -d postgrest kong edge-runtime redis
     wait_service kong
     # Only config and plan lookups are upserted. No users, company details, demo
