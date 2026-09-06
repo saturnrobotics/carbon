@@ -508,6 +508,9 @@ msgstr "公司范围的折扣或加价，按百分比或固定金额，当行匹
 msgid "A completed job's output, received into inventory at the job's actual accumulated WIP cost."
 msgstr "已完成工单的产出，按工单实际累计在制品成本收入库存管理。"
 
+msgid "A connected mailbox does not match its configured address. Reconnect that mailbox."
+msgstr "已连接的邮箱与配置的地址不匹配。请重新连接该邮箱。"
+
 msgid "A consumable is a physical item used to make a part that can be used across multiple jobs"
 msgstr "耗材是用来制造零件的物理物料，可以在多个工单中使用。"
 
@@ -1904,6 +1907,9 @@ msgstr "审批日期"
 msgid "Approval is required at or above this amount, up to the next rule's minimum"
 msgstr "此金额及以上需要审批，直到下一规则的最小值"
 
+msgid "Approval links an existing invoice or creates a draft purchase invoice and copies its source files. Review new invoice dates, numbers, totals and lines before posting. Bank account mapping and payment settlement are not configured; these records do not mark invoices as paid."
+msgstr "批准会关联现有发票，或创建采购发票草稿并复制源文件。过账前请检查发票日期、编号、总额和行。银行账户映射和付款结算尚未配置；这些记录不会将发票标记为已付款。"
+
 msgid "Approval requirements"
 msgstr "审批要求"
 
@@ -1918,6 +1924,9 @@ msgstr "审批"
 
 msgid "Approve"
 msgstr "审批"
+
+msgid "Approve and link invoice"
+msgstr "批准并关联发票"
 
 msgid "Approved By"
 msgstr "批准人"
@@ -2616,6 +2625,9 @@ msgstr "通过事件驱动的工作流自动化您的业务流程，当 Carbon �
 
 msgid "Automatic Cost Updates"
 msgstr "自动成本更新"
+
+msgid "Automatic import"
+msgstr "自动导入"
 
 msgid "Automatic Lead Time Updates"
 msgstr "自动提前期更新"
@@ -3355,6 +3367,8 @@ msgstr "聊天"
 
 msgid "Check operations on the left to build the batch."
 msgstr "勾选左侧的操作以构建批次。"
+msgid "Check outgoing payments every hour. Proposed suppliers and invoice matches wait for your review."
+msgstr "每小时检查出账付款。建议的供应商和发票匹配项等待审核。"
 
 msgid "Check the item ledger for any items with a negative on-hand quantity as of period end — usually a missing receipt or an out-of-order posting that distorts inventory value and cost of goods sold. Mark it done once reviewed, or skip with a reason."
 msgstr "检查物料分类账以查找期末现有数量为负的任何物料 — 通常是缺少收货或过账顺序错误，导致库存价值和销售成本失真。审查后标记为完成，或因某个理由跳过。"
@@ -5637,6 +5651,9 @@ msgstr "方向"
 msgid "Disabled"
 msgstr "已禁用"
 
+msgid "Disabled in connection setup"
+msgstr "在连接设置中已禁用"
+
 msgid "Discard"
 msgstr "丢弃"
 
@@ -6780,11 +6797,17 @@ msgstr "豁免证书"
 msgid "Exemption Reason"
 msgstr "豁免原因"
 
+msgid "Existing invoice"
+msgstr "现有发票"
+
 msgid "Existing mappings. Pick a different provider option to re-map."
 msgstr "现有映射。选择不同的提供商选项进行重新映射。"
 
 msgid "Existing Stripe customer"
 msgstr "现有 Stripe 客户"
+
+msgid "Existing supplier"
+msgstr "现有供应商"
 
 msgid "Expand"
 msgstr "展开"
@@ -7419,6 +7442,9 @@ msgstr "通过未结 → 已锁定 → 已关闭的生命周期来最终化会�
 msgid "Financial Statements"
 msgstr "财务报表"
 
+msgid "Find invoice emails"
+msgstr "查找发票邮件"
+
 msgid "finish"
 msgstr "成品"
 
@@ -7526,6 +7552,9 @@ msgstr "标志"
 
 msgid "for anything. They'll pull in the right person."
 msgstr "用于任何事项。他们会调配合适的人员。"
+
+msgid "For one-time deployment setup, use this company ID for PAYMENT_SYNC_COMPANY_ID:"
+msgstr "一次性部署设置请将此公司 ID 用于 PAYMENT_SYNC_COMPANY_ID："
 
 msgid "Forecast"
 msgstr "预测"
@@ -8023,6 +8052,9 @@ msgstr "主机"
 msgid "Host, secure, and back up the platform"
 msgstr "托管、保护和备份平台"
 
+msgid "Hourly sync"
+msgstr "每小时同步"
+
 msgid "Hours"
 msgstr "时数"
 
@@ -8244,6 +8276,11 @@ msgstr "如果您希望更改零件号，请点击\"取消\"并在转换前为�
 
 msgid "Ignore"
 msgstr "忽略"
+msgid "Ignore this payment"
+msgstr "忽略此付款"
+
+msgid "Ignored"
+msgstr "已忽略"
 
 msgid "II (normal default)"
 msgstr "II（正常默认值）"
@@ -8268,6 +8305,9 @@ msgstr "实施主管"
 
 msgid "Import {label} CSV"
 msgstr "导入 {label} CSV"
+
+msgid "Import history from"
+msgstr "导入历史记录自"
 
 msgid "Import results"
 msgstr "导入结果"
@@ -9085,6 +9125,9 @@ msgstr "上一季度"
 msgid "Last Run"
 msgstr "最后运行"
 
+msgid "Last successful sync:"
+msgstr "上次成功同步："
+
 msgid "Last synced: <0/>"
 msgstr "上次同步: <0/>"
 
@@ -9132,6 +9175,9 @@ msgstr "保留任何相关收据不变"
 
 msgid "Leave blank for built-in"
 msgstr "留空以使用内置"
+
+msgid "Leave blank to include all available payment history."
+msgstr "留空以包含所有可用的付款历史。"
 
 msgid "Leave blank to use the next revision automatically"
 msgstr "留空以自动使用下一个修订版"
@@ -9269,6 +9315,9 @@ msgstr "关联销售订单行"
 #. placeholder {1}: r.quantity
 msgid "Linked entity quantity ({0}) does not match row quantity ({1})."
 msgstr "关联实体数量 ({0}) 与行数量 ({1}) 不匹配。"
+
+msgid "Linked invoices"
+msgstr "已关联发票"
 
 msgid "Linked Issue"
 msgstr "关联问题"
@@ -9479,6 +9528,15 @@ msgstr "MACRS资产类别"
 
 msgid "Magic link"
 msgstr "魔法链接"
+
+msgid "Mailbox authorization needs to be renewed. Reconnect the affected mailbox."
+msgstr "邮箱授权需要续期。请重新连接受影响的邮箱。"
+
+msgid "Mailbox configuration needs correction."
+msgstr "需要修正邮箱配置。"
+
+msgid "Mailbox matching needs attention:"
+msgstr "邮箱匹配需要处理："
 
 msgid "Maintain a single part and item master"
 msgstr "维护单一零件和物料主数据"
@@ -9880,6 +9938,18 @@ msgstr "备忘录日期"
 msgid "Memo ID"
 msgstr "备忘录 ID"
 
+msgid "Mercury"
+msgstr "Mercury"
+
+msgid "Mercury authorization needs to be renewed. Check the read-only account connection."
+msgstr "Mercury 授权需要续期。请检查只读账户连接。"
+
+msgid "Mercury connection configured"
+msgstr "Mercury 连接已配置"
+
+msgid "Mercury payments"
+msgstr "Mercury 付款"
+
 msgid "MES"
 msgstr "MES"
 
@@ -10190,6 +10260,9 @@ msgstr "需要工作"
 msgid "Needs ordering"
 msgstr "需要订购"
 
+msgid "Needs review"
+msgstr "需要审核"
+
 msgid "Negative Adjustment"
 msgstr "负调整"
 
@@ -10475,6 +10548,12 @@ msgstr "新存储单元"
 msgid "New Supplier"
 msgstr "新供应商"
 
+msgid "New supplier email"
+msgstr "新供应商邮箱"
+
+msgid "New supplier name"
+msgstr "新供应商名称"
+
 msgid "New Supplier Part"
 msgstr "新供应商零件"
 
@@ -10755,6 +10834,9 @@ msgstr "没有图像"
 msgid "No inspection plans"
 msgstr "无检验计划"
 
+msgid "No invoice mailboxes are connected yet."
+msgstr "尚未连接发票邮箱。"
+
 msgid "No issue types configured"
 msgstr "未配置问题类型"
 
@@ -10871,6 +10953,9 @@ msgstr "还没有已登记的通行密钥。"
 
 msgid "No payables"
 msgstr "没有应付款项"
+
+msgid "No payments in this view."
+msgstr "此视图中没有付款。"
 
 msgid "No payments yet."
 msgstr "还没有付款。"
@@ -11123,6 +11208,9 @@ msgstr "今天不工作"
 
 msgid "Not yet"
 msgstr "还未"
+
+msgid "Not yet run"
+msgstr "尚未运行"
 
 msgid "Not you?"
 msgstr "不是你？"
@@ -11403,6 +11491,9 @@ msgstr "打开于变更通知 {ids}。下达它们来创建新版本或修订版
 
 msgid "Open in MES"
 msgstr "在 MES 中打开"
+
+msgid "Open invoice"
+msgstr "打开发票"
 
 msgid "Open Issues"
 msgstr "未结领料"
@@ -11902,6 +11993,9 @@ msgstr "如果您的身份提供商未发布元数据 URL,请粘贴元数据 XML
 msgid "Path"
 msgstr "路径"
 
+msgid "Pause"
+msgstr "暂停"
+
 msgid "Pay Rate"
 msgstr "支付汇率"
 
@@ -11925,6 +12019,9 @@ msgstr "付款应用"
 
 msgid "Payment Date"
 msgstr "付款日期"
+
+msgid "Payment history is still being imported. The next hourly run will continue where it stopped."
+msgstr "付款历史仍在导入。下一次每小时运行将从中断处继续。"
 
 msgid "Payment ID"
 msgstr "付款ID"
@@ -12248,6 +12345,9 @@ msgstr "门户"
 
 msgid "Positive Adjustment"
 msgstr "正向调整"
+
+msgid "Possible invoice emails"
+msgstr "可能的发票邮件"
 
 msgid "Post"
 msgstr "过账"
@@ -13727,6 +13827,9 @@ msgstr "从备份中恢复此公司"
 msgid "Restore this entity to available stock at the bin and cost it was scrapped from."
 msgstr "将此实体恢复到来自其被报废的料箱和成本的可用库存。"
 
+msgid "Restore to review"
+msgstr "恢复以供审核"
+
 msgid "Restore tracked entities to available"
 msgstr "将跟踪的实体恢复为可用"
 
@@ -13768,6 +13871,9 @@ msgstr "全部重试"
 
 msgid "Retry revert"
 msgstr "重试还原"
+
+msgid "Retry source files"
+msgstr "重试源文件"
 
 msgid "Return Home"
 msgstr "返回首页"
@@ -13831,6 +13937,9 @@ msgstr "查看和创建"
 
 msgid "Review each item's changes, then confirm — releasing can't be undone."
 msgstr "评审每个物料的更改，然后确认——发布无法撤销。"
+
+msgid "Review supplier"
+msgstr "审核供应商"
 
 msgid "Review the period's balance sheet and income statement and confirm the figures look right. This is a manual sign-off — mark it done once you have reviewed them."
 msgstr "评审期间的资产负债表和利润表，并确认数字正确。这是手动签核——一旦您评审完毕即标记为完成。"
@@ -14223,6 +14332,9 @@ msgstr "保存方法"
 msgid "Save Rate"
 msgstr "保存汇率"
 
+msgid "Save sync settings"
+msgstr "保存同步设置"
+
 msgid "Save view"
 msgstr "保存视图"
 
@@ -14393,6 +14505,9 @@ msgstr "按 Jira 问题标题搜索..."
 
 msgid "Search by linear issue title..."
 msgstr "按线性问题标题搜索..."
+
+msgid "Search connected mailboxes for invoice evidence and supplier suggestions."
+msgstr "在已连接邮箱中搜索发票凭证和供应商建议。"
 
 msgid "Search customers and types..."
 msgstr "搜索客户和类型..."
@@ -14677,6 +14792,9 @@ msgstr "选择应该完成此培训的组"
 msgid "Select the invoices this payment settles. Discount and write-off are in invoice currency."
 msgstr "选择此付款结算的发票。折扣和核销以发票货币计。"
 
+msgid "Select the original invoice for an additional or partial payment. Its supplier is reused; leave blank to create a new draft."
+msgstr "选择追加或部分付款的原始发票。将复用其供应商；留空以创建新草稿。"
+
 msgid "Select value"
 msgstr "选择值"
 
@@ -14908,6 +15026,9 @@ msgstr "换型单位"
 
 msgid "Setup Unit"
 msgstr "换型单位"
+
+msgid "Several invoice emails could match this payment. Review the candidates before approving."
+msgstr "多封发票邮件可能匹配此付款。批准前请审核候选项。"
 
 msgid "Severities"
 msgstr "严重程度"
@@ -15264,6 +15385,9 @@ msgstr "某些记录不会回来。输入 <0>{CONFIRM_WORD}</0> 继续。"
 
 msgid "Some Shifts"
 msgstr "某些班次"
+
+msgid "Some source files need another copy attempt. Use Retry source files below."
+msgstr "部分源文件需要再次复制。请使用下面的“重试源文件”。"
 
 msgid "Something went wrong. Please try again."
 msgstr "出现问题。请重试。"
@@ -15785,6 +15909,9 @@ msgstr "供应商位置"
 
 msgid "Supplier Location"
 msgstr "供应商位置"
+
+msgid "Supplier needs identification"
+msgstr "需要识别供应商"
 
 msgid "Supplier Order Number"
 msgstr "供应商订单号"
@@ -16487,6 +16614,9 @@ msgstr "此属性接受的值类型（文本、数字、日期、布尔值、列
 msgid "The label and document printers your company prints to"
 msgstr "您公司打印至的标签和文件打印机"
 
+msgid "The last attempt could not finish. The next sync will retry; the available payment evidence is preserved."
+msgstr "上次尝试未完成。下一次同步将重试；可用的付款凭证已保留。"
+
 msgid "The latest date to place this PO so it arrives by the need-by date, given the supplier's lead time."
 msgstr "放置此采购订单的最迟日期，以便在给定供应商提前期的情况下按需要日期到达。"
 
@@ -16552,6 +16682,9 @@ msgstr "原材料是从供应商购买用于该特定订单，而不是制造或
 
 msgid "The material types you organize your stock by"
 msgstr "您用来组织库存的原材料类型"
+
+msgid "The Mercury connection needs one-time setup before syncing can start."
+msgstr "开始同步前需要完成 Mercury 连接的一次性设置。"
 
 msgid "The month your financial year begins; periods are numbered from this month."
 msgstr "财政年度开始的月份；期间从该月份开始编号。"
@@ -16671,6 +16804,9 @@ msgstr "技术人员执行此维护时遵循的程序文件；在已生成排程
 
 msgid "The processes this work center can run; appears in process-pickers when scheduling operations, and limits which jobs can route through this work center."
 msgstr "此工作中心可以运行的工艺；在排程工序时显示在工艺选择器中，并限制哪些工单可以通过此工作中心。"
+
+msgid "The provider is limiting requests. The next sync will retry."
+msgstr "服务提供商正在限制请求。下一次同步将重试。"
 
 msgid "The provider offers no dimension targets. Enable the feature in the provider first (e.g. tracking categories, class tracking, or fields)."
 msgstr "提供商不提供维度目标。首先在提供商中启用该功能（例如跟踪类别、类跟踪或字段）。"
@@ -16940,6 +17076,9 @@ msgstr "然后调整为"
 msgid "Then by"
 msgstr "然后按"
 
+msgid "There are more possible emails than could be checked automatically. Review the available matches."
+msgstr "可能的邮件超出自动检查范围。请审核可用匹配项。"
+
 msgid "There are no active supplier quotes to compare for this RFQ."
 msgstr "此询价单没有可比较的启用供应商报价。"
 
@@ -17126,6 +17265,9 @@ msgstr "此零件已被替代并设置为仅库存 — 它补充到其备件储�
 
 msgid "This path only decides what runs next"
 msgstr "此路径仅决定接下来运行什么"
+
+msgid "This payment has more source files than can be imported automatically. Review the originals."
+msgstr "此付款的源文件多于可自动导入的数量。请审核原始文件。"
 
 msgid "This period has no journal entries posted to it and can be permanently deleted. This cannot be undone."
 msgstr "此期间没有已过账的凭证，可以永久删除。此操作无法撤销。"
@@ -17636,6 +17778,9 @@ msgstr "星期二"
 msgid "Turn on the built-in pieces"
 msgstr "启用内置功能"
 
+msgid "Turn this off to pause future imports. Existing review records stay available."
+msgstr "关闭此项可暂停未来导入。现有审核记录仍可用。"
+
 msgid "Two-Factor"
 msgstr "双因素"
 
@@ -18077,6 +18222,9 @@ msgstr "用于主屏幕和数字报价"
 
 msgid "Used on the home screen in dark mode"
 msgstr "在深色模式下用于主屏幕"
+
+msgid "Used only when creating an invoice without an existing supplier or recipient link."
+msgstr "仅在没有现有供应商或收款人链接时创建发票。"
 
 msgid "Used to categorize items for reporting and analysis"
 msgstr "用于对物料进行分类以进行报告和分析"

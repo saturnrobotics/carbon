@@ -16,6 +16,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import private_postgres
+import payment_sync
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[2]
@@ -50,9 +51,10 @@ def private_json(path):
 
 
 def validate(config, secrets):
-    if set(config) - CONFIG_KEYS - private_postgres.OPTIONAL_KEYS or set(secrets) - SECRET_KEYS:
+    if set(config) - CONFIG_KEYS - private_postgres.OPTIONAL_KEYS - payment_sync.CONFIG_KEYS or set(secrets) - SECRET_KEYS - payment_sync.SECRET_KEYS:
         raise ValueError("Unknown configuration keys; see config.example.json and secrets.example.json")
     private_postgres.validate(config)
+    payment_sync.validate({**config, **secrets})
     for key in CONFIG_KEYS:
         if key not in config:
             raise ValueError(f"Missing {key}")

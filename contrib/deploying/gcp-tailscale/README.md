@@ -140,6 +140,10 @@ Preserve the root license and commercial-file exclusions; choosing community
 edition does not grant a commercial license. See [public fork policy](../../../docs/public-fork.md)
 and [the authentication implementation](auth/README.md).
 
+Optional [Mercury payment and Gmail invoice sync](PAYMENT-SYNC.md) runs hourly
+inside ERP, with application controls for pausing the sync or individual mailboxes.
+Bank and mailbox credentials are separate private deployment inputs.
+
 ## Updates, backup and recovery
 
 Use [the branch workflow](WORKFLOW.md) to create features from `saturn/main`, merge

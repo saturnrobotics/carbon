@@ -508,6 +508,9 @@ msgstr "会社スコープの値引またはマークアップ。パーセンテ
 msgid "A completed job's output, received into inventory at the job's actual accumulated WIP cost."
 msgstr "完了した製造指図の出力で、その製造指図の実績累積仕掛品原価で在庫に受け入れられます。"
 
+msgid "A connected mailbox does not match its configured address. Reconnect that mailbox."
+msgstr "接続されたメールボックスが設定済みのアドレスと一致しません。このメールボックスを再接続してください。"
+
 msgid "A consumable is a physical item used to make a part that can be used across multiple jobs"
 msgstr "消耗品は、部品を製造するために使用される物理的な品目で、複数の製造指図で使用できます。"
 
@@ -1904,6 +1907,9 @@ msgstr "承認日"
 msgid "Approval is required at or above this amount, up to the next rule's minimum"
 msgstr "この金額以上で次のルールの最小値までの承認が必要です"
 
+msgid "Approval links an existing invoice or creates a draft purchase invoice and copies its source files. Review new invoice dates, numbers, totals and lines before posting. Bank account mapping and payment settlement are not configured; these records do not mark invoices as paid."
+msgstr "既存の請求書を承認してリンクするか、購入請求書の下書きを作成して元ファイルをコピーします。転記前に日付、番号、合計、明細を確認してください。銀行口座のマッピングと支払い決済は未設定のため、これらの記録は請求書を支払済みにしません。"
+
 msgid "Approval requirements"
 msgstr "承認要件"
 
@@ -1918,6 +1924,9 @@ msgstr "承認"
 
 msgid "Approve"
 msgstr "承認"
+
+msgid "Approve and link invoice"
+msgstr "請求書を承認してリンク"
 
 msgid "Approved By"
 msgstr "承認者"
@@ -2616,6 +2625,9 @@ msgstr "Carbonで発生するときにアクションをトリガーするイベ
 
 msgid "Automatic Cost Updates"
 msgstr "原価の自動更新"
+
+msgid "Automatic import"
+msgstr "自動インポート"
 
 msgid "Automatic Lead Time Updates"
 msgstr "自動リードタイム更新"
@@ -3355,6 +3367,8 @@ msgstr "チャット"
 
 msgid "Check operations on the left to build the batch."
 msgstr "左側の作業をチェックしてバッチを構築します。"
+msgid "Check outgoing payments every hour. Proposed suppliers and invoice matches wait for your review."
+msgstr "出金を毎時間確認します。候補の仕入先と請求書の一致は確認待ちです。"
 
 msgid "Check the item ledger for any items with a negative on-hand quantity as of period end — usually a missing receipt or an out-of-order posting that distorts inventory value and cost of goods sold. Mark it done once reviewed, or skip with a reason."
 msgstr "期末時点で保有数量がマイナスの品目がないか品目台帳を確認してください — 通常、納品漏れまたは順序外の転記により、在庫価値および売上原価が歪む可能性があります。確認済みの場合はマーク完了し、スキップする場合は理由を記入してください。"
@@ -5637,6 +5651,9 @@ msgstr "方向"
 msgid "Disabled"
 msgstr "無効"
 
+msgid "Disabled in connection setup"
+msgstr "接続設定で無効"
+
 msgid "Discard"
 msgstr "破棄"
 
@@ -6780,11 +6797,17 @@ msgstr "免除証明書"
 msgid "Exemption Reason"
 msgstr "免除理由"
 
+msgid "Existing invoice"
+msgstr "既存の請求書"
+
 msgid "Existing mappings. Pick a different provider option to re-map."
 msgstr "既存のマッピング。異なるプロバイダーオプションを選択して再マップしてください。"
 
 msgid "Existing Stripe customer"
 msgstr "既存のStripe顧客"
+
+msgid "Existing supplier"
+msgstr "既存の仕入先"
 
 msgid "Expand"
 msgstr "展開"
@@ -7419,6 +7442,9 @@ msgstr "会計月をオープン → ロック中 → クローズ済のライ�
 msgid "Financial Statements"
 msgstr "財務諸表"
 
+msgid "Find invoice emails"
+msgstr "請求書メールを検索"
+
 msgid "finish"
 msgstr "完成品"
 
@@ -7526,6 +7552,9 @@ msgstr "フラグ"
 
 msgid "for anything. They'll pull in the right person."
 msgstr "何でも構いません。彼らが適切な人を連れてきます。"
+
+msgid "For one-time deployment setup, use this company ID for PAYMENT_SYNC_COMPANY_ID:"
+msgstr "一度だけのデプロイ設定には、PAYMENT_SYNC_COMPANY_ID にこの会社 ID を使用してください："
 
 msgid "Forecast"
 msgstr "予測"
@@ -8023,6 +8052,9 @@ msgstr "ホスト"
 msgid "Host, secure, and back up the platform"
 msgstr "プラットフォームをホストし、保護し、バックアップする"
 
+msgid "Hourly sync"
+msgstr "毎時同期"
+
 msgid "Hours"
 msgstr "時間"
 
@@ -8243,6 +8275,10 @@ msgid "If you wish to change the part numbers, please click Cancel and manually 
 msgstr "部品番号を変更したい場合は、[キャンセル]をクリックして、変換する前に各行アイテムの部品を手動で割り当ててください。"
 
 msgid "Ignore"
+msgid "Ignore this payment"
+msgstr "この支払いを無視"
+
+msgid "Ignored"
 msgstr "無視"
 
 msgid "II (normal default)"
@@ -8268,6 +8304,9 @@ msgstr "実施リード"
 
 msgid "Import {label} CSV"
 msgstr "{label} CSV をインポート"
+
+msgid "Import history from"
+msgstr "履歴のインポート開始日"
 
 msgid "Import results"
 msgstr "インポート結果"
@@ -9085,6 +9124,9 @@ msgstr "前四半期"
 msgid "Last Run"
 msgstr "最終実行"
 
+msgid "Last successful sync:"
+msgstr "最終成功同期："
+
 msgid "Last synced: <0/>"
 msgstr "最後に同期: <0/>"
 
@@ -9132,6 +9174,9 @@ msgstr "関連するすべての領収書はそのままにしておく"
 
 msgid "Leave blank for built-in"
 msgstr "組み込みの場合は空白のままにしてください"
+
+msgid "Leave blank to include all available payment history."
+msgstr "利用可能なすべての支払い履歴を含める場合は空欄にします。"
 
 msgid "Leave blank to use the next revision automatically"
 msgstr "空白のままにして、次のリビジョンを自動的に使用します"
@@ -9269,6 +9314,9 @@ msgstr "受注明細へのリンク"
 #. placeholder {1}: r.quantity
 msgid "Linked entity quantity ({0}) does not match row quantity ({1})."
 msgstr "リンクされたエンティティの数量({0})が行の数量({1})と一致しません。"
+
+msgid "Linked invoices"
+msgstr "リンク済み請求書"
 
 msgid "Linked Issue"
 msgstr "リンク済み問題"
@@ -9479,6 +9527,15 @@ msgstr "MACRS資産クラス"
 
 msgid "Magic link"
 msgstr "マジックリンク"
+
+msgid "Mailbox authorization needs to be renewed. Reconnect the affected mailbox."
+msgstr "メールボックスの認証を更新してください。対象のメールボックスを再接続します。"
+
+msgid "Mailbox configuration needs correction."
+msgstr "メールボックス設定を修正してください。"
+
+msgid "Mailbox matching needs attention:"
+msgstr "メールボックスの照合を確認してください："
 
 msgid "Maintain a single part and item master"
 msgstr "単一の部品とアイテムマスターを維持する"
@@ -9880,6 +9937,18 @@ msgstr "メモ日付"
 msgid "Memo ID"
 msgstr "メモID"
 
+msgid "Mercury"
+msgstr "Mercury"
+
+msgid "Mercury authorization needs to be renewed. Check the read-only account connection."
+msgstr "Mercury の認証を更新してください。読み取り専用アカウントの接続を確認します。"
+
+msgid "Mercury connection configured"
+msgstr "Mercury 接続を設定済み"
+
+msgid "Mercury payments"
+msgstr "Mercury 支払い"
+
 msgid "MES"
 msgstr "MES"
 
@@ -10190,6 +10259,9 @@ msgstr "ジョブが必要"
 msgid "Needs ordering"
 msgstr "発注が必要"
 
+msgid "Needs review"
+msgstr "要確認"
+
 msgid "Negative Adjustment"
 msgstr "負の調整"
 
@@ -10475,6 +10547,12 @@ msgstr "新しい保管ユニット"
 msgid "New Supplier"
 msgstr "新規仕入先"
 
+msgid "New supplier email"
+msgstr "新しい仕入先のメール"
+
+msgid "New supplier name"
+msgstr "新しい仕入先名"
+
 msgid "New Supplier Part"
 msgstr "新規仕入先部品"
 
@@ -10755,6 +10833,9 @@ msgstr "画像なし"
 msgid "No inspection plans"
 msgstr "検査計画がありません"
 
+msgid "No invoice mailboxes are connected yet."
+msgstr "請求書メールボックスはまだ接続されていません。"
+
 msgid "No issue types configured"
 msgstr "問題タイプが設定されていません"
 
@@ -10871,6 +10952,9 @@ msgstr "登録済のパスキーがまだありません。"
 
 msgid "No payables"
 msgstr "買掛金がありません"
+
+msgid "No payments in this view."
+msgstr "このビューに支払いはありません。"
 
 msgid "No payments yet."
 msgstr "まだ支払いはありません。"
@@ -11123,6 +11207,9 @@ msgstr "今日は勤務していません"
 
 msgid "Not yet"
 msgstr "まだ"
+
+msgid "Not yet run"
+msgstr "未実行"
 
 msgid "Not you?"
 msgstr "違いますか？"
@@ -11403,6 +11490,9 @@ msgstr "変更通知{ids}で開いています。新しいバージョンまた�
 
 msgid "Open in MES"
 msgstr "MESで開く"
+
+msgid "Open invoice"
+msgstr "請求書を開く"
 
 msgid "Open Issues"
 msgstr "未解決の問題"
@@ -11902,6 +11992,9 @@ msgstr "IDプロバイダーがメタデータURLを公開していない場合�
 msgid "Path"
 msgstr "パス"
 
+msgid "Pause"
+msgstr "一時停止"
+
 msgid "Pay Rate"
 msgstr "支払レート"
 
@@ -11925,6 +12018,9 @@ msgstr "支払い適用"
 
 msgid "Payment Date"
 msgstr "支払日"
+
+msgid "Payment history is still being imported. The next hourly run will continue where it stopped."
+msgstr "支払い履歴をインポート中です。次の毎時実行で停止した場所から続行します。"
 
 msgid "Payment ID"
 msgstr "支払いID"
@@ -12248,6 +12344,9 @@ msgstr "ポータル"
 
 msgid "Positive Adjustment"
 msgstr "正の調整"
+
+msgid "Possible invoice emails"
+msgstr "請求書の可能性があるメール"
 
 msgid "Post"
 msgstr "転記"
@@ -13727,6 +13826,9 @@ msgstr "バックアップからこの会社を復元する"
 msgid "Restore this entity to available stock at the bin and cost it was scrapped from."
 msgstr "このエンティティを、スクラップされた元のビンと原価で利用可能な在庫に復元します。"
 
+msgid "Restore to review"
+msgstr "レビューに戻す"
+
 msgid "Restore tracked entities to available"
 msgstr "追跡対象エンティティを利用可能に復元"
 
@@ -13768,6 +13870,9 @@ msgstr "すべてを再試行"
 
 msgid "Retry revert"
 msgstr "リバートを再試行"
+
+msgid "Retry source files"
+msgstr "ソースファイルを再試行"
 
 msgid "Return Home"
 msgstr "ホームに戻る"
@@ -13831,6 +13936,9 @@ msgstr "確認と作成"
 
 msgid "Review each item's changes, then confirm — releasing can't be undone."
 msgstr "各アイテムの変更をレビューしてから確認してください。リリースは取り消せません。"
+
+msgid "Review supplier"
+msgstr "仕入先を確認"
 
 msgid "Review the period's balance sheet and income statement and confirm the figures look right. This is a manual sign-off — mark it done once you have reviewed them."
 msgstr "期間の貸借対照表と損益計算書をレビューして、数字が正しいことを確認してください。これは手動の承認です。レビュー後、完了にマークしてください。"
@@ -14223,6 +14331,9 @@ msgstr "メソッドを保存"
 msgid "Save Rate"
 msgstr "レートを保存"
 
+msgid "Save sync settings"
+msgstr "同期設定を保存"
+
 msgid "Save view"
 msgstr "ビューを保存"
 
@@ -14393,6 +14504,9 @@ msgstr "Jiraの課題タイトルで検索..."
 
 msgid "Search by linear issue title..."
 msgstr "Linear イシュータイトルで検索..."
+
+msgid "Search connected mailboxes for invoice evidence and supplier suggestions."
+msgstr "接続済みメールボックスで請求書の証拠と仕入先候補を検索します。"
 
 msgid "Search customers and types..."
 msgstr "得意先とタイプを検索..."
@@ -14677,6 +14791,9 @@ msgstr "この教育訓練を完了すべきグループを選択してくださ
 msgid "Select the invoices this payment settles. Discount and write-off are in invoice currency."
 msgstr "この支払いで決済する請求書を選択してください。値引と償却は請求書の通貨で表示されます。"
 
+msgid "Select the original invoice for an additional or partial payment. Its supplier is reused; leave blank to create a new draft."
+msgstr "追加または一部支払いの元請求書を選択します。仕入先は再利用されます。新しい下書きを作成する場合は空欄にします。"
+
 msgid "Select value"
 msgstr "値を選択"
 
@@ -14908,6 +15025,9 @@ msgstr "セットアップ単位"
 
 msgid "Setup Unit"
 msgstr "セットアップユニット"
+
+msgid "Several invoice emails could match this payment. Review the candidates before approving."
+msgstr "複数の請求書メールがこの支払いに一致する可能性があります。承認前に候補を確認してください。"
 
 msgid "Severities"
 msgstr "重大度"
@@ -15264,6 +15384,9 @@ msgstr "いくつかのレコードは戻りません。続行するには<0>{CO
 
 msgid "Some Shifts"
 msgstr "一部のシフト"
+
+msgid "Some source files need another copy attempt. Use Retry source files below."
+msgstr "一部の元ファイルは再コピーが必要です。下の「元ファイルを再試行」を使用してください。"
 
 msgid "Something went wrong. Please try again."
 msgstr "何か問題が発生しました。もう一度お試しください。"
@@ -15785,6 +15908,9 @@ msgstr "仕入先所在地"
 
 msgid "Supplier Location"
 msgstr "仕入先の場所"
+
+msgid "Supplier needs identification"
+msgstr "仕入先の特定が必要です"
 
 msgid "Supplier Order Number"
 msgstr "仕入先注文番号"
@@ -16487,6 +16613,9 @@ msgstr "この属性が受け付ける値の種類（テキスト、数値、日
 msgid "The label and document printers your company prints to"
 msgstr "あなたの会社が印刷するラベルおよび文書プリンター"
 
+msgid "The last attempt could not finish. The next sync will retry; the available payment evidence is preserved."
+msgstr "前回の試行を完了できませんでした。次の同期で再試行します。利用可能な支払い証拠は保持されます。"
+
 msgid "The latest date to place this PO so it arrives by the need-by date, given the supplier's lead time."
 msgstr "仕入先のリードタイムを考慮して、この発注書が必要日までに到着するように発注書を出すべき最後の日付。"
 
@@ -16552,6 +16681,9 @@ msgstr "この材料は、製造または在庫から取得するのではなく
 
 msgid "The material types you organize your stock by"
 msgstr "あなたが在庫を整理する材料タイプ"
+
+msgid "The Mercury connection needs one-time setup before syncing can start."
+msgstr "同期開始前に Mercury 接続の初回設定が必要です。"
 
 msgid "The month your financial year begins; periods are numbered from this month."
 msgstr "財務年度が開始される月。期間はこの月から番号が付けられます。"
@@ -16671,6 +16803,9 @@ msgstr "この保全が実施されるときに技術者が従う手順書。ス
 
 msgid "The processes this work center can run; appears in process-pickers when scheduling operations, and limits which jobs can route through this work center."
 msgstr "この作業区が実行できる工法。工程のスケジュール時にプロセスピッカーに表示され、この作業区を経由できる製造指図を制限します。"
+
+msgid "The provider is limiting requests. The next sync will retry."
+msgstr "プロバイダーがリクエストを制限しています。次の同期で再試行します。"
 
 msgid "The provider offers no dimension targets. Enable the feature in the provider first (e.g. tracking categories, class tracking, or fields)."
 msgstr "プロバイダーはディメンションターゲットを提供していません。最初にプロバイダーで機能を有効にしてください(例:追跡カテゴリ、クラス追跡、またはフィールド)。"
@@ -16940,6 +17075,9 @@ msgstr "その後、以下のために調整されます"
 msgid "Then by"
 msgstr "次に"
 
+msgid "There are more possible emails than could be checked automatically. Review the available matches."
+msgstr "自動確認できるメール数を超えています。利用可能な候補を確認してください。"
+
 msgid "There are no active supplier quotes to compare for this RFQ."
 msgstr "このRFQに対して比較する有効な仕入先見積がありません。"
 
@@ -17126,6 +17264,9 @@ msgstr "この部品は置き換えられ、「在庫のみ」に設定されて
 
 msgid "This path only decides what runs next"
 msgstr "このパスは次に何が実行されるかだけを決定します"
+
+msgid "This payment has more source files than can be imported automatically. Review the originals."
+msgstr "この支払いには自動インポートできる数を超える元ファイルがあります。元ファイルを確認してください。"
 
 msgid "This period has no journal entries posted to it and can be permanently deleted. This cannot be undone."
 msgstr "この期間には転記された仕訳がなく、永久に削除できます。この処理は取り消せません。"
@@ -17636,6 +17777,9 @@ msgstr "火曜日"
 msgid "Turn on the built-in pieces"
 msgstr "組み込み機能をオンにする"
 
+msgid "Turn this off to pause future imports. Existing review records stay available."
+msgstr "今後のインポートを停止するにはオフにします。既存のレビュー記録は利用できます。"
+
 msgid "Two-Factor"
 msgstr "2要素認証"
 
@@ -18077,6 +18221,9 @@ msgstr "ホーム画面とデジタル見積書で使用されます"
 
 msgid "Used on the home screen in dark mode"
 msgstr "ダークモードのホーム画面で使用されます"
+
+msgid "Used only when creating an invoice without an existing supplier or recipient link."
+msgstr "既存の仕入先または受取人リンクなしで請求書を作成する場合のみ使用します。"
 
 msgid "Used to categorize items for reporting and analysis"
 msgstr "レポートと分析のためにアイテムを分類するために使用されます"

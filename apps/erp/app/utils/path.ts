@@ -1419,6 +1419,7 @@ export const path = {
     memoPost: (id: string) => generatePath(`${x}/credits/${id}/post`),
     memos: `${x}/invoicing/credits`,
     memoVoid: (id: string) => generatePath(`${x}/credits/${id}/void`),
+    mercuryPayments: `${x}/invoicing/mercury`,
     methodMaterial: (id: string) =>
       generatePath(`${x}/items/methods/material/${id}`),
     methodMaterials: `${x}/items/methods/materials`,

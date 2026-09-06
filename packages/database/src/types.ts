@@ -9028,7 +9028,7 @@ export type Database = {
           customerTypeId: string | null
           customFields: Json | null
           defaultCc: string[] | null
-          embedding: unknown
+          embedding: unknown | null
           fax: string | null
           id: string
           intercompanyCompanyId: string | null
@@ -9054,7 +9054,7 @@ export type Database = {
           customerTypeId?: string | null
           customFields?: Json | null
           defaultCc?: string[] | null
-          embedding?: unknown
+          embedding?: unknown | null
           fax?: string | null
           id?: string
           intercompanyCompanyId?: string | null
@@ -9080,7 +9080,7 @@ export type Database = {
           customerTypeId?: string | null
           customFields?: Json | null
           defaultCc?: string[] | null
-          embedding?: unknown
+          embedding?: unknown | null
           fax?: string | null
           id?: string
           intercompanyCompanyId?: string | null
@@ -20055,7 +20055,7 @@ export type Database = {
           createdBy: string
           defaultMethodType: Database["public"]["Enums"]["methodType"] | null
           description: string | null
-          embedding: unknown
+          embedding: unknown | null
           id: string
           itemTrackingType: Database["public"]["Enums"]["itemTrackingType"]
           modelUploadId: string | null
@@ -20084,7 +20084,7 @@ export type Database = {
           createdBy: string
           defaultMethodType?: Database["public"]["Enums"]["methodType"] | null
           description?: string | null
-          embedding?: unknown
+          embedding?: unknown | null
           id?: string
           itemTrackingType: Database["public"]["Enums"]["itemTrackingType"]
           modelUploadId?: string | null
@@ -20113,7 +20113,7 @@ export type Database = {
           createdBy?: string
           defaultMethodType?: Database["public"]["Enums"]["methodType"] | null
           description?: string | null
-          embedding?: unknown
+          embedding?: unknown | null
           id?: string
           itemTrackingType?: Database["public"]["Enums"]["itemTrackingType"]
           modelUploadId?: string | null
@@ -29387,6 +29387,524 @@ export type Database = {
           {
             foreignKeyName: "memo_voidedBy_fkey"
             columns: ["voidedBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+        ]
+      }
+      mercuryRecipientMapping: {
+        Row: {
+          companyId: string
+          createdAt: string
+          createdBy: string
+          id: string
+          mercuryRecipientId: string
+          supplierId: string
+          updatedAt: string | null
+          updatedBy: string | null
+        }
+        Insert: {
+          companyId: string
+          createdAt?: string
+          createdBy: string
+          id?: string
+          mercuryRecipientId: string
+          supplierId: string
+          updatedAt?: string | null
+          updatedBy?: string | null
+        }
+        Update: {
+          companyId?: string
+          createdAt?: string
+          createdBy?: string
+          id?: string
+          mercuryRecipientId?: string
+          supplierId?: string
+          updatedAt?: string | null
+          updatedBy?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mercuryRecipientMapping_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mercuryRecipientMapping_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mercuryRecipientMapping_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "customFieldTables"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "mercuryRecipientMapping_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "integrations"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "mercuryRecipientMapping_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mercuryRecipientMapping_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mercuryRecipientMapping_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mercuryRecipientMapping_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mercuryRecipientMapping_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "mercuryRecipientMapping_supplierId_companyId_fkey"
+            columns: ["supplierId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "purchaseOrderSuppliers"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "mercuryRecipientMapping_supplierId_companyId_fkey"
+            columns: ["supplierId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "supplier"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "mercuryRecipientMapping_supplierId_companyId_fkey"
+            columns: ["supplierId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "mercuryRecipientMapping_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mercuryRecipientMapping_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mercuryRecipientMapping_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mercuryRecipientMapping_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mercuryRecipientMapping_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+        ]
+      }
+      mercurySyncSettings: {
+        Row: {
+          companyId: string
+          createdAt: string
+          createdBy: string
+          cursor: string | null
+          disabledMailboxes: string[]
+          enabled: boolean
+          eventCursor: string | null
+          gmailEnabled: boolean
+          id: string
+          lastAttemptAt: string | null
+          lastError: string | null
+          lastGmailError: string | null
+          lastSuccessAt: string | null
+          syncFromDate: string | null
+          updatedAt: string | null
+          updatedBy: string | null
+        }
+        Insert: {
+          companyId: string
+          createdAt?: string
+          createdBy: string
+          cursor?: string | null
+          disabledMailboxes?: string[]
+          enabled?: boolean
+          eventCursor?: string | null
+          gmailEnabled?: boolean
+          id?: string
+          lastAttemptAt?: string | null
+          lastError?: string | null
+          lastGmailError?: string | null
+          lastSuccessAt?: string | null
+          syncFromDate?: string | null
+          updatedAt?: string | null
+          updatedBy?: string | null
+        }
+        Update: {
+          companyId?: string
+          createdAt?: string
+          createdBy?: string
+          cursor?: string | null
+          disabledMailboxes?: string[]
+          enabled?: boolean
+          eventCursor?: string | null
+          gmailEnabled?: boolean
+          id?: string
+          lastAttemptAt?: string | null
+          lastError?: string | null
+          lastGmailError?: string | null
+          lastSuccessAt?: string | null
+          syncFromDate?: string | null
+          updatedAt?: string | null
+          updatedBy?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mercurySyncSettings_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mercurySyncSettings_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: true
+            referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mercurySyncSettings_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: true
+            referencedRelation: "customFieldTables"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "mercurySyncSettings_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: true
+            referencedRelation: "integrations"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "mercurySyncSettings_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mercurySyncSettings_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mercurySyncSettings_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mercurySyncSettings_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mercurySyncSettings_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "mercurySyncSettings_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mercurySyncSettings_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mercurySyncSettings_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mercurySyncSettings_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mercurySyncSettings_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+        ]
+      }
+      mercuryTransactionImport: {
+        Row: {
+          amount: number
+          attachments: Json
+          companyId: string
+          createdAt: string
+          createdBy: string
+          currencyCode: string
+          id: string
+          invoiceEvidence: Json
+          lastError: string | null
+          memo: string | null
+          mercuryAccountId: string
+          mercuryRecipientId: string | null
+          mercuryTransactionId: string
+          purchaseInvoiceId: string | null
+          reference: string | null
+          remoteStatus: string
+          reviewStatus: string
+          supplierId: string | null
+          transactionDate: string
+          updatedAt: string | null
+          updatedBy: string | null
+          vendorSuggestion: Json
+        }
+        Insert: {
+          amount: number
+          attachments?: Json
+          companyId: string
+          createdAt?: string
+          createdBy: string
+          currencyCode: string
+          id?: string
+          invoiceEvidence?: Json
+          lastError?: string | null
+          memo?: string | null
+          mercuryAccountId: string
+          mercuryRecipientId?: string | null
+          mercuryTransactionId: string
+          purchaseInvoiceId?: string | null
+          reference?: string | null
+          remoteStatus: string
+          reviewStatus?: string
+          supplierId?: string | null
+          transactionDate: string
+          updatedAt?: string | null
+          updatedBy?: string | null
+          vendorSuggestion?: Json
+        }
+        Update: {
+          amount?: number
+          attachments?: Json
+          companyId?: string
+          createdAt?: string
+          createdBy?: string
+          currencyCode?: string
+          id?: string
+          invoiceEvidence?: Json
+          lastError?: string | null
+          memo?: string | null
+          mercuryAccountId?: string
+          mercuryRecipientId?: string | null
+          mercuryTransactionId?: string
+          purchaseInvoiceId?: string | null
+          reference?: string | null
+          remoteStatus?: string
+          reviewStatus?: string
+          supplierId?: string | null
+          transactionDate?: string
+          updatedAt?: string | null
+          updatedBy?: string | null
+          vendorSuggestion?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mercuryTransactionImport_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mercuryTransactionImport_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mercuryTransactionImport_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "customFieldTables"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "mercuryTransactionImport_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "integrations"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "mercuryTransactionImport_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mercuryTransactionImport_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mercuryTransactionImport_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mercuryTransactionImport_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mercuryTransactionImport_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "mercuryTransactionImport_purchaseInvoiceId_companyId_fkey"
+            columns: ["purchaseInvoiceId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "purchaseInvoice"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "mercuryTransactionImport_purchaseInvoiceId_companyId_fkey"
+            columns: ["purchaseInvoiceId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "purchaseInvoices"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "mercuryTransactionImport_supplierId_companyId_fkey"
+            columns: ["supplierId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "purchaseOrderSuppliers"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "mercuryTransactionImport_supplierId_companyId_fkey"
+            columns: ["supplierId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "supplier"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "mercuryTransactionImport_supplierId_companyId_fkey"
+            columns: ["supplierId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "mercuryTransactionImport_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mercuryTransactionImport_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mercuryTransactionImport_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mercuryTransactionImport_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mercuryTransactionImport_updatedBy_fkey"
+            columns: ["updatedBy"]
             isOneToOne: false
             referencedRelation: "userDefaults"
             referencedColumns: ["userId"]
@@ -53326,7 +53844,7 @@ export type Database = {
           currencyCode: string | null
           customFields: Json | null
           defaultCc: string[] | null
-          embedding: unknown
+          embedding: unknown | null
           fax: string | null
           id: string
           intercompanyCompanyId: string | null
@@ -53354,7 +53872,7 @@ export type Database = {
           currencyCode?: string | null
           customFields?: Json | null
           defaultCc?: string[] | null
-          embedding?: unknown
+          embedding?: unknown | null
           fax?: string | null
           id?: string
           intercompanyCompanyId?: string | null
@@ -53382,7 +53900,7 @@ export type Database = {
           currencyCode?: string | null
           customFields?: Json | null
           defaultCc?: string[] | null
-          embedding?: unknown
+          embedding?: unknown | null
           fax?: string | null
           id?: string
           intercompanyCompanyId?: string | null
@@ -63654,7 +64172,7 @@ export type Database = {
         Row: {
           attachedFunctions: string | null
           status: string | null
-          systemTriggerName: unknown
+          systemTriggerName: unknown | null
           tableName: string | null
           type: string | null
         }
@@ -73754,14 +74272,14 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "address_countryCode_fkey"
-            columns: ["shipmentCountryCode"]
+            columns: ["invoiceCountryCode"]
             isOneToOne: false
             referencedRelation: "country"
             referencedColumns: ["alpha2"]
           },
           {
             foreignKeyName: "address_countryCode_fkey"
-            columns: ["invoiceCountryCode"]
+            columns: ["shipmentCountryCode"]
             isOneToOne: false
             referencedRelation: "country"
             referencedColumns: ["alpha2"]
@@ -76572,7 +77090,7 @@ export type Database = {
           currencyCode: string | null
           customFields: Json | null
           defaultCc: string[] | null
-          embedding: unknown
+          embedding: unknown | null
           eori: string | null
           externalId: Json | null
           fax: string | null
@@ -77658,7 +78176,10 @@ export type Database = {
       }
     }
     Functions: {
-      _xid_machine_id: { Args: never; Returns: number }
+      _xid_machine_id: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
       accountTreeBalancePeriodSeries: {
         Args: {
           p_company_group_id: string
@@ -77749,7 +78270,10 @@ export type Database = {
         Args: { operation_id: string }
         Returns: boolean
       }
-      company_today: { Args: { p_company_id: string }; Returns: string }
+      company_today: {
+        Args: { p_company_id: string }
+        Returns: string
+      }
       complete_job_to_inventory: {
         Args: {
           p_company_id?: string
@@ -78031,7 +78555,10 @@ export type Database = {
           variance: number
         }[]
       }
-      get_api_key_scopes: { Args: never; Returns: Json }
+      get_api_key_scopes: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       get_ar_aging: {
         Args: {
           _aging_method?: string
@@ -78210,23 +78737,38 @@ export type Database = {
           workCenterId: string
         }[]
       }
-      get_claims: { Args: { company: string; uid: string }; Returns: Json }
-      get_companies_with_any_role: { Args: never; Returns: string[] }
+      get_claims: {
+        Args: { company: string; uid: string }
+        Returns: Json
+      }
+      get_companies_with_any_role: {
+        Args: Record<PropertyKey, never>
+        Returns: string[]
+      }
       get_companies_with_employee_permission: {
         Args: { permission: string }
         Returns: string[]
       }
-      get_companies_with_employee_role: { Args: never; Returns: string[] }
+      get_companies_with_employee_role: {
+        Args: Record<PropertyKey, never>
+        Returns: string[]
+      }
       get_companies_with_permission: {
         Args: { permission: string }
         Returns: string[]
       }
-      get_company_groups_for_employee: { Args: never; Returns: string[] }
+      get_company_groups_for_employee: {
+        Args: Record<PropertyKey, never>
+        Returns: string[]
+      }
       get_company_groups_for_root_permission: {
         Args: { permission: string }
         Returns: string[]
       }
-      get_company_id_from_api_key: { Args: never; Returns: string }
+      get_company_id_from_api_key: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       get_company_id_from_foreign_key: {
         Args: { foreign_key: string; tbl: string }
         Returns: string
@@ -78934,8 +79476,14 @@ export type Database = {
           version: number
         }[]
       }
-      get_my_claim: { Args: { claim: string }; Returns: Json }
-      get_my_permission: { Args: { claim: string }; Returns: Json }
+      get_my_claim: {
+        Args: { claim: string }
+        Returns: Json
+      }
+      get_my_permission: {
+        Args: { claim: string }
+        Returns: Json
+      }
       get_next_numeric_sequence: {
         Args: {
           company_id: string
@@ -79011,9 +79559,18 @@ export type Database = {
           updatedBy: string
         }[]
       }
-      get_period_end_date: { Args: { period: string }; Returns: string }
-      get_period_start_date: { Args: { period: string }; Returns: string }
-      get_permission_companies: { Args: { claim: string }; Returns: string[] }
+      get_period_end_date: {
+        Args: { period: string }
+        Returns: string
+      }
+      get_period_start_date: {
+        Args: { period: string }
+        Returns: string
+      }
+      get_permission_companies: {
+        Args: { claim: string }
+        Returns: string[]
+      }
       get_picking_list_availability: {
         Args: { p_picking_list_id: string }
         Returns: {
@@ -79551,7 +80108,7 @@ export type Database = {
         }[]
       }
       get_timezone_names: {
-        Args: never
+        Args: Record<PropertyKey, never>
         Returns: {
           name: string
           utcOffset: string
@@ -79726,7 +80283,10 @@ export type Database = {
           targetCompanyName: string
         }[]
       }
-      groups_for_user: { Args: { uid: string }; Returns: string[] }
+      groups_for_user: {
+        Args: { uid: string }
+        Returns: string[]
+      }
       groups_query: {
         Args: { _name?: string; _uid?: string }
         Returns: {
@@ -79742,7 +80302,30 @@ export type Database = {
           users: Json
         }[]
       }
-      has_any_company_permission: { Args: { claim: string }; Returns: boolean }
+      gtrgm_compress: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gtrgm_decompress: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gtrgm_in: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gtrgm_options: {
+        Args: { "": unknown }
+        Returns: undefined
+      }
+      gtrgm_out: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      has_any_company_permission: {
+        Args: { claim: string }
+        Returns: boolean
+      }
       has_company_permission: {
         Args: { claim: string; company: string }
         Returns: boolean
@@ -79755,7 +80338,10 @@ export type Database = {
         Args: { company: string }
         Returns: boolean
       }
-      id: { Args: { _prefix?: string }; Returns: string }
+      id: {
+        Args: { _prefix?: string }
+        Returns: string
+      }
       increment_notification_delivery: {
         Args: {
           p_company_id: string
@@ -79791,12 +80377,18 @@ export type Database = {
         Args: { p_company_id: string; p_entries: Json[] }
         Returns: number
       }
-      is_claims_admin: { Args: { company: string }; Returns: boolean }
+      is_claims_admin: {
+        Args: { company: string }
+        Returns: boolean
+      }
       is_last_job_operation: {
         Args: { operation_id: string }
         Returns: boolean
       }
-      is_valid_timezone: { Args: { tz: string }; Returns: boolean }
+      is_valid_timezone: {
+        Args: { tz: string }
+        Returns: boolean
+      }
       item_ledger_on_hand_contribution: {
         Args: {
           quantity: number
@@ -79891,7 +80483,10 @@ export type Database = {
           number: string
         }[]
       }
-      jsonb_to_text_array: { Args: { "": Json }; Returns: string[] }
+      jsonb_to_text_array: {
+        Args: { "": Json }
+        Returns: string[]
+      }
       location_today: {
         Args: { p_company_id: string; p_location_id: string }
         Returns: string
@@ -79991,7 +80586,10 @@ export type Database = {
         }
         Returns: undefined
       }
-      reconcile_item_stock_quantities: { Args: never; Returns: undefined }
+      reconcile_item_stock_quantities: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       resolve_shelf_life_start_for_receipt: {
         Args: { p_item_id: string; p_receipt_id: string }
         Returns: string
@@ -80028,6 +80626,10 @@ export type Database = {
           title: string
         }[]
       }
+      set_limit: {
+        Args: { "": number }
+        Returns: number
+      }
       set_shelf_life_for_operation: {
         Args: {
           p_event: Database["public"]["Enums"]["shelfLifeTriggerTiming"]
@@ -80043,8 +80645,14 @@ export type Database = {
         Args: { p_new: Json; p_old: Json; p_operation: string; p_table: string }
         Returns: undefined
       }
-      show_limit: { Args: never; Returns: number }
-      show_trgm: { Args: { "": string }; Returns: string[] }
+      show_limit: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
+      show_trgm: {
+        Args: { "": string }
+        Returns: string[]
+      }
       snapshotAccountingPeriodBalances: {
         Args: { p_company_id: string; p_period_id: string; p_user_id: string }
         Returns: undefined
@@ -80176,20 +80784,12 @@ export type Database = {
         Args: { p_new: Json; p_old: Json; p_operation: string; p_table: string }
         Returns: undefined
       }
-      sync_finish_job_operation:
-        | {
-            Args: { p_new: Json; p_old: Json; p_operation: string }
-            Returns: undefined
-          }
-        | {
-            Args: {
-              p_new: Json
-              p_old: Json
-              p_operation: string
-              p_table: string
-            }
-            Returns: undefined
-          }
+      sync_finish_job_operation: {
+        Args:
+          | { p_new: Json; p_old: Json; p_operation: string }
+          | { p_new: Json; p_old: Json; p_operation: string; p_table: string }
+        Returns: undefined
+      }
       sync_insert_company_related_records: {
         Args: { p_new: Json; p_old: Json; p_operation: string; p_table: string }
         Returns: undefined
@@ -80386,15 +80986,24 @@ export type Database = {
         }
         Returns: undefined
       }
-      users_for_groups: { Args: { groups: string[] }; Returns: Json }
+      users_for_groups: {
+        Args: { groups: string[] }
+        Returns: Json
+      }
       users_with_verified_mfa: {
         Args: { company_id: string }
         Returns: {
           userId: string
         }[]
       }
-      uuid_generate_v4: { Args: never; Returns: string }
-      uuid_to_base58: { Args: { _uuid: string }; Returns: string }
+      uuid_generate_v4: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      uuid_to_base58: {
+        Args: { _uuid: string }
+        Returns: string
+      }
       workflow_merge_custom_fields: {
         Args: {
           p_company_id: string
@@ -80404,13 +81013,34 @@ export type Database = {
         }
         Returns: undefined
       }
-      xid: { Args: { _at?: string }; Returns: unknown }
-      xid_counter: { Args: { _xid: unknown }; Returns: number }
-      xid_decode: { Args: { _xid: unknown }; Returns: number[] }
-      xid_encode: { Args: { _id: number[] }; Returns: unknown }
-      xid_machine: { Args: { _xid: unknown }; Returns: number[] }
-      xid_pid: { Args: { _xid: unknown }; Returns: number }
-      xid_time: { Args: { _xid: unknown }; Returns: string }
+      xid: {
+        Args: { _at?: string }
+        Returns: unknown
+      }
+      xid_counter: {
+        Args: { _xid: unknown }
+        Returns: number
+      }
+      xid_decode: {
+        Args: { _xid: unknown }
+        Returns: number[]
+      }
+      xid_encode: {
+        Args: { _id: number[] }
+        Returns: unknown
+      }
+      xid_machine: {
+        Args: { _xid: unknown }
+        Returns: number[]
+      }
+      xid_pid: {
+        Args: { _xid: unknown }
+        Returns: number
+      }
+      xid_time: {
+        Args: { _xid: unknown }
+        Returns: string
+      }
     }
     Enums: {
       accountingPeriodStatus: "Inactive" | "Active"
@@ -81547,15 +82177,24 @@ export type Database = {
         Args: { bucketid: string; metadata: Json; name: string; owner: string }
         Returns: undefined
       }
-      extension: { Args: { name: string }; Returns: string }
-      filename: { Args: { name: string }; Returns: string }
-      foldername: { Args: { name: string }; Returns: string[] }
+      extension: {
+        Args: { name: string }
+        Returns: string
+      }
+      filename: {
+        Args: { name: string }
+        Returns: string
+      }
+      foldername: {
+        Args: { name: string }
+        Returns: string[]
+      }
       get_common_prefix: {
         Args: { p_delimiter: string; p_key: string; p_prefix: string }
         Returns: string
       }
       get_size_by_bucket: {
-        Args: never
+        Args: Record<PropertyKey, never>
         Returns: {
           bucket_id: string
           size: number
@@ -81595,7 +82234,10 @@ export type Database = {
           updated_at: string
         }[]
       }
-      operation: { Args: never; Returns: string }
+      operation: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       search: {
         Args: {
           bucketname: string

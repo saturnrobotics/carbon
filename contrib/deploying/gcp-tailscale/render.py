@@ -20,6 +20,7 @@ import time
 
 import yaml
 import private_postgres
+import payment_sync
 
 
 def write_private(path, content):
@@ -87,6 +88,7 @@ def render(config, repo, output, state=Path("/var/lib/carbon")):
     """Write concrete Compose JSON, gateway policy and proxy configuration."""
     os.umask(0o077)
     private_postgres.validate(config)
+    payment_sync.validate(config)
     repo, output = repo.resolve(), output.resolve()
     names = ("ERP_HOST", "MES_HOST", "SUPABASE_HOST", "AUTH_ALLOWED_GOOGLE_DOMAIN")
     for key in names:
@@ -161,6 +163,7 @@ def render(config, repo, output, state=Path("/var/lib/carbon")):
         })
         if "resend_api_key" not in services[app]["secrets"]:
             services[app]["secrets"].append("resend_api_key")
+    payment_sync.configure(config, services["erp"], directory, write_private)
     # A 200 response alone is insufficient: ERP reports dependency failures in JSON.
     services["erp"]["healthcheck"]["test"] = ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/health').then(r=>r.json()).then(b=>process.exit(b.status==='healthy'?0:1)).catch(()=>process.exit(1))"]
 

@@ -5,6 +5,38 @@ import { zfd } from "zod-form-data";
 // `@carbon/auth`'s Lingui-macro glossary and break plain unit tests of this module.
 import { incoterms, itemType, methodType } from "../shared/shared.models";
 
+export const mercurySettingsValidator = z.object({
+  enabled: zfd.checkbox(),
+  gmailEnabled: zfd.checkbox(),
+  disabledMailboxes: zfd.repeatableOfType(z.string().email()),
+  syncFromDate: zfd.text(
+    z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/)
+      .optional()
+  )
+});
+
+export const mercuryApprovalValidator = z
+  .object({
+    importId: z.string().min(1),
+    purchaseInvoiceId: zfd.text(z.string().optional()),
+    supplierId: zfd.text(z.string().optional()),
+    supplierName: zfd.text(z.string().trim().min(1).max(500).optional()),
+    supplierEmail: zfd.text(z.string().trim().email().max(320).optional())
+  })
+  .refine(
+    (value) =>
+      Boolean(
+        value.purchaseInvoiceId || value.supplierId || value.supplierName
+      ),
+    {
+      message:
+        "Choose an invoice, choose a supplier, or confirm the new supplier's name",
+      path: ["supplierName"]
+    }
+  );
+
 export const purchaseInvoiceLineType = [
   "Part",
   "Service",

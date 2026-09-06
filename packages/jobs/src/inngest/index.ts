@@ -47,6 +47,7 @@ import {
   syncExternalAccountingFunction,
   timeCardAutoCloseFunction
 } from "./functions/integrations";
+import { mercurySyncFunction } from "./functions/integrations/mercury-sync";
 // Import all functions
 import {
   notifyFunction,
@@ -152,6 +153,7 @@ export const functions = [
   notificationPurgeFunction,
   workflowRunRetentionFunction,
   // Integrations
+  mercurySyncFunction,
   jiraSyncFunction,
   linearSyncFunction,
   paperlessPartsFunction,

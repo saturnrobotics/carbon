@@ -508,6 +508,9 @@ msgstr "Zdefiniowany w zakresie firmy rabat lub narzut, wyrażony w procentach l
 msgid "A completed job's output, received into inventory at the job's actual accumulated WIP cost."
 msgstr "Wyjście ukończonego zlecenia produkcyjnego, przyjęte do zapasów w rzeczywistym skumulowanym koszcie produkcji w toku."
 
+msgid "A connected mailbox does not match its configured address. Reconnect that mailbox."
+msgstr "Podłączona skrzynka nie odpowiada skonfigurowanemu adresowi. Połącz ją ponownie."
+
 msgid "A consumable is a physical item used to make a part that can be used across multiple jobs"
 msgstr "Materiał eksploatacyjny to przedmiot fizyczny używany do wykonania części, który może być używany w wielu zleceniach produkcyjnych"
 
@@ -1904,6 +1907,9 @@ msgstr "Data zatwierdzenia"
 msgid "Approval is required at or above this amount, up to the next rule's minimum"
 msgstr "Zatwierdzenie jest wymagane przy tej kwocie lub wyższej, aż do minimum następnej reguły"
 
+msgid "Approval links an existing invoice or creates a draft purchase invoice and copies its source files. Review new invoice dates, numbers, totals and lines before posting. Bank account mapping and payment settlement are not configured; these records do not mark invoices as paid."
+msgstr "Zatwierdzenie łączy istniejącą fakturę lub tworzy roboczą fakturę zakupu i kopiuje pliki źródłowe. Przed zaksięgowaniem sprawdź daty, numery, sumy i pozycje. Mapowanie konta bankowego i rozliczenie płatności nie są skonfigurowane; te rekordy nie oznaczają faktur jako opłaconych."
+
 msgid "Approval requirements"
 msgstr "Wymagania dotyczące zatwierdzenia"
 
@@ -1918,6 +1924,9 @@ msgstr "Zatwierdzenia"
 
 msgid "Approve"
 msgstr "Zatwierdź"
+
+msgid "Approve and link invoice"
+msgstr "Zatwierdź i połącz fakturę"
 
 msgid "Approved By"
 msgstr "Zatwierdzone przez"
@@ -2616,6 +2625,9 @@ msgstr "Automatyzuj swoje procesy biznesowe za pomocą przepływów pracy oparty
 
 msgid "Automatic Cost Updates"
 msgstr "Automatyczne aktualizacje kosztów"
+
+msgid "Automatic import"
+msgstr "Automatyczny import"
 
 msgid "Automatic Lead Time Updates"
 msgstr "Automatyczne aktualizacje czasu realizacji"
@@ -3355,6 +3367,8 @@ msgstr "Czat"
 
 msgid "Check operations on the left to build the batch."
 msgstr "Zaznacz operacje po lewej stronie, aby zbudować wsad."
+msgid "Check outgoing payments every hour. Proposed suppliers and invoice matches wait for your review."
+msgstr "Sprawdzaj płatności wychodzące co godzinę. Sugerowani dostawcy i dopasowania faktur czekają na przegląd."
 
 msgid "Check the item ledger for any items with a negative on-hand quantity as of period end — usually a missing receipt or an out-of-order posting that distorts inventory value and cost of goods sold. Mark it done once reviewed, or skip with a reason."
 msgstr "Sprawdź księgę artykułów pod kątem artykułów z ujemną ilością dostępną na koniec okresu — zwykle brakuje przyjęcia lub zaksięgowania poza kolejnością, które zniekształca wartość zapasów i koszt własny sprzedaży. Oznacz jako gotowe po przejrzeniu lub pomiń z uzasadnieniem."
@@ -5637,6 +5651,9 @@ msgstr "Kierunki"
 msgid "Disabled"
 msgstr "Wyłączone"
 
+msgid "Disabled in connection setup"
+msgstr "Wyłączone w konfiguracji połączenia"
+
 msgid "Discard"
 msgstr "Odrzuć"
 
@@ -6780,11 +6797,17 @@ msgstr "Certifikat Zwolnienia"
 msgid "Exemption Reason"
 msgstr "Powód Zwolnienia"
 
+msgid "Existing invoice"
+msgstr "Istniejąca faktura"
+
 msgid "Existing mappings. Pick a different provider option to re-map."
 msgstr "Istniejące mapowania. Wybierz inną opcję dostawcy, aby przezmapować."
 
 msgid "Existing Stripe customer"
 msgstr "Istniejący klient Stripe"
+
+msgid "Existing supplier"
+msgstr "Istniejący dostawca"
 
 msgid "Expand"
 msgstr "Rozwiń"
@@ -7419,6 +7442,9 @@ msgstr "Finalizowanie miesiąca obrachunkowego poprzez cykl Otwarte → Zablokow
 msgid "Financial Statements"
 msgstr "Sprawozdania finansowe"
 
+msgid "Find invoice emails"
+msgstr "Znajdź e-maile z fakturami"
+
 msgid "finish"
 msgstr "Wyroby gotowe"
 
@@ -7526,6 +7552,9 @@ msgstr "Flagi"
 
 msgid "for anything. They'll pull in the right person."
 msgstr "w sprawie czegokolwiek. Zaangażują odpowiednią osobę."
+
+msgid "For one-time deployment setup, use this company ID for PAYMENT_SYNC_COMPANY_ID:"
+msgstr "Do jednorazowej konfiguracji wdrożenia użyj tego identyfikatora firmy dla PAYMENT_SYNC_COMPANY_ID:"
 
 msgid "Forecast"
 msgstr "Prognoza"
@@ -8023,6 +8052,9 @@ msgstr "Host"
 msgid "Host, secure, and back up the platform"
 msgstr "Hostuj, zabezpiecz i wykonuj kopie zapasowe platformy"
 
+msgid "Hourly sync"
+msgstr "Synchronizacja co godzinę"
+
 msgid "Hours"
 msgstr "Godziny"
 
@@ -8244,6 +8276,11 @@ msgstr "Jeśli chcesz zmienić numery części, kliknij Anuluj i ręcznie przypi
 
 msgid "Ignore"
 msgstr "Ignoruj"
+msgid "Ignore this payment"
+msgstr "Ignoruj tę płatność"
+
+msgid "Ignored"
+msgstr "Zignorowane"
 
 msgid "II (normal default)"
 msgstr "II (normalne domyślne)"
@@ -8268,6 +8305,9 @@ msgstr "Lider Wdrożenia"
 
 msgid "Import {label} CSV"
 msgstr "Importuj {label} CSV"
+
+msgid "Import history from"
+msgstr "Importuj historię od"
 
 msgid "Import results"
 msgstr "Wyniki Importu"
@@ -9085,6 +9125,9 @@ msgstr "Ostatni kwartał"
 msgid "Last Run"
 msgstr "Ostatnie uruchomienie"
 
+msgid "Last successful sync:"
+msgstr "Ostatnia udana synchronizacja:"
+
 msgid "Last synced: <0/>"
 msgstr "Ostatnia synchronizacja: <0/>"
 
@@ -9132,6 +9175,9 @@ msgstr "Pozostaw wszelkie powiązane paragony bez zmian"
 
 msgid "Leave blank for built-in"
 msgstr "Pozostaw puste dla wbudowanego"
+
+msgid "Leave blank to include all available payment history."
+msgstr "Pozostaw puste, aby uwzględnić całą dostępną historię płatności."
 
 msgid "Leave blank to use the next revision automatically"
 msgstr "Pozostaw puste, aby automatycznie użyć następnej rewizji"
@@ -9269,6 +9315,9 @@ msgstr "Łącze do pozycji zamówienia sprzedaży"
 #. placeholder {1}: r.quantity
 msgid "Linked entity quantity ({0}) does not match row quantity ({1})."
 msgstr "Ilość połączonej jednostki ({0}) nie odpowiada ilości wiersza ({1})."
+
+msgid "Linked invoices"
+msgstr "Połączone faktury"
 
 msgid "Linked Issue"
 msgstr "Powiązany problem"
@@ -9479,6 +9528,15 @@ msgstr "Klasa Właściwości MACRS"
 
 msgid "Magic link"
 msgstr "Magiczny link"
+
+msgid "Mailbox authorization needs to be renewed. Reconnect the affected mailbox."
+msgstr "Autoryzację skrzynki należy odnowić. Połącz ponownie wskazaną skrzynkę."
+
+msgid "Mailbox configuration needs correction."
+msgstr "Należy poprawić konfigurację skrzynki."
+
+msgid "Mailbox matching needs attention:"
+msgstr "Dopasowanie skrzynki wymaga uwagi:"
 
 msgid "Maintain a single part and item master"
 msgstr "Utrzymuj pojedynczy katalog części i artykułów"
@@ -9880,6 +9938,18 @@ msgstr "Data memorandum"
 msgid "Memo ID"
 msgstr "ID Notatki"
 
+msgid "Mercury"
+msgstr "Mercury"
+
+msgid "Mercury authorization needs to be renewed. Check the read-only account connection."
+msgstr "Autoryzację Mercury należy odnowić. Sprawdź połączenie konta tylko do odczytu."
+
+msgid "Mercury connection configured"
+msgstr "Połączenie Mercury skonfigurowane"
+
+msgid "Mercury payments"
+msgstr "Płatności Mercury"
+
 msgid "MES"
 msgstr "MES"
 
@@ -10190,6 +10260,9 @@ msgstr "Wymaga zadania"
 msgid "Needs ordering"
 msgstr "Wymaga zamówienia"
 
+msgid "Needs review"
+msgstr "Wymaga przeglądu"
+
 msgid "Negative Adjustment"
 msgstr "Ujemna Korekta"
 
@@ -10475,6 +10548,12 @@ msgstr "Nowa jednostka magazynowa"
 msgid "New Supplier"
 msgstr "Nowy Dostawca"
 
+msgid "New supplier email"
+msgstr "E-mail nowego dostawcy"
+
+msgid "New supplier name"
+msgstr "Nazwa nowego dostawcy"
+
 msgid "New Supplier Part"
 msgstr "Nowa część dostawcy"
 
@@ -10755,6 +10834,9 @@ msgstr "Brak obrazu"
 msgid "No inspection plans"
 msgstr "Brak planów kontroli"
 
+msgid "No invoice mailboxes are connected yet."
+msgstr "Nie połączono jeszcze skrzynek z fakturami."
+
 msgid "No issue types configured"
 msgstr "Brak skonfigurowanych typów problemów"
 
@@ -10871,6 +10953,9 @@ msgstr "Nie zarejestrowano jeszcze żadnych kluczy dostępu."
 
 msgid "No payables"
 msgstr "Brak zobowiązań"
+
+msgid "No payments in this view."
+msgstr "Brak płatności w tym widoku."
 
 msgid "No payments yet."
 msgstr "Brak płatności."
@@ -11123,6 +11208,9 @@ msgstr "Nie pracuje dzisiaj"
 
 msgid "Not yet"
 msgstr "Jeszcze nie"
+
+msgid "Not yet run"
+msgstr "Jeszcze nie uruchomiono"
 
 msgid "Not you?"
 msgstr "To nie ty?"
@@ -11403,6 +11491,9 @@ msgstr "Otwarte w zawiadomieniach o zmianie {ids}. Zwolnij je aby utworzyć nowe
 
 msgid "Open in MES"
 msgstr "Otwórz w MES"
+
+msgid "Open invoice"
+msgstr "Otwórz fakturę"
 
 msgid "Open Issues"
 msgstr "Otwarte problemy"
@@ -11902,6 +11993,9 @@ msgstr "Wklej kod XML metadanych, jeśli Twój dostawca tożsamości nie publiku
 msgid "Path"
 msgstr "Ścieżka"
 
+msgid "Pause"
+msgstr "Wstrzymaj"
+
 msgid "Pay Rate"
 msgstr "Kurs płatności"
 
@@ -11925,6 +12019,9 @@ msgstr "Zastosowania Płatności"
 
 msgid "Payment Date"
 msgstr "Data płatności"
+
+msgid "Payment history is still being imported. The next hourly run will continue where it stopped."
+msgstr "Historia płatności jest nadal importowana. Następne uruchomienie godzinowe będzie kontynuować od miejsca przerwania."
 
 msgid "Payment ID"
 msgstr "Identyfikator płatności"
@@ -12248,6 +12345,9 @@ msgstr "Portale"
 
 msgid "Positive Adjustment"
 msgstr "Dodatnia Korekta"
+
+msgid "Possible invoice emails"
+msgstr "Możliwe e-maile z fakturami"
 
 msgid "Post"
 msgstr "Opublikuj"
@@ -13727,6 +13827,9 @@ msgstr "Przywróć tę firmę z kopii zapasowej"
 msgid "Restore this entity to available stock at the bin and cost it was scrapped from."
 msgstr "Przywróć tę jednostkę do dostępnych zapasów w pojemniku i po koszcie, z których została złomowana."
 
+msgid "Restore to review"
+msgstr "Przywróć do przeglądu"
+
 msgid "Restore tracked entities to available"
 msgstr "Przywróć śledzone jednostki do dostępnych"
 
@@ -13768,6 +13871,9 @@ msgstr "Ponów wszystko"
 
 msgid "Retry revert"
 msgstr "Ponów przywracanie"
+
+msgid "Retry source files"
+msgstr "Ponów próbę plików źródłowych"
 
 msgid "Return Home"
 msgstr "Wróć do domu"
@@ -13831,6 +13937,9 @@ msgstr "Przejrzyj i utwórz"
 
 msgid "Review each item's changes, then confirm — releasing can't be undone."
 msgstr "Przejrzyj zmiany w każdym artykule, a następnie potwierdź — uwolnienie nie może być cofnięte."
+
+msgid "Review supplier"
+msgstr "Sprawdź dostawcę"
 
 msgid "Review the period's balance sheet and income statement and confirm the figures look right. This is a manual sign-off — mark it done once you have reviewed them."
 msgstr "Przejrzyj bilans i rachunek zysków i strat za okres i potwierdź, że liczby wyglądają prawidłowo. Jest to ręczne podpisanie — oznacz jako gotowe po ich przejrzeniu."
@@ -14223,6 +14332,9 @@ msgstr "Zapisz metodę"
 msgid "Save Rate"
 msgstr "Zapisz kurs"
 
+msgid "Save sync settings"
+msgstr "Zapisz ustawienia synchronizacji"
+
 msgid "Save view"
 msgstr "Zapisz widok"
 
@@ -14393,6 +14505,9 @@ msgstr "Szukaj po tytule problemu Jira..."
 
 msgid "Search by linear issue title..."
 msgstr "Szukaj po tytule problemu Linear..."
+
+msgid "Search connected mailboxes for invoice evidence and supplier suggestions."
+msgstr "Wyszukuj dowody faktur i sugestie dostawców w połączonych skrzynkach."
 
 msgid "Search customers and types..."
 msgstr "Wyszukaj klientów i typy..."
@@ -14677,6 +14792,9 @@ msgstr "Wybierz grupy, które powinny ukończyć to szkolenie"
 msgid "Select the invoices this payment settles. Discount and write-off are in invoice currency."
 msgstr "Wybierz faktury, które ta płatność rozlicza. Rabat i spisanie są w walucie faktury."
 
+msgid "Select the original invoice for an additional or partial payment. Its supplier is reused; leave blank to create a new draft."
+msgstr "Wybierz oryginalną fakturę dla dodatkowej lub częściowej płatności. Jej dostawca zostanie użyty ponownie; pozostaw puste, aby utworzyć nowy szkic."
+
 msgid "Select value"
 msgstr "Wybierz wartość"
 
@@ -14908,6 +15026,9 @@ msgstr "Jednostka konfiguracji"
 
 msgid "Setup Unit"
 msgstr "Jednostka konfiguracji"
+
+msgid "Several invoice emails could match this payment. Review the candidates before approving."
+msgstr "Kilka wiadomości z fakturami może pasować do tej płatności. Przejrzyj kandydatów przed zatwierdzeniem."
 
 msgid "Severities"
 msgstr "Ważności"
@@ -15264,6 +15385,9 @@ msgstr "Niektóre rekordy nie wrócą. Wpisz <0>{CONFIRM_WORD}</0> aby kontynuow
 
 msgid "Some Shifts"
 msgstr "Niektóre zmiany"
+
+msgid "Some source files need another copy attempt. Use Retry source files below."
+msgstr "Niektóre pliki źródłowe wymagają kolejnej próby kopiowania. Użyj poniżej opcji Ponów pliki źródłowe."
 
 msgid "Something went wrong. Please try again."
 msgstr "Coś poszło nie tak. Spróbuj ponownie."
@@ -15785,6 +15909,9 @@ msgstr "Lokalizacja dostawcy"
 
 msgid "Supplier Location"
 msgstr "Lokalizacja dostawcy"
+
+msgid "Supplier needs identification"
+msgstr "Wymagana identyfikacja dostawcy"
 
 msgid "Supplier Order Number"
 msgstr "Numer zamówienia dostawcy"
@@ -16487,6 +16614,9 @@ msgstr "Rodzaj wartości, jaki ten atrybut przyjmuje (tekst, liczba, data, warto
 msgid "The label and document printers your company prints to"
 msgstr "Drukarki etykiet i dokumentów, na które drukuje Twoja firma"
 
+msgid "The last attempt could not finish. The next sync will retry; the available payment evidence is preserved."
+msgstr "Ostatniej próby nie udało się ukończyć. Następna synchronizacja spróbuje ponownie; dostępne dowody płatności zostaną zachowane."
+
 msgid "The latest date to place this PO so it arrives by the need-by date, given the supplier's lead time."
 msgstr "Najnowsza data złożenia tego zamówienia, aby dotarło do daty wymaganej, biorąc pod uwagę czas realizacji dostawcy."
 
@@ -16552,6 +16682,9 @@ msgstr "Materiał jest kupowany od dostawcy dla tego konkretnego zamówienia, za
 
 msgid "The material types you organize your stock by"
 msgstr "Typy materiałów, według których organizujesz swoje zapasy"
+
+msgid "The Mercury connection needs one-time setup before syncing can start."
+msgstr "Połączenie Mercury wymaga jednorazowej konfiguracji przed rozpoczęciem synchronizacji."
 
 msgid "The month your financial year begins; periods are numbered from this month."
 msgstr "Miesiąc, w którym rozpoczyna się Twój rok obrachunkowy; okresy są numerowane od tego miesiąca."
@@ -16671,6 +16804,9 @@ msgstr "Procedura, którą technicy stosują podczas wykonywania tego utrzymania
 
 msgid "The processes this work center can run; appears in process-pickers when scheduling operations, and limits which jobs can route through this work center."
 msgstr "Procesy, które to stanowisko robocze może wykonywać; pojawia się w selektor procesów podczas planowania operacji i ogranicza, które zlecenia mogą przechodzić przez to stanowisko robocze."
+
+msgid "The provider is limiting requests. The next sync will retry."
+msgstr "Dostawca ogranicza żądania. Następna synchronizacja spróbuje ponownie."
 
 msgid "The provider offers no dimension targets. Enable the feature in the provider first (e.g. tracking categories, class tracking, or fields)."
 msgstr "Dostawca nie oferuje celów wymiarów. Najpierw włącz funkcję u dostawcy (np. kategorie śledzenia, śledzenie klasy lub pola)."
@@ -16940,6 +17076,9 @@ msgstr "Następnie dostosowane do"
 msgid "Then by"
 msgstr "Następnie wg"
 
+msgid "There are more possible emails than could be checked automatically. Review the available matches."
+msgstr "Jest więcej możliwych e-maili, niż można automatycznie sprawdzić. Sprawdź dostępne dopasowania."
+
 msgid "There are no active supplier quotes to compare for this RFQ."
 msgstr "Brak aktywnych ofert dostawców do porównania dla tego zapytania ofertowego."
 
@@ -17126,6 +17265,9 @@ msgstr "Ta część jest zastępowana i ustawiona na Tylko zapas — jest uzupe�
 
 msgid "This path only decides what runs next"
 msgstr "Ta ścieżka decyduje tylko o tym, co uruchomi się dalej"
+
+msgid "This payment has more source files than can be imported automatically. Review the originals."
+msgstr "Ta płatność ma więcej plików źródłowych, niż można automatycznie zaimportować. Przejrzyj oryginały."
 
 msgid "This period has no journal entries posted to it and can be permanently deleted. This cannot be undone."
 msgstr "Ten okres nie ma zaksięgowanych dowodów księgowych i może być trwale usunięty. Nie można tego cofnąć."
@@ -17636,6 +17778,9 @@ msgstr "Wtorek"
 msgid "Turn on the built-in pieces"
 msgstr "Włącz wbudowane komponenty"
 
+msgid "Turn this off to pause future imports. Existing review records stay available."
+msgstr "Wyłącz, aby wstrzymać przyszłe importy. Istniejące rekordy przeglądu pozostaną dostępne."
+
 msgid "Two-Factor"
 msgstr "Dwuskładnikowe"
 
@@ -18077,6 +18222,9 @@ msgstr "Używane na ekranie głównym i cyfrowych ofertach"
 
 msgid "Used on the home screen in dark mode"
 msgstr "Używane na ekranie głównym w trybie ciemnym"
+
+msgid "Used only when creating an invoice without an existing supplier or recipient link."
+msgstr "Używane tylko podczas tworzenia faktury bez istniejącego dostawcy lub łącza odbiorcy."
 
 msgid "Used to categorize items for reporting and analysis"
 msgstr "Używane do kategoryzacji pozycji do raportowania i analizy"

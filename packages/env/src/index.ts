@@ -134,6 +134,21 @@ export const BINDERY_PRESS_API_KEY = getEnv("BINDERY_PRESS_API_KEY", {
   isSecret: true
 });
 
+// Optional community payment importer. These values are server-only, including
+// the company binding and mailbox list, which contain private deployment data.
+export const PAYMENT_SYNC_COMPANY_ID = getEnv("PAYMENT_SYNC_COMPANY_ID", {
+  isRequired: false,
+  isSecret: true
+});
+export const MERCURY_API_TOKEN = getEnv("MERCURY_API_TOKEN", {
+  isRequired: false,
+  isSecret: true
+});
+export const GMAIL_ACCOUNTS_JSON = getEnv("GMAIL_ACCOUNTS_JSON", {
+  isRequired: false,
+  isSecret: true
+});
+
 const CARBON_EDITION = getEnv("CARBON_EDITION", {
   isRequired: false,
   isSecret: false

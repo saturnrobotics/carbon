@@ -30,6 +30,7 @@
     "./ratelimit": "./src/ratelimit.ts",
     "./sampling": "./src/sampling.ts",
     "./sequence": "./src/sequence.ts",
+    "./mercury": "./src/mercury.ts",
     "./seed-workflows": "./src/datasets/tiers/workflow-definitions.ts",
     "./audit": "./src/audit.ts",
     "./audit.config": "./src/audit.config.ts",

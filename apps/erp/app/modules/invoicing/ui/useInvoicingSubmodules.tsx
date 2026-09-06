@@ -56,6 +56,12 @@ export default function useInvoicingSubmodules() {
       name: t`Payments`,
       routes: [
         {
+          name: t`Mercury`,
+          to: path.to.mercuryPayments,
+          icon: <LuBanknote />,
+          permission: "invoicing"
+        },
+        {
           name: t`Payments`,
           to: path.to.payments,
           icon: <LuBanknote />,

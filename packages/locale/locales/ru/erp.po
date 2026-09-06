@@ -508,6 +508,9 @@ msgstr "Определенные организацией скидка или н
 msgid "A completed job's output, received into inventory at the job's actual accumulated WIP cost."
 msgstr "Продукция завершенного производственного заказа, поступившая в запасы по фактической накопленной себестоимости незавершенного производства заказа."
 
+msgid "A connected mailbox does not match its configured address. Reconnect that mailbox."
+msgstr "Подключенный почтовый ящик не соответствует настроенному адресу. Подключите его снова."
+
 msgid "A consumable is a physical item used to make a part that can be used across multiple jobs"
 msgstr "Расходный материал — это физическая номенклатура, используемая для производства детали, которая может быть использована в нескольких производственных заказах."
 
@@ -1904,6 +1907,9 @@ msgstr "Дата утверждения"
 msgid "Approval is required at or above this amount, up to the next rule's minimum"
 msgstr "Утверждение требуется для сумм, равных этой сумме или выше, вплоть до минимума следующего правила"
 
+msgid "Approval links an existing invoice or creates a draft purchase invoice and copies its source files. Review new invoice dates, numbers, totals and lines before posting. Bank account mapping and payment settlement are not configured; these records do not mark invoices as paid."
+msgstr "Одобрение связывает существующий счёт или создаёт черновик счёта поставщика и копирует исходные файлы. Проверьте даты, номера, итоги и строки перед проведением. Банковское сопоставление и расчёт платежа не настроены; эти записи не отмечают счета как оплаченные."
+
 msgid "Approval requirements"
 msgstr "Требования утверждения"
 
@@ -1918,6 +1924,9 @@ msgstr "Утверждения"
 
 msgid "Approve"
 msgstr "Утвердить"
+
+msgid "Approve and link invoice"
+msgstr "Одобрить и связать счёт"
 
 msgid "Approved By"
 msgstr "Одобрено"
@@ -2616,6 +2625,9 @@ msgstr "Автоматизируйте бизнес-процессы с помо
 
 msgid "Automatic Cost Updates"
 msgstr "Автоматическое обновление себестоимости"
+
+msgid "Automatic import"
+msgstr "Автоматический импорт"
 
 msgid "Automatic Lead Time Updates"
 msgstr "Автоматическое обновление сроков поставки"
@@ -3355,6 +3367,8 @@ msgstr "Чат"
 
 msgid "Check operations on the left to build the batch."
 msgstr "Отметьте операции слева, чтобы создать пакет."
+msgid "Check outgoing payments every hour. Proposed suppliers and invoice matches wait for your review."
+msgstr "Проверяйте исходящие платежи каждый час. Предложенные поставщики и совпадения счетов ждут проверки."
 
 msgid "Check the item ledger for any items with a negative on-hand quantity as of period end — usually a missing receipt or an out-of-order posting that distorts inventory value and cost of goods sold. Mark it done once reviewed, or skip with a reason."
 msgstr "Проверьте реестр номенклатуры на наличие номенклатур с отрицательным количеством на складе на конец периода — обычно это недостающее поступление или неправильно проведённая операция, которая искажает стоимость запасов и себестоимость продаж. Отметьте как выполненное после проверки или пропустите с указанием причины."
@@ -5637,6 +5651,9 @@ msgstr "Направления"
 msgid "Disabled"
 msgstr "Отключено"
 
+msgid "Disabled in connection setup"
+msgstr "Отключено в настройках подключения"
+
 msgid "Discard"
 msgstr "Отклонить"
 
@@ -6780,11 +6797,17 @@ msgstr "Сертификат освобождения"
 msgid "Exemption Reason"
 msgstr "Причина освобождения"
 
+msgid "Existing invoice"
+msgstr "Существующий счёт"
+
 msgid "Existing mappings. Pick a different provider option to re-map."
 msgstr "Существующие отображения. Выберите другой вариант провайдера для переотображения."
 
 msgid "Existing Stripe customer"
 msgstr "Существующий покупатель Stripe"
+
+msgid "Existing supplier"
+msgstr "Существующий поставщик"
 
 msgid "Expand"
 msgstr "Развернуть"
@@ -7419,6 +7442,9 @@ msgstr "Завершение финансового месяца через ци
 msgid "Financial Statements"
 msgstr "Финансовые отчеты"
 
+msgid "Find invoice emails"
+msgstr "Искать письма со счетами"
+
 msgid "finish"
 msgstr "Готовая продукция"
 
@@ -7526,6 +7552,9 @@ msgstr "Флаги"
 
 msgid "for anything. They'll pull in the right person."
 msgstr "для чего угодно. Они привлекут нужного человека."
+
+msgid "For one-time deployment setup, use this company ID for PAYMENT_SYNC_COMPANY_ID:"
+msgstr "Для разовой настройки используйте этот ID компании для PAYMENT_SYNC_COMPANY_ID:"
 
 msgid "Forecast"
 msgstr "Прогноз"
@@ -8023,6 +8052,9 @@ msgstr "Хост"
 msgid "Host, secure, and back up the platform"
 msgstr "Размещение, защита и резервное копирование платформы"
 
+msgid "Hourly sync"
+msgstr "Почасовая синхронизация"
+
 msgid "Hours"
 msgstr "Часы"
 
@@ -8244,6 +8276,11 @@ msgstr "Если вы хотите изменить номера деталей,
 
 msgid "Ignore"
 msgstr "Игнорировать"
+msgid "Ignore this payment"
+msgstr "Игнорировать этот платёж"
+
+msgid "Ignored"
+msgstr "Игнорируется"
 
 msgid "II (normal default)"
 msgstr "II (обычно по умолчанию)"
@@ -8268,6 +8305,9 @@ msgstr "Руководитель внедрения"
 
 msgid "Import {label} CSV"
 msgstr "Импортировать {label} CSV"
+
+msgid "Import history from"
+msgstr "Импортировать историю с"
 
 msgid "Import results"
 msgstr "Импортировать результаты"
@@ -9085,6 +9125,9 @@ msgstr "Последний квартал"
 msgid "Last Run"
 msgstr "Последний запуск"
 
+msgid "Last successful sync:"
+msgstr "Последняя успешная синхронизация:"
+
 msgid "Last synced: <0/>"
 msgstr "Последняя синхронизация: <0/>"
 
@@ -9132,6 +9175,9 @@ msgstr "Оставить все связанные квитанции без и�
 
 msgid "Leave blank for built-in"
 msgstr "Оставьте пустым для встроенного"
+
+msgid "Leave blank to include all available payment history."
+msgstr "Оставьте пустым, чтобы включить всю доступную историю платежей."
 
 msgid "Leave blank to use the next revision automatically"
 msgstr "Оставить пусто, чтобы использовать следующую ревизию автоматически"
@@ -9269,6 +9315,9 @@ msgstr "Ссылка на строку заказа покупателя"
 #. placeholder {1}: r.quantity
 msgid "Linked entity quantity ({0}) does not match row quantity ({1})."
 msgstr "Количество связанной сущности ({0}) не совпадает с количеством строки ({1})."
+
+msgid "Linked invoices"
+msgstr "Связанные счета"
 
 msgid "Linked Issue"
 msgstr "Связанная проблема"
@@ -9479,6 +9528,15 @@ msgstr "Класс имущества MACRS"
 
 msgid "Magic link"
 msgstr "Волшебная ссылка"
+
+msgid "Mailbox authorization needs to be renewed. Reconnect the affected mailbox."
+msgstr "Авторизацию почтового ящика нужно обновить. Подключите затронутый ящик заново."
+
+msgid "Mailbox configuration needs correction."
+msgstr "Конфигурацию почтового ящика нужно исправить."
+
+msgid "Mailbox matching needs attention:"
+msgstr "Требуется проверить совпадение почтового ящика:"
 
 msgid "Maintain a single part and item master"
 msgstr "Ведите единый реестр деталей и товаров"
@@ -9880,6 +9938,18 @@ msgstr "Дата меморандума"
 msgid "Memo ID"
 msgstr "ID Памятки"
 
+msgid "Mercury"
+msgstr "Mercury"
+
+msgid "Mercury authorization needs to be renewed. Check the read-only account connection."
+msgstr "Авторизацию Mercury нужно обновить. Проверьте подключение аккаунта только для чтения."
+
+msgid "Mercury connection configured"
+msgstr "Подключение Mercury настроено"
+
+msgid "Mercury payments"
+msgstr "Платежи Mercury"
+
 msgid "MES"
 msgstr "MES"
 
@@ -10190,6 +10260,9 @@ msgstr "Требуется задание"
 msgid "Needs ordering"
 msgstr "Требуется заказ"
 
+msgid "Needs review"
+msgstr "Требует проверки"
+
 msgid "Negative Adjustment"
 msgstr "Отрицательная корректировка"
 
@@ -10475,6 +10548,12 @@ msgstr "Новая единица хранения"
 msgid "New Supplier"
 msgstr "Новый поставщик"
 
+msgid "New supplier email"
+msgstr "Электронная почта нового поставщика"
+
+msgid "New supplier name"
+msgstr "Название нового поставщика"
+
 msgid "New Supplier Part"
 msgstr "Новая деталь поставщика"
 
@@ -10755,6 +10834,9 @@ msgstr "Нет изображения"
 msgid "No inspection plans"
 msgstr "Нет планов контроля"
 
+msgid "No invoice mailboxes are connected yet."
+msgstr "Почтовые ящики для счетов ещё не подключены."
+
 msgid "No issue types configured"
 msgstr "Типы проблем не настроены"
 
@@ -10871,6 +10953,9 @@ msgstr "Ключи доступа еще не зарегистрированы."
 
 msgid "No payables"
 msgstr "Нет кредиторской задолженности"
+
+msgid "No payments in this view."
+msgstr "В этом представлении нет платежей."
 
 msgid "No payments yet."
 msgstr "Платежей пока нет."
@@ -11123,6 +11208,9 @@ msgstr "Не работает сегодня"
 
 msgid "Not yet"
 msgstr "Еще нет"
+
+msgid "Not yet run"
+msgstr "Ещё не запускался"
 
 msgid "Not you?"
 msgstr "Это не вы?"
@@ -11403,6 +11491,9 @@ msgstr "Открыть в Извещениях об изменении {ids}. З
 
 msgid "Open in MES"
 msgstr "Открыть в MES"
+
+msgid "Open invoice"
+msgstr "Открыть счёт"
 
 msgid "Open Issues"
 msgstr "Открытые проблемы"
@@ -11902,6 +11993,9 @@ msgstr "Вставьте XML метаданных, если ваш постав�
 msgid "Path"
 msgstr "Путь"
 
+msgid "Pause"
+msgstr "Пауза"
+
 msgid "Pay Rate"
 msgstr "Курс платежа"
 
@@ -11925,6 +12019,9 @@ msgstr "Применение платежей"
 
 msgid "Payment Date"
 msgstr "Дата платежа"
+
+msgid "Payment history is still being imported. The next hourly run will continue where it stopped."
+msgstr "История платежей ещё импортируется. Следующий ежечасный запуск продолжит с места остановки."
 
 msgid "Payment ID"
 msgstr "ID платежа"
@@ -12248,6 +12345,9 @@ msgstr "Порталы"
 
 msgid "Positive Adjustment"
 msgstr "Положительная корректировка"
+
+msgid "Possible invoice emails"
+msgstr "Возможные письма со счетами"
 
 msgid "Post"
 msgstr "Опубликовать"
@@ -13727,6 +13827,9 @@ msgstr "Восстановить компанию из резервной коп
 msgid "Restore this entity to available stock at the bin and cost it was scrapped from."
 msgstr "Восстановить эту сущность в доступный запас по ячейке и себестоимости, откуда она была выбракована."
 
+msgid "Restore to review"
+msgstr "Вернуть на проверку"
+
 msgid "Restore tracked entities to available"
 msgstr "Восстановить отслеживаемые объекты в доступные"
 
@@ -13768,6 +13871,9 @@ msgstr "Повторить все"
 
 msgid "Retry revert"
 msgstr "Повторить восстановление"
+
+msgid "Retry source files"
+msgstr "Повторить для исходных файлов"
 
 msgid "Return Home"
 msgstr "Вернуться на главную"
@@ -13831,6 +13937,9 @@ msgstr "Просмотр и создание"
 
 msgid "Review each item's changes, then confirm — releasing can't be undone."
 msgstr "Рассмотреть изменения каждой номенклатуры, затем подтвердить — выпуск нельзя отменить."
+
+msgid "Review supplier"
+msgstr "Проверить поставщика"
 
 msgid "Review the period's balance sheet and income statement and confirm the figures look right. This is a manual sign-off — mark it done once you have reviewed them."
 msgstr "Рассмотреть бухгалтерский баланс и отчет о прибылях и убытках периода и подтвердить, что цифры выглядят правильно. Это ручное утверждение — отметьте как готово как только вы их рассмотрели."
@@ -14223,6 +14332,9 @@ msgstr "Сохранить метод"
 msgid "Save Rate"
 msgstr "Сохранить курс"
 
+msgid "Save sync settings"
+msgstr "Сохранить настройки синхронизации"
+
 msgid "Save view"
 msgstr "Сохранить представление"
 
@@ -14393,6 +14505,9 @@ msgstr "Поиск по названию задачи Jira..."
 
 msgid "Search by linear issue title..."
 msgstr "Поиск по названию задачи Linear..."
+
+msgid "Search connected mailboxes for invoice evidence and supplier suggestions."
+msgstr "Ищите подтверждения счетов и предложения поставщиков в подключённых ящиках."
 
 msgid "Search customers and types..."
 msgstr "Поиск покупателей и типов..."
@@ -14677,6 +14792,9 @@ msgstr "Выберите группы, которые должны пройти 
 msgid "Select the invoices this payment settles. Discount and write-off are in invoice currency."
 msgstr "Выберите счета-фактуры, которые погашает этот платеж. Скидка и списание указаны в валюте счета-фактуры."
 
+msgid "Select the original invoice for an additional or partial payment. Its supplier is reused; leave blank to create a new draft."
+msgstr "Выберите исходный счёт для дополнительного или частичного платежа. Поставщик будет использован повторно; оставьте поле пустым для нового черновика."
+
 msgid "Select value"
 msgstr "Выберите значение"
 
@@ -14908,6 +15026,9 @@ msgstr "Единица настройки"
 
 msgid "Setup Unit"
 msgstr "Единица установки"
+
+msgid "Several invoice emails could match this payment. Review the candidates before approving."
+msgstr "Несколько писем со счетами могут соответствовать этому платежу. Проверьте кандидатов перед одобрением."
 
 msgid "Severities"
 msgstr "Серьезности"
@@ -15264,6 +15385,9 @@ msgstr "Некоторые записи не вернутся. Введите <0
 
 msgid "Some Shifts"
 msgstr "Некоторые смены"
+
+msgid "Some source files need another copy attempt. Use Retry source files below."
+msgstr "Некоторые исходные файлы требуют повторного копирования. Используйте «Повторить исходные файлы» ниже."
 
 msgid "Something went wrong. Please try again."
 msgstr "Что-то пошло не так. Пожалуйста, попробуйте еще раз."
@@ -15785,6 +15909,9 @@ msgstr "Место расположения поставщика"
 
 msgid "Supplier Location"
 msgstr "Местоположение поставщика"
+
+msgid "Supplier needs identification"
+msgstr "Требуется определить поставщика"
 
 msgid "Supplier Order Number"
 msgstr "Номер заказа поставщика"
@@ -16487,6 +16614,9 @@ msgstr "Вид значения, которое принимает это пол
 msgid "The label and document printers your company prints to"
 msgstr "Принтеры этикеток и документов, на которые печатает ваша организация"
 
+msgid "The last attempt could not finish. The next sync will retry; the available payment evidence is preserved."
+msgstr "Последнюю попытку завершить не удалось. Следующая синхронизация повторит её; доступные подтверждения платежа сохранены."
+
 msgid "The latest date to place this PO so it arrives by the need-by date, given the supplier's lead time."
 msgstr "Самая поздняя дата размещения этого заказа поставщику, чтобы он прибыл к нужной дате, с учетом срока поставки поставщика."
 
@@ -16552,6 +16682,9 @@ msgstr "Материал закупается у поставщика для э�
 
 msgid "The material types you organize your stock by"
 msgstr "Типы материалов, по которым вы организуете свой запас"
+
+msgid "The Mercury connection needs one-time setup before syncing can start."
+msgstr "Перед началом синхронизации требуется разовая настройка подключения Mercury."
 
 msgid "The month your financial year begins; periods are numbered from this month."
 msgstr "Месяц начала финансового года; периоды нумеруются, начиная с этого месяца."
@@ -16671,6 +16804,9 @@ msgstr "Процедура, которую следуют техники при 
 
 msgid "The processes this work center can run; appears in process-pickers when scheduling operations, and limits which jobs can route through this work center."
 msgstr "Процессы, которые может выполнять этот рабочий центр; отображается в программах выбора процессов при планировании операций и ограничивает, какие производственные заказы могут проходить через этот рабочий центр."
+
+msgid "The provider is limiting requests. The next sync will retry."
+msgstr "Провайдер ограничивает запросы. Следующая синхронизация повторит попытку."
 
 msgid "The provider offers no dimension targets. Enable the feature in the provider first (e.g. tracking categories, class tracking, or fields)."
 msgstr "Поставщик не предлагает целевые показатели по измерениям. Сначала включите функцию у поставщика (например, категории отслеживания, отслеживание класса или поля)."
@@ -16940,6 +17076,9 @@ msgstr "Затем отрегулировано для"
 msgid "Then by"
 msgstr "Затем по"
 
+msgid "There are more possible emails than could be checked automatically. Review the available matches."
+msgstr "Возможных писем больше, чем можно проверить автоматически. Проверьте доступные совпадения."
+
 msgid "There are no active supplier quotes to compare for this RFQ."
 msgstr "Нет активных предложений поставщиков для сравнения по этому РФП."
 
@@ -17126,6 +17265,9 @@ msgstr "Эта деталь снята с производства и устан
 
 msgid "This path only decides what runs next"
 msgstr "Этот путь решает только, что будет запущено дальше"
+
+msgid "This payment has more source files than can be imported automatically. Review the originals."
+msgstr "У этого платежа больше исходных файлов, чем можно импортировать автоматически. Проверьте оригиналы."
 
 msgid "This period has no journal entries posted to it and can be permanently deleted. This cannot be undone."
 msgstr "Этот период не имеет проведенных операций и может быть безвозвратно удален. Это невозможно отменить."
@@ -17636,6 +17778,9 @@ msgstr "Вторник"
 msgid "Turn on the built-in pieces"
 msgstr "Включите встроенные компоненты"
 
+msgid "Turn this off to pause future imports. Existing review records stay available."
+msgstr "Отключите, чтобы приостановить будущий импорт. Существующие записи проверки останутся доступны."
+
 msgid "Two-Factor"
 msgstr "Двухфакторная аутентификация"
 
@@ -18077,6 +18222,9 @@ msgstr "Используется на главном экране и в цифр
 
 msgid "Used on the home screen in dark mode"
 msgstr "Используется на главном экране в темном режиме"
+
+msgid "Used only when creating an invoice without an existing supplier or recipient link."
+msgstr "Используется только при создании счёта без существующего поставщика или ссылки на получателя."
 
 msgid "Used to categorize items for reporting and analysis"
 msgstr "Используется для категоризации товаров в целях отчетности и анализа"
