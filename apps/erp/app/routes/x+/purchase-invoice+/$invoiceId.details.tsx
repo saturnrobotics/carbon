@@ -32,6 +32,7 @@ import {
   SupplierInteractionDocuments,
   SupplierInteractionNotes
 } from "~/modules/purchasing/ui/SupplierInteraction";
+import type { ReadOnlySupplierAttachment } from "~/modules/purchasing/ui/SupplierInteraction/SupplierInteractionDocuments";
 import { getCustomFields, setCustomFields } from "~/utils/form";
 import { requireUnlocked } from "~/utils/lockedGuard.server";
 import { path } from "~/utils/path";
@@ -155,6 +156,7 @@ export default function PurchaseInvoiceBasicRoute() {
     purchaseInvoiceDelivery: PurchaseInvoiceDelivery;
     interaction: SupplierInteraction;
     files: Promise<FileObject[]>;
+    copiedAttachments: ReadOnlySupplierAttachment[];
   }>(path.to.purchaseInvoice(invoiceId));
 
   if (!invoiceData?.purchaseInvoice)
@@ -212,6 +214,7 @@ export default function PurchaseInvoiceBasicRoute() {
           <SupplierInteractionDocuments
             interactionId={invoiceData.interaction.id}
             attachments={resolvedFiles}
+            readOnlyAttachments={invoiceData.copiedAttachments}
             id={invoiceId}
             type="Purchase Invoice"
           />

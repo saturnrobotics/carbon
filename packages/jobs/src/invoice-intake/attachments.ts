@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { isMercuryAttachmentPath } from "@carbon/database/mercury";
+import { round } from "@carbon/utils";
 import { sql } from "kysely";
 import { INVOICE_LIMITS } from "./contracts";
 import { isInvoiceSourcePath } from "./ingestion";
@@ -152,7 +153,9 @@ export async function copyInvoiceAttachments(context: Context) {
         documents.push({
           path: destination,
           name,
-          size: bytes.length,
+          // Native document metadata stores rounded KiB; source byteSize and
+          // hash verification above continue to use exact bytes.
+          size: round(bytes.length / 1024, 0),
           type: extension === "pdf" ? "PDF" : "Image"
         });
         copied++;

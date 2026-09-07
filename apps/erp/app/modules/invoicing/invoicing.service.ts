@@ -34,6 +34,55 @@ import type {
   salesInvoiceValidator
 } from "./invoicing.models";
 
+/** Immutable source copies use document metadata, not the interaction upload folder. */
+export async function getPurchaseInvoiceAttachments(
+  client: SupabaseClient<Database>,
+  companyId: string,
+  invoiceId: string
+) {
+  const documents = await client
+    .from("document")
+    .select("path, name, size, createdAt")
+    .eq("companyId", companyId)
+    .eq("sourceDocument", "Purchase Invoice")
+    .eq("sourceDocumentId", invoiceId)
+    .like("path", `${companyId}/invoice-intake/%`)
+    .order("createdAt")
+    .limit(100);
+  if (documents.error) return { data: [], error: documents.error };
+
+  const ownedCopies = documents.data.filter((document) => {
+    const parts = document.path.split("/");
+    return (
+      parts.length === 6 &&
+      parts[0] === companyId &&
+      parts[1] === "invoice-intake" &&
+      parts[3] === "invoice" &&
+      parts[4] === invoiceId &&
+      parts.every((part) => part && part !== "." && part !== "..") &&
+      !Array.from(document.path).some(
+        (character) => character === "\\" || character.charCodeAt(0) < 32
+      )
+    );
+  });
+  if (!ownedCopies.length) return { data: [], error: null };
+
+  const signed = await client.storage.from("private").createSignedUrls(
+    ownedCopies.map((document) => document.path),
+    600
+  );
+  const urls = new Map(
+    (signed.data ?? []).map((document) => [document.path, document.signedUrl])
+  );
+  return {
+    data: ownedCopies.map((document) => ({
+      ...document,
+      signedUrl: urls.get(document.path) ?? null
+    })),
+    error: signed.error
+  };
+}
+
 const PURCHASE_INVOICES_LIST_COLUMNS =
   "id,invoiceId,supplierId,invoiceSupplierId,supplierReference,postingDate,dateIssued,dateDue,datePaid,balance,assignee,createdBy,createdAt,updatedBy,updatedAt,customFields,companyId,thumbnailPath,itemType,orderTotal,status,paymentTermName" as const;
 

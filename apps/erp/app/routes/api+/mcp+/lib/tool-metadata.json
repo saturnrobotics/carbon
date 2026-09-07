@@ -1,6 +1,6 @@
 {
-  "generated": "2026-09-07T04:44:01.655Z",
-  "totalTools": 1495,
+  "generated": "2026-09-07T04:58:05.976Z",
+  "totalTools": 1496,
   "modules": 15,
   "tools": [
     {
@@ -9389,6 +9389,32 @@
         },
         "required": [
           "id"
+        ]
+      }
+    },
+    {
+      "name": "invoicing_getPurchaseInvoiceAttachments",
+      "module": "invoicing",
+      "classification": "READ",
+      "description": "get purchase invoice attachments",
+      "paramCount": 1,
+      "serviceParams": [
+        "client",
+        "companyId",
+        "invoiceId"
+      ],
+      "injectAuth": [
+        "companyId"
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "invoiceId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "invoiceId"
         ]
       }
     },

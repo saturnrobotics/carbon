@@ -5,10 +5,12 @@ import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { copyInvoiceAttachments } from "./attachments";
 import { emptyInvoiceExtraction } from "./contracts";
+import { registerInvoiceSource } from "./ingestion";
 import {
   createGoogleInvoiceProvider,
   loadInvoiceProviderConfig
 } from "./provider";
+import { pendingInvoiceValidations } from "./validation";
 import {
   type InvoiceWorkerContext,
   pendingInvoiceIntakes,
@@ -167,7 +169,8 @@ async function fixture(
       .execute();
     const storage = {
       from: vi.fn(() => ({
-        download: vi.fn(async () => ({ data: new Blob([bytes]), error: null }))
+        download: vi.fn(async () => ({ data: new Blob([bytes]), error: null })),
+        upload: vi.fn(async () => ({ error: null }))
       }))
     } as unknown as InvoiceWorkerContext["storage"];
     await run(
@@ -439,6 +442,108 @@ describe("durable invoice worker", () => {
       expect((await runInvoiceIntake(c)).state).toBe("complete");
       expect(p.paid).toHaveBeenCalledTimes(1);
     }));
+  it.each([
+    "extract",
+    "match"
+  ] as const)("preserves review and billing when another source arrives during %s", async (operation) =>
+    fixture(async (c, userId) => {
+      if (operation === "match") await runInvoiceIntake(c);
+      const header = { invoiceNumber: "reviewed-reference" };
+      await db
+        .updateTable("invoiceIntake")
+        .set({ header })
+        .where("companyId", "=", c.companyId)
+        .where("id", "=", c.intakeId)
+        .execute();
+      await db
+        .insertInto("invoiceIntakeLine")
+        .values({
+          companyId: c.companyId,
+          intakeId: c.intakeId,
+          lineKey: "reviewed-line",
+          sortOrder: 0,
+          description: "Reviewed description",
+          lineType: "Comment",
+          createdBy: userId
+        })
+        .execute();
+      const before = await review(c);
+      const responseData =
+        operation === "extract"
+          ? emptyInvoiceExtraction()
+          : { supplierId: null, lines: [] };
+      const p = provider(async () => {
+        expect((await review(c)).status).toBe("Processing");
+        const registered = await registerInvoiceSource(
+          db,
+          c.storage,
+          { companyId: c.companyId, userId },
+          {
+            kind: "upload",
+            sourceKey: randomUUID(),
+            fileName: "duplicate.png",
+            bytes
+          }
+        );
+        expect(registered.intakeId).toBe(c.intakeId);
+        expect(registered.existing).toBe(true);
+        return Response.json({
+          candidates: [
+            {
+              finishReason: "STOP",
+              content: { parts: [{ text: JSON.stringify(responseData) }] }
+            }
+          ],
+          usageMetadata: {
+            promptTokenCount: 1000,
+            candidatesTokenCount: 100,
+            thoughtsTokenCount: 20,
+            totalTokenCount: 1120
+          },
+          modelVersion: "fixture-version"
+        });
+      });
+      c.provider = p.provider;
+      const completed =
+        operation === "extract"
+          ? await runInvoiceIntake(c)
+          : await runInvoiceMatch({ ...c, revision: before.revision });
+      expect(completed.state).toBe("stale");
+      expect(await review(c)).toMatchObject({
+        status: "NeedsReview",
+        revision: before.revision + 1,
+        activeExtractionId: null,
+        lastErrorCode: "invoice_source_changed",
+        header
+      });
+      expect(
+        await db
+          .selectFrom("invoiceIntakeLine")
+          .select(["lineKey", "description", "lineType"])
+          .where("companyId", "=", c.companyId)
+          .where("intakeId", "=", c.intakeId)
+          .execute()
+      ).toEqual([
+        {
+          lineKey: "reviewed-line",
+          description: "Reviewed description",
+          lineType: "Comment"
+        }
+      ]);
+      const evidence = (await attempts(c)).at(-1)!;
+      expect(evidence.status).toBe("completed");
+      expect(evidence.extractedData).toEqual(responseData);
+      expect(evidence.billingState).toBe("Reconciled");
+      expect(Number(evidence.actualCostUsd)).toBeCloseTo(0.002838);
+      expect(
+        (await pendingInvoiceValidations(db)).some(
+          (pending) => pending.intakeId === c.intakeId
+        )
+      ).toBe(false);
+      expect((await runInvoiceIntake(c)).state).toBe("stale");
+      expect(await attempts(c)).toHaveLength(operation === "extract" ? 1 : 2);
+      expect(p.paid).toHaveBeenCalledTimes(1);
+    }));
   it("preserves extracted fields when optional matching fails and counts both operations", async () =>
     fixture(async (c) => {
       const p = provider();
@@ -588,11 +693,12 @@ describe("durable invoice worker", () => {
       expect((await review(c)).attachmentStatus).toBe("Complete");
       const documents = await db
         .selectFrom("document")
-        .select(["path", "sourceDocument", "sourceDocumentId"])
+        .select(["path", "sourceDocument", "sourceDocumentId", "size"])
         .where("companyId", "=", c.companyId)
         .execute();
       expect(documents).toHaveLength(1);
       expect(documents[0]?.sourceDocumentId).toBe(invoice.id);
+      expect(documents[0]?.size).toBe(0);
       expect(documents[0]?.path).toContain(
         `/invoice-intake/${c.intakeId}/invoice/${invoice.id}/`
       );

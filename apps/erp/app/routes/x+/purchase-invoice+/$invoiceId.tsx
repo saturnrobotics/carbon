@@ -11,6 +11,7 @@ import { getCurrencyByCode } from "~/modules/accounting";
 import {
   getCompanyHasOpenCredits,
   getPurchaseInvoice,
+  getPurchaseInvoiceAttachments,
   getPurchaseInvoiceDelivery,
   getPurchaseInvoiceLines,
   PurchaseInvoiceHeader
@@ -68,7 +69,8 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
     files,
     orgHasCredits,
     currency,
-    intakeDocuments
+    intakeDocuments,
+    copiedAttachments
   ] = await Promise.all([
     purchaseInvoice.data?.supplierId
       ? getSupplier(client, purchaseInvoice.data.supplierId)
@@ -92,7 +94,8 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
       .select("id, historical, attachmentStatus")
       .eq("companyId", companyId)
       .eq("purchaseInvoiceId", invoiceId)
-      .in("status", ["Approved", "Linked"])
+      .in("status", ["Approved", "Linked"]),
+    getPurchaseInvoiceAttachments(client, companyId, invoiceId)
   ]);
 
   return {
@@ -101,6 +104,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
     purchaseInvoiceLines: purchaseInvoiceLines.data ?? [],
     purchaseInvoiceDelivery: purchaseInvoiceDelivery.data,
     files,
+    copiedAttachments: copiedAttachments.data,
     interaction: interaction.data,
     supplier: supplier?.data ?? null,
     orgHasCredits,

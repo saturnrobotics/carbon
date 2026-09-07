@@ -29,6 +29,16 @@ Use another synthetic receipt and an unapproved review. Change the line type and
 
 For generated Material IDs, choose the existing Substance and Shape. The generated ID/name and the selected tracking type, replenishment system, method, and inventory unit must all remain in the saved proposal. Complete the receipt fields and approve to verify a Material and a Draft purchase invoice are created.
 
+## Learned repeat and attachment completion
+
+1. Use the real invoice worker with a deterministic synthetic provider response and the canonical ERP validation callback. The first parsed document from an unconfirmed supplier name should remain Needs review.
+2. In the browser, select the correct existing supplier and item, save, and approve. Verify a supplier-name rule is now displayed. A manual document without an extracted supplier name does not teach an unsupported supplier alias.
+3. Process a new document with the same supplier/item text but a different invoice reference, date, quantity, price, and total. Verify the worker persists Ready and a saved match.
+4. Open that document in the browser. Verify the new quantity and price, then approve in one click. Verify a new Draft invoice and unchanged supplier/item counts.
+5. Invoke the actual attachment-copy worker against local storage. Verify Complete in the database and that the invoice's copying message disappears. Confirm the protected document metadata and original remain available.
+6. Open the native invoice's Files card. Verify the copied filename appears, its signed download returns the original bytes, and it has no delete menu. The empty-files message must be absent. Upload an ordinary file through the existing New control and verify its usual download/delete menu remains available.
+7. Open `/x/purchase-invoice/new`, choose an existing synthetic supplier, and save without uploading a receipt. Verify the normal form creates a Draft invoice and does not post inventory.
+
 ## Selector notes
 
 - Use the native form's `requestSubmit(submitter)` for **Use proposal** and **Upload and review**. Review action buttons use their normal click handler.
@@ -47,3 +57,7 @@ For generated Material IDs, choose the existing Substance and Shape. The generat
 - Consumable and generated Material approval create Draft invoices with no inventory ledger entries.
 - **Open invoice** displays the native invoice detail screen with the selected item, quantity, price, total, source-document link, shipping fields, and properties.
 - `/x/sales-rfq/new` retains its normal customer/contact/date/location fields and RFQ PDF dropzone. This smoke test does not send a paid RFQ inference request.
+- Deterministic provider response → real extraction worker → canonical ERP validation → Ready → one-click browser approval. New document quantity, unit price, and date remain independent of saved identity rules.
+- Actual attachment-copy worker completes and the native invoice's pending attachment message clears.
+- Copied receipt appears inside the native Files card; signed download returns HTTP 200 with the expected PNG signature, and no delete menu is offered. An ordinary manual upload still appears with its enabled native Delete menu.
+- The normal purchase-invoice creation form saves a new Draft invoice without a receipt. The disposable schema-only restore needed the standard `extensions` schema USAGE grant for authenticated default-ID generation before this baseline workflow could run.

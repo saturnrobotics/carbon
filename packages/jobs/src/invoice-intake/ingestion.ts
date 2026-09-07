@@ -390,9 +390,18 @@ export async function registerInvoiceSource(
                   approvedBy: actor.userId,
                   approvedAt: sql<string>`now()`
                 }
-              : intake.status === "NeedsDocument" && file
-                ? { status: "Queued" }
-                : {})
+              : intake.status === "Processing"
+                ? {
+                    // This revision no longer belongs to the active attempt.
+                    // Keep its eventual evidence/billing, but exclude it from
+                    // hydration and readiness recovery for the current review.
+                    status: "NeedsReview",
+                    activeExtractionId: null,
+                    lastErrorCode: "invoice_source_changed"
+                  }
+                : intake.status === "NeedsDocument" && file
+                  ? { status: "Queued" }
+                  : {})
         })
         .where("companyId", "=", actor.companyId)
         .where("id", "=", intake.id)

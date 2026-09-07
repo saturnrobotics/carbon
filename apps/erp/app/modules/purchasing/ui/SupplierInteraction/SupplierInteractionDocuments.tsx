@@ -1,6 +1,7 @@
 import { useCarbon } from "@carbon/auth";
 import { getLogger } from "@carbon/logger";
 import {
+  Button,
   Card,
   CardAction,
   CardContent,
@@ -37,8 +38,17 @@ import { stripSpecialCharacters } from "~/utils/string";
 
 const logger = getLogger("erp", "supplierinteractiondocuments");
 
+export type ReadOnlySupplierAttachment = {
+  path: string;
+  name: string;
+  size: number;
+  createdAt: string;
+  signedUrl: string | null;
+};
+
 type SupplierInteractionDocumentsProps = {
   attachments: FileObject[];
+  readOnlyAttachments?: ReadOnlySupplierAttachment[];
   id: string;
   interactionId: string;
   isReadOnly?: boolean;
@@ -51,6 +61,7 @@ type SupplierInteractionDocumentsProps = {
 
 const SupplierInteractionDocuments = ({
   attachments,
+  readOnlyAttachments = [],
   id,
   interactionId,
   isReadOnly,
@@ -101,74 +112,133 @@ const SupplierInteractionDocuments = ({
               </Tr>
             </Thead>
             <Tbody>
-              {attachments.length ? (
-                attachments.map((attachment) => (
-                  <Tr key={attachment.id}>
-                    <Td>
-                      <HStack>
-                        <DocumentIcon type={getDocumentType(attachment.name)} />
-                        <span
-                          className="font-medium"
-                          onClick={() => download(attachment)}
-                        >
-                          {["PDF", "Image"].includes(
-                            getDocumentType(attachment.name)
-                          ) ? (
-                            <DocumentPreview
-                              bucket="private"
-                              pathToFile={getPath(attachment)}
-                              // @ts-ignore
-                              type={getDocumentType(attachment.name)}
+              {attachments.length || readOnlyAttachments.length ? (
+                <>
+                  {attachments.map((attachment) => (
+                    <Tr key={attachment.id}>
+                      <Td>
+                        <HStack>
+                          <DocumentIcon
+                            type={getDocumentType(attachment.name)}
+                          />
+                          <span
+                            className="font-medium"
+                            onClick={() => download(attachment)}
+                          >
+                            {["PDF", "Image"].includes(
+                              getDocumentType(attachment.name)
+                            ) ? (
+                              <DocumentPreview
+                                bucket="private"
+                                pathToFile={getPath(attachment)}
+                                // @ts-ignore
+                                type={getDocumentType(attachment.name)}
+                              >
+                                {attachment.name}
+                              </DocumentPreview>
+                            ) : (
+                              attachment.name
+                            )}
+                          </span>
+                        </HStack>
+                      </Td>
+                      <Td className="text-xs font-mono">
+                        {convertKbToString(
+                          Math.floor((attachment.metadata?.size ?? 0) / 1024)
+                        )}
+                      </Td>
+                      <Td className="text-xs font-mono">
+                        <DateTime
+                          value={attachment.created_at}
+                          variant="date"
+                          fallback="--"
+                        />
+                      </Td>
+                      <Td>
+                        <div className="flex justify-end gap-2">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <IconButton
+                                aria-label={t`More`}
+                                icon={<LuEllipsisVertical />}
+                                variant="secondary"
+                              />
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent>
+                              <DropdownMenuItem
+                                onClick={() => download(attachment)}
+                              >
+                                <Trans>Download</Trans>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                destructive
+                                disabled={!canDelete || isReadOnly}
+                                onClick={() => deleteAttachment(attachment)}
+                              >
+                                <Trans>Delete</Trans>
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </Td>
+                    </Tr>
+                  ))}
+                  {readOnlyAttachments.map((attachment) => (
+                    <Tr key={attachment.path}>
+                      <Td>
+                        <HStack>
+                          <DocumentIcon
+                            type={getDocumentType(attachment.name)}
+                          />
+                          {attachment.signedUrl ? (
+                            <a
+                              className="font-medium"
+                              href={attachment.signedUrl}
+                              target="_blank"
+                              rel="noreferrer"
                             >
                               {attachment.name}
-                            </DocumentPreview>
+                            </a>
                           ) : (
-                            attachment.name
+                            <span className="font-medium">
+                              {attachment.name}
+                            </span>
                           )}
-                        </span>
-                      </HStack>
-                    </Td>
-                    <Td className="text-xs font-mono">
-                      {convertKbToString(
-                        Math.floor((attachment.metadata?.size ?? 0) / 1024)
-                      )}
-                    </Td>
-                    <Td className="text-xs font-mono">
-                      <DateTime
-                        value={attachment.created_at}
-                        variant="date"
-                        fallback="--"
-                      />
-                    </Td>
-                    <Td>
-                      <div className="flex justify-end gap-2">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <IconButton
-                              aria-label={t`More`}
-                              icon={<LuEllipsisVertical />}
-                              variant="secondary"
-                            />
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent>
-                            <DropdownMenuItem
-                              onClick={() => download(attachment)}
-                            >
+                        </HStack>
+                      </Td>
+                      <Td className="text-xs font-mono">
+                        {convertKbToString(attachment.size)}
+                      </Td>
+                      <Td className="text-xs font-mono">
+                        <DateTime
+                          value={attachment.createdAt}
+                          variant="date"
+                          fallback="--"
+                        />
+                      </Td>
+                      <Td>
+                        <div className="flex justify-end">
+                          {attachment.signedUrl ? (
+                            <Button asChild variant="secondary">
+                              <a
+                                href={attachment.signedUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                download={attachment.name}
+                              >
+                                <Trans>Download</Trans>
+                              </a>
+                            </Button>
+                          ) : (
+                            <Button variant="secondary" isDisabled>
                               <Trans>Download</Trans>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              destructive
-                              disabled={!canDelete || isReadOnly}
-                              onClick={() => deleteAttachment(attachment)}
-                            >
-                              <Trans>Delete</Trans>
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </Td>
-                  </Tr>
-                ))
+                            </Button>
+                          )}
+                        </div>
+                      </Td>
+                    </Tr>
+                  ))}
+                </>
               ) : (
                 <Tr>
                   <Td
