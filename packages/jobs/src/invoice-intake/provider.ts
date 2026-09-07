@@ -113,16 +113,9 @@ export function googleResponseSchema(schema: z.ZodType): JsonSchema {
       };
     }
     const result: JsonSchema = {};
-    for (const key of [
-      "type",
-      "description",
-      "enum",
-      "required",
-      "minimum",
-      "maximum",
-      "minItems",
-      "maxItems"
-    ]) {
+    // Repeated numeric/array bounds can exceed Vertex's decoder complexity
+    // limit. Zod still enforces every evidence, page, and line-count bound.
+    for (const key of ["type", "description", "enum", "required"]) {
       if (raw[key] !== undefined) result[key] = raw[key];
     }
     if (typeof result.type === "string")
@@ -378,8 +371,9 @@ export function createGoogleInvoiceProvider(
   }
 
   async function estimate<T>(prepared: PreparedInvoiceRequest<T>) {
-    // countTokens is free, but multimodal counts are estimates. Admission reserves
-    // a documented 2x input margin; reported billing is reconciled after inference.
+    // Multimodal counts are estimates; budget schema input explicitly as well.
+    // Reserve twice the counted input plus one token per serialized schema byte;
+    // reported billing is reconciled after inference.
     // Vertex v1 accepts generation fields directly, including the response schema.
     const value = await call("countTokens", {
       ...prepared.body,
@@ -388,7 +382,11 @@ export function createGoogleInvoiceProvider(
     const estimate = integer(value.totalTokens);
     if (estimate === undefined || estimate <= 0)
       throw new InvoiceProviderError("inference_token_count_invalid");
-    const reservedInputTokens = estimate * 2;
+    const schemaAllowance = Buffer.byteLength(
+      JSON.stringify(prepared.body.generationConfig.responseSchema),
+      "utf8"
+    );
+    const reservedInputTokens = estimate * 2 + schemaAllowance;
     if (reservedInputTokens > config.maxInputTokens)
       throw new InvoiceProviderError("inference_input_token_limit");
     return {

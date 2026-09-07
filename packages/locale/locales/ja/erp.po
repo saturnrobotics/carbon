@@ -3388,6 +3388,9 @@ msgstr "変更者"
 msgid "Changes"
 msgstr "変更"
 
+msgid "Changing this selection keeps your current review fields. Save the review, then use Parse again to read the selected document."
+msgstr ""
+
 msgid "Changing this will overwrite the existing method"
 msgstr "これを変更すると、既存のメソッドが上書きされます"
 
@@ -3446,6 +3449,12 @@ msgstr "シリアル番号を選択"
 
 msgid "Choose another file"
 msgstr "別のファイルを選択"
+
+msgid "Choose the invoice document to parse"
+msgstr ""
+
+msgid "Choose the invoice or receipt that defines this purchase. Review every other attachment and explain why it adds no separate invoice lines. Documents for another purchase need a separate review."
+msgstr ""
 
 msgid "Choose what appears on the printed job traveler."
 msgstr "印刷された製造指図現品票に表示される内容を選択します。"
@@ -7660,6 +7669,9 @@ msgstr "フラグ"
 msgid "for anything. They'll pull in the right person."
 msgstr "何でも構いません。彼らが適切な人を連れてきます。"
 
+msgid "For each other file, explain whether it is a duplicate, payment confirmation, supporting evidence, or unrelated to this invoice. Review decisions apply once per distinct file, even when the same file arrived from several sources."
+msgstr ""
+
 msgid "For one-time deployment setup, use this company ID for PAYMENT_SYNC_COMPANY_ID:"
 msgstr "一度だけのデプロイ設定には、PAYMENT_SYNC_COMPANY_ID にこの会社 ID を使用してください："
 
@@ -8824,6 +8836,9 @@ msgstr "請求書の日付"
 msgid "Invoice document"
 msgstr "請求書文書"
 
+msgid "Invoice document to parse"
+msgstr ""
+
 msgid "Invoice documents"
 msgstr "請求書ドキュメント"
 
@@ -8844,6 +8859,9 @@ msgstr "請求書番号"
 
 msgid "Invoice settlement"
 msgstr "請求書決済"
+
+msgid "Invoice source"
+msgstr ""
 
 msgid "Invoice supplier"
 msgstr "請求書仕入先"
@@ -9821,6 +9839,9 @@ msgstr "手動"
 
 msgid "Manual correction"
 msgstr "手動補正"
+
+msgid "Manual review of selected invoice"
+msgstr ""
 
 msgid "Manually scheduled"
 msgstr "手動スケジュール済み"
@@ -11911,6 +11932,9 @@ msgstr "IAS 21 に従って純資産残高を換算する際に使用するオ�
 msgid "Optional pages & sections"
 msgstr "オプションページとセクション"
 
+msgid "Optional unless the extracted facts came from another file. Confirm that you manually entered or reviewed these invoice facts against the selected document."
+msgstr ""
+
 msgid "Options"
 msgstr "オプション"
 
@@ -12149,6 +12173,9 @@ msgstr "値がマッピングされるまで警告付きで仕訳を保留する
 
 msgid "Parse again"
 msgstr "再度解析します"
+
+msgid "Parse the selected invoice or explain your manual review of its facts"
+msgstr ""
 
 msgid "Parsing and historical ingestion"
 msgstr "解析と履歴取り込み"
@@ -12700,6 +12727,9 @@ msgstr "設備の予防保全スケジュール"
 
 msgid "Preview"
 msgstr "プレビュー"
+
+msgid "Preview document"
+msgstr ""
 
 msgid "Preview failed: {error}"
 msgstr "プレビューに失敗しました: {error}"
@@ -13536,6 +13566,9 @@ msgstr "領収書行"
 msgid "Receipt Lines"
 msgstr "領収書行"
 
+msgid "Receipt or invoice"
+msgstr ""
+
 msgid "Receipt Promised Date"
 msgstr "入荷回答納期"
 
@@ -14262,6 +14295,9 @@ msgstr "文書のレビュー"
 msgid "Review each item's changes, then confirm — releasing can't be undone."
 msgstr "各アイテムの変更をレビューしてから確認してください。リリースは取り消せません。"
 
+msgid "Review every other attachment and enter a reason"
+msgstr ""
+
 msgid "Review extracted purchases"
 msgstr "抽出した購入内容を確認する"
 
@@ -14273,6 +14309,9 @@ msgstr "問題を確認する"
 
 msgid "Review or retry parsing"
 msgstr "解析を確認または再試行してください"
+
+msgid "Review reason for {name}"
+msgstr ""
 
 msgid "Review supplier"
 msgstr "仕入先を確認"
@@ -16928,6 +16967,8 @@ msgstr "この間接支出明細が転記される費用勘定。間接明細に
 
 msgid "The file you uploaded and the mappings you've made will be lost."
 msgstr "アップロードしたファイルと設定したマッピングは失われます。"
+msgid "The extracted facts came from another document. Parse the selected invoice, or check every line and total manually and describe your review below."
+msgstr ""
 
 msgid "the first 3 to 4 weeks"
 msgstr "最初の3～4週間"

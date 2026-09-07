@@ -3388,6 +3388,9 @@ msgstr "Изменено"
 msgid "Changes"
 msgstr "Изменения"
 
+msgid "Changing this selection keeps your current review fields. Save the review, then use Parse again to read the selected document."
+msgstr ""
+
 msgid "Changing this will overwrite the existing method"
 msgstr "Это изменение перезапишет существующий метод"
 
@@ -3446,6 +3449,12 @@ msgstr "Выберите серийный номер"
 
 msgid "Choose another file"
 msgstr "Выбрать другой файл"
+
+msgid "Choose the invoice document to parse"
+msgstr ""
+
+msgid "Choose the invoice or receipt that defines this purchase. Review every other attachment and explain why it adds no separate invoice lines. Documents for another purchase need a separate review."
+msgstr ""
 
 msgid "Choose what appears on the printed job traveler."
 msgstr "Выбрать, что отображается на распечатанном маршрутном листе работы."
@@ -7660,6 +7669,9 @@ msgstr "Флаги"
 msgid "for anything. They'll pull in the right person."
 msgstr "для чего угодно. Они привлекут нужного человека."
 
+msgid "For each other file, explain whether it is a duplicate, payment confirmation, supporting evidence, or unrelated to this invoice. Review decisions apply once per distinct file, even when the same file arrived from several sources."
+msgstr ""
+
 msgid "For one-time deployment setup, use this company ID for PAYMENT_SYNC_COMPANY_ID:"
 msgstr "Для разовой настройки используйте этот ID компании для PAYMENT_SYNC_COMPANY_ID:"
 
@@ -8825,6 +8837,9 @@ msgstr "Дата Счет-фактура"
 msgid "Invoice document"
 msgstr "Документ Счет-фактура"
 
+msgid "Invoice document to parse"
+msgstr ""
+
 msgid "Invoice documents"
 msgstr "Документы — Счет-фактура"
 
@@ -8845,6 +8860,9 @@ msgstr "Номер счета-фактуры"
 
 msgid "Invoice settlement"
 msgstr "Расчет по счету-фактуре"
+
+msgid "Invoice source"
+msgstr ""
 
 msgid "Invoice supplier"
 msgstr "Поставщик счета-фактуры"
@@ -9822,6 +9840,9 @@ msgstr "Ручной"
 
 msgid "Manual correction"
 msgstr "Ручная коррекция"
+
+msgid "Manual review of selected invoice"
+msgstr ""
 
 msgid "Manually scheduled"
 msgstr "Вручную запланировано"
@@ -11912,6 +11933,9 @@ msgstr "Дополнительный фиксированный курс, исп
 msgid "Optional pages & sections"
 msgstr "Дополнительные страницы и разделы"
 
+msgid "Optional unless the extracted facts came from another file. Confirm that you manually entered or reviewed these invoice facts against the selected document."
+msgstr ""
+
 msgid "Options"
 msgstr "Параметры"
 
@@ -12150,6 +12174,9 @@ msgstr "Отложить операцию с предупреждением до
 
 msgid "Parse again"
 msgstr "Разобрать еще раз"
+
+msgid "Parse the selected invoice or explain your manual review of its facts"
+msgstr ""
 
 msgid "Parsing and historical ingestion"
 msgstr "Анализ и исторический прием"
@@ -12701,6 +12728,9 @@ msgstr "Графики предупреждающего техобслужива
 
 msgid "Preview"
 msgstr "Предпросмотр"
+
+msgid "Preview document"
+msgstr ""
 
 msgid "Preview failed: {error}"
 msgstr "Ошибка предпросмотра: {error}"
@@ -13537,6 +13567,9 @@ msgstr "Строка квитанции"
 msgid "Receipt Lines"
 msgstr "Строки квитанции"
 
+msgid "Receipt or invoice"
+msgstr ""
+
 msgid "Receipt Promised Date"
 msgstr "Подтвержденная дата поступления"
 
@@ -14263,6 +14296,9 @@ msgstr "Обзор документа"
 msgid "Review each item's changes, then confirm — releasing can't be undone."
 msgstr "Рассмотреть изменения каждой номенклатуры, затем подтвердить — выпуск нельзя отменить."
 
+msgid "Review every other attachment and enter a reason"
+msgstr ""
+
 msgid "Review extracted purchases"
 msgstr "Просмотр извлеченных покупок"
 
@@ -14274,6 +14310,9 @@ msgstr "Проблемы с обзором"
 
 msgid "Review or retry parsing"
 msgstr "Просмотрите или повторите синтаксический анализ"
+
+msgid "Review reason for {name}"
+msgstr ""
 
 msgid "Review supplier"
 msgstr "Проверить поставщика"
@@ -16929,6 +16968,8 @@ msgstr "Счет расходов, на который относится эта
 
 msgid "The file you uploaded and the mappings you've made will be lost."
 msgstr "Загруженный файл и созданные сопоставления будут потеряны."
+msgid "The extracted facts came from another document. Parse the selected invoice, or check every line and total manually and describe your review below."
+msgstr ""
 
 msgid "the first 3 to 4 weeks"
 msgstr "первые 3–4 недели"

@@ -3388,6 +3388,9 @@ msgstr "Cambiado por"
 msgid "Changes"
 msgstr "Cambios"
 
+msgid "Changing this selection keeps your current review fields. Save the review, then use Parse again to read the selected document."
+msgstr ""
+
 msgid "Changing this will overwrite the existing method"
 msgstr "Cambiar esto sobrescribirá el método existente"
 
@@ -3446,6 +3449,12 @@ msgstr "Elige un número de serie"
 
 msgid "Choose another file"
 msgstr "Elegir otro archivo"
+
+msgid "Choose the invoice document to parse"
+msgstr ""
+
+msgid "Choose the invoice or receipt that defines this purchase. Review every other attachment and explain why it adds no separate invoice lines. Documents for another purchase need a separate review."
+msgstr ""
 
 msgid "Choose what appears on the printed job traveler."
 msgstr "Elija qué aparece en la hoja viajera de la orden de trabajo impresa."
@@ -7660,6 +7669,9 @@ msgstr "Banderas"
 msgid "for anything. They'll pull in the right person."
 msgstr "para cualquier cosa. Ellos traerán a la persona indicada."
 
+msgid "For each other file, explain whether it is a duplicate, payment confirmation, supporting evidence, or unrelated to this invoice. Review decisions apply once per distinct file, even when the same file arrived from several sources."
+msgstr ""
+
 msgid "For one-time deployment setup, use this company ID for PAYMENT_SYNC_COMPANY_ID:"
 msgstr "Para la configuración inicial del despliegue, usa este ID de empresa para PAYMENT_SYNC_COMPANY_ID:"
 
@@ -8825,6 +8837,9 @@ msgstr "fecha de factura"
 msgid "Invoice document"
 msgstr "documento de factura"
 
+msgid "Invoice document to parse"
+msgstr ""
+
 msgid "Invoice documents"
 msgstr "Documentos de factura"
 
@@ -8845,6 +8860,9 @@ msgstr "Número de Factura"
 
 msgid "Invoice settlement"
 msgstr "Liquidación de facturas"
+
+msgid "Invoice source"
+msgstr ""
 
 msgid "Invoice supplier"
 msgstr "Proveedor de factura"
@@ -9822,6 +9840,9 @@ msgstr "Manual"
 
 msgid "Manual correction"
 msgstr "Corrección manual"
+
+msgid "Manual review of selected invoice"
+msgstr ""
 
 msgid "Manually scheduled"
 msgstr "Programado manualmente"
@@ -11912,6 +11933,9 @@ msgstr "Tasa fija opcional utilizada al traducir saldos de patrimonio según IAS
 msgid "Optional pages & sections"
 msgstr "Páginas y secciones opcionales"
 
+msgid "Optional unless the extracted facts came from another file. Confirm that you manually entered or reviewed these invoice facts against the selected document."
+msgstr ""
+
 msgid "Options"
 msgstr "Opciones"
 
@@ -12150,6 +12174,9 @@ msgstr "Aparcar el asiento con una advertencia hasta que se asigne el valor"
 
 msgid "Parse again"
 msgstr "Analizar de nuevo"
+
+msgid "Parse the selected invoice or explain your manual review of its facts"
+msgstr ""
 
 msgid "Parsing and historical ingestion"
 msgstr "Análisis e ingestión histórica."
@@ -12701,6 +12728,9 @@ msgstr "Calendarios de mantenimiento preventivo para su equipo"
 
 msgid "Preview"
 msgstr "Vista previa"
+
+msgid "Preview document"
+msgstr ""
 
 msgid "Preview failed: {error}"
 msgstr "Vista previa fallida: {error}"
@@ -13537,6 +13567,9 @@ msgstr "Línea de Recepción"
 msgid "Receipt Lines"
 msgstr "Líneas de Recepción"
 
+msgid "Receipt or invoice"
+msgstr ""
+
 msgid "Receipt Promised Date"
 msgstr "Fecha de Entrega Prometida"
 
@@ -14263,6 +14296,9 @@ msgstr "Revisar documento"
 msgid "Review each item's changes, then confirm — releasing can't be undone."
 msgstr "Revisa los cambios de cada elemento y confirma — liberar no se puede deshacer."
 
+msgid "Review every other attachment and enter a reason"
+msgstr ""
+
 msgid "Review extracted purchases"
 msgstr "Revisar compras extraídas"
 
@@ -14274,6 +14310,9 @@ msgstr "Revisar problemas"
 
 msgid "Review or retry parsing"
 msgstr "Revisar o volver a intentar el análisis"
+
+msgid "Review reason for {name}"
+msgstr ""
 
 msgid "Review supplier"
 msgstr "Revisar proveedor"
@@ -16929,6 +16968,8 @@ msgstr "La cuenta de gastos en la que se contabiliza esta línea de gasto indire
 
 msgid "The file you uploaded and the mappings you've made will be lost."
 msgstr "Se perderán el archivo que subiste y las asignaciones que hiciste."
+msgid "The extracted facts came from another document. Parse the selected invoice, or check every line and total manually and describe your review below."
+msgstr ""
 
 msgid "the first 3 to 4 weeks"
 msgstr "las primeras 3 a 4 semanas"

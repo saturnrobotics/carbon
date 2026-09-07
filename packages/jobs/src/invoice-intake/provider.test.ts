@@ -78,6 +78,8 @@ describe("invoice inference configuration", () => {
     const encoded = JSON.stringify(json);
     expect(encoded).not.toContain("additionalProperties");
     expect(encoded).not.toContain("$schema");
+    for (const bound of ["minimum", "maximum", "minItems", "maxItems"])
+      expect(encoded).not.toContain(`"${bound}":`);
     expect(encoded).toContain('"nullable":true');
     expect(encoded).toContain(
       '"schemaVersion":{"type":"STRING","enum":["invoice-intake.v1"]}'
@@ -98,7 +100,13 @@ describe("Google invoice REST boundary", () => {
     );
     const prepared = provider.prepareExtraction(document);
     const estimate = await provider.estimate(prepared);
-    expect(estimate.reservedInputTokens).toBe(8000);
+    expect(estimate.reservedInputTokens).toBe(
+      8000 +
+        Buffer.byteLength(
+          JSON.stringify(prepared.body.generationConfig.responseSchema),
+          "utf8"
+        )
+    );
     expect(request.mock.calls[1]?.[0]).toBe(
       "https://aiplatform.us.rep.googleapis.com/v1/projects/example-project/locations/us/publishers/google/models/gemini-3.5-flash:countTokens"
     );
@@ -128,6 +136,107 @@ describe("Google invoice REST boundary", () => {
     expect(body.generationConfig.responseMimeType).toBe("application/json");
     expect(body.tools).toBeUndefined();
     expect(request.mock.calls[2]?.[1]?.redirect).toBe("error");
+  });
+
+  it("still rejects out-of-range evidence and more than 500 source lines", async () => {
+    const line = {
+      lineKey: "1",
+      page: null,
+      sourceText: null,
+      ...Object.fromEntries(
+        [
+          "description",
+          "supplierSku",
+          "manufacturerPartNumber",
+          "quantity",
+          "purchaseUnit",
+          "packText",
+          "unitPrice",
+          "discount",
+          "tax",
+          "taxPercent",
+          "shipping",
+          "lineTotal",
+          "suggestedType"
+        ].map((name) => [
+          name,
+          { value: null, confidence: null, sourceText: null, page: null }
+        ])
+      )
+    };
+    const extraction = { ...emptyInvoiceExtraction(), lines: [line] };
+    expect(invoiceExtractionEnvelopeSchema.safeParse(extraction).success).toBe(
+      true
+    );
+    const invalid = [
+      { ...extraction, lines: [{ ...line, page: 21 }] },
+      {
+        ...extraction,
+        supplier: {
+          ...extraction.supplier,
+          name: { ...extraction.supplier.name, confidence: 1.01 }
+        }
+      },
+      {
+        ...extraction,
+        lines: Array.from({ length: 501 }, (_, index) => ({
+          ...line,
+          lineKey: String(index)
+        }))
+      }
+    ];
+    for (const document of invalid) {
+      const request = vi
+        .fn<typeof fetch>()
+        .mockResolvedValueOnce(token())
+        .mockResolvedValueOnce(
+          completion({
+            candidates: [
+              {
+                finishReason: "STOP",
+                content: { parts: [{ text: JSON.stringify(document) }] }
+              }
+            ]
+          })
+        );
+      const provider = createGoogleInvoiceProvider(
+        loadInvoiceProviderConfig(env),
+        { fetch: request }
+      );
+      await expect(
+        provider.execute(
+          provider.prepareExtraction({
+            bytes: new TextEncoder().encode("%PDF synthetic"),
+            mimeType: "application/pdf"
+          })
+        )
+      ).rejects.toMatchObject({
+        code: "inference_output_invalid",
+        usage: { totalTokens: 4200 }
+      });
+    }
+  });
+
+  it("includes schema overhead in the input limit before any paid request", async () => {
+    const request = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(token())
+      .mockResolvedValueOnce(Response.json({ totalTokens: 2000 }));
+    const provider = createGoogleInvoiceProvider(
+      loadInvoiceProviderConfig({
+        ...env,
+        INVOICE_AI_MAX_INPUT_TOKENS: "6000"
+      }),
+      { fetch: request }
+    );
+    await expect(
+      provider.estimate(provider.prepareExtraction(document))
+    ).rejects.toThrow("inference_input_token_limit");
+    expect(
+      request.mock.calls.some(([url]) =>
+        String(url).endsWith(":generateContent")
+      )
+    ).toBe(false);
   });
 
   it("refreshes temporary tokens early without retrying paid requests internally", async () => {

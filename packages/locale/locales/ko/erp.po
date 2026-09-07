@@ -3388,6 +3388,9 @@ msgstr "변경자"
 msgid "Changes"
 msgstr "변경 사항"
 
+msgid "Changing this selection keeps your current review fields. Save the review, then use Parse again to read the selected document."
+msgstr ""
+
 msgid "Changing this will overwrite the existing method"
 msgstr "이를 변경하면 기존 제조방법을 덮어씁니다"
 
@@ -3446,6 +3449,12 @@ msgstr "시리얼 번호를 선택하십시오"
 
 msgid "Choose another file"
 msgstr "다른 파일을 선택하세요"
+
+msgid "Choose the invoice document to parse"
+msgstr ""
+
+msgid "Choose the invoice or receipt that defines this purchase. Review every other attachment and explain why it adds no separate invoice lines. Documents for another purchase need a separate review."
+msgstr ""
 
 msgid "Choose what appears on the printed job traveler."
 msgstr "인쇄된 작업 이동표에 나타날 내용을 선택하십시오."
@@ -7660,6 +7669,9 @@ msgstr "플래그"
 msgid "for anything. They'll pull in the right person."
 msgstr "무엇이든지요. 적임자를 연결해 드립니다."
 
+msgid "For each other file, explain whether it is a duplicate, payment confirmation, supporting evidence, or unrelated to this invoice. Review decisions apply once per distinct file, even when the same file arrived from several sources."
+msgstr ""
+
 msgid "For one-time deployment setup, use this company ID for PAYMENT_SYNC_COMPANY_ID:"
 msgstr "일회성 배포 설정에는 PAYMENT_SYNC_COMPANY_ID에 이 회사 ID를 사용하세요:"
 
@@ -8825,6 +8837,9 @@ msgstr "송장 날짜"
 msgid "Invoice document"
 msgstr "송장 문서"
 
+msgid "Invoice document to parse"
+msgstr ""
+
 msgid "Invoice documents"
 msgstr "송장 문서"
 
@@ -8845,6 +8860,9 @@ msgstr "송장 번호"
 
 msgid "Invoice settlement"
 msgstr "송장 결제"
+
+msgid "Invoice source"
+msgstr ""
 
 msgid "Invoice supplier"
 msgstr "송장 공급업체"
@@ -9822,6 +9840,9 @@ msgstr "수동"
 
 msgid "Manual correction"
 msgstr "수동 수정"
+
+msgid "Manual review of selected invoice"
+msgstr ""
 
 msgid "Manually scheduled"
 msgstr "수동으로 예약됨"
@@ -11912,6 +11933,9 @@ msgstr "IAS 21에 따라 자본 잔액을 환산할 때 사용하는 선택적 �
 msgid "Optional pages & sections"
 msgstr "선택적 페이지 및 섹션"
 
+msgid "Optional unless the extracted facts came from another file. Confirm that you manually entered or reviewed these invoice facts against the selected document."
+msgstr ""
+
 msgid "Options"
 msgstr "옵션"
 
@@ -12150,6 +12174,9 @@ msgstr "값이 매핑될 때까지 경고와 함께 전표를 대기시킵니다
 
 msgid "Parse again"
 msgstr "다시 구문 분석"
+
+msgid "Parse the selected invoice or explain your manual review of its facts"
+msgstr ""
 
 msgid "Parsing and historical ingestion"
 msgstr "구문 분석 및 기록 수집"
@@ -12701,6 +12728,9 @@ msgstr "설비 예방 유지보수 일정"
 
 msgid "Preview"
 msgstr "미리보기"
+
+msgid "Preview document"
+msgstr ""
 
 msgid "Preview failed: {error}"
 msgstr "미리보기 실패: {error}"
@@ -13537,6 +13567,9 @@ msgstr "입고 라인"
 msgid "Receipt Lines"
 msgstr "입고 라인"
 
+msgid "Receipt or invoice"
+msgstr ""
+
 msgid "Receipt Promised Date"
 msgstr "입고 약속일"
 
@@ -14263,6 +14296,9 @@ msgstr "문서 검토"
 msgid "Review each item's changes, then confirm — releasing can't be undone."
 msgstr "각 항목의 변경 사항을 검토한 후 확인하세요 — 릴리스는 실행 취소할 수 없습니다."
 
+msgid "Review every other attachment and enter a reason"
+msgstr ""
+
 msgid "Review extracted purchases"
 msgstr "추출된 구매 검토"
 
@@ -14274,6 +14310,9 @@ msgstr "문제 검토"
 
 msgid "Review or retry parsing"
 msgstr "구문 분석을 검토하거나 다시 시도하세요."
+
+msgid "Review reason for {name}"
+msgstr ""
 
 msgid "Review supplier"
 msgstr "공급업체 검토"
@@ -16929,6 +16968,8 @@ msgstr "이 간접비 지출 라인이 계상되는 비용 계정입니다. 간�
 
 msgid "The file you uploaded and the mappings you've made will be lost."
 msgstr "업로드한 파일과 설정한 매핑이 손실됩니다."
+msgid "The extracted facts came from another document. Parse the selected invoice, or check every line and total manually and describe your review below."
+msgstr ""
 
 msgid "the first 3 to 4 weeks"
 msgstr "처음 3~4주"

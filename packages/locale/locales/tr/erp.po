@@ -3388,6 +3388,9 @@ msgstr "Değiştiren"
 msgid "Changes"
 msgstr "Değişiklikler"
 
+msgid "Changing this selection keeps your current review fields. Save the review, then use Parse again to read the selected document."
+msgstr ""
+
 msgid "Changing this will overwrite the existing method"
 msgstr "Bunu değiştirmek mevcut yöntemi geçersiz kılacaktır"
 
@@ -3446,6 +3449,12 @@ msgstr "Bir seri numarası seçin"
 
 msgid "Choose another file"
 msgstr "Başka bir dosya seç"
+
+msgid "Choose the invoice document to parse"
+msgstr ""
+
+msgid "Choose the invoice or receipt that defines this purchase. Review every other attachment and explain why it adds no separate invoice lines. Documents for another purchase need a separate review."
+msgstr ""
 
 msgid "Choose what appears on the printed job traveler."
 msgstr "Yazdırılan İş takip kartında neyin görüneceğini seçin."
@@ -7660,6 +7669,9 @@ msgstr "Bayraklar"
 msgid "for anything. They'll pull in the right person."
 msgstr "herhangi bir şey için. Doğru kişiyi çekerler."
 
+msgid "For each other file, explain whether it is a duplicate, payment confirmation, supporting evidence, or unrelated to this invoice. Review decisions apply once per distinct file, even when the same file arrived from several sources."
+msgstr ""
+
 msgid "For one-time deployment setup, use this company ID for PAYMENT_SYNC_COMPANY_ID:"
 msgstr "Tek seferlik dağıtım kurulumu için bu şirket kimliğini PAYMENT_SYNC_COMPANY_ID değerinde kullanın:"
 
@@ -8825,6 +8837,9 @@ msgstr "Fatura tarihi"
 msgid "Invoice document"
 msgstr "Fatura belgesi"
 
+msgid "Invoice document to parse"
+msgstr ""
+
 msgid "Invoice documents"
 msgstr "Fatura belgeleri"
 
@@ -8845,6 +8860,9 @@ msgstr "Fatura Numarası"
 
 msgid "Invoice settlement"
 msgstr "Fatura Ödeme"
+
+msgid "Invoice source"
+msgstr ""
 
 msgid "Invoice supplier"
 msgstr "Fatura tedarikçi"
@@ -9822,6 +9840,9 @@ msgstr "Manuel"
 
 msgid "Manual correction"
 msgstr "Manuel düzeltme"
+
+msgid "Manual review of selected invoice"
+msgstr ""
 
 msgid "Manually scheduled"
 msgstr "El ile zamanlandırılmış"
@@ -11912,6 +11933,9 @@ msgstr "Özkaynak bakiyelerini IAS 21'e göre çevirirken kullanılan isteğe ba
 msgid "Optional pages & sections"
 msgstr "İsteğe bağlı sayfalar ve bölümler"
 
+msgid "Optional unless the extracted facts came from another file. Confirm that you manually entered or reviewed these invoice facts against the selected document."
+msgstr ""
+
 msgid "Options"
 msgstr "Seçenekler"
 
@@ -12150,6 +12174,9 @@ msgstr "Muhasebe fişini değer eşleştirilene kadar uyarı ile park et"
 
 msgid "Parse again"
 msgstr "Tekrar ayrıştır"
+
+msgid "Parse the selected invoice or explain your manual review of its facts"
+msgstr ""
 
 msgid "Parsing and historical ingestion"
 msgstr "Ayrıştırma ve geçmişe alım"
@@ -12701,6 +12728,9 @@ msgstr "Ekipmanınız için önleyici bakım programları"
 
 msgid "Preview"
 msgstr "Önizle"
+
+msgid "Preview document"
+msgstr ""
 
 msgid "Preview failed: {error}"
 msgstr "Önizleme başarısız oldu: {error}"
@@ -13537,6 +13567,9 @@ msgstr "Mal Kabul Satırı"
 msgid "Receipt Lines"
 msgstr "Mal Kabul Edilen Satırlar"
 
+msgid "Receipt or invoice"
+msgstr ""
+
 msgid "Receipt Promised Date"
 msgstr "Mal kabul taahhüt tarihi"
 
@@ -14263,6 +14296,9 @@ msgstr "Belgeyi inceleyin"
 msgid "Review each item's changes, then confirm — releasing can't be undone."
 msgstr "Her stok kartın değişikliklerini incele, sonra onayla — serbest bırakma geri alınamaz."
 
+msgid "Review every other attachment and enter a reason"
+msgstr ""
+
 msgid "Review extracted purchases"
 msgstr "Çıkarılan satın alma işlemlerini inceleyin"
 
@@ -14274,6 +14310,9 @@ msgstr "Sorunları inceleyin"
 
 msgid "Review or retry parsing"
 msgstr "Ayrıştırma işlemini gözden geçirin veya yeniden deneyin"
+
+msgid "Review reason for {name}"
+msgstr ""
 
 msgid "Review supplier"
 msgstr "Tedarikçiyi incele"
@@ -16929,6 +16968,8 @@ msgstr "Bu dolaylı harcama satırının nakledildiği gider hesabı; dolaylı s
 
 msgid "The file you uploaded and the mappings you've made will be lost."
 msgstr "Yüklediğiniz dosya ve yaptığınız eşleştirmeler kaybolacak."
+msgid "The extracted facts came from another document. Parse the selected invoice, or check every line and total manually and describe your review below."
+msgstr ""
 
 msgid "the first 3 to 4 weeks"
 msgstr "ilk 3 ila 4 hafta"

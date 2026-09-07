@@ -3388,6 +3388,9 @@ msgstr "Changed By"
 msgid "Changes"
 msgstr "Changes"
 
+msgid "Changing this selection keeps your current review fields. Save the review, then use Parse again to read the selected document."
+msgstr "Changing this selection keeps your current review fields. Save the review, then use Parse again to read the selected document."
+
 msgid "Changing this will overwrite the existing method"
 msgstr "Changing this will overwrite the existing method"
 
@@ -3446,6 +3449,12 @@ msgstr "Choose a serial number"
 
 msgid "Choose another file"
 msgstr "Choose another file"
+
+msgid "Choose the invoice document to parse"
+msgstr "Choose the invoice document to parse"
+
+msgid "Choose the invoice or receipt that defines this purchase. Review every other attachment and explain why it adds no separate invoice lines. Documents for another purchase need a separate review."
+msgstr "Choose the invoice or receipt that defines this purchase. Review every other attachment and explain why it adds no separate invoice lines. Documents for another purchase need a separate review."
 
 msgid "Choose what appears on the printed job traveler."
 msgstr "Choose what appears on the printed job traveler."
@@ -7660,6 +7669,9 @@ msgstr "Flags"
 msgid "for anything. They'll pull in the right person."
 msgstr "for anything. They'll pull in the right person."
 
+msgid "For each other file, explain whether it is a duplicate, payment confirmation, supporting evidence, or unrelated to this invoice. Review decisions apply once per distinct file, even when the same file arrived from several sources."
+msgstr "For each other file, explain whether it is a duplicate, payment confirmation, supporting evidence, or unrelated to this invoice. Review decisions apply once per distinct file, even when the same file arrived from several sources."
+
 msgid "For one-time deployment setup, use this company ID for PAYMENT_SYNC_COMPANY_ID:"
 msgstr "For one-time deployment setup, use this company ID for PAYMENT_SYNC_COMPANY_ID:"
 
@@ -8825,6 +8837,9 @@ msgstr "Invoice date"
 msgid "Invoice document"
 msgstr "Invoice document"
 
+msgid "Invoice document to parse"
+msgstr "Invoice document to parse"
+
 msgid "Invoice documents"
 msgstr "Invoice documents"
 
@@ -8845,6 +8860,9 @@ msgstr "Invoice Number"
 
 msgid "Invoice settlement"
 msgstr "Invoice settlement"
+
+msgid "Invoice source"
+msgstr "Invoice source"
 
 msgid "Invoice supplier"
 msgstr "Invoice supplier"
@@ -9822,6 +9840,9 @@ msgstr "Manual"
 
 msgid "Manual correction"
 msgstr "Manual correction"
+
+msgid "Manual review of selected invoice"
+msgstr "Manual review of selected invoice"
 
 msgid "Manually scheduled"
 msgstr "Manually scheduled"
@@ -11912,6 +11933,9 @@ msgstr "Optional fixed rate used when translating equity balances per IAS 21 (in
 msgid "Optional pages & sections"
 msgstr "Optional pages & sections"
 
+msgid "Optional unless the extracted facts came from another file. Confirm that you manually entered or reviewed these invoice facts against the selected document."
+msgstr "Optional unless the extracted facts came from another file. Confirm that you manually entered or reviewed these invoice facts against the selected document."
+
 msgid "Options"
 msgstr "Options"
 
@@ -12150,6 +12174,9 @@ msgstr "Park the journal with a warning until the value is mapped"
 
 msgid "Parse again"
 msgstr "Parse again"
+
+msgid "Parse the selected invoice or explain your manual review of its facts"
+msgstr "Parse the selected invoice or explain your manual review of its facts"
 
 msgid "Parsing and historical ingestion"
 msgstr "Parsing and historical ingestion"
@@ -12701,6 +12728,9 @@ msgstr "Preventive maintenance schedules for your equipment"
 
 msgid "Preview"
 msgstr "Preview"
+
+msgid "Preview document"
+msgstr "Preview document"
 
 msgid "Preview failed: {error}"
 msgstr "Preview failed: {error}"
@@ -13537,6 +13567,9 @@ msgstr "Receipt Line"
 msgid "Receipt Lines"
 msgstr "Receipt Lines"
 
+msgid "Receipt or invoice"
+msgstr "Receipt or invoice"
+
 msgid "Receipt Promised Date"
 msgstr "Receipt Promised Date"
 
@@ -14263,6 +14296,9 @@ msgstr "Review document"
 msgid "Review each item's changes, then confirm — releasing can't be undone."
 msgstr "Review each item's changes, then confirm — releasing can't be undone."
 
+msgid "Review every other attachment and enter a reason"
+msgstr "Review every other attachment and enter a reason"
+
 msgid "Review extracted purchases"
 msgstr "Review extracted purchases"
 
@@ -14274,6 +14310,9 @@ msgstr "Review issues"
 
 msgid "Review or retry parsing"
 msgstr "Review or retry parsing"
+
+msgid "Review reason for {name}"
+msgstr "Review reason for {name}"
 
 msgid "Review supplier"
 msgstr "Review supplier"
@@ -16929,6 +16968,8 @@ msgstr "The expense account this indirect-spend line posts to; required because 
 
 msgid "The file you uploaded and the mappings you've made will be lost."
 msgstr "The file you uploaded and the mappings you've made will be lost."
+msgid "The extracted facts came from another document. Parse the selected invoice, or check every line and total manually and describe your review below."
+msgstr "The extracted facts came from another document. Parse the selected invoice, or check every line and total manually and describe your review below."
 
 msgid "the first 3 to 4 weeks"
 msgstr "the first 3 to 4 weeks"
