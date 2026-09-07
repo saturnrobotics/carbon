@@ -126,6 +126,12 @@ describe.skipIf(process.env.INVOICE_EVAL_LIVE !== "true")(
         );
       const candidateBudget = config.maxCostUsd / config.models.length;
       const candidateFailures: Array<{ modelId: string; reason: string }> = [];
+      const candidateDiagnostics: Array<{
+        modelId: string;
+        name: string;
+        message: string;
+        stack: string | null;
+      }> = [];
       try {
         if (!config.runId) {
           config.runId = randomUUID();
@@ -345,7 +351,20 @@ describe.skipIf(process.env.INVOICE_EVAL_LIVE !== "true")(
                 `Evaluated ${samples.length} synthetic samples.\n`
               );
             }
-          } catch {
+          } catch (failure) {
+            candidateDiagnostics.push({
+              modelId: model.id,
+              name: failure instanceof Error ? failure.name : "ThrownValue",
+              message:
+                failure instanceof Error ? failure.message : String(failure),
+              stack: failure instanceof Error ? (failure.stack ?? null) : null
+            });
+            // Full diagnostics stay in an atomic mode-0600 artifact, never the
+            // console or the shared candidate summary.
+            await privateJson(
+              path.join(directory, "candidate-errors.json"),
+              candidateDiagnostics
+            );
             candidateFailures.push({
               modelId: model.id,
               reason: "evaluation_incomplete"
