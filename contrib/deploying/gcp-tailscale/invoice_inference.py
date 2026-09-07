@@ -3,6 +3,8 @@
 import datetime
 import math
 import re
+import subprocess
+import time
 
 CONFIG_KEYS = {
     "INVOICE_INTAKE_ENABLED", "INVOICE_AI_PROJECT", "INVOICE_AI_LOCATION", "INVOICE_AI_MODEL",
@@ -102,7 +104,21 @@ def provision(cloud):
     if any(binding.get("role") != role_name or binding.get("condition") for binding in grants):
         raise ValueError("Invoice inference service account has unexpected project grants")
     if not grants:
-        cloud.call("projects", "add-iam-policy-binding", project, "--member=" + member, "--role=" + role_name, "--condition=None")
+        delays = (2, 4, 8, 16, 30)
+        for attempt in range(len(delays) + 1):
+            try:
+                # Capture policy output and diagnostics; neither belongs in public logs.
+                cloud.call("projects", "add-iam-policy-binding", project, "--member=" + member,
+                           "--role=" + role_name, "--condition=None", capture=True, capture_error=True)
+                break
+            except subprocess.CalledProcessError as error:
+                diagnostic = error.stderr or ""
+                # IAM can briefly reject an identity created by this very run.
+                # Permission errors, other identities and existing accounts fail immediately.
+                if (accounts_found or attempt == len(delays) or "INVALID_ARGUMENT:" not in diagnostic
+                        or not re.search(r"Service account " + re.escape(account_email) + r" does not exist\b", diagnostic)):
+                    raise
+                time.sleep(delays[attempt])
     scopes = ["https://www.googleapis.com/auth/cloud-platform"]
     if accounts and accounts[0].get("scopes") == scopes:
         return

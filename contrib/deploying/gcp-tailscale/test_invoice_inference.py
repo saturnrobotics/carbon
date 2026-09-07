@@ -1,7 +1,8 @@
 """Offline configuration/IAM tests: no cloud requests or static credentials."""
 import copy
+import subprocess
 import unittest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, call, patch
 import invoice_inference as inference
 
 
@@ -74,6 +75,66 @@ class InvoiceInferenceTests(unittest.TestCase):
         inference.provision(cloud)
         self.assertEqual([call.args[:2] for call in cloud.call.call_args_list], [("services", "enable")])
 
+    def test_new_service_account_binding_retries_only_until_visible(self):
+        cloud = self.cloud()
+        error = subprocess.CalledProcessError(1, ["gcloud"], stderr=(
+            "ERROR: (gcloud.projects.add-iam-policy-binding) INVALID_ARGUMENT: Service account "
+            "example-carbon-invoice@example-project.iam.gserviceaccount.com does not exist."))
+        bindings = []
+        def mutate(*args, **kwargs):
+            if args[:2] == ("projects", "add-iam-policy-binding"):
+                bindings.append((args, kwargs))
+                if len(bindings) < 3: raise error
+        cloud.call.side_effect = mutate
+        with patch("time.sleep") as sleep:
+            inference.provision(cloud)
+        self.assertEqual(len(bindings), 3)
+        self.assertEqual(sleep.call_args_list, [call(2), call(4)])
+        self.assertTrue(all(kwargs == {"capture": True, "capture_error": True} for _, kwargs in bindings))
+        self.assertEqual([entry.args[2] for entry in cloud.call.call_args_list if entry.args[:2] == ("compute", "instances")],
+                         ["stop", "set-service-account", "start"])
+
+    def test_service_account_propagation_retry_is_bounded_before_vm_stop(self):
+        cloud = self.cloud()
+        error = subprocess.CalledProcessError(1, ["gcloud"], stderr=(
+            "INVALID_ARGUMENT: Service account example-carbon-invoice@example-project.iam.gserviceaccount.com does not exist."))
+        def mutate(*args, **kwargs):
+            if args[:2] == ("projects", "add-iam-policy-binding"): raise error
+        cloud.call.side_effect = mutate
+        with patch("time.sleep") as sleep:
+            with self.assertRaises(subprocess.CalledProcessError) as failure:
+                inference.provision(cloud)
+        self.assertIs(failure.exception, error)
+        self.assertEqual(sleep.call_args_list, [call(2), call(4), call(8), call(16), call(30)])
+        self.assertEqual(sum(entry.args[:2] == ("projects", "add-iam-policy-binding") for entry in cloud.call.call_args_list), 6)
+        self.assertFalse(any(entry.args[:2] == ("compute", "instances") for entry in cloud.call.call_args_list))
+
+    def test_binding_does_not_retry_other_errors_or_existing_identity(self):
+        for message, existing in [
+            ("PERMISSION_DENIED: policy write denied", False),
+            ("INVALID_ARGUMENT: role is invalid", False),
+            ("INVALID_ARGUMENT: Service account other@example-project.iam.gserviceaccount.com does not exist.", False),
+            (None, False),
+            ("INVALID_ARGUMENT: Service account example-carbon-invoice@example-project.iam.gserviceaccount.com does not exist.", True),
+        ]:
+            with self.subTest(message=message, existing=existing):
+                cloud = self.cloud()
+                if existing:
+                    get = cloud.get.side_effect
+                    cloud.get.side_effect = lambda *args: ([{"email": "example-carbon-invoice@example-project.iam.gserviceaccount.com"}]
+                        if args[:3] == ("iam", "service-accounts", "list") else get(*args))
+                error = subprocess.CalledProcessError(1, ["gcloud"], stderr=message)
+                def mutate(*args, **kwargs):
+                    if args[:2] == ("projects", "add-iam-policy-binding"): raise error
+                cloud.call.side_effect = mutate
+                with patch("time.sleep") as sleep:
+                    with self.assertRaises(subprocess.CalledProcessError) as failure:
+                        inference.provision(cloud)
+                self.assertIs(failure.exception, error)
+                sleep.assert_not_called()
+                self.assertEqual(sum(entry.args[:2] == ("projects", "add-iam-policy-binding") for entry in cloud.call.call_args_list), 1)
+                self.assertFalse(any(entry.args[:2] == ("compute", "instances") for entry in cloud.call.call_args_list))
+
     def test_unexpected_existing_identity_fails_before_cloud_mutations(self):
         cloud = self.cloud(unexpected=True)
         with self.assertRaisesRegex(ValueError, "unexpected service account"): inference.provision(cloud)
@@ -81,7 +142,7 @@ class InvoiceInferenceTests(unittest.TestCase):
 
     def test_restarts_vm_even_if_attachment_fails(self):
         cloud = self.cloud()
-        def mutate(*args):
+        def mutate(*args, **kwargs):
             if args[:3] == ("compute", "instances", "set-service-account"): raise RuntimeError("fixture failure")
         cloud.call.side_effect = mutate
         with self.assertRaises(RuntimeError): inference.provision(cloud)

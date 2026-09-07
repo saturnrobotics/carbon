@@ -26,9 +26,10 @@ SECRET_KEYS = {"CLOUDFLARE_API_TOKEN", "TAILSCALE_AUTH_KEY", "GOOGLE_CLIENT_ID",
 CONFIG_KEYS = {"PROJECT_ID", "REGION", "ZONE", "VM_NAME", "MACHINE_TYPE", "DATA_DISK_GB", "DNS_ZONE_NAME", "ERP_HOST", "MES_HOST", "SUPABASE_HOST", "AUTH_ALLOWED_GOOGLE_DOMAIN", "ACME_EMAIL", "TAILSCALE_HOSTNAME", "SOURCE_REPO_URL"}
 
 
-def run(args, *, capture=False, input=None):
+def run(args, *, capture=False, input=None, capture_error=False):
     return subprocess.run(args, check=True, text=True, input=input,
-                          stdout=subprocess.PIPE if capture else None).stdout
+                          stdout=subprocess.PIPE if capture else None,
+                          stderr=subprocess.PIPE if capture_error else None).stdout
 
 
 def private_json(path):
@@ -101,8 +102,9 @@ class Cloud:
     def __init__(self, config):
         self.c = config
 
-    def call(self, *args, capture=False):
-        return run(["gcloud", *args, "--project", self.c["PROJECT_ID"], "--quiet"], capture=capture)
+    def call(self, *args, capture=False, capture_error=False):
+        return run(["gcloud", *args, "--project", self.c["PROJECT_ID"], "--quiet"],
+                   capture=capture, capture_error=capture_error)
 
     def get(self, *args):
         # List operations distinguish absence from permission/network errors. Never

@@ -90,6 +90,16 @@ class ValidationTests(unittest.TestCase):
 
 
 class ProvisioningTests(unittest.TestCase):
+    def test_error_capture_is_explicit_and_preserves_default_output(self):
+        cloud = deploy.Cloud(fixture())
+        with patch.object(deploy.subprocess, "run", return_value=MagicMock(stdout="captured")) as run:
+            self.assertEqual(cloud.call("projects", "add-iam-policy-binding", "test-carbon", capture=True, capture_error=True), "captured")
+            self.assertEqual(run.call_args.kwargs["stdout"], deploy.subprocess.PIPE)
+            self.assertEqual(run.call_args.kwargs["stderr"], deploy.subprocess.PIPE)
+            cloud.call("services", "enable", "aiplatform.googleapis.com")
+            self.assertIsNone(run.call_args.kwargs["stdout"])
+            self.assertIsNone(run.call_args.kwargs["stderr"])
+
     def private_config(self):
         return {**fixture(), "POSTGRES_PRIVATE_IP": "10.73.0.2", "POSTGRES_CLIENT_CIDRS": ["10.81.0.0/26"]}
 
