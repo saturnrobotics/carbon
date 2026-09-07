@@ -1,11 +1,11 @@
 {
   "kind": "carbon-company-backup",
   "version": 1,
-  "schemaVersion": "20260906203248",
+  "schemaVersion": "20260907031408",
   "sourceCompanyId": "schema-baseline",
   "sourceCompanyGroupId": null,
   "sourceCompanyName": null,
-  "exportedAt": "2026-09-06T21:14:12.629Z",
+  "exportedAt": "2026-09-07T03:31:23.949Z",
   "exportedBy": "schema-baseline",
   "label": "schema baseline",
   "includeStorage": "none",
@@ -142,7 +142,6 @@
         "metadata",
         "createdAt",
         "updatedAt",
-        "id",
         "companyId",
         "integration",
         "entityType",
@@ -154,7 +153,8 @@
         "errorMessage",
         "externalId",
         "createdBy",
-        "updatedBy"
+        "updatedBy",
+        "id"
       ]
     },
     {
@@ -238,12 +238,12 @@
       "name": "agentMessagePart",
       "rows": 0,
       "columns": [
+        "orderIndex",
+        "toolInput",
         "toolOutput",
         "toolDurationMs",
         "createdAt",
         "updatedAt",
-        "orderIndex",
-        "toolInput",
         "id",
         "messageId",
         "companyId",
@@ -649,26 +649,6 @@
       ]
     },
     {
-      "name": "documentExtraction",
-      "rows": 0,
-      "columns": [
-        "documentType",
-        "status",
-        "extractedData",
-        "filteredData",
-        "createdAt",
-        "updatedAt",
-        "id",
-        "companyId",
-        "sourceDocument",
-        "sourceDocumentId",
-        "storagePath",
-        "error",
-        "createdBy",
-        "updatedBy"
-      ]
-    },
-    {
       "name": "documentFavorite",
       "rows": 0,
       "columns": [
@@ -970,6 +950,27 @@
         "createdBy",
         "updatedBy",
         "attestedBy"
+      ]
+    },
+    {
+      "name": "invoiceIntakeSettings",
+      "rows": 0,
+      "columns": [
+        "enabled",
+        "automaticMercuryIntake",
+        "dailyBudgetUsd",
+        "monthlyBudgetUsd",
+        "backfillCursor",
+        "backfillUpperBound",
+        "backfillCounts",
+        "createdAt",
+        "updatedAt",
+        "id",
+        "companyId",
+        "backfillStatus",
+        "lastErrorCode",
+        "createdBy",
+        "updatedBy"
       ]
     },
     {
@@ -3483,6 +3484,10 @@
       "name": "maintenanceDispatch",
       "rows": 0,
       "columns": [
+        "content",
+        "status",
+        "priority",
+        "source",
         "plannedStartTime",
         "plannedEndTime",
         "actualStartTime",
@@ -3493,10 +3498,6 @@
         "oeeImpact",
         "severity",
         "takesWorkCenterOffline",
-        "content",
-        "status",
-        "priority",
-        "source",
         "id",
         "maintenanceDispatchId",
         "workCenterId",
@@ -4264,6 +4265,44 @@
         "customerPartId",
         "customerPartRevision",
         "tags"
+      ]
+    },
+    {
+      "name": "documentExtraction",
+      "rows": 0,
+      "columns": [
+        "documentType",
+        "status",
+        "extractedData",
+        "filteredData",
+        "createdAt",
+        "updatedAt",
+        "generation",
+        "inputRevision",
+        "attemptNumber",
+        "leaseUntil",
+        "reservedCostUsd",
+        "reservedAt",
+        "priceSnapshot",
+        "actualCostUsd",
+        "usage",
+        "id",
+        "companyId",
+        "sourceDocument",
+        "sourceDocumentId",
+        "storagePath",
+        "error",
+        "createdBy",
+        "updatedBy",
+        "intakeId",
+        "operation",
+        "schemaVersion",
+        "promptVersion",
+        "modelId",
+        "provider",
+        "processingRegion",
+        "claimToken",
+        "billingState"
       ]
     },
     {
@@ -5503,15 +5542,6 @@
         "requiredDate",
         "receivedDate",
         "sortOrder",
-        "id",
-        "purchaseOrderId",
-        "itemId",
-        "assetId",
-        "description",
-        "inventoryUnitOfMeasureCode",
-        "purchaseUnitOfMeasureCode",
-        "locationId",
-        "storageUnitId",
         "companyId",
         "createdBy",
         "updatedBy",
@@ -5522,7 +5552,16 @@
         "accountId",
         "costCenterId",
         "ownerId",
-        "supplierPartId"
+        "supplierPartId",
+        "storageUnitId",
+        "id",
+        "purchaseOrderId",
+        "itemId",
+        "assetId",
+        "description",
+        "inventoryUnitOfMeasureCode",
+        "purchaseUnitOfMeasureCode",
+        "locationId"
       ]
     },
     {
@@ -5980,7 +6019,6 @@
         "requiresBatchTracking",
         "createdAt",
         "updatedAt",
-        "fulfillmentId",
         "id",
         "shipmentId",
         "lineId",
@@ -5990,7 +6028,8 @@
         "unitOfMeasure",
         "companyId",
         "createdBy",
-        "updatedBy"
+        "updatedBy",
+        "fulfillmentId"
       ]
     },
     {
@@ -6200,6 +6239,39 @@
       ]
     },
     {
+      "name": "invoiceIntake",
+      "rows": 0,
+      "columns": [
+        "revision",
+        "generation",
+        "header",
+        "newSupplier",
+        "historical",
+        "approvalSnapshot",
+        "approvedAt",
+        "createdAt",
+        "updatedAt",
+        "id",
+        "companyId",
+        "status",
+        "supplierId",
+        "purchaseInvoiceId",
+        "activeExtractionId",
+        "locationId",
+        "paymentTermId",
+        "invoiceSupplierId",
+        "invoiceSupplierContactId",
+        "invoiceSupplierLocationId",
+        "documentKind",
+        "approvalKey",
+        "approvedBy",
+        "attachmentStatus",
+        "lastErrorCode",
+        "createdBy",
+        "updatedBy"
+      ]
+    },
+    {
       "name": "mercuryTransactionImport",
       "rows": 0,
       "columns": [
@@ -6223,6 +6295,29 @@
         "supplierId",
         "purchaseInvoiceId",
         "lastError",
+        "createdBy",
+        "updatedBy"
+      ]
+    },
+    {
+      "name": "invoiceIntakeSource",
+      "rows": 0,
+      "columns": [
+        "byteSize",
+        "provenance",
+        "createdAt",
+        "updatedAt",
+        "id",
+        "companyId",
+        "intakeId",
+        "mercuryImportId",
+        "kind",
+        "sourceKey",
+        "storageBucket",
+        "storagePath",
+        "sha256",
+        "mediaType",
+        "fileName",
         "createdBy",
         "updatedBy"
       ]
@@ -6303,6 +6398,46 @@
       ]
     },
     {
+      "name": "invoiceIntakeLine",
+      "rows": 0,
+      "columns": [
+        "sortOrder",
+        "raw",
+        "quantity",
+        "supplierUnitPrice",
+        "discountAmount",
+        "supplierTaxAmount",
+        "taxPercent",
+        "supplierShippingCost",
+        "documentLineTotal",
+        "conversionFactor",
+        "newItem",
+        "review",
+        "createdAt",
+        "updatedAt",
+        "id",
+        "companyId",
+        "intakeId",
+        "lineKey",
+        "description",
+        "supplierSku",
+        "manufacturerPartNumber",
+        "itemId",
+        "purchaseOrderLineId",
+        "accountId",
+        "assetId",
+        "purchaseInvoiceLineId",
+        "locationId",
+        "storageUnitId",
+        "costCenterId",
+        "lineType",
+        "purchaseUnit",
+        "stockUnit",
+        "createdBy",
+        "updatedBy"
+      ]
+    },
+    {
       "name": "purchaseInvoicePriceChange",
       "rows": 0,
       "columns": [
@@ -6355,6 +6490,31 @@
         "createdBy",
         "updatedBy",
         "tags"
+      ]
+    },
+    {
+      "name": "invoiceRecognitionRule",
+      "rows": 0,
+      "columns": [
+        "conversionFactor",
+        "active",
+        "version",
+        "createdAt",
+        "updatedAt",
+        "id",
+        "companyId",
+        "kind",
+        "matchKey",
+        "sourceText",
+        "supplierId",
+        "itemId",
+        "supplierPartId",
+        "purchaseUnit",
+        "stockUnit",
+        "supersedesId",
+        "intakeId",
+        "createdBy",
+        "updatedBy"
       ]
     },
     {
