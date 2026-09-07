@@ -60,18 +60,12 @@ const PurchaseInvoiceForm = ({ initialValues }: PurchaseInvoiceFormProps) => {
     invoiceSupplier,
     setInvoiceSupplier,
     currentValues,
-    formKey,
-    extractedLineItems,
-    extractedTaxAmount,
-    extractedStoragePath,
-    handleExtractionComplete,
     onSupplierChange,
     onInvoiceSupplierChange
   } = usePurchaseInvoiceAutoFill(initialValues);
 
   return (
     <ValidatedForm
-      key={formKey}
       method="post"
       validator={purchaseInvoiceValidator}
       defaultValues={currentValues}
@@ -93,23 +87,6 @@ const PurchaseInvoiceForm = ({ initialValues }: PurchaseInvoiceFormProps) => {
         </CardHeader>
         <CardContent>
           <Hidden name="id" />
-          <input
-            type="hidden"
-            name="extractedLineItems"
-            value={JSON.stringify(extractedLineItems)}
-          />
-          <input
-            type="hidden"
-            name="extractedTaxAmount"
-            value={extractedTaxAmount}
-          />
-          {extractedStoragePath && (
-            <input
-              type="hidden"
-              name="extractedStoragePath"
-              value={extractedStoragePath}
-            />
-          )}
           {currentValues.supplierShippingCost !== undefined && (
             <input
               type="hidden"
@@ -221,7 +198,6 @@ const PurchaseInvoiceForm = ({ initialValues }: PurchaseInvoiceFormProps) => {
             sourceDocument="Purchase Invoice"
             sourceDocumentId={initialValues.id}
             label={t`Invoice`}
-            onExtractionComplete={handleExtractionComplete}
           />
         </CardContent>
         <CardFooter>

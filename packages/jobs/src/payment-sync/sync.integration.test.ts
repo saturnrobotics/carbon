@@ -24,7 +24,7 @@ import {
   type PaymentSource,
   ProviderError
 } from "./providers";
-import { runMercurySync } from "./sync";
+import { refreshMercurySupportingDocuments, runMercurySync } from "./sync";
 
 // Opt in only against an isolated local database with the repository migrations.
 // Credentials are supplied by the caller, never a committed configuration file.
@@ -217,6 +217,10 @@ describe.skipIf(!databaseUrl)("Mercury sync against PostgreSQL", () => {
 
   afterEach(async () => {
     // All fixture records are scoped by generated company/user IDs.
+    await db
+      .deleteFrom("invoiceIntake")
+      .where("companyId", "in", companies)
+      .execute();
     await pool.query(
       `DELETE FROM public."mercuryTransactionImport" WHERE "companyId" = ANY($1::TEXT[])`,
       [companies]
@@ -266,6 +270,98 @@ describe.skipIf(!databaseUrl)("Mercury sync against PostgreSQL", () => {
     expect(mercury.listTransactions).not.toHaveBeenCalled();
     expect(mercury.listEvents).not.toHaveBeenCalled();
     expect(await imports()).toHaveLength(0);
+  });
+
+  it("commits hourly bank evidence even when automatic document registration fails", async () => {
+    await db
+      .updateTable("userPermission")
+      .set({
+        permissions: {
+          invoicing_view: [companyId],
+          invoicing_create: [companyId]
+        }
+      })
+      .where("id", "=", actor)
+      .execute();
+    await db
+      .insertInto("invoiceIntakeSettings")
+      .values({ companyId, createdBy: actor, enabled: false })
+      .execute();
+    vi.mocked(mercury.listTransactions).mockResolvedValue({
+      payments: [
+        payment({
+          attachments: [
+            {
+              id: "receipt",
+              fileName: "receipt.pdf",
+              url: "https://files.example.com/receipt.pdf"
+            }
+          ]
+        })
+      ],
+      nextPage: null
+    });
+    // Upload succeeds but there is deliberately no download method: this is a
+    // registration outage after evidence and its bank cursor have committed.
+    expect((await runMercurySync(context)).state).toBe("complete");
+    expect((await state()).cursor).toBe("transaction-example");
+    expect(await imports()).toHaveLength(1);
+    const intakeSettings = await db
+      .selectFrom("invoiceIntakeSettings")
+      .select(["enabled", "lastErrorCode"])
+      .where("companyId", "=", companyId)
+      .executeTakeFirstOrThrow();
+    expect(intakeSettings).toMatchObject({
+      enabled: false,
+      lastErrorCode: "invoice_automatic_registration_failed"
+    });
+  });
+
+  it("explicitly searches reviewed payments while preserving review and honoring mailbox pauses", async () => {
+    await runMercurySync(context);
+    const [record] = await imports();
+    await db
+      .updateTable("mercuryTransactionImport")
+      .set({
+        reviewStatus: "Imported",
+        vendorSuggestion: { name: "Confirmed Supplier" }
+      })
+      .where("id", "=", record!.id)
+      .execute();
+    await db
+      .updateTable("userPermission")
+      .set({
+        permissions: {
+          invoicing_view: [companyId],
+          invoicing_create: [companyId]
+        }
+      })
+      .where("id", "=", actor)
+      .execute();
+    context.mailboxes = [mailboxConfig];
+    context.gmailClients = [gmail];
+    await db
+      .updateTable("mercurySyncSettings")
+      .set({ gmailEnabled: true })
+      .where("companyId", "=", companyId)
+      .execute();
+    expect(
+      (await refreshMercurySupportingDocuments(context, actor, record!.id))
+        .state
+    ).toBe("complete");
+    expect(gmail.searchInvoices).toHaveBeenCalled();
+    expect((await imports())[0]).toMatchObject({
+      reviewStatus: "Imported",
+      vendorSuggestion: { name: "Confirmed Supplier" }
+    });
+    vi.mocked(gmail.searchInvoices).mockClear();
+    await db
+      .updateTable("mercurySyncSettings")
+      .set({ disabledMailboxes: [mailboxConfig.email] })
+      .where("companyId", "=", companyId)
+      .execute();
+    await refreshMercurySupportingDocuments(context, actor, record!.id);
+    expect(gmail.searchInvoices).not.toHaveBeenCalled();
   });
 
   it.each([

@@ -436,6 +436,16 @@ Forward flow:
    dialog only reports "complete" once data AND files are in place — but it never
    throws (per-file warnings), so a storage hiccup still can't fail a committed
    restore. Every write is guarded to the target `{companyId}/` prefix.
+   Invoice-intake and extraction paths, protected native document paths, and
+   Mercury attachment JSON use typed source-company path transforms. Their raw
+   extraction/email evidence remains unchanged. A foreign restore disables
+   inference and Mercury/Gmail processing, clears backfill progress and active
+   extraction leases, and returns unfinished reviews to NeedsReview without
+   carrying creation proposals or transient candidate IDs. Approved invoice
+   links and confirmed recognition rules retain their remapped canonical IDs.
+   Same-company snapshot loads remain exact copies; expired leases are recovered
+   by the normal worker. These financial files are private company assets and
+   never become shared onboarding-template references.
 6. State marker → `ready` (data committed + files copied).
 7. `assertWipeSafe(catalog)` guards the invariant that a KEPT table has no NOT-NULL
    FK into a WIPED table.

@@ -46,6 +46,8 @@ import {
   approveMercuryReview,
   assertMercuryRequestOrigin,
   getMercuryReviewPage,
+  openMercuryInvoiceReview,
+  refreshMercuryInvoiceDocuments,
   saveMercurySettings,
   setMercuryReviewStatus
 } from "~/modules/invoicing/mercury.server";
@@ -105,6 +107,26 @@ export async function action({ request }: ActionFunctionArgs) {
         await flash(request, success("Sync settings saved"))
       );
     }
+    if (intent === "review-invoice" || intent === "refresh-documents") {
+      const actor = await requirePermissions(request, { update: "invoicing" });
+      const importId = String(form.get("importId") ?? "");
+      if (!importId) throw new MercuryImportError("Payment import is required");
+      const result =
+        intent === "refresh-documents"
+          ? await refreshMercuryInvoiceDocuments(
+              getDatabaseClient(),
+              getCarbonServiceRole(),
+              actor,
+              importId
+            )
+          : await openMercuryInvoiceReview(
+              getDatabaseClient(),
+              getCarbonServiceRole(),
+              actor,
+              importId
+            );
+      return redirect(path.to.invoiceDocument(result.intakeId));
+    }
     if (intent === "approve" || intent === "retry-attachments") {
       const { companyId, userId } = await requirePermissions(request, {
         create: ["invoicing", "purchasing"]
@@ -141,7 +163,9 @@ export async function action({ request }: ActionFunctionArgs) {
         { ...approval, companyId, userId }
       );
       return redirect(
-        `${path.to.mercuryPayments}?status=Imported`,
+        result.intakeId
+          ? path.to.invoiceDocument(result.intakeId)
+          : `${path.to.mercuryPayments}?status=Imported`,
         await flash(
           request,
           success(
@@ -460,6 +484,40 @@ export default function MercuryPaymentsRoute() {
                 </ul>
               </details>
             )}
+            <HStack className="flex-wrap">
+              {record.invoiceIntakeId ? (
+                <Button asChild variant="primary">
+                  <Link to={path.to.invoiceDocument(record.invoiceIntakeId)}>
+                    <Trans>Review invoice document</Trans>
+                  </Link>
+                </Button>
+              ) : (
+                permissions.can("update", "invoicing") && (
+                  <Form method="post">
+                    <input type="hidden" name="intent" value="review-invoice" />
+                    <input type="hidden" name="importId" value={record.id} />
+                    <Button type="submit">
+                      <Trans>Review invoice document</Trans>
+                    </Button>
+                  </Form>
+                )
+              )}
+              {status !== "Ignored" &&
+                permissions.can("update", "invoicing") &&
+                connection.mercuryReady && (
+                  <Form method="post">
+                    <input
+                      type="hidden"
+                      name="intent"
+                      value="refresh-documents"
+                    />
+                    <input type="hidden" name="importId" value={record.id} />
+                    <Button type="submit" variant="secondary">
+                      <Trans>Refresh Mercury and Gmail documents</Trans>
+                    </Button>
+                  </Form>
+                )}
+            </HStack>
             {record.purchaseInvoiceId ? (
               <HStack>
                 <Button asChild variant="secondary">

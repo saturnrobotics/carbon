@@ -1,13 +1,15 @@
 import { getLogger } from "@carbon/logger";
 import { Spinner, useCarbon } from "@carbon/react";
+import { stripSpecialCharacters } from "@carbon/utils";
 import { useLingui } from "@lingui/react/macro";
 import { useEffect, useState } from "react";
 import { LuCircleCheck } from "react-icons/lu";
-import { useFetcher } from "react-router";
+import { useFetcher, useNavigate } from "react-router";
 import { FileDropzone } from "~/components";
 import { useUser } from "~/hooks";
 import { useDocumentExtraction } from "~/hooks/useDocumentExtraction";
 import type { ExtractedDocumentData } from "~/modules/documents";
+import { path } from "~/utils/path";
 
 const logger = getLogger("erp", "pdfextractor");
 
@@ -17,8 +19,16 @@ type PdfExtractorProps = {
   sourceDocumentId?: string;
   /** Heading shown above the drop zone (e.g. "Invoice", "RFQ"). */
   label: string;
-  onExtractionComplete: (data: ExtractedDocumentData) => void;
-};
+} & (
+  | {
+      documentType: "purchaseInvoice";
+      onExtractionComplete?: (data: ExtractedDocumentData) => void;
+    }
+  | {
+      documentType: "salesRfq";
+      onExtractionComplete: (data: ExtractedDocumentData) => void;
+    }
+);
 
 export function PdfExtractor({
   documentType,
@@ -30,7 +40,12 @@ export function PdfExtractor({
   const { t } = useLingui();
   const { carbon: supabase } = useCarbon();
   const { company } = useUser();
-  const fetcher = useFetcher<{ extractionId?: string }>();
+  const fetcher = useFetcher<{
+    extractionId?: string;
+    intakeId?: string;
+    error?: string;
+  }>();
+  const navigate = useNavigate();
   const [extractionId, setExtractionId] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
@@ -40,6 +55,11 @@ export function PdfExtractor({
   >(null);
 
   const { extraction } = useDocumentExtraction(extractionId, documentType);
+  useEffect(() => {
+    if (fetcher.state === "idle" && fetcher.data?.intakeId)
+      navigate(path.to.invoiceDocument(fetcher.data.intakeId));
+    if (fetcher.state === "idle" && fetcher.data?.error) setUploadFailed(true);
+  }, [fetcher.data, fetcher.state, navigate]);
 
   // Adopt each newly-created extraction id (a re-upload returns a fresh one).
   // Keying on the id — not `!extractionId` — avoids re-latching the prior id
@@ -60,7 +80,7 @@ export function PdfExtractor({
       extractionId !== notifiedExtractionId
     ) {
       setNotifiedExtractionId(extractionId);
-      onExtractionComplete({
+      onExtractionComplete?.({
         ...extraction.filteredData,
         _storagePath: extraction.storagePath
       });
@@ -76,7 +96,22 @@ export function PdfExtractor({
 
   const handleDrop = async (acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
-    if (!file || !file.name.endsWith(".pdf")) return;
+    if (!file) return;
+    if (documentType === "purchaseInvoice") {
+      const form = new FormData();
+      form.append("file", file);
+      form.append("sourceKey", crypto.randomUUID());
+      if (sourceDocumentId) form.append("purchaseInvoiceId", sourceDocumentId);
+      setUploadFailed(false);
+      setUploadedFileName(file.name);
+      fetcher.submit(form, {
+        method: "post",
+        action: path.to.invoiceIntakeUpload,
+        encType: "multipart/form-data"
+      });
+      return;
+    }
+    if (!file.name.toLowerCase().endsWith(".pdf")) return;
     if (!supabase) return;
 
     // Reset the prior extraction so a failed re-upload can't show the old
@@ -86,7 +121,7 @@ export function PdfExtractor({
     setUploadFailed(false);
     setUploadedFileName(file.name);
     setUploading(true);
-    const storagePath = `${company.id}/extractions/${Date.now()}_${file.name}`;
+    const storagePath = `${company.id}/extractions/${crypto.randomUUID()}_${stripSpecialCharacters(file.name) || "document.pdf"}`;
 
     const { error } = await supabase.storage
       .from("private")
@@ -128,7 +163,15 @@ export function PdfExtractor({
       <div className="relative">
         <FileDropzone
           onDrop={handleDrop}
-          accept={{ "application/pdf": [".pdf"] }}
+          accept={
+            documentType === "purchaseInvoice"
+              ? {
+                  "application/pdf": [".pdf"],
+                  "image/png": [".png"],
+                  "image/jpeg": [".jpg", ".jpeg"]
+                }
+              : { "application/pdf": [".pdf"] }
+          }
           multiple={false}
           disabled={isBusy}
           className="mt-0"

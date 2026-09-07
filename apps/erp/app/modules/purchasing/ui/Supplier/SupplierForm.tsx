@@ -46,12 +46,15 @@ type SupplierFormProps = {
   initialValues: z.infer<typeof supplierValidator>;
   type?: "card" | "modal";
   onClose?: () => void;
+  /** Capture a validated proposal without writing a master record. */
+  onPropose?: (values: Record<string, unknown>, formData: FormData) => void;
 };
 
 const SupplierForm = ({
   initialValues,
   type = "card",
-  onClose
+  onClose,
+  onPropose
 }: SupplierFormProps) => {
   const { t } = useLingui();
   const permissions = usePermissions();
@@ -103,7 +106,7 @@ const SupplierForm = ({
     }
   }, [fetcher.data, fetcher.state, onClose, t, type, setSuppliers]);
 
-  const isEditing = initialValues.id !== undefined;
+  const isEditing = !onPropose && initialValues.id !== undefined;
   const isDisabled = isEditing
     ? !permissions.can("update", "purchasing")
     : !permissions.can("create", "purchasing");
@@ -124,6 +127,17 @@ const SupplierForm = ({
               }
               defaultValues={initialValues}
               fetcher={fetcher}
+              onSubmit={
+                onPropose
+                  ? (values, event) => {
+                      event.preventDefault();
+                      onPropose(
+                        values,
+                        new FormData(event.target as HTMLFormElement)
+                      );
+                    }
+                  : undefined
+              }
             >
               <ModalCardHeader>
                 <ModalCardTitle>
@@ -209,7 +223,11 @@ const SupplierForm = ({
               <ModalCardFooter>
                 <HStack>
                   <Submit isDisabled={isDisabled}>
-                    <Trans>Save</Trans>
+                    {onPropose ? (
+                      <Trans>Use proposal</Trans>
+                    ) : (
+                      <Trans>Save</Trans>
+                    )}
                   </Submit>
                 </HStack>
               </ModalCardFooter>

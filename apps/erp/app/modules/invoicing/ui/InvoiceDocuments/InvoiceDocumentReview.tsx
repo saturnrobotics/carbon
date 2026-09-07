@@ -1,0 +1,1011 @@
+import {
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Heading,
+  HStack
+} from "@carbon/react";
+import { INPUT_FORMAT } from "@carbon/utils";
+import { Trans, useLingui } from "@lingui/react/macro";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Link, useFetcher, useRevalidator } from "react-router";
+import { DeferredMasterCreation } from "~/components/Form/DeferredMasterCreation";
+import {
+  consumableValidator,
+  materialValidator,
+  partValidator,
+  serviceValidator,
+  toolValidator
+} from "~/modules/items/items.models";
+import { supplierValidator } from "~/modules/purchasing/purchasing.models";
+import SupplierForm from "~/modules/purchasing/ui/Supplier/SupplierForm";
+import { useItems, useSuppliers } from "~/stores";
+import { setCustomFields } from "~/utils/form";
+import { path } from "~/utils/path";
+import { getInvoiceReviewReadiness } from "../../invoice-intake.utils";
+import type { InvoiceIntakeReview } from "../../invoicing.models";
+import type { getInvoiceIntakeReview } from "../../invoicing.server";
+import { InvoiceAttachmentStatus } from "./InvoiceAttachmentStatus";
+import {
+  InvoiceChoiceField,
+  InvoiceDecimalField,
+  InvoiceDocumentLines,
+  InvoiceTextField,
+  InvoiceToggle
+} from "./InvoiceDocumentLines";
+import {
+  InvoiceRecognitionRules,
+  invoiceRuleLabel
+} from "./InvoiceRecognitionRules";
+import { useInvoiceDocumentLabels } from "./useInvoiceDocumentLabels";
+
+type ReviewData = Awaited<ReturnType<typeof getInvoiceIntakeReview>> & {
+  signedSources: {
+    id: string;
+    fileName: string | null;
+    mediaType: string | null;
+    url: string | null;
+  }[];
+};
+const nativeItemValidators = {
+  Part: partValidator,
+  Material: materialValidator,
+  Consumable: consumableValidator,
+  Tool: toolValidator,
+  Service: serviceValidator
+};
+
+export function InvoiceDocumentReview({ data }: { data: ReviewData }) {
+  const { t } = useLingui();
+  const statusLabel = useInvoiceDocumentLabels();
+  const factLabels: Record<string, string> = {
+    invoiceNumber: t`Invoice number`,
+    issueDate: t`Invoice date`,
+    dueDate: t`Due date`,
+    currency: t`Currency`,
+    subtotal: t`Subtotal`,
+    discount: t`Discount`,
+    shipping: t`Shipping`,
+    tax: t`Tax`,
+    total: t`Total`
+  };
+  const addressLabels = {
+    addressLine2: t`Address line 2`,
+    city: t`City`,
+    stateProvince: t`State or province`,
+    postalCode: t`Postal code`,
+    countryCode: t`Country code`
+  };
+  const fetcher = useFetcher<{ success?: boolean; error?: string }>();
+  const revalidator = useRevalidator();
+  const refreshPreview = useRef(false);
+  const [review, setReview] = useState(data.review);
+  const [baseRevision, setBaseRevision] = useState(data.intake.revision);
+  const [dirty, setDirty] = useState(false);
+  const [supplierProposalOpen, setSupplierProposalOpen] = useState(false);
+  const [sourceId, setSourceId] = useState(data.signedSources[0]?.id ?? "");
+  const [storedSuppliers] = useSuppliers();
+  const suppliers = useMemo(
+    () => [
+      ...new Map(
+        [...storedSuppliers, ...data.selectedSuppliers].map((supplier) => [
+          supplier.id,
+          supplier
+        ])
+      ).values()
+    ],
+    [storedSuppliers, data.selectedSuppliers]
+  );
+  const [items] = useItems();
+  const [approvalKey, setApprovalKey] = useState(() => crypto.randomUUID());
+  const submittedReview = useRef<string | null>(null);
+  useEffect(() => {
+    if (
+      fetcher.state === "idle" &&
+      fetcher.data?.success &&
+      submittedReview.current !== null
+    ) {
+      if (submittedReview.current === JSON.stringify(review)) setDirty(false);
+      submittedReview.current = null;
+    }
+  }, [fetcher.state, fetcher.data, review]);
+  useEffect(() => {
+    if (!dirty) {
+      setReview(data.review);
+      setBaseRevision(data.intake.revision);
+    }
+  }, [data.review, data.intake.revision, dirty]);
+  const reviewForPermissions = (value: InvoiceIntakeReview) =>
+    data.permissions.canUpdateSupplier
+      ? value
+      : {
+          ...value,
+          header: { ...value.header, rememberSupplier: false },
+          lines: value.lines.map((line) => ({
+            ...line,
+            review: { ...line.review, rememberMatch: false }
+          }))
+        };
+  const change = (value: InvoiceIntakeReview) => {
+    setReview(reviewForPermissions(value));
+    setDirty(true);
+    setApprovalKey(crypto.randomUUID());
+  };
+  const header = (patch: Partial<InvoiceIntakeReview["header"]>) =>
+    change({ ...review, header: { ...review.header, ...patch } });
+  const readOnly =
+    ["Approved", "Linked", "Ignored"].includes(data.intake.status) ||
+    !data.permissions.canUpdate;
+  const conflict = dirty && baseRevision !== data.intake.revision;
+  const localValidation = useMemo(
+    () =>
+      getInvoiceReviewReadiness(review, {
+        ...data.reviewContext,
+        supplierAllowed: suppliers.some(
+          (supplier) =>
+            supplier.id === review.supplierId &&
+            supplier.supplierStatus === "Active"
+        ),
+        currencyDecimalPlaces:
+          data.currencies.find(
+            (currency) => currency.value === review.header.currencyCode
+          )?.decimalPlaces ?? null,
+        items: new Map([
+          ...items.map((item) => [item.id, item] as const),
+          ...data.reviewContext.items
+        ]),
+        validateNewItem: (proposal) => {
+          const result = nativeItemValidators[proposal.type].safeParse(
+            proposal.data
+          );
+          return result.success
+            ? []
+            : result.error.issues.map((issue) => issue.message);
+        },
+        validateNewSupplier: (proposal) => {
+          const result = supplierValidator.safeParse(proposal.supplier);
+          return result.success
+            ? []
+            : result.error.issues.map((issue) => issue.message);
+        }
+      }),
+    [review, data.reviewContext, data.currencies, items, suppliers]
+  );
+  // Server validation includes source coverage and custom-field references that
+  // are intentionally unavailable in the browser. Recheck them after each save.
+  const validation = dirty ? localValidation : data.validation;
+  const activeSource =
+    data.signedSources.find((source) => source.id === sourceId) ??
+    data.signedSources[0];
+  const [previewSource, setPreviewSource] = useState(activeSource);
+  useEffect(() => {
+    // Retain a signed preview through status polling; repeatedly navigating a
+    // PDF iframe interrupts review and restarts the browser's PDF renderer.
+    const refresh = refreshPreview.current;
+    setPreviewSource((previous) =>
+      previous?.id === activeSource?.id && previous?.url && !refresh
+        ? previous
+        : activeSource
+    );
+    refreshPreview.current = false;
+  }, [activeSource]);
+  useEffect(() => {
+    const timer = setInterval(
+      () => {
+        refreshPreview.current = true;
+        revalidator.revalidate();
+      },
+      8 * 60 * 1000
+    );
+    return () => clearInterval(timer);
+  }, [revalidator.revalidate]);
+  const busy = fetcher.state !== "idle";
+  const submit = (
+    action:
+      | "save"
+      | "approve"
+      | "link"
+      | "retry"
+      | "ignore"
+      | "restore"
+      | "suggest"
+  ) => {
+    if (busy) return;
+    const submitted = reviewForPermissions(review);
+    submittedReview.current = ["save", "approve", "link"].includes(action)
+      ? JSON.stringify(submitted)
+      : null;
+    if (submitted !== review) setReview(submitted);
+    fetcher.submit(
+      JSON.stringify({
+        action,
+        expectedRevision: baseRevision,
+        approvalKey,
+        ...(["save", "approve", "link"].includes(action)
+          ? { review: submitted }
+          : {})
+      }),
+      {
+        method: "post",
+        action: path.to.invoiceIntakeAction(data.intake.id),
+        encType: "application/json"
+      }
+    );
+  };
+  return (
+    <div className="w-full p-4 space-y-4">
+      <HStack className="justify-between">
+        <Heading>
+          <Trans>Review invoice document</Trans>
+        </Heading>
+        <Badge>{statusLabel(data.intake.status)}</Badge>
+      </HStack>
+      <InvoiceAttachmentStatus status={data.intake.attachmentStatus} />
+      <HStack>
+        <Button variant="secondary" asChild>
+          <Link to={path.to.invoiceDocuments}>
+            <Trans>All documents</Trans>
+          </Link>
+        </Button>
+        {data.intake.purchaseInvoiceId && (
+          <Button asChild>
+            <Link to={path.to.purchaseInvoice(data.intake.purchaseInvoiceId)}>
+              <Trans>Open invoice</Trans>
+            </Link>
+          </Button>
+        )}
+      </HStack>
+      {review.historical && (
+        <p className="rounded border p-3 text-sm">
+          <Trans>
+            This is a historical purchase. Document approval creates a draft or
+            links evidence. Receiving inventory, accounting, and payment
+            reconciliation remain separate actions.
+          </Trans>
+        </p>
+      )}
+      {fetcher.data?.error && (
+        <p role="alert" className="text-destructive">
+          {fetcher.data.error}
+        </p>
+      )}
+      {data.intake.lastErrorCode && (
+        <p role="status" className="text-sm text-muted-foreground">
+          <Trans>
+            Automatic processing needs attention. Your original document is
+            safe. Review the fields manually or save your work and retry
+            parsing.
+          </Trans>
+        </p>
+      )}
+      {conflict && (
+        <Card>
+          <CardContent className="pt-4 space-y-2">
+            <p role="alert">
+              <Trans>
+                The document changed while you were editing. Your unsaved edits
+                are still here. Reload the latest saved review before
+                submitting.
+              </Trans>
+            </p>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setDirty(false);
+                setReview(data.review);
+                setBaseRevision(data.intake.revision);
+              }}
+            >
+              <Trans>Reload saved review</Trans>
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+      <div className="grid gap-6 xl:grid-cols-2 items-start">
+        <div className="space-y-3 xl:sticky xl:top-4">
+          <InvoiceChoiceField
+            label={t`Source document`}
+            value={activeSource?.id ?? null}
+            options={data.signedSources.map((source) => ({
+              value: source.id,
+              label: source.fileName ?? t`Payment evidence`
+            }))}
+            onChange={(id) => setSourceId(id ?? "")}
+          />
+          {activeSource?.url ? (
+            <>
+              <Button variant="link" asChild>
+                <a href={activeSource.url} target="_blank" rel="noreferrer">
+                  <Trans>Open original document</Trans>
+                </a>
+              </Button>
+              {activeSource.mediaType === "application/pdf" ? (
+                <iframe
+                  title={t`Original invoice document`}
+                  src={
+                    previewSource?.id === activeSource.id
+                      ? (previewSource.url ?? activeSource.url)
+                      : activeSource.url
+                  }
+                  className="w-full h-[75dvh] rounded border"
+                />
+              ) : (
+                <img
+                  src={activeSource.url}
+                  alt={t`Original invoice document`}
+                  className="w-full rounded border"
+                />
+              )}
+            </>
+          ) : (
+            <Card>
+              <CardContent className="pt-4">
+                <Trans>
+                  No source document is attached yet. Upload a receipt or find
+                  supporting evidence from Mercury.
+                </Trans>
+              </CardContent>
+            </Card>
+          )}
+          {!readOnly && (
+            <form
+              method="post"
+              encType="multipart/form-data"
+              action={path.to.invoiceIntakeUpload}
+              onSubmit={(event) => {
+                event.preventDefault();
+                const form = new FormData(event.currentTarget);
+                fetcher.submit(form, {
+                  method: "post",
+                  encType: "multipart/form-data",
+                  action: path.to.invoiceIntakeUpload
+                });
+              }}
+              className="space-y-2"
+            >
+              <input type="hidden" name="intakeId" value={data.intake.id} />
+              <input type="hidden" name="sourceKey" value={approvalKey} />
+              <input
+                type="file"
+                name="file"
+                aria-label={t`Add supporting document`}
+                accept="application/pdf,image/png,image/jpeg"
+                required
+              />
+              <Button
+                type="submit"
+                variant="secondary"
+                isLoading={fetcher.state !== "idle"}
+              >
+                <Trans>Add supporting document</Trans>
+              </Button>
+            </form>
+          )}
+          {data.extraction && (
+            <details className="rounded border p-3">
+              <summary>
+                <Trans>Extracted facts and confidence</Trans>
+              </summary>
+              <div className="space-y-2 pt-3 text-sm">
+                {Object.entries(data.extraction.header).map(([key, fact]) => (
+                  <p key={key}>
+                    <strong>{factLabels[key] ?? key}</strong>:{" "}
+                    {fact.value ?? t`Missing`} ·{" "}
+                    {fact.confidence === null
+                      ? t`Confidence unavailable`
+                      : new Intl.NumberFormat(
+                          undefined,
+                          INPUT_FORMAT.percent
+                        ).format(fact.confidence)}{" "}
+                    {fact.page && `· ${t`Page`} ${fact.page}`}
+                  </p>
+                ))}
+              </div>
+            </details>
+          )}
+        </div>
+        <div className="space-y-4 min-w-0">
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                <Trans>Supplier and invoice</Trans>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <InvoiceChoiceField
+                label={t`Document kind`}
+                value={review.documentKind}
+                options={[
+                  { value: "invoice", label: t`Invoice` },
+                  { value: "receipt", label: t`Receipt` },
+                  { value: "credit", label: t`Credit note` },
+                  { value: "statement", label: t`Statement` },
+                  {
+                    value: "paymentConfirmation",
+                    label: t`Payment confirmation`
+                  },
+                  { value: "multiple", label: t`Multiple invoices` },
+                  { value: "unknown", label: t`Unknown` }
+                ]}
+                onChange={(documentKind) =>
+                  change({
+                    ...review,
+                    documentKind:
+                      documentKind as InvoiceIntakeReview["documentKind"]
+                  })
+                }
+                disabled={readOnly}
+              />
+              <InvoiceChoiceField
+                label={t`Supplier`}
+                value={review.supplierId}
+                options={suppliers.map((supplier) => ({
+                  value: supplier.id,
+                  label: supplier.name
+                }))}
+                onChange={(supplierId) =>
+                  change({ ...review, supplierId, newSupplier: null })
+                }
+                disabled={readOnly}
+              />
+              {data.modelSuggestions?.supplierId && (
+                <div className="rounded border p-3 space-y-2">
+                  <p>
+                    <Trans>Suggested supplier:</Trans>{" "}
+                    {suppliers.find(
+                      (supplier) =>
+                        supplier.id === data.modelSuggestions?.supplierId
+                    )?.name ?? t`Unavailable supplier`}
+                  </p>
+                  <Button
+                    variant="secondary"
+                    isDisabled={readOnly}
+                    onClick={() =>
+                      change({
+                        ...review,
+                        supplierId: data.modelSuggestions!.supplierId,
+                        newSupplier: null
+                      })
+                    }
+                  >
+                    <Trans>Use suggested supplier</Trans>
+                  </Button>
+                </div>
+              )}
+              {review.newSupplier && (
+                <p>
+                  <Trans>New supplier proposed:</Trans>{" "}
+                  {String(review.newSupplier.supplier.name ?? "")}
+                </p>
+              )}
+              <Button
+                variant="secondary"
+                isDisabled={readOnly || !data.permissions.canCreateSupplier}
+                onClick={() => setSupplierProposalOpen(true)}
+              >
+                {review.newSupplier
+                  ? t`Edit supplier proposal`
+                  : t`Propose new supplier`}
+              </Button>
+              {review.newSupplier && (
+                <div className="grid gap-3 md:grid-cols-2">
+                  <InvoiceTextField
+                    label={t`Supplier email`}
+                    type="email"
+                    value={
+                      String(review.newSupplier.contact?.email ?? "") || null
+                    }
+                    onChange={(email) =>
+                      change({
+                        ...review,
+                        newSupplier: {
+                          ...review.newSupplier!,
+                          contact: email
+                            ? { ...review.newSupplier!.contact, email }
+                            : undefined
+                        }
+                      })
+                    }
+                    disabled={readOnly}
+                  />
+                  <InvoiceTextField
+                    label={t`Tax ID`}
+                    value={String(review.newSupplier.tax?.taxId ?? "") || null}
+                    disabled={readOnly}
+                    onChange={(taxId) =>
+                      change({
+                        ...review,
+                        newSupplier: {
+                          ...review.newSupplier!,
+                          tax: taxId
+                            ? { ...review.newSupplier!.tax, taxId }
+                            : undefined
+                        }
+                      })
+                    }
+                  />
+                  <InvoiceTextField
+                    label={t`Address line 1`}
+                    value={
+                      String(review.newSupplier.address?.addressLine1 ?? "") ||
+                      null
+                    }
+                    onChange={(addressLine1) =>
+                      change({
+                        ...review,
+                        newSupplier: {
+                          ...review.newSupplier!,
+                          address: {
+                            ...review.newSupplier!.address,
+                            name: "Invoice address",
+                            addressLine1: addressLine1 ?? ""
+                          }
+                        }
+                      })
+                    }
+                    disabled={readOnly}
+                  />
+                  {(
+                    [
+                      "addressLine2",
+                      "city",
+                      "stateProvince",
+                      "postalCode",
+                      "countryCode"
+                    ] as const
+                  ).map((key) => (
+                    <InvoiceTextField
+                      key={key}
+                      label={addressLabels[key]}
+                      value={
+                        String(review.newSupplier?.address?.[key] ?? "") || null
+                      }
+                      onChange={(value) =>
+                        change({
+                          ...review,
+                          newSupplier: {
+                            ...review.newSupplier!,
+                            address: {
+                              ...review.newSupplier!.address,
+                              name: "Invoice address",
+                              [key]: value ?? ""
+                            }
+                          }
+                        })
+                      }
+                      disabled={readOnly}
+                    />
+                  ))}
+                </div>
+              )}
+              <div className="grid gap-4 md:grid-cols-2">
+                <InvoiceTextField
+                  label={t`Invoice number`}
+                  value={review.header.invoiceNumber}
+                  onChange={(invoiceNumber) => header({ invoiceNumber })}
+                  disabled={readOnly}
+                />
+                <InvoiceTextField
+                  label={t`Invoice date`}
+                  type="date"
+                  value={review.header.issueDate}
+                  onChange={(issueDate) => header({ issueDate })}
+                  disabled={readOnly}
+                />
+                <InvoiceTextField
+                  label={t`Due date`}
+                  type="date"
+                  value={review.header.dueDate}
+                  onChange={(dueDate) => header({ dueDate })}
+                  disabled={readOnly}
+                />
+                <InvoiceChoiceField
+                  label={t`Currency`}
+                  value={review.header.currencyCode}
+                  options={data.currencies}
+                  onChange={(currencyCode) =>
+                    header({ currencyCode, exchangeRate: null })
+                  }
+                  disabled={readOnly}
+                />
+                <InvoiceDecimalField
+                  label={t`Historical exchange rate`}
+                  value={review.header.exchangeRate}
+                  onChange={(exchangeRate) => header({ exchangeRate })}
+                  disabled={readOnly}
+                />
+                <InvoiceChoiceField
+                  label={t`Invoice location`}
+                  value={review.locationId}
+                  options={data.locations}
+                  onChange={(locationId) => change({ ...review, locationId })}
+                  disabled={readOnly}
+                />
+                <InvoiceChoiceField
+                  label={t`Payment terms`}
+                  value={review.paymentTermId}
+                  options={data.paymentTerms}
+                  onChange={(paymentTermId) =>
+                    change({ ...review, paymentTermId })
+                  }
+                  disabled={readOnly}
+                />
+              </div>
+              <InvoiceToggle
+                label={t`The receipt has no invoice number`}
+                checked={review.header.noInvoiceNumberConfirmed}
+                onChange={(noInvoiceNumberConfirmed) =>
+                  header({ noInvoiceNumberConfirmed })
+                }
+                disabled={readOnly}
+              />
+              <InvoiceToggle
+                label={t`Remember this supplier name after approval`}
+                checked={
+                  data.permissions.canUpdateSupplier &&
+                  review.header.rememberSupplier
+                }
+                onChange={(rememberSupplier) => header({ rememberSupplier })}
+                disabled={readOnly || !data.permissions.canUpdateSupplier}
+              />
+              {!data.permissions.canUpdateSupplier && (
+                <p className="text-sm text-muted-foreground">
+                  <Trans>
+                    Purchasing update permission is required to save recognition
+                    rules.
+                  </Trans>
+                </p>
+              )}
+              <InvoiceToggle
+                label={t`Historical purchase`}
+                checked={review.historical}
+                onChange={(historical) => change({ ...review, historical })}
+                disabled={readOnly}
+              />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                <Trans>Document totals and charges</Trans>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <InvoiceDecimalField
+                  label={t`Source subtotal before discounts`}
+                  value={review.header.subtotal}
+                  onChange={(subtotal) => header({ subtotal })}
+                  disabled={readOnly}
+                />
+                <InvoiceDecimalField
+                  label={t`Source discount total`}
+                  value={review.header.discount}
+                  onChange={(discount) => header({ discount })}
+                  disabled={readOnly}
+                />
+                <InvoiceDecimalField
+                  label={t`Source tax total`}
+                  value={review.header.tax}
+                  onChange={(tax) => header({ tax })}
+                  disabled={readOnly}
+                />
+                <InvoiceDecimalField
+                  label={t`Shipping not allocated to lines`}
+                  value={review.header.shipping}
+                  onChange={(shipping) => header({ shipping })}
+                  disabled={readOnly}
+                />
+                <InvoiceDecimalField
+                  label={t`Source document total`}
+                  value={review.header.total}
+                  onChange={(total) => header({ total })}
+                  disabled={readOnly}
+                />
+              </div>
+              <InvoiceToggle
+                label={t`Tax, discounts, and shipping are represented correctly`}
+                checked={review.header.chargesConfirmed}
+                onChange={(chargesConfirmed) => header({ chargesConfirmed })}
+                disabled={readOnly}
+              />
+              {review.header.sourceIssues.length > 0 && (
+                <>
+                  <ul className="list-disc pl-5">
+                    {review.header.sourceIssues.map((issue, index) => (
+                      <li key={`${index}-${issue}`}>{issue}</li>
+                    ))}
+                  </ul>
+                  <InvoiceToggle
+                    label={t`I resolved these extraction issues and checked all source lines`}
+                    checked={review.header.resolvedSourceIssues}
+                    onChange={(resolvedSourceIssues) =>
+                      header({ resolvedSourceIssues })
+                    }
+                    disabled={readOnly}
+                  />
+                </>
+              )}
+            </CardContent>
+          </Card>
+          {(data.invoiceOptions.length > 0 || review.purchaseInvoiceId) && (
+            <Card>
+              <CardHeader>
+                <CardTitle>
+                  <Trans>Existing invoice</Trans>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <InvoiceChoiceField
+                  label={t`Link existing invoice`}
+                  value={review.purchaseInvoiceId}
+                  options={data.invoiceOptions.map((invoice) => ({
+                    ...invoice,
+                    label: `${invoice.label} · ${invoice.status}`
+                  }))}
+                  onChange={(purchaseInvoiceId) =>
+                    change({
+                      ...review,
+                      purchaseInvoiceId,
+                      mergeMode: purchaseInvoiceId ? "evidence" : "new",
+                      newSupplier: null,
+                      lines: review.lines.map((line) => ({
+                        ...line,
+                        newItem: null
+                      }))
+                    })
+                  }
+                  disabled={readOnly}
+                />
+                <InvoiceChoiceField
+                  label={t`Review action`}
+                  value={review.mergeMode}
+                  options={[
+                    { value: "new", label: t`Create draft` },
+                    { value: "enrich", label: t`Fill empty draft` },
+                    {
+                      value: "merge",
+                      label: t`Merge explicitly selected draft lines`
+                    },
+                    { value: "evidence", label: t`Link evidence only` }
+                  ]}
+                  onChange={(mergeMode) =>
+                    change({
+                      ...review,
+                      mergeMode: mergeMode as InvoiceIntakeReview["mergeMode"],
+                      ...(mergeMode === "evidence"
+                        ? {
+                            newSupplier: null,
+                            lines: review.lines.map((line) => ({
+                              ...line,
+                              newItem: null
+                            }))
+                          }
+                        : {}),
+                      expectedInvoiceUpdatedAt:
+                        data.linkedInvoice?.updatedAt ?? null
+                    })
+                  }
+                  disabled={readOnly}
+                />
+                <InvoiceTextField
+                  label={t`Reason this is a different purchase despite a duplicate warning`}
+                  value={review.header.duplicateOverrideReason}
+                  onChange={(duplicateOverrideReason) =>
+                    header({ duplicateOverrideReason })
+                  }
+                  disabled={readOnly}
+                />
+              </CardContent>
+            </Card>
+          )}
+          {review.mergeMode !== "evidence" && (
+            <InvoiceDocumentLines
+              lines={review.lines}
+              onChange={(lines) => change({ ...review, lines })}
+              onExclude={(lineKey, reason) =>
+                change({
+                  ...review,
+                  lines: review.lines.filter(
+                    (line) => line.lineKey !== lineKey
+                  ),
+                  header: {
+                    ...review.header,
+                    excludedLines: [
+                      ...review.header.excludedLines.filter(
+                        (line) => line.lineKey !== lineKey
+                      ),
+                      { lineKey, reason }
+                    ]
+                  }
+                })
+              }
+              locations={data.locations}
+              units={data.units}
+              currencyDecimals={
+                data.currencies.find(
+                  (currency) => currency.value === review.header.currencyCode
+                )?.decimalPlaces ?? null
+              }
+              accounts={data.accounts}
+              assets={data.assets}
+              invoiceLines={data.invoiceLines}
+              modelSuggestions={data.modelSuggestions?.lines ?? []}
+              recognitionRules={data.rules
+                .filter((rule) => rule.kind === "itemAlias")
+                .map((rule) => ({
+                  value: rule.id,
+                  label: invoiceRuleLabel(rule.sourceText)
+                }))}
+              canCreateTypes={data.permissions.canCreateItemTypes}
+              selectedItems={data.selectedItems}
+              canRemember={data.permissions.canUpdateSupplier}
+              canReplaceRule={data.permissions.canUpdateItems}
+              readOnly={readOnly}
+            />
+          )}
+          {review.header.excludedLines.length > 0 && (
+            <details>
+              <summary>
+                <Trans>Excluded source lines</Trans>
+              </summary>
+              <ul>
+                {review.header.excludedLines.map((line) => (
+                  <li key={line.lineKey}>
+                    {line.lineKey}: {line.reason}
+                  </li>
+                ))}
+              </ul>
+            </details>
+          )}
+          <InvoiceRecognitionRules
+            intakeId={data.intake.id}
+            rules={data.rules}
+            permissions={data.permissions}
+          />
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                <Trans>Approval</Trans>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p>{t`This approval will create ${validation.newSupplierCount} supplier(s) and ${validation.newItemCount} item(s).`}</p>
+              <p>
+                <Trans>
+                  The invoice remains a draft. Inventory and payments are
+                  unchanged.
+                </Trans>
+              </p>
+              {!readOnly && !validation.ready && (
+                <ul
+                  className="list-disc pl-5 text-sm"
+                  aria-label={t`Review issues`}
+                >
+                  {validation.issues.map((issue, index) => (
+                    <li key={`${issue.path}-${index}`}>{issue.message}</li>
+                  ))}
+                </ul>
+              )}
+              <HStack className="flex-wrap">
+                <Button
+                  variant="secondary"
+                  onClick={() => submit("save")}
+                  isDisabled={readOnly || conflict || busy}
+                  isLoading={fetcher.state !== "idle"}
+                >
+                  <Trans>Save review</Trans>
+                </Button>
+                <Button
+                  onClick={() =>
+                    submit(review.mergeMode === "evidence" ? "link" : "approve")
+                  }
+                  isDisabled={
+                    readOnly ||
+                    busy ||
+                    conflict ||
+                    !validation.ready ||
+                    !data.sources.some((source) => source.storagePath) ||
+                    !data.permissions.canApprove
+                  }
+                  isLoading={fetcher.state !== "idle"}
+                >
+                  {review.mergeMode === "evidence"
+                    ? t`Approve evidence link`
+                    : t`Approve and create draft`}
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => submit("suggest")}
+                  isDisabled={readOnly || dirty || busy}
+                >
+                  <Trans>Suggest matches</Trans>
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => submit("retry")}
+                  isDisabled={readOnly || dirty || busy}
+                >
+                  <Trans>Parse again</Trans>
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() =>
+                    submit(
+                      data.intake.status === "Ignored" ? "restore" : "ignore"
+                    )
+                  }
+                  isDisabled={
+                    !data.permissions.canUpdate ||
+                    busy ||
+                    ["Approved", "Linked"].includes(data.intake.status)
+                  }
+                >
+                  {data.intake.status === "Ignored"
+                    ? t`Restore document`
+                    : t`Ignore document`}
+                </Button>
+              </HStack>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+      {supplierProposalOpen && (
+        <DeferredMasterCreation.Provider value={true}>
+          <SupplierForm
+            type="modal"
+            initialValues={{
+              name: String(
+                review.newSupplier?.supplier.name ??
+                  review.header.sourceSupplierName ??
+                  ""
+              ),
+              currencyCode: review.header.currencyCode ?? undefined,
+              ...review.newSupplier?.supplier
+            }}
+            onClose={() => setSupplierProposalOpen(false)}
+            onPropose={(values, form) => {
+              const source = data.extraction?.supplier;
+              const contact = source?.email.value
+                ? {
+                    email: source.email.value,
+                    workPhone: source.phone.value ?? ""
+                  }
+                : undefined;
+              const address = source?.addressLine1.value
+                ? {
+                    name: "Invoice address",
+                    addressLine1: source.addressLine1.value,
+                    addressLine2: source.addressLine2.value ?? "",
+                    city: source.city.value ?? "",
+                    stateProvince: source.state.value ?? "",
+                    postalCode: source.postalCode.value ?? "",
+                    countryCode: source.countryCode.value ?? ""
+                  }
+                : undefined;
+              change({
+                ...review,
+                supplierId: null,
+                newSupplier: {
+                  supplier: values,
+                  contact: review.newSupplier?.contact ?? contact,
+                  address: review.newSupplier?.address ?? address,
+                  tax:
+                    review.newSupplier?.tax ??
+                    (source?.taxId.value
+                      ? { taxId: source.taxId.value }
+                      : undefined),
+                  customFields: setCustomFields(form)
+                }
+              });
+              setSupplierProposalOpen(false);
+            }}
+          />
+        </DeferredMasterCreation.Provider>
+      )}
+    </div>
+  );
+}

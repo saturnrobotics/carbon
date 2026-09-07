@@ -4,13 +4,16 @@ import {
   type MercuryAttachment,
   type MercuryInvoiceEvidence,
   type MercurySyncSettings,
-  parseMercuryAttachments
+  parseMercuryAttachments,
+  parseMercuryInvoiceEvidence
 } from "@carbon/database/mercury";
 import { datetime } from "@carbon/utils";
 import { parseAbsolute } from "@internationalized/date";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { sql } from "kysely";
 import type { JobDatabase } from "../db";
+import { registerAutomaticMercuryInvoiceSources } from "../invoice-intake/backfill";
+import { assertInvoiceSourceAccess } from "../invoice-intake/ingestion";
 import {
   type InvoiceCandidate,
   isOutgoingPayment,
@@ -160,7 +163,8 @@ async function processPage(
   payments: PaymentSource[],
   current: MercurySyncSettings,
   cursors: { cursor?: string; eventCursor?: string } = {},
-  assertPageActive = createActiveGuard(context, current)
+  assertPageActive = createActiveGuard(context, current),
+  findDocumentAgain = false
 ) {
   await assertPageActive(true);
   if (
@@ -284,7 +288,7 @@ async function processPage(
     let incomplete = !!context.gmailConfigError;
     // Already-approved records retain their reviewed evidence. New or unresolved
     // payments are revisited, so a later invoice email can still be discovered.
-    if (!old || old.reviewStatus === "Pending") {
+    if (!old || old.reviewStatus === "Pending" || findDocumentAgain) {
       for (const mailbox of gmail) {
         try {
           const found = await mailbox.searchInvoices(payment);
@@ -370,16 +374,21 @@ async function processPage(
       memo: payment.note,
       vendorSuggestion:
         old?.reviewStatus === "Imported" ? old.vendorSuggestion : suggestion,
-      invoiceEvidence: JSON.stringify(
-        evidence.length ? evidence : old?.invoiceEvidence || []
-      ),
+      invoiceEvidence: JSON.stringify([
+        ...new Map(
+          [
+            ...parseMercuryInvoiceEvidence(old?.invoiceEvidence),
+            ...evidence
+          ].map((entry) => [`${entry.mailbox}:${entry.messageId}`, entry])
+        ).values()
+      ]),
       attachments: JSON.stringify([...attachments.values()]),
       lastError: issue,
       createdBy: current.updatedBy || current.createdBy,
       updatedAt: datetime.timestamp()
     });
   }
-  return await context.db.transaction().execute(async (trx) => {
+  const committed = await context.db.transaction().execute(async (trx) => {
     const live = await trx
       .selectFrom("mercurySyncSettings")
       .selectAll()
@@ -423,6 +432,81 @@ async function processPage(
       .where("companyId", "=", context.companyId)
       .execute();
     return { stopped: false, count: rows.length };
+  });
+  if (!committed.stopped && rows.length) {
+    // The bank page and its cursor are already committed. Inference configuration,
+    // source-registration errors and queue dispatch cannot fail the bank import.
+    try {
+      const saved = await context.db
+        .selectFrom("mercuryTransactionImport")
+        .select("id")
+        .where("companyId", "=", context.companyId)
+        .where(
+          "mercuryTransactionId",
+          "in",
+          rows.map((row) => row.mercuryTransactionId)
+        )
+        .execute();
+      await registerAutomaticMercuryInvoiceSources(
+        { ...context, userId: current.updatedBy || current.createdBy },
+        saved.map((row) => row.id)
+      );
+    } catch {
+      /* The paginated local reconciler retries missing source registrations. */
+    }
+  }
+  return committed;
+}
+
+/** Explicit read-only evidence search for an already reviewed payment. */
+export async function refreshMercurySupportingDocuments(
+  context: Context,
+  userId: string,
+  importId: string
+) {
+  await assertInvoiceSourceAccess(context.db, {
+    companyId: context.companyId,
+    userId
+  });
+  return context.db.connection().execute(async (connection) => {
+    const locked = await sql<{
+      locked: boolean;
+    }>`SELECT pg_try_advisory_lock(hashtext('mercury-sync'),hashtext(${context.companyId})) AS locked`.execute(
+      connection
+    );
+    if (!locked.rows[0]?.locked) return { state: "busy" };
+    try {
+      const scoped = { ...context, db: connection };
+      const current = await settings(scoped);
+      if (!current?.enabled) return { state: "disabled" };
+      await assertOperator(scoped, current);
+      const imported = await connection
+        .selectFrom("mercuryTransactionImport")
+        .select(["mercuryTransactionId", "reviewStatus"])
+        .where("companyId", "=", context.companyId)
+        .where("id", "=", importId)
+        .executeTakeFirst();
+      if (!imported || imported.reviewStatus === "Ignored")
+        throw new Error("invoice_source_import_unavailable");
+      const active = createActiveGuard(scoped, current);
+      await active(true);
+      const payment = await context.mercury.getTransaction(
+        imported.mercuryTransactionId
+      );
+      const result = await processPage(
+        scoped,
+        [payment],
+        current,
+        {},
+        active,
+        true
+      );
+      return { state: result.stopped ? "disabled" : "complete" };
+    } finally {
+      await sql`SELECT pg_advisory_unlock(hashtext('mercury-sync'),hashtext(${context.companyId}))`.execute(
+        connection
+      );
+    }
   });
 }
 

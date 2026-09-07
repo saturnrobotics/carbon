@@ -123,13 +123,41 @@ delivered copies instead. No domain-wide delegation is needed.
    the same invoice, which avoids duplicate drafts for partial payments.
 
 The imported payment amount is bank evidence, not an inferred invoice line total.
-Draft invoices contain the source documents; complete their line items, taxes,
-and accounting details through the normal invoice workflow. Importing payment
+Use **Invoicing → Document inbox** to review document line items, suppliers, item
+types and purchase units before creating or enriching a draft. Importing payment
 evidence does not itself settle or post an invoice. There is no automatic bank
 account assignment or invented exchange rate. This connector currently uses the
 USD bank amount Mercury exposes; a company using another base currency needs a
 verified exchange-rate workflow before draft creation. An existing invoice can
 still be linked when its currency matches the payment evidence.
+
+## Existing payment history and document review
+
+1. Let the Mercury payment import finish first. Its history cursor and hourly
+   collection work independently from document parsing.
+2. Open **Invoicing → Document inbox** and save the intake settings. Automatic
+   Mercury intake registers newly collected evidence; inference has its own
+   enable switch and daily/monthly cost limits.
+3. Start the historical document backfill explicitly. It snapshots the current
+   history boundary, processes 100 saved payments per page, and saves progress
+   after each committed source registration. Pause and resume retain that cursor.
+   Starting again after completion includes later payments without creating
+   duplicate source identities.
+4. Payments without a supporting file appear as **Needs document**. Upload the
+   missing receipt, or use **Find supporting document again** on the Mercury
+   payment. The latter searches only currently enabled mailboxes and requires
+   hourly synchronization to be enabled. It can search a previously reviewed
+   payment without replacing its confirmed supplier or invoice link.
+5. Review parsed facts and select or propose each supplier and item. Confirm the
+   item type, quantities, purchasing units, conversion factors, prices and taxes.
+   Approval creates or enriches a **Draft**. Existing populated drafts require an
+   explicit line comparison; existing non-Draft invoices receive evidence only.
+   Ignored payments stay ignored until explicitly restored.
+
+If a document backfill fails, correct its reported source or access problem and
+resume it. Already registered evidence is retained. Bank synchronization continues
+while document inference is disabled or unavailable. Posting an invoice, receiving
+inventory and recording settlement remain separate existing workflows.
 
 ## Move future matching to a purchasing mailbox
 
@@ -146,9 +174,11 @@ still be linked when its currency matches the payment evidence.
 
 The matcher combines invoice references, amount and currency, recipient identity,
 and date proximity. It uses invoice totals rather than a coincidental line-item
-price when a total is present. It extracts PDF text locally using the existing
-PDF library; it does not send invoices to an external AI service. Scanned images
-without text may need manual review. Forwarded emails and competing matches
+price when a total is present. Email matching extracts PDF text locally using the
+existing PDF library. The separate document-intake inference feature sends selected
+private receipt bytes to the configured managed provider only when enabled; consult
+the inference setup guide for its region, limits and cost controls. Scanned images
+can be parsed there. Forwarded emails and competing matches
 remain ambiguous rather than becoming silent supplier merges.
 
 Searches are bounded to 200 candidate messages per payment per mailbox. If this

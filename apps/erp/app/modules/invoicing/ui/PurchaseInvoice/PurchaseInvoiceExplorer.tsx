@@ -131,7 +131,7 @@ export default function PurchaseInvoiceExplorer() {
             <div className="p-2 border-b">
               <Alert variant="warning">
                 <AlertTitle>
-                  <Trans>Unmapped Extracted Lines</Trans>
+                  <Trans>Review extracted purchases</Trans>
                 </AlertTitle>
                 <AlertDescription className="mt-1">
                   <Trans>
@@ -144,7 +144,7 @@ export default function PurchaseInvoiceExplorer() {
                       variant="secondary"
                       onClick={mapLinesDisclosure.onOpen}
                     >
-                      <Trans>Map Lines Now</Trans>
+                      <Trans>Review invoice document</Trans>
                     </Button>
                   </div>
                 </AlertDescription>

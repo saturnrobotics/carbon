@@ -317,6 +317,107 @@ export function buildRowTransforms(
   const isCompanySingleton = fkByColumn.get("id")?.refTable === "company";
 
   const build = (col: ColumnInfo): RowTransform => {
+    const financialPath: RowTransform = (value) => {
+      if (value == null) return value;
+      if (
+        typeof value !== "string" ||
+        !value.startsWith(`${ctx.sourceCompanyId}/`) ||
+        value
+          .split("/")
+          .some((part) => !part || part === "." || part === "..") ||
+        // biome-ignore lint/suspicious/noControlCharactersInRegex: stored object names must not escape their company prefix.
+        /[\\\x00-\x1f\x7f]/.test(value)
+      )
+        throw new Error("Backup contains an invalid financial source path");
+      return rewriteStoragePath(
+        value,
+        ctx.sourceCompanyId,
+        ctx.companyId,
+        ctx.idRewrite
+      );
+    };
+    if (table.name === "invoiceIntakeSettings") {
+      if (["enabled", "automaticMercuryIntake"].includes(col.name))
+        return () => false;
+      if (col.name === "backfillStatus") return () => "Idle";
+      if (
+        ["backfillCursor", "backfillUpperBound", "lastErrorCode"].includes(
+          col.name
+        )
+      )
+        return () => null;
+      if (col.name === "backfillCounts") return () => ({});
+    }
+    // A foreign restore never activates the source company's connected accounts.
+    if (
+      table.name === "mercurySyncSettings" &&
+      ["enabled", "gmailEnabled"].includes(col.name)
+    )
+      return () => false;
+    if (table.name === "invoiceIntake") {
+      if (col.name === "status")
+        return (v) =>
+          ["Approved", "Linked", "Ignored"].includes(String(v))
+            ? v
+            : "NeedsReview";
+      if (["activeExtractionId", "newSupplier"].includes(col.name))
+        return () => null;
+    }
+    if (table.name === "invoiceIntakeLine") {
+      if (col.name === "newItem") return () => null;
+      if (col.name === "review") return () => ({});
+    }
+    if (table.name === "documentExtraction") {
+      if (["claimToken", "leaseUntil", "filteredData"].includes(col.name))
+        return () => null;
+      if (col.name === "status")
+        return (v) =>
+          ["pending", "processing"].includes(String(v)) ? "failed" : v;
+      if (col.name === "sourceDocumentId")
+        return (v) => (typeof v === "string" ? (ctx.idRewrite.get(v) ?? v) : v);
+    }
+    if (
+      ["invoiceIntakeSource", "documentExtraction"].includes(table.name) &&
+      col.name === "storagePath"
+    )
+      return financialPath;
+    if (table.name === "document" && col.name === "path")
+      return (value) => {
+        if (
+          typeof value === "string" &&
+          ["invoice-intake", "mercury"].includes(value.split("/")[1] ?? "")
+        )
+          return financialPath(value);
+        return value;
+      };
+    if (table.name === "document" && col.name === "sourceDocumentId")
+      return (v) => (typeof v === "string" ? (ctx.idRewrite.get(v) ?? v) : v);
+    if (table.name === "invoiceIntakeSource" && col.name === "provenance")
+      return (value) => {
+        if (!value || typeof value !== "object" || Array.isArray(value))
+          return value;
+        const provenance = { ...(value as Record<string, unknown>) };
+        if (typeof provenance.path === "string")
+          provenance.path = financialPath(provenance.path);
+        if (typeof provenance.mercuryImportId === "string")
+          provenance.mercuryImportId =
+            ctx.idMaps
+              .get("mercuryTransactionImport")
+              ?.get(provenance.mercuryImportId) ?? null;
+        return provenance;
+      };
+    if (table.name === "mercuryTransactionImport" && col.name === "attachments")
+      return (value) => {
+        if (!Array.isArray(value)) return [];
+        return value.map((entry: unknown) => {
+          if (!entry || typeof entry !== "object" || Array.isArray(entry))
+            throw new Error("Backup contains invalid payment attachments");
+          const attachment = entry as Record<string, unknown>;
+          if (typeof attachment.path !== "string")
+            throw new Error("Backup contains invalid payment attachments");
+          return { ...attachment, path: financialPath(attachment.path) };
+        });
+      };
     const fk = fkByColumn.get(col.name);
     if (col.name === "id" && isCompanySingleton) {
       return (v) => (v === ctx.sourceCompanyId ? ctx.companyId : v);

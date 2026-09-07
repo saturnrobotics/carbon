@@ -43,6 +43,9 @@ const taskToEvent = {
   "update-permissions": "carbon/update-permissions",
   "user-admin": "carbon/user-admin",
   "extract-document": "carbon/extract-document",
+  "invoice-intake": "carbon/invoice-intake.process",
+  "invoice-intake-match": "carbon/invoice-intake.match",
+  "invoice-intake-backfill": "carbon/invoice-intake.backfill",
   "workflow-moment": "carbon/workflow-moment.raised",
   "workflow-scheduler-wake": "carbon/workflow-scheduler.wake"
 } as const;

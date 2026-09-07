@@ -3209,6 +3209,89 @@ async function cascadeSourcingAndMethodTypeToMethodMaterials(
     .execute();
 }
 
+/** Shared creation payloads for native forms and transaction-based intake approval. */
+export function prepareCreatedItem(
+  type: Database["public"]["Enums"]["itemType"],
+  item: z.infer<typeof itemValidator> & {
+    companyId: string;
+    createdBy: string;
+    revision?: string;
+    modelUploadId?: string;
+  },
+  materialRevision?: string
+): Database["public"]["Tables"]["item"]["Insert"] {
+  return {
+    readableId: item.id,
+    name: item.name,
+    description: item.description,
+    type,
+    replenishmentSystem: item.replenishmentSystem,
+    defaultMethodType: item.defaultMethodType,
+    itemTrackingType:
+      type === "Service" ? "Non-Inventory" : item.itemTrackingType,
+    unitOfMeasureCode: item.unitOfMeasureCode,
+    active: true,
+    companyId: item.companyId,
+    createdBy: item.createdBy,
+    ...(["Part", "Tool", "Service"].includes(type)
+      ? { revision: item.revision ?? "0" }
+      : materialRevision === undefined
+        ? {}
+        : { revision: materialRevision }),
+    ...(["Part", "Tool"].includes(type)
+      ? { modelUploadId: item.modelUploadId }
+      : {})
+  };
+}
+
+export function prepareCreatedItemCost(
+  type: Database["public"]["Enums"]["itemType"],
+  item: Pick<
+    z.infer<typeof itemValidator>,
+    "postingGroupId" | "unitCost" | "replenishmentSystem"
+  >
+) {
+  return sanitize({
+    itemPostingGroupId: item.postingGroupId,
+    unitCost:
+      type === "Part" && item.replenishmentSystem === "Make"
+        ? undefined
+        : item.unitCost
+  });
+}
+
+export function prepareCreatedItemSubtype(item: {
+  id: string;
+  companyId: string;
+  createdBy: string;
+  customFields?: Json;
+}) {
+  return {
+    id: item.id,
+    companyId: item.companyId,
+    createdBy: item.createdBy,
+    customFields: item.customFields
+  };
+}
+
+export function prepareCreatedMaterial(
+  material: z.infer<typeof materialValidator> & {
+    companyId: string;
+    createdBy: string;
+    customFields?: Json;
+  }
+) {
+  return {
+    ...prepareCreatedItemSubtype(material),
+    materialFormId: material.materialFormId,
+    materialSubstanceId: material.materialSubstanceId,
+    finishId: material.finishId,
+    gradeId: material.gradeId,
+    dimensionId: material.dimensionId,
+    materialTypeId: material.materialTypeId
+  };
+}
+
 export async function upsertConsumable(
   client: SupabaseClient<Database>,
   consumable:
@@ -3225,39 +3308,17 @@ export async function upsertConsumable(
   if ("createdBy" in consumable) {
     const itemInsert = await client
       .from("item")
-      .insert({
-        readableId: consumable.id,
-        name: consumable.name,
-        description: consumable.description,
-        type: "Consumable",
-        replenishmentSystem: consumable.replenishmentSystem,
-        defaultMethodType: consumable.defaultMethodType,
-        itemTrackingType: consumable.itemTrackingType,
-        unitOfMeasureCode: consumable.unitOfMeasureCode,
-        active: true,
-        companyId: consumable.companyId,
-        createdBy: consumable.createdBy
-      })
+      .insert(prepareCreatedItem("Consumable", consumable))
       .select("id")
       .single();
     if (itemInsert.error) return itemInsert;
     const itemId = itemInsert.data?.id;
 
     const [consumableInsert, itemCostUpdate] = await Promise.all([
-      client.from("consumable").upsert({
-        id: consumable.id,
-        companyId: consumable.companyId,
-        createdBy: consumable.createdBy,
-        customFields: consumable.customFields
-      }),
+      client.from("consumable").upsert(prepareCreatedItemSubtype(consumable)),
       client
         .from("itemCost")
-        .update(
-          sanitize({
-            itemPostingGroupId: consumable.postingGroupId,
-            unitCost: consumable.unitCost
-          })
-        )
+        .update(prepareCreatedItemCost("Consumable", consumable))
         .eq("itemId", itemId)
     ]);
 
@@ -3509,42 +3570,17 @@ export async function upsertPart(
   if ("createdBy" in part) {
     const itemInsert = await client
       .from("item")
-      .insert({
-        readableId: part.id,
-        revision: part.revision ?? "0",
-        name: part.name,
-        description: part.description,
-        type: "Part",
-        replenishmentSystem: part.replenishmentSystem,
-        defaultMethodType: part.defaultMethodType,
-        itemTrackingType: part.itemTrackingType,
-        unitOfMeasureCode: part.unitOfMeasureCode,
-        active: true,
-        modelUploadId: part.modelUploadId,
-        companyId: part.companyId,
-        createdBy: part.createdBy
-      })
+      .insert(prepareCreatedItem("Part", part))
       .select("id")
       .single();
     if (itemInsert.error) return itemInsert;
     const itemId = itemInsert.data?.id;
 
     const [partInsert, itemCostUpdate] = await Promise.all([
-      client.from("part").upsert({
-        id: part.id,
-        companyId: part.companyId,
-        createdBy: part.createdBy,
-        customFields: part.customFields
-      }),
+      client.from("part").upsert(prepareCreatedItemSubtype(part)),
       client
         .from("itemCost")
-        .update(
-          sanitize({
-            itemPostingGroupId: part.postingGroupId,
-            unitCost:
-              part.replenishmentSystem !== "Make" ? part.unitCost : undefined
-          })
-        )
+        .update(prepareCreatedItemCost("Part", part))
         .eq("itemId", itemId)
     ]);
 
@@ -4584,20 +4620,7 @@ export async function upsertMaterial(
         material.sizes.map((size) =>
           client
             .from("item")
-            .insert({
-              readableId: material.id,
-              name: material.name,
-              description: material.description,
-              type: "Material",
-              replenishmentSystem: material.replenishmentSystem,
-              defaultMethodType: material.defaultMethodType,
-              itemTrackingType: material.itemTrackingType,
-              unitOfMeasureCode: material.unitOfMeasureCode,
-              active: true,
-              revision: size,
-              companyId: material.companyId,
-              createdBy: material.createdBy
-            })
+            .insert(prepareCreatedItem("Material", material, size))
             .select("id")
             .single()
         )
@@ -4615,12 +4638,7 @@ export async function upsertMaterial(
         itemInserts.map((insert) =>
           client
             .from("itemCost")
-            .update(
-              sanitize({
-                itemPostingGroupId: material.postingGroupId,
-                unitCost: material.unitCost
-              })
-            )
+            .update(prepareCreatedItemCost("Material", material))
             .eq("itemId", insert.data?.id ?? "")
         )
       );
@@ -4632,19 +4650,7 @@ export async function upsertMaterial(
     } else {
       const itemInsert = await client
         .from("item")
-        .insert({
-          readableId: material.id,
-          name: material.name,
-          description: material.description,
-          type: "Material",
-          replenishmentSystem: material.replenishmentSystem,
-          defaultMethodType: material.defaultMethodType,
-          itemTrackingType: material.itemTrackingType,
-          unitOfMeasureCode: material.unitOfMeasureCode,
-          active: true,
-          companyId: material.companyId,
-          createdBy: material.createdBy
-        })
+        .insert(prepareCreatedItem("Material", material))
         .select("id")
         .single();
       if (itemInsert.error) return itemInsert;
@@ -4652,12 +4658,7 @@ export async function upsertMaterial(
       if (itemId) newItemIds.push(itemId);
       const itemCostUpdate = await client
         .from("itemCost")
-        .update(
-          sanitize({
-            itemPostingGroupId: material.postingGroupId,
-            unitCost: material.unitCost
-          })
-        )
+        .update(prepareCreatedItemCost("Material", material))
         .eq("itemId", itemId);
       if (itemCostUpdate.error) {
         logger.error("Failed to update item cost", {
@@ -4687,18 +4688,9 @@ export async function upsertMaterial(
       if (shelfLife.error) return shelfLife;
     }
 
-    const materialInsert = await client.from("material").upsert({
-      id: material.id,
-      materialFormId: material.materialFormId,
-      materialSubstanceId: material.materialSubstanceId,
-      finishId: material.finishId,
-      gradeId: material.gradeId,
-      dimensionId: material.dimensionId,
-      materialTypeId: material.materialTypeId,
-      companyId: material.companyId,
-      createdBy: material.createdBy,
-      customFields: material.customFields
-    });
+    const materialInsert = await client
+      .from("material")
+      .upsert(prepareCreatedMaterial(material));
 
     if (materialInsert.error) return materialInsert;
 
@@ -5022,21 +5014,7 @@ export async function upsertService(
   if ("createdBy" in service) {
     const itemInsert = await client
       .from("item")
-      .insert({
-        readableId: service.id,
-        revision: service.revision ?? "0",
-        name: service.name,
-        description: service.description,
-        type: "Service",
-        replenishmentSystem: service.replenishmentSystem,
-        defaultMethodType: service.defaultMethodType,
-        // Services can never be shipped, received, or stocked
-        itemTrackingType: "Non-Inventory",
-        unitOfMeasureCode: service.unitOfMeasureCode,
-        active: true,
-        companyId: service.companyId,
-        createdBy: service.createdBy
-      })
+      .insert(prepareCreatedItem("Service", service))
       .select("id")
       .single();
     if (itemInsert.error) return itemInsert;
@@ -5055,12 +5033,7 @@ export async function upsertService(
       }),
       client
         .from("itemCost")
-        .update(
-          sanitize({
-            itemPostingGroupId: service.postingGroupId,
-            unitCost: service.unitCost
-          })
-        )
+        .update(prepareCreatedItemCost("Service", service))
         .eq("itemId", itemId)
     ]);
 
@@ -5168,41 +5141,17 @@ export async function upsertTool(
   if ("createdBy" in tool) {
     const itemInsert = await client
       .from("item")
-      .insert({
-        readableId: tool.id,
-        revision: tool.revision ?? "0",
-        name: tool.name,
-        description: tool.description,
-        type: "Tool",
-        replenishmentSystem: tool.replenishmentSystem,
-        defaultMethodType: tool.defaultMethodType,
-        itemTrackingType: tool.itemTrackingType,
-        unitOfMeasureCode: tool.unitOfMeasureCode,
-        active: true,
-        modelUploadId: tool.modelUploadId,
-        companyId: tool.companyId,
-        createdBy: tool.createdBy
-      })
+      .insert(prepareCreatedItem("Tool", tool))
       .select("id")
       .single();
     if (itemInsert.error) return itemInsert;
     const itemId = itemInsert.data?.id;
 
     const [toolInsert, itemCostUpdate] = await Promise.all([
-      client.from("tool").upsert({
-        id: tool.id,
-        companyId: tool.companyId,
-        createdBy: tool.createdBy,
-        customFields: tool.customFields
-      }),
+      client.from("tool").upsert(prepareCreatedItemSubtype(tool)),
       client
         .from("itemCost")
-        .update(
-          sanitize({
-            itemPostingGroupId: tool.postingGroupId,
-            unitCost: tool.unitCost
-          })
-        )
+        .update(prepareCreatedItemCost("Tool", tool))
         .eq("itemId", itemId)
     ]);
 

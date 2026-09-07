@@ -39,6 +39,8 @@ type ServiceFormProps = {
   initialValues: z.infer<typeof serviceValidator> & { tags: string[] };
   type?: "card" | "modal";
   onClose?: () => void;
+  /** Capture a validated proposal without writing a master record. */
+  onPropose?: (values: Record<string, unknown>, formData: FormData) => void;
 };
 
 function startsWithLetter(value: string) {
@@ -48,7 +50,8 @@ function startsWithLetter(value: string) {
 const ServiceForm = ({
   initialValues,
   type = "card",
-  onClose
+  onClose,
+  onPropose
 }: ServiceFormProps) => {
   const fetcher = useFetcher<PostgrestResponse<{ id: string }>>();
   const { t } = useLingui();
@@ -68,7 +71,7 @@ const ServiceForm = ({
   const permissions = usePermissions();
   const allowLowercaseItemIds =
     useCompanySettings()?.allowLowercaseItemIds === true;
-  const isEditing = !!initialValues.id;
+  const isEditing = !onPropose && !!initialValues.id;
 
   const [replenishmentSystem, setReplenishmentSystem] = useState<string>(
     initialValues.replenishmentSystem ?? "Buy"
@@ -100,6 +103,17 @@ const ServiceForm = ({
             validator={serviceValidator}
             defaultValues={initialValues}
             fetcher={fetcher}
+            onSubmit={
+              onPropose
+                ? (values, event) => {
+                    event.preventDefault();
+                    onPropose(
+                      values,
+                      new FormData(event.target as HTMLFormElement)
+                    );
+                  }
+                : undefined
+            }
           >
             <ModalCardHeader>
               <ModalCardTitle>
@@ -188,7 +202,7 @@ const ServiceForm = ({
                     : !permissions.can("create", "parts")
                 }
               >
-                <Trans>Save</Trans>
+                {onPropose ? <Trans>Use proposal</Trans> : <Trans>Save</Trans>}
               </Submit>
             </ModalCardFooter>
           </ValidatedForm>

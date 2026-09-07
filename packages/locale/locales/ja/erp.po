@@ -109,6 +109,11 @@ msgstr "{0} 件の製造指図が作成されました"
 msgid "{0} lines to map"
 msgstr "{0}件のラインをマップします"
 
+#. placeholder {0}: intake.newSupplierCount
+#. placeholder {1}: intake.newItemCount
+msgid "{0} new supplier(s), {1} new item(s)"
+msgstr "{0} 個の新しい仕入先、{1} 個の新しいアイテム"
+
 #. placeholder {0}: mappingReadiness.mapped
 #. placeholder {1}: mappingReadiness.required
 msgid "{0} of {1} posting accounts mapped"
@@ -1317,7 +1322,7 @@ msgid "Add Item"
 msgstr "アイテムを追加"
 
 msgid "Add line"
-msgstr ""
+msgstr "行を追加"
 
 msgid "Add Line"
 msgstr "行を追加"
@@ -1426,7 +1431,7 @@ msgid "Add Supplier"
 msgstr "仕入先を追加"
 
 msgid "Add supporting document"
-msgstr ""
+msgstr "サポート文書を追加する"
 
 msgid "Add the next capability on the same system instead of buying another tool."
 msgstr "同じシステム上に次の機能を追加して、別のツールを購入する代わりにします。"
@@ -1472,13 +1477,13 @@ msgid "Address"
 msgstr "住所"
 
 msgid "Address line 1"
-msgstr ""
+msgstr "住所行 1"
 
 msgid "Address Line 1"
 msgstr "住所 1行目"
 
 msgid "Address line 2"
-msgstr ""
+msgstr "住所行 2"
 
 msgid "Address Line 2"
 msgstr "住所2行目"
@@ -1566,7 +1571,7 @@ msgid "All departments"
 msgstr "すべての部門"
 
 msgid "All documents"
-msgstr ""
+msgstr "すべてのドキュメント"
 
 msgid "All Documents"
 msgstr "すべてのドキュメント"
@@ -1917,7 +1922,7 @@ msgid "Approaching {PO_EMAIL_ATTACHMENT_LIMIT_MB} MB cap."
 msgstr "{PO_EMAIL_ATTACHMENT_LIMIT_MB} MBの上限に近づいています。"
 
 msgid "Approval"
-msgstr ""
+msgstr "承認"
 
 msgid "Approval Date"
 msgstr "承認日"
@@ -1935,7 +1940,7 @@ msgid "Approval Requirements"
 msgstr "承認要件"
 
 msgid "Approval results"
-msgstr ""
+msgstr "承認結果"
 
 msgid "Approval Rules"
 msgstr "承認ルール"
@@ -1947,19 +1952,19 @@ msgid "Approve"
 msgstr "承認"
 
 msgid "Approve and create draft"
-msgstr ""
+msgstr "承認して下書きを作成する"
 
 msgid "Approve and link invoice"
 msgstr "請求書を承認してリンク"
 
 msgid "Approve evidence link"
-msgstr ""
+msgstr "証拠のリンクを承認する"
 
 msgid "Approve selected ready documents"
-msgstr ""
+msgstr "選択した準備完了ドキュメントを承認する"
 
 msgid "Approved"
-msgstr ""
+msgstr "承認済み"
 
 msgid "Approved By"
 msgstr "承認者"
@@ -2666,7 +2671,7 @@ msgid "Automatic Lead Time Updates"
 msgstr "自動リードタイム更新"
 
 msgid "Automatic processing needs attention. Your original document is safe. Review the fields manually or save your work and retry parsing."
-msgstr ""
+msgstr "自動処理には注意が必要です。オリジナルの文書は安全です。フィールドを手動で確認するか、作業内容を保存して解析を再試行してください。"
 
 msgid "Automatic Updates"
 msgstr "自動更新"
@@ -3291,7 +3296,7 @@ msgid "Cash & Banking"
 msgstr "現金と銀行"
 
 msgid "Catalog suggestion"
-msgstr ""
+msgstr "カタログのご提案"
 
 msgid "Categories that classify how stock is stored"
 msgstr "在庫がどのように保管されるかを分類するカテゴリ"
@@ -3587,7 +3592,7 @@ msgid "Collapse subtree"
 msgstr "サブツリーを折りたたむ"
 
 msgid "Collect invoice documents during Mercury sync"
-msgstr ""
+msgstr "Mercury 同期中に請求書ドキュメントを収集する"
 
 msgid "Column dimension"
 msgstr "列ディメンション"
@@ -3720,7 +3725,7 @@ msgid "Conditions"
 msgstr "条件"
 
 msgid "Confidence unavailable"
-msgstr ""
+msgstr "自信が持てない"
 
 msgid "Configuration"
 msgstr "設定"
@@ -4203,6 +4208,9 @@ msgstr "教育訓練の識別子をコピー"
 msgid "Copy week"
 msgstr "週をコピー"
 
+msgid "Copying the attachment to the invoice. The original document remains available in its review."
+msgstr "添付ファイルを請求書にコピーしています。元の文書はレビューで引き続き利用可能です。"
+
 msgid "Correct"
 msgstr "訂正"
 
@@ -4219,7 +4227,7 @@ msgid "Correct Stock Movement"
 msgstr "在庫移動を訂正"
 
 msgid "Correct supplier"
-msgstr ""
+msgstr "正しい仕入先"
 
 msgid "Corrected Quantity"
 msgstr "訂正された数量"
@@ -4438,7 +4446,7 @@ msgid "Create Change Notice"
 msgstr "変更通知を作成"
 
 msgid "Create draft"
-msgstr ""
+msgstr "下書きの作成"
 
 msgid "Create Forecast"
 msgstr "予測を作成"
@@ -4654,7 +4662,7 @@ msgid "Credit Memo"
 msgstr "クレジットメモ"
 
 msgid "Credit note"
-msgstr ""
+msgstr "クレジットメモ"
 
 msgid "Credits"
 msgstr "クレジット"
@@ -4715,9 +4723,6 @@ msgstr "現在の予測"
 
 msgid "Current quantity"
 msgstr "現在の数量"
-
-msgid "Currently linked invoice"
-msgstr ""
 
 msgid "Custom"
 msgstr "カスタム"
@@ -4918,7 +4923,7 @@ msgid "Daily check-ins while your team finds its feet on the live system"
 msgstr "ライブシステムでチームが軌道に乗るまでの毎日のチェックイン"
 
 msgid "Daily parsing allowance (USD)"
-msgstr ""
+msgstr "毎日の解析許容量 (USD)"
 
 msgid "Daily summary"
 msgstr "毎日のサマリー"
@@ -5709,7 +5714,7 @@ msgid "Directions"
 msgstr "方向"
 
 msgid "Disable rule"
-msgstr ""
+msgstr "ルールを無効にする"
 
 msgid "Disabled"
 msgstr "無効"
@@ -5752,7 +5757,7 @@ msgid "Discount for {0}"
 msgstr "{0}の値引"
 
 msgid "Discount included in net price"
-msgstr ""
+msgstr "値引は正味価格に含まれています"
 
 msgid "Discount Percent"
 msgstr "値引率"
@@ -5848,13 +5853,13 @@ msgid "Document Control"
 msgstr "文書管理"
 
 msgid "Document kind"
-msgstr ""
+msgstr "文書の種類"
 
 msgid "Document Templates"
 msgstr "文書テンプレート"
 
 msgid "Document totals and charges"
-msgstr ""
+msgstr "文書の合計と料金"
 
 msgid "Document Type"
 msgstr "文書タイプ"
@@ -5866,7 +5871,7 @@ msgid "Documents"
 msgstr "ドキュメント"
 
 msgid "Documents collected"
-msgstr ""
+msgstr "収集したドキュメント"
 
 msgid "Documents pushes invoices, bills and payments as native provider documents; their journals are recorded as covered by the document. It also pulls payments recorded in the provider back into Carbon, closing the matching invoice or bill and posting a Carbon GL journal. Off records them as deliberately excluded."
 msgstr "ドキュメントはネイティブプロバイダ文書として請求書および支払をプッシュします。それらの仕訳は文書でカバーされたものとして記録されます。また、プロバイダで記録された支払をCarbonに取り込み、対応する請求書をクローズし、Carbon総勘定元帳仕訳を転記します。オフはそれらを意図的に除外したものとして記録します。"
@@ -6262,7 +6267,7 @@ msgid "Edit Item Group"
 msgstr "アイテムグループを編集"
 
 msgid "Edit item proposal"
-msgstr ""
+msgstr "アイテム提案を編集する"
 
 msgid "Edit Journal Entry"
 msgstr "仕訳行を編集"
@@ -6424,7 +6429,7 @@ msgid "Edit supplier process"
 msgstr "仕入先工法を編集"
 
 msgid "Edit supplier proposal"
-msgstr ""
+msgstr "仕入先提案の編集"
 
 msgid "Edit Supplier Type"
 msgstr "仕入先タイプを編集"
@@ -6532,7 +6537,7 @@ msgid "Enable audit logging in settings to start tracking changes to your data."
 msgstr "設定で監査ログを有効にして、データへの変更の追跡を開始します。"
 
 msgid "Enable automatic document parsing"
-msgstr ""
+msgstr "自動文書解析を有効にする"
 
 msgid "Enable digital quotes for your company. This will allow you to send digital quotes to your customers, and allow them to accept them online."
 msgstr "貴社においてデジタル見積を有効にします。これにより、デジタル見積を得意先に送信でき、得意先がオンラインで承諾することができます。"
@@ -6873,7 +6878,7 @@ msgid "Excluded"
 msgstr "除外"
 
 msgid "Excluded source lines"
-msgstr ""
+msgstr "除外されたソース行"
 
 msgid "Executive P&L"
 msgstr "経営幹部向けP&L"
@@ -6888,10 +6893,10 @@ msgid "Existing invoice"
 msgstr "既存の請求書"
 
 msgid "Existing invoice links"
-msgstr ""
+msgstr "既存の請求書のリンク"
 
 msgid "Existing item"
-msgstr ""
+msgstr "既存品"
 
 msgid "Existing mappings. Pick a different provider option to re-map."
 msgstr "既存のマッピング。異なるプロバイダーオプションを選択して再マップしてください。"
@@ -6943,7 +6948,7 @@ msgid "Expected Receipt Date"
 msgstr "予想受取日"
 
 msgid "Expense account"
-msgstr ""
+msgstr "費用勘定"
 
 msgid "Expense account for customer balances written off as uncollectable on AR settlement"
 msgstr "売掛金決済において回収不可能として償却された得意先残高の費用勘定"
@@ -7093,7 +7098,7 @@ msgid "Extra tags for slicing your GL reporting"
 msgstr "総勘定元帳報告をスライスするための追加タグ"
 
 msgid "Extracted facts and confidence"
-msgstr ""
+msgstr "抽出された事実と自信"
 
 msgid "Fail"
 msgstr "不合格"
@@ -7518,7 +7523,7 @@ msgid "Files attached here ride along on every purchase order email sent to this
 msgstr "ここに添付されたファイルは、この仕入先に送信されるすべての発注書メールに付属します(会社全体のデフォルトに加えて)。"
 
 msgid "Fill empty draft"
-msgstr ""
+msgstr "空の下書きを記入する"
 
 msgid "Fill this company with a realistic industry story so every screen has something in it. You can put back what was here before."
 msgstr "この会社に現実的な業界ストーリーを入れて、すべての画面に何かが表示されるようにします。以前ここにあったものを戻すことができます。"
@@ -7722,7 +7727,7 @@ msgid "From customer"
 msgstr "得意先から"
 
 msgid "From document"
-msgstr ""
+msgstr "文書から"
 
 msgid "From Location"
 msgstr "出発地"
@@ -8119,19 +8124,19 @@ msgid "Hints in the first row"
 msgstr "最初の行のヒント"
 
 msgid "Historical"
-msgstr ""
+msgstr "歴史的"
 
 msgid "Historical data older than what's on the Data Migration Map"
 msgstr "データ移行マップにあるもの以前の履歴データ"
 
 msgid "Historical exchange rate"
-msgstr ""
+msgstr "過去の為替レート"
 
 msgid "Historical ingestion:"
-msgstr ""
+msgstr "過去の取り込み:"
 
 msgid "Historical purchase"
-msgstr ""
+msgstr "過去の購入"
 
 msgid "Historical Rate (equity)"
 msgstr "取得時レート(純資産)"
@@ -8338,7 +8343,7 @@ msgid "I have a reasonable basis to believe this individual is a U.S. person as 
 msgstr "この個人は22 CFR 120.62で定義されている米国人である合理的な根拠があります"
 
 msgid "I resolved these extraction issues and checked all source lines"
-msgstr ""
+msgstr "これらの抽出の問題を解決し、すべてのソース行をチェックしました"
 
 msgid "I'm Still Working"
 msgstr "まだ働いています"
@@ -8396,7 +8401,7 @@ msgstr "部品番号を変更したい場合は、[キャンセル]をクリッ�
 
 msgid "Ignore"
 msgid "Ignore document"
-msgstr ""
+msgstr "文書を無視する"
 
 msgid "Ignore this payment"
 msgstr "この支払いを無視"
@@ -8405,7 +8410,7 @@ msgid "Ignored"
 msgstr "無視"
 
 msgid "Ignored payments"
-msgstr ""
+msgstr "無視された支払い"
 
 msgid "II (normal default)"
 msgstr "II（通常デフォルト）"
@@ -8754,7 +8759,7 @@ msgid "Inventory Job Notifications"
 msgstr "在庫ジョブ通知"
 
 msgid "Inventory location"
-msgstr ""
+msgstr "在庫の場所"
 
 msgid "Inventory Movements"
 msgstr "在庫移動"
@@ -8766,13 +8771,13 @@ msgid "Inventory Tracking"
 msgstr "在庫追跡"
 
 msgid "Inventory unit"
-msgstr ""
+msgstr "在庫単位"
 
 msgid "Inventory Unit of Measure"
 msgstr "在庫単位"
 
 msgid "Inventory units per purchase unit"
-msgstr ""
+msgstr "購入単位あたりの在庫単位"
 
 msgid "Inventory Valuation"
 msgstr "在庫評価"
@@ -8788,6 +8793,9 @@ msgstr "招待済み"
 
 msgid "Invoice"
 msgstr "請求書"
+
+msgid "Invoice attachment copy needs retrying. The original document remains available in its review; automatic retry is scheduled."
+msgstr "請求書の添付ファイルのコピーを再試行する必要があります。元の文書はレビューで引き続き利用可能です。自動再試行が予定されています。"
 
 msgid "Invoice Contact"
 msgstr "請求書担当者"
@@ -8811,25 +8819,25 @@ msgid "Invoice Customer Location"
 msgstr "請求書得意先拠点"
 
 msgid "Invoice date"
-msgstr ""
+msgstr "請求書の日付"
 
 msgid "Invoice document"
-msgstr ""
+msgstr "請求書文書"
 
 msgid "Invoice documents"
-msgstr ""
+msgstr "請求書ドキュメント"
 
 msgid "Invoice ID"
 msgstr "請求書ID"
 
 msgid "Invoice location"
-msgstr ""
+msgstr "請求書の場所"
 
 msgid "Invoice Location"
 msgstr "請求書の場所"
 
 msgid "Invoice number"
-msgstr ""
+msgstr "請求書番号"
 
 msgid "Invoice Number"
 msgstr "請求書番号"
@@ -9414,7 +9422,7 @@ msgstr "発生可能性"
 
 #. placeholder {0}: index + 1
 msgid "Line {0}"
-msgstr ""
+msgstr "行 {0}"
 
 msgid "Line description (optional)"
 msgstr "行の説明 (オプション)"
@@ -9426,16 +9434,16 @@ msgid "Line options"
 msgstr "行オプション"
 
 msgid "Line shipping"
-msgstr ""
+msgstr "ライン配送"
 
 msgid "Line Status"
 msgstr "ラインステータス"
 
 msgid "Line tax amount"
-msgstr ""
+msgstr "明細税額"
 
 msgid "Line type"
-msgstr ""
+msgstr "線種"
 
 msgid "Linear Team"
 msgstr "Linear Team"
@@ -9459,10 +9467,10 @@ msgid "Link (optional) — e.g. /x/settings/…"
 msgstr "リンク（オプション） — 例: /x/settings/…"
 
 msgid "Link evidence only"
-msgstr ""
+msgstr "証拠のみをリンクする"
 
 msgid "Link existing invoice"
-msgstr ""
+msgstr "既存の請求書をリンクする"
 
 msgid "Link Jira Issue"
 msgstr "Jira イシューをリンク"
@@ -9480,7 +9488,7 @@ msgid "Link to sales order line"
 msgstr "受注明細へのリンク"
 
 msgid "Linked"
-msgstr ""
+msgstr "リンク済み"
 
 #. placeholder {0}: r.linkedSum
 #. placeholder {1}: r.quantity
@@ -9812,7 +9820,7 @@ msgid "Manual"
 msgstr "手動"
 
 msgid "Manual correction"
-msgstr ""
+msgstr "手動補正"
 
 msgid "Manually scheduled"
 msgstr "手動スケジュール済み"
@@ -9821,7 +9829,7 @@ msgid "Manufacturer"
 msgstr "製造業者"
 
 msgid "Manufacturer part number"
-msgstr ""
+msgstr "メーカー品番"
 
 msgid "Manufacturer Part Number"
 msgstr "メーカー部品番号"
@@ -10125,7 +10133,7 @@ msgid "Mercury payments"
 msgstr "Mercury 支払い"
 
 msgid "Merge explicitly selected draft lines"
-msgstr ""
+msgstr "明示的に選択した下書き線を結合します"
 
 msgid "MES"
 msgstr "MES"
@@ -10265,10 +10273,10 @@ msgid "Model removed from line"
 msgstr "モデルがラインから削除されました"
 
 msgid "Model suggestion"
-msgstr ""
+msgstr "モデルの提案"
 
 msgid "Model suggestion:"
-msgstr ""
+msgstr "モデルの提案:"
 
 msgid "Model upload"
 msgstr "モデルアップロード"
@@ -10304,7 +10312,7 @@ msgid "Monthly"
 msgstr "月次"
 
 msgid "Monthly parsing allowance (USD)"
-msgstr ""
+msgstr "毎月の解析許容量 (USD)"
 
 msgid "Months over which this asset depreciates for tax purposes (when not using MACRS)."
 msgstr "このアセットが税務上償却される月数（MACRS使用時以外）。"
@@ -10392,7 +10400,7 @@ msgstr "MRPは3時間ごとに自動的に実行されますが、ここで手�
 msgid "Multiple jobs can run on this process at the same time — e.g. a laser table, furnace, or plating bath"
 msgstr "複数のジョブがこのプロセスで同時に実行できます — 例：レーザーテーブル、炉、またはめっき槽"
 msgid "Multiple invoices"
-msgstr ""
+msgstr "複数の請求書"
 
 msgid "Must be in the same location"
 msgstr "同じ場所にある必要があります"
@@ -10440,7 +10448,7 @@ msgid "Needs a Business or Partner plan."
 msgstr "ビジネスプランまたはパートナープランが必要です。"
 
 msgid "Needs document"
-msgstr ""
+msgstr "文書が必要"
 
 msgid "Needs fixing"
 msgstr "修理が必要です"
@@ -10470,7 +10478,7 @@ msgid "Net Income"
 msgstr "純収益"
 
 msgid "Net unit price"
-msgstr ""
+msgstr "正味単価"
 
 msgid "Never"
 msgstr "なし"
@@ -10599,7 +10607,7 @@ msgid "New Item Group"
 msgstr "新しいアイテムグループ"
 
 msgid "New item proposed:"
-msgstr ""
+msgstr "新しいアイテムの提案:"
 
 msgid "New Kanban"
 msgstr "新規かんばん"
@@ -10755,7 +10763,7 @@ msgid "New Supplier Part"
 msgstr "新規仕入先部品"
 
 msgid "New supplier proposed:"
-msgstr ""
+msgstr "新しい仕入先が提案したもの:"
 
 msgid "New Timecard"
 msgstr "新しいタイムカード"
@@ -10963,7 +10971,7 @@ msgid "No dimension values mapped yet"
 msgstr "まだディメンション値がマップされていません"
 
 msgid "No documents in this view."
-msgstr ""
+msgstr "このビューにはドキュメントがありません。"
 
 msgid "No draft make method for this item yet."
 msgstr "この品目の下書き製造方法はまだありません。"
@@ -11215,7 +11223,7 @@ msgid "No records found"
 msgstr "レコードが見つかりません"
 
 msgid "No reference"
-msgstr ""
+msgstr "参考文献なし"
 
 msgid "No reference image"
 msgstr "参照画像がありません"
@@ -11242,7 +11250,7 @@ msgid "No rules assigned"
 msgstr "ルールが割り当てられていません"
 
 msgid "No saved rules for this document yet."
-msgstr ""
+msgstr "この文書にはまだルールが保存されていません。"
 
 msgid "No scheduled work in this window"
 msgstr "このウィンドウにはスケジュール済みの作業がありません"
@@ -11257,7 +11265,7 @@ msgid "No sorts applied to this view"
 msgstr "このビューに適用されたソートはありません"
 
 msgid "No source document is attached yet. Upload a receipt or find supporting evidence from Mercury."
-msgstr ""
+msgstr "参照伝票はまだ添付されていません。領収書をアップロードするか、Mercury からの証拠を見つけてください。"
 
 msgid "No stock"
 msgstr "在庫なし"
@@ -11693,6 +11701,9 @@ msgid "Open Dispatches"
 msgstr "オープン保全指示"
 
 msgid "Open document review"
+msgstr "オープン文書レビュー"
+
+msgid "Open document review and original attachment"
 msgstr ""
 
 msgid "Open in Carbon"
@@ -11729,7 +11740,7 @@ msgid "Open navigation"
 msgstr "ナビゲーションを開く"
 
 msgid "Open original document"
-msgstr ""
+msgstr "元の文書を開く"
 
 msgid "Open payables by supplier and age"
 msgstr "仕入先・日数別オープン買掛金"
@@ -11968,7 +11979,7 @@ msgid "Original Count"
 msgstr "元のカウント"
 
 msgid "Original invoice document"
-msgstr ""
+msgstr "請求書原本の文書の文書の文書"
 
 msgid "Other"
 msgstr "その他"
@@ -12137,10 +12148,10 @@ msgid "Park the journal with a warning until the value is mapped"
 msgstr "値がマッピングされるまで警告付きで仕訳を保留する"
 
 msgid "Parse again"
-msgstr ""
+msgstr "再度解析します"
 
 msgid "Parsing and historical ingestion"
-msgstr ""
+msgstr "解析と履歴取り込み"
 
 msgid "part"
 msgstr "部品"
@@ -12224,13 +12235,13 @@ msgid "Pause"
 msgstr "一時停止"
 
 msgid "Pause history"
-msgstr ""
+msgstr "履歴を一時停止する"
 
 msgid "Paused"
-msgstr ""
+msgstr "一時停止中"
 
 msgid "Pausing parsing keeps documents and manual review available. These allowances control this application's new requests."
-msgstr ""
+msgstr "解析を一時停止すると、ドキュメントと手動レビューを利用可能ようになります。これらの許可により、このアプリケーションの新しいリクエストが制御されます。"
 
 msgid "Pay Rate"
 msgstr "支払レート"
@@ -12254,13 +12265,13 @@ msgid "Payment Applications"
 msgstr "支払い適用"
 
 msgid "Payment confirmation"
-msgstr ""
+msgstr "支払い確認"
 
 msgid "Payment Date"
 msgstr "支払日"
 
 msgid "Payment evidence"
-msgstr ""
+msgstr "支払い証拠"
 
 msgid "Payment history is still being imported. The next hourly run will continue where it stopped."
 msgstr "支払い履歴をインポート中です。次の毎時実行で停止した場所から続行します。"
@@ -12281,7 +12292,7 @@ msgid "payment terms"
 msgstr "支払条件"
 
 msgid "Payment terms"
-msgstr ""
+msgstr "支払条件"
 
 msgid "Payment Terms"
 msgstr "支払条件"
@@ -12296,7 +12307,7 @@ msgid "Payments and credits applied to this invoice. Click a row to open the sou
 msgstr "この請求書に充当された支払と調整額。行をクリックして参照伝票を開きます。"
 
 msgid "Payments examined"
-msgstr ""
+msgstr "審査された支払い"
 
 msgid "PDF"
 msgstr "PDF"
@@ -12841,7 +12852,7 @@ msgid "Processes"
 msgstr "プロセス"
 
 msgid "Processing"
-msgstr ""
+msgstr "処理中"
 
 msgid "Procurement status — needs ordering, planned, on order, or received. The same indicator shown in the BoM tree."
 msgstr "調達ステータス — 発注が必要、計画済み、発注済み、または入荷済み。BoM ツリーに表示されるものと同じインジケーター。"
@@ -12965,10 +12976,10 @@ msgid "Property"
 msgstr "プロパティ"
 
 msgid "Propose new item"
-msgstr ""
+msgstr "新しいアイテムを提案する"
 
 msgid "Propose new supplier"
-msgstr ""
+msgstr "新しい仕入先を提案する"
 
 msgid "Proposed matches where the Carbon account number equals the provider account code exactly."
 msgstr "Carbon勘定科目番号がプロバイダー勘定科目コードと正確に一致する提案されたマッチ。"
@@ -13131,7 +13142,7 @@ msgid "Purchase to Order"
 msgstr "受注購買"
 
 msgid "Purchase unit"
-msgstr ""
+msgstr "購入単位"
 
 msgid "Purchase Unit of Measure"
 msgstr "購入単位"
@@ -13168,6 +13179,9 @@ msgstr "購買請求書"
 
 msgid "Purchasing Unit of Measure"
 msgstr "購買単位"
+
+msgid "Purchasing update permission is required to save recognition rules."
+msgstr "認識ルールを保存するには購買更新権限が必要です。"
 
 msgid "Push"
 msgstr "プッシュ"
@@ -13294,7 +13308,7 @@ msgid "Quantity physically on the material's assigned storage unit (shelf). Turn
 msgstr "材料に割り当てられた保管ユニット（棚）の物理的在庫数。その保管ユニットの供給必要数量以下の場合は赤く表示されます。"
 
 msgid "Quantity purchased"
-msgstr ""
+msgstr "購入数量"
 
 msgid "Quantity Range"
 msgstr "数量範囲"
@@ -13478,22 +13492,22 @@ msgid "Reason for Change"
 msgstr "変更の理由"
 
 msgid "Reason for correction"
-msgstr ""
+msgstr "訂正理由"
 
 msgid "Reason for declining (Optional)"
 msgstr "辞退する理由（オプション）"
 
 msgid "Reason for replacing this item match"
-msgstr ""
+msgstr "このアイテムを交換する理由の一致"
 
 msgid "Reason for skipping (required)"
 msgstr "スキップの理由（必須）"
 
 msgid "Reason this is a different purchase despite a duplicate warning"
-msgstr ""
+msgstr "重複した警告にもかかわらず、これが別の購入である理由"
 
 msgid "Reason to exclude this source line"
-msgstr ""
+msgstr "このソース行を除外する理由"
 
 msgid "Reasons"
 msgstr "理由"
@@ -13659,7 +13673,7 @@ msgid "Refresh exchange rate"
 msgstr "為替レートを更新"
 
 msgid "Refresh Mercury and Gmail documents"
-msgstr ""
+msgstr "Mercury と Gmail ドキュメントを更新する"
 
 msgid "Regenerate"
 msgstr "再生成"
@@ -13754,7 +13768,7 @@ msgid "Released revision is locked"
 msgstr "発行済みリビジョンはロック中です"
 
 msgid "Reload saved review"
-msgstr ""
+msgstr "保存したレビューを再読み込みする"
 
 msgid "Remaining"
 msgstr "残高"
@@ -13766,10 +13780,10 @@ msgid "Remember this PIN. You will need it to exit console mode on MES terminals
 msgstr "このPINを覚えておいてください。MES端末でコンソールモードを終了するために必要になります。"
 
 msgid "Remember this supplier item and pack match after approval"
-msgstr ""
+msgstr "この仕入先のアイテムを記憶し、承認後に一致を梱包します"
 
 msgid "Remember this supplier name after approval"
-msgstr ""
+msgstr "承認後、この仕入先名を記憶してください"
 
 msgid "Remove"
 msgstr "除去"
@@ -13819,7 +13833,7 @@ msgid "Remove line"
 msgstr "明細を除去"
 
 msgid "Remove line from review"
-msgstr ""
+msgstr "レビューから行を削除"
 
 msgid "Remove order"
 msgstr "注文を除去"
@@ -13925,13 +13939,13 @@ msgid "Replace PDF"
 msgstr "PDFを置き換える"
 
 msgid "Replace supplier rule"
-msgstr ""
+msgstr "仕入先ルールを置き換える"
 
 msgid "Replace this company's data with a demo dataset — snapshotted first, so you can revert."
 msgstr "この会社のデータをデモデータセットで置き換えます — 最初にスナップショットが取得されるため、元に戻すことができます。"
 
 msgid "Replace this reviewed draft line"
-msgstr ""
+msgstr "このレビューされた下書き行を置き換えます"
 
 msgid "Replacing the PDF removes all balloon placements on this document. Feature rows and their values stay; you can place balloons again on the new drawing."
 msgstr "PDFを置き換えると、このドキュメント上のすべてのバルーン配置が削除されます。機能行とその値は残ります。新しい図面にバルーンを再度配置できます。"
@@ -14057,7 +14071,7 @@ msgid "Reserve the work center's capacity for this PM. Requires an estimated dur
 msgstr "このPMの作業センターの容量を予約します。推定期間が必要です。"
 
 msgid "reserved"
-msgstr ""
+msgstr "引当済"
 
 msgid "Reserved"
 msgstr "引当済"
@@ -14118,7 +14132,7 @@ msgid "Restore"
 msgstr "復元"
 
 msgid "Restore document"
-msgstr ""
+msgstr "文書を復元する"
 
 msgid "Restore from Trash"
 msgstr "ゴミ箱から復元"
@@ -14154,7 +14168,7 @@ msgid "Results per page"
 msgstr "ページあたりの結果数"
 
 msgid "Resume history"
-msgstr ""
+msgstr "履歴を再開する"
 
 msgid "Resume Receiving"
 msgstr "受信を再開"
@@ -14240,31 +14254,31 @@ msgstr "レビュー"
 msgid "Review & create"
 msgstr "確認と作成"
 msgid "Review action"
-msgstr ""
+msgstr "レビューアクション"
 
 msgid "Review document"
-msgstr ""
+msgstr "文書のレビュー"
 
 msgid "Review each item's changes, then confirm — releasing can't be undone."
 msgstr "各アイテムの変更をレビューしてから確認してください。リリースは取り消せません。"
 
 msgid "Review extracted purchases"
-msgstr ""
+msgstr "抽出した購入内容を確認する"
 
 msgid "Review invoice document"
-msgstr ""
+msgstr "請求書文書を確認する"
 
 msgid "Review issues"
-msgstr ""
+msgstr "問題を確認する"
 
 msgid "Review or retry parsing"
-msgstr ""
+msgstr "解析を確認または再試行してください"
 
 msgid "Review supplier"
 msgstr "仕入先を確認"
 
 msgid "Review the original invoice to select the correct supplier and item classes, confirm pack sizes and totals, and map each existing line explicitly."
-msgstr ""
+msgstr "元の請求書を確認して、正しい仕入先と品目クラスを選択し、梱包サイズと合計を確認して、既存の各行を明示的にマッピングします。"
 
 msgid "Review the period's balance sheet and income statement and confirm the figures look right. This is a manual sign-off — mark it done once you have reviewed them."
 msgstr "期間の貸借対照表と損益計算書をレビューして、数字が正しいことを確認してください。これは手動の承認です。レビュー後、完了にマークしてください。"
@@ -14404,7 +14418,7 @@ msgid "Rules"
 msgstr "ルール"
 
 msgid "Rules remember identities and purchasing units. Prices, quantities, dates, and payment status always come from the current document. Correct an item rule in the line review and approve the correction with a reason."
-msgstr ""
+msgstr "ルールは ID と購買単位を記憶します。価格、数量、日付、支払ステータスは常に現在の文書から取得されます。明細レビューで品目ルールを修正し、理由を付けて修正を承認します。"
 
 msgid "Rules that adjust prices automatically by quantity or customer"
 msgstr "数量または得意先によって価格を自動調整するルール"
@@ -14658,20 +14672,20 @@ msgid "Save Method"
 msgstr "メソッドを保存"
 
 msgid "Save parsing settings"
-msgstr ""
+msgstr "解析設定を保存する"
 
 msgid "Save Rate"
 msgstr "レートを保存"
 
 msgid "Save review"
-msgstr ""
+msgstr "レビューを保存する"
 
 msgid "Save sync settings"
 msgstr "同期設定を保存"
 
 #. placeholder {0}: copy.moduleLabel
 msgid "Save this review, add the required definition in {0}, and reopen the proposal to select it."
-msgstr ""
+msgstr "このレビューを保存し、{0} に必要な定義を追加して、提案を再度開いて選択します。"
 
 msgid "Save view"
 msgstr "ビューを保存"
@@ -14683,13 +14697,13 @@ msgid "Saved"
 msgstr "保存済み"
 
 msgid "Saved item rule to correct"
-msgstr ""
+msgstr "修正する保存済みアイテムのルール"
 
 msgid "Saved match"
-msgstr ""
+msgstr "保存された試合"
 
 msgid "Saved recognition rules"
-msgstr ""
+msgstr "保存された認識ルール"
 
 msgid "Saved Views"
 msgstr "保存済みビュー"
@@ -15056,7 +15070,7 @@ msgid "Select dimension"
 msgstr "ディメンションを選択"
 
 msgid "Select document"
-msgstr ""
+msgstr "文書の選択"
 
 msgid "Select Employee"
 msgstr "従業員を選択"
@@ -15519,7 +15533,7 @@ msgid "Shipping Methods"
 msgstr "出荷方法"
 
 msgid "Shipping not allocated to lines"
-msgstr ""
+msgstr "明細に送料が割り当てられていません"
 
 msgid "Shipping Notes"
 msgstr "配送メモ"
@@ -15770,13 +15784,13 @@ msgid "Source Analysis"
 msgstr "ソース分析"
 
 msgid "Source code"
-msgstr ""
+msgstr "ソースコード"
 
 msgid "Source Company"
 msgstr "ソース会社"
 
 msgid "Source discount total"
-msgstr ""
+msgstr "ソース値引合計"
 
 msgid "Source document"
 msgstr "参照伝票"
@@ -15791,6 +15805,9 @@ msgid "Source document readable"
 msgstr "参照伝票判読可能"
 
 msgid "Source document total"
+msgstr "参照伝票の合計"
+
+msgid "Source documents"
 msgstr ""
 
 msgid "Source Item"
@@ -15800,7 +15817,7 @@ msgid "Source Job"
 msgstr "ソース製造指図"
 
 msgid "Source line total"
-msgstr ""
+msgstr "ソース行の合計"
 
 msgid "Source list"
 msgstr "ソースリスト"
@@ -15809,10 +15826,10 @@ msgid "Source Method"
 msgstr "ソース方法"
 
 msgid "Source subtotal before discounts"
-msgstr ""
+msgstr "値引前のソース小計"
 
 msgid "Source tax total"
-msgstr ""
+msgstr "源泉税総額"
 
 msgid "Source types"
 msgstr "ソースタイプ"
@@ -15930,7 +15947,7 @@ msgid "Start Here"
 msgstr "ここから始める"
 
 msgid "Start historical document ingestion"
-msgstr ""
+msgstr "履歴文書の取り込みを開始する"
 
 msgid "Start Now"
 msgstr "今すぐ開始"
@@ -15960,13 +15977,13 @@ msgid "State / Province"
 msgstr "都道府県"
 
 msgid "State or province"
-msgstr ""
+msgstr "州または地方"
 
 msgid "State province"
 msgstr "都道府県"
 
 msgid "Statement"
-msgstr ""
+msgstr "声明"
 
 msgid "Station"
 msgstr "ステーション"
@@ -16218,7 +16235,7 @@ msgstr "AIでマッピングを提案"
 msgid "Suggest Match"
 msgstr "照合を提案"
 msgid "Suggest matches"
-msgstr ""
+msgstr "一致を提案する"
 
 msgid "Suggest with AI"
 msgstr "AIで提案"
@@ -16227,7 +16244,7 @@ msgid "Suggested orders you haven't placed yet."
 msgstr "まだ発注していない推奨注文。"
 
 msgid "Suggested supplier:"
-msgstr ""
+msgstr "推奨される仕入先:"
 
 msgid "Suggestion"
 msgstr "提案"
@@ -16263,7 +16280,7 @@ msgid "Supplier"
 msgstr "仕入先"
 
 msgid "Supplier / reference"
-msgstr ""
+msgstr "仕入先/参照先"
 
 msgid "Supplier Accounts"
 msgstr "仕入先アカウント"
@@ -16272,7 +16289,7 @@ msgid "Supplier added and selected"
 msgstr "仕入先が追加され選択されました"
 
 msgid "Supplier and invoice"
-msgstr ""
+msgstr "仕入先と請求書"
 
 msgid "Supplier contact"
 msgstr "仕入先担当者"
@@ -16281,7 +16298,7 @@ msgid "Supplier Contact"
 msgstr "仕入先担当者"
 
 msgid "Supplier email"
-msgstr ""
+msgstr "仕入先の電子メール"
 
 msgid "Supplier ID"
 msgstr "仕入先ID"
@@ -16296,7 +16313,7 @@ msgid "Supplier Invoice Number"
 msgstr "仕入先請求書番号"
 
 msgid "Supplier item and pack"
-msgstr ""
+msgstr "仕入先のアイテムとパック"
 
 msgid "Supplier location"
 msgstr "仕入先所在地"
@@ -16305,7 +16322,7 @@ msgid "Supplier Location"
 msgstr "仕入先の場所"
 
 msgid "Supplier name"
-msgstr ""
+msgstr "仕入先名"
 
 msgid "Supplier needs identification"
 msgstr "仕入先の特定が必要です"
@@ -16380,7 +16397,7 @@ msgid "Supplier Reference"
 msgstr "仕入先参照"
 
 msgid "Supplier SKU"
-msgstr ""
+msgstr "仕入先のSKU"
 
 msgid "Supplier Status"
 msgstr "仕入先ステータス"
@@ -16401,7 +16418,7 @@ msgid "Supplier Unit Price"
 msgstr "仕入先単価"
 
 msgid "Supplier unresolved"
-msgstr ""
+msgstr "仕入先が未解決"
 
 msgid "Supplier updated"
 msgstr "仕入先が更新されました"
@@ -16608,9 +16625,6 @@ msgstr "税率"
 msgid "Tax Percent"
 msgstr "税率"
 
-msgid "Tax rate (0–1)"
-msgstr ""
-
 msgid "Tax Residual Value %"
 msgstr "税務残存価額 %"
 
@@ -16624,7 +16638,7 @@ msgid "Tax Useful Life (Months)"
 msgstr "税務耐用年数（月）"
 
 msgid "Tax, discounts, and shipping are represented correctly"
-msgstr ""
+msgstr "税金、値引、送料が正しく表示される"
 
 msgid "Tax:"
 msgstr "税:"
@@ -16880,7 +16894,7 @@ msgid "The department this one rolls up under for reporting and headcount hierar
 msgstr "レポートとヘッドカウント階層のために、このロールアップが行われるセクション。トップレベル部門の場合は空白のままにしてください。"
 
 msgid "The document changed while you were editing. Your unsaved edits are still here. Reload the latest saved review before submitting."
-msgstr ""
+msgstr "編集中に文書が変更されました。保存されていない編集内容はまだここにあります。送信する前に、最後に保存されたレビューを再読み込みします。"
 
 msgid "The early hours, {name}."
 msgstr "早朝の時間、{name}。"
@@ -17006,7 +17020,7 @@ msgid "The inventory cost recognized when a shipment posts, valued by the item's
 msgstr "出荷が転記されるときに認識されるインベントリコスト。品目の原価計算方法で評価されます。"
 
 msgid "The invoice remains a draft. Inventory and payments are unchanged."
-msgstr ""
+msgstr "請求書はまだ下書きのままです。在庫と支払いは変更ありません。"
 
 msgid "The IRS recovery-period class for this asset under MACRS (3, 5, 7, 10, 15, 20, 27.5, 39-year)."
 msgstr "MACRS（3、5、7、10、15、20、27.5、39年）に基づくこのアセットのIRS回収期間クラス。"
@@ -17121,7 +17135,7 @@ msgid "The negotiated price per unit on this line; the inline trace icon shows w
 msgstr "この明細の協議済み単価。この明細に表示されるトレースアイコンは、どの価格設定ルールまたは上書きが生成したかを示します。"
 
 msgid "The net unit price includes this discount"
-msgstr ""
+msgstr "正味単価にはこの値引が含まれます"
 
 msgid "The new version number of the document"
 msgstr "文書の新しいバージョン番号"
@@ -17254,7 +17268,7 @@ msgid "The reasons you record when you decline an RFQ"
 msgstr "RFQを辞退した理由を記録する"
 
 msgid "The receipt has no invoice number"
-msgstr ""
+msgstr "領収書には請求書番号がありません"
 
 msgid "The record a workflow notification points at, named as an id plus its kind; leave it empty and the notification links to the workflow run itself."
 msgstr "ワークフロー通知が指す レコード。ID とそのタイプで名前が付けられます。空のままにすると、通知はワークフロー実行そのものにリンクします。"
@@ -17545,7 +17559,7 @@ msgstr "このスキル"
 #. placeholder {0}: validation.newSupplierCount
 #. placeholder {1}: validation.newItemCount
 msgid "This approval will create {0} supplier(s) and {1} item(s)."
-msgstr ""
+msgstr "この承認により、{0} 個の仕入先と {1} 個のアイテムが作成されます。"
 
 msgid "This backup could not be completed."
 msgstr "このバックアップを完了できませんでした。"
@@ -17596,6 +17610,9 @@ msgstr "この検査計画"
 msgid "This invitation to join {0} has expired. You can request a new invite to be sent to your email."
 msgstr "この{0}への参加への招待は期限切れです。新しい招待をメールで送信されるようにリクエストできます。"
 
+msgid "This invoice documents a historical purchase. Check current stock before receiving inventory; purchase history does not establish today's stock balance."
+msgstr ""
+
 msgid "This invoice has no usable due date — choose one for Stripe."
 msgstr "この請求書には使用可能な支払期日がありません— Stripeのものを選択してください。"
 
@@ -17609,10 +17626,10 @@ msgid "This is a controlled environment, so two-factor authentication is require
 msgstr "これは管理されたリソースのため、二要素認証は全員に必須であり、無効にすることはできません。"
 
 msgid "This is a historical purchase. Document approval creates a draft or links evidence. Receiving inventory, accounting, and payment reconciliation remain separate actions."
-msgstr ""
+msgstr "これは歴史的な購入です。文書の承認により、下書きが作成されたり、証拠がリンクされたりします。在庫の受け取り、会計、支払いの調整は引き続き個別のアクションとなります。"
 
 msgid "This is a nonfinancial comment in the source"
-msgstr ""
+msgstr "これはソース内の非財務的なコメントです"
 
 msgid "This is a purchased item — it has no BoM/BoP; only its attributes and documents can change."
 msgstr "これは購買品目です。BOM/BoPはありません。属性とドキュメントのみが変更できます。"
@@ -17672,7 +17689,7 @@ msgid "This Month"
 msgstr "今月"
 
 msgid "This month:"
-msgstr ""
+msgstr "今月:"
 
 msgid "This operation can't be scheduled yet — the bar marks where it would run once the conflict is resolved. It isn't holding capacity."
 msgstr "この工程はまだスケジュールできません — バーは競合が解決されたら実行される場所をマークします。容量を保持していません。"
@@ -18286,10 +18303,10 @@ msgid "Unassigned"
 msgstr "未割り当て"
 
 msgid "Unavailable item"
-msgstr ""
+msgstr "利用できないアイテム"
 
 msgid "Unavailable supplier"
-msgstr ""
+msgstr "利用できない仕入先"
 
 msgid "Unballoon"
 msgstr "バルーンを削除"
@@ -18579,10 +18596,10 @@ msgid "Upload a PDF first"
 msgstr "まずPDFをアップロードしてください"
 
 msgid "Upload a receipt or review documents collected from Mercury and Gmail. Confirm suppliers, items, and amounts before creating a draft invoice."
-msgstr ""
+msgstr "領収書をアップロードするか、Mercury と Gmail から収集したドキュメントを確認します。請求書下書きを作成する前に、仕入先、品目、金額を確認してください。"
 
 msgid "Upload and review"
-msgstr ""
+msgstr "アップロードしてレビューする"
 
 msgid "Upload completed but no file path returned"
 msgstr "アップロードは完了しましたがファイルパスが返されませんでした"
@@ -18594,7 +18611,7 @@ msgid "Upload failed. Please try again."
 msgstr "アップロードに失敗しました。もう一度お試しください。"
 
 msgid "Upload receipt or invoice"
-msgstr ""
+msgstr "領収書または請求書のアップロード"
 
 msgid "Uploaded model"
 msgstr "モデルをアップロードしました"
@@ -18656,16 +18673,16 @@ msgid "Use metric system for default material dimensions."
 msgstr "デフォルト材料ディメンションにメートル法を使用してください。"
 
 msgid "Use proposal"
-msgstr ""
+msgstr "利用提案"
 
 msgid "Use suggested supplier"
-msgstr ""
+msgstr "推奨された仕入先を使用する"
 
 msgid "Use suggestion and review units"
-msgstr ""
+msgstr "提案とレビューのユニットを使用する"
 
 msgid "used"
-msgstr ""
+msgstr "使用済み"
 
 msgid "Used In"
 msgstr "使用されている"
@@ -19068,7 +19085,7 @@ msgid "Waited"
 msgstr "待機"
 
 msgid "Waiting for documents"
-msgstr ""
+msgstr "ドキュメント待ち"
 
 msgid "Walk each area with your champion and toggle anything out of scope. Codes read Module.Area.Number (ACC.GL.01 = Accounting, General Ledger, item 1)."
 msgstr "各エリアをチャンピオンと一緒に確認し、スコープ外のものをチェック解除してください。コードの読み方はModule.Area.Numberです（ACC.GL.01 = 会計、総勘定元帳、項目1）。"

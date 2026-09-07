@@ -60,6 +60,8 @@ type MaterialFormProps = {
   initialValues: z.infer<typeof materialValidator> & { tags?: string[] };
   type?: "card" | "modal";
   onClose?: () => void;
+  /** Capture a validated proposal without writing a master record. */
+  onPropose?: (values: Record<string, unknown>, formData: FormData) => void;
 };
 
 function startsWithLetter(value: string) {
@@ -69,7 +71,8 @@ function startsWithLetter(value: string) {
 const MaterialForm = ({
   initialValues,
   type = "card",
-  onClose
+  onClose,
+  onPropose
 }: MaterialFormProps) => {
   const { t } = useLingui();
   const [materialId, setMaterialId] = useState(initialValues.id ?? "");
@@ -162,10 +165,23 @@ const MaterialForm = ({
             validator={
               useCustomId
                 ? materialValidator
-                : materialValidatorWithGeneratedIds
+                : onPropose
+                  ? materialValidator.and(materialValidatorWithGeneratedIds)
+                  : materialValidatorWithGeneratedIds
             }
             defaultValues={initialValues}
             fetcher={fetcher}
+            onSubmit={
+              onPropose
+                ? (values, event) => {
+                    event.preventDefault();
+                    onPropose(
+                      values,
+                      new FormData(event.target as HTMLFormElement)
+                    );
+                  }
+                : undefined
+            }
           >
             <ModalCardHeader>
               <ModalCardTitle>
@@ -355,7 +371,7 @@ const MaterialForm = ({
                 isLoading={fetcher.state !== "idle"}
                 isDisabled={!permissions.can("create", "parts")}
               >
-                <Trans>Save</Trans>
+                {onPropose ? <Trans>Use proposal</Trans> : <Trans>Save</Trans>}
               </Submit>
             </ModalCardFooter>
           </ValidatedForm>

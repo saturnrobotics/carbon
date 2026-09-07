@@ -7,6 +7,7 @@ import type { getItemPostingGroupsList } from "~/modules/items";
 import ItemPostingGroupForm from "~/modules/items/ui/ItemPostingGroups/ItemPostingGroupForm";
 import { path } from "~/utils/path";
 import { Enumerable } from "../Enumerable";
+import { useDeferredMasterCreation } from "./DeferredMasterCreation";
 import { useEmptyState } from "./emptyStates";
 
 type ItemPostingGroupSelectProps = Omit<
@@ -25,6 +26,7 @@ const ItemPostingGroupPreview = (
 };
 
 const ItemPostingGroup = (props: ItemPostingGroupSelectProps) => {
+  const deferCreation = useDeferredMasterCreation();
   const newItemPostingGroupModal = useDisclosure();
   const [created, setCreated] = useState<string>("");
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -49,10 +51,14 @@ const ItemPostingGroup = (props: ItemPostingGroupSelectProps) => {
         {...props}
         inline={props.inline ? ItemPostingGroupPreview : undefined}
         label={props?.label ?? "Posting Group"}
-        onCreateOption={(option) => {
-          newItemPostingGroupModal.onOpen();
-          setCreated(option);
-        }}
+        onCreateOption={
+          deferCreation
+            ? undefined
+            : (option) => {
+                newItemPostingGroupModal.onOpen();
+                setCreated(option);
+              }
+        }
       />
       {newItemPostingGroupModal.isOpen && (
         <ItemPostingGroupForm

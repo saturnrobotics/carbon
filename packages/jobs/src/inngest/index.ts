@@ -4,6 +4,10 @@ import "@carbon/lib/shims";
 
 // Re-export the inngest client and helpers
 
+export {
+  type InvoiceIntakeValidationContext,
+  setInvoiceIntakeValidation
+} from "../invoice-intake/validation.ts";
 // Server-only on purpose: the app bundle imports `@carbon/jobs`, not this subpath.
 export type {
   DispatchContext,
@@ -28,6 +32,15 @@ import {
   workflowFunction
 } from "./functions/events";
 import { extractDocumentFunction } from "./functions/extraction";
+import {
+  invoiceIntakeAttachmentFunction,
+  invoiceIntakeBackfillFunction,
+  invoiceIntakeFunction,
+  invoiceIntakeMatchFunction,
+  invoiceIntakeReconcileFunction,
+  invoiceIntakeSourceRecoveryFunction,
+  invoiceIntakeValidationFunction
+} from "./functions/extraction/invoice-intake";
 import {
   accountingBackfillFunction,
   accountingConsolidationFunction,
@@ -172,5 +185,12 @@ export const functions = [
   stripeConnectPullSweepFunction,
   timeCardAutoCloseFunction,
   // Document extraction
-  extractDocumentFunction
+  extractDocumentFunction,
+  invoiceIntakeValidationFunction,
+  invoiceIntakeAttachmentFunction,
+  invoiceIntakeBackfillFunction,
+  invoiceIntakeFunction,
+  invoiceIntakeMatchFunction,
+  invoiceIntakeReconcileFunction,
+  invoiceIntakeSourceRecoveryFunction
 ];

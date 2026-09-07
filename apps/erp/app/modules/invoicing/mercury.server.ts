@@ -1,10 +1,10 @@
-import { createHash } from "node:crypto";
 import type { Database } from "@carbon/database";
 import { fetchAllFromTable } from "@carbon/database";
 import type { Kysely, KyselyDatabase } from "@carbon/database/client";
 import {
   approveMercuryImport,
   isMercuryAttachmentPath,
+  lockCompanyInvoiceApproval,
   type MercuryApprovalInput,
   MercuryImportError,
   parseMercuryAttachments,
@@ -120,10 +120,28 @@ export async function getMercuryReviewPage(
   ]);
   if (settings.error || imports.error || invoices.error)
     throw new Error("Unable to load payment imports");
+  const importIds = (imports.data ?? []).slice(0, 50).map((row) => row.id);
+  const intakeSources = importIds.length
+    ? await client
+        .from("invoiceIntakeSource")
+        .select("mercuryImportId,intakeId")
+        .eq("companyId", companyId)
+        .in("mercuryImportId", importIds)
+        .order("createdAt", { ascending: false })
+    : { data: [], error: null };
+  if (intakeSources.error)
+    throw new Error("Unable to load invoice document links");
+  const intakeIds = new Map(
+    (intakeSources.data ?? []).map((source) => [
+      source.mercuryImportId,
+      source.intakeId
+    ])
+  );
   return {
     settings: settings.data,
     imports: (imports.data ?? []).slice(0, 50).map((record) => ({
       ...record,
+      invoiceIntakeId: intakeIds.get(record.id) ?? null,
       vendorSuggestion: parseMercuryVendorSuggestion(record.vendorSuggestion),
       invoiceEvidence: parseMercuryInvoiceEvidence(record.invoiceEvidence),
       attachments: parseMercuryAttachments(record.attachments).filter(
@@ -201,22 +219,151 @@ export async function setMercuryReviewStatus(
   importId: string,
   reviewStatus: "Pending" | "Ignored"
 ) {
-  const result = await db
-    .updateTable("mercuryTransactionImport")
-    .set({
-      reviewStatus,
-      updatedBy: userId,
-      updatedAt: sql<string>`now()`
-    })
-    .where("id", "=", importId)
-    .where("companyId", "=", companyId)
-    .where("purchaseInvoiceId", "is", null)
-    .returning("id")
-    .executeTakeFirst();
-  if (!result)
+  await db.transaction().execute(async (trx) => {
+    await lockCompanyInvoiceApproval(trx, companyId);
+    const imported = await trx
+      .selectFrom("mercuryTransactionImport")
+      .select("id")
+      .where("id", "=", importId)
+      .where("companyId", "=", companyId)
+      .where("purchaseInvoiceId", "is", null)
+      .forUpdate()
+      .executeTakeFirst();
+    if (!imported)
+      throw new MercuryImportError(
+        "This payment is unavailable or already has an invoice"
+      );
+    const sources = await trx
+      .selectFrom("invoiceIntakeSource")
+      .select("intakeId")
+      .where("companyId", "=", companyId)
+      .where("mercuryImportId", "=", importId)
+      .execute();
+    const ids = [...new Set(sources.map((source) => source.intakeId))].sort();
+    if (ids.length)
+      await trx
+        .selectFrom("invoiceIntake")
+        .select("id")
+        .where("companyId", "=", companyId)
+        .where("id", "in", ids)
+        .orderBy("id")
+        .forUpdate()
+        .execute();
+    await trx
+      .updateTable("mercuryTransactionImport")
+      .set({ reviewStatus, updatedBy: userId, updatedAt: sql<string>`now()` })
+      .where("id", "=", importId)
+      .where("companyId", "=", companyId)
+      .execute();
+    if (ids.length) {
+      let related = trx
+        .updateTable("invoiceIntake")
+        .set({
+          status:
+            reviewStatus === "Ignored"
+              ? "Ignored"
+              : sql<string>`CASE WHEN EXISTS (
+          SELECT 1 FROM "invoiceIntakeSource" s WHERE s."companyId"="invoiceIntake"."companyId" AND s."intakeId"="invoiceIntake".id AND s."storagePath" IS NOT NULL
+        ) THEN 'NeedsReview' ELSE 'NeedsDocument' END`,
+          revision: sql<number>`revision+1`,
+          updatedBy: userId,
+          updatedAt: sql<string>`now()`
+        })
+        .where("companyId", "=", companyId)
+        .where("id", "in", ids);
+      related =
+        reviewStatus === "Ignored"
+          ? related.where("status", "not in", ["Approved", "Linked"])
+          : related.where("status", "=", "Ignored");
+      await related.execute();
+    }
+  });
+}
+
+/** Register local evidence for review without creating any supplier, item or invoice. */
+export async function openMercuryInvoiceReview(
+  db: Kysely<KyselyDatabase>,
+  client: SupabaseClient<Database>,
+  actor: { companyId: string; userId: string },
+  importId: string
+) {
+  const { registerMercuryInvoiceSources } = await import(
+    "@carbon/jobs/invoice-intake"
+  );
+  const registered = await registerMercuryInvoiceSources(
+    { db, storage: client.storage, ...actor },
+    importId
+  );
+  if (registered.needsDispatch) {
+    try {
+      const { trigger } = await import("@carbon/jobs");
+      await trigger("invoice-intake", {
+        companyId: actor.companyId,
+        intakeId: registered.intakeId,
+        generation: registered.generation
+      });
+    } catch {
+      /* Durable queue reconciliation retries delivery without repeating approval. */
+    }
+  }
+  return registered;
+}
+
+/** Explicit read-only bank/mailbox refresh. Credentials never leave this server helper. */
+export async function refreshMercuryInvoiceDocuments(
+  db: Kysely<KyselyDatabase>,
+  client: SupabaseClient<Database>,
+  actor: { companyId: string; userId: string },
+  importId: string
+) {
+  const connection = getMercuryConnectionStatus(actor.companyId);
+  if (!connection.mercuryReady)
     throw new MercuryImportError(
-      "This payment is unavailable or already has an invoice"
+      "Configure the Mercury connection before refreshing documents"
     );
+  const {
+    refreshMercurySupportingDocuments,
+    MercuryClient,
+    parseGmailAccounts
+  } = await import("@carbon/jobs/invoice-intake");
+  let mailboxes: ReturnType<typeof parseGmailAccounts> = [];
+  let gmailConfigError: string | undefined;
+  try {
+    mailboxes = parseGmailAccounts(optionalSecret("GMAIL_ACCOUNTS_JSON"));
+  } catch {
+    gmailConfigError = "gmail_configuration_invalid";
+  }
+  try {
+    const refreshed = await refreshMercurySupportingDocuments(
+      {
+        db,
+        storage: client.storage,
+        companyId: actor.companyId,
+        mercury: new MercuryClient(optionalSecret("MERCURY_API_TOKEN")!),
+        mailboxes,
+        gmailConfigError
+      },
+      actor.userId,
+      importId
+    );
+    if (refreshed.state === "busy")
+      throw new MercuryImportError(
+        "A payment sync is already running. Try refreshing documents after it finishes."
+      );
+    if (refreshed.state === "disabled")
+      throw new MercuryImportError(
+        "Enable payment sync before refreshing Mercury and Gmail documents."
+      );
+    return {
+      ...(await openMercuryInvoiceReview(db, client, actor, importId)),
+      refreshState: refreshed.state
+    };
+  } catch (error) {
+    if (error instanceof MercuryImportError) throw error;
+    throw new MercuryImportError(
+      "Unable to refresh supporting documents. Check the read-only Mercury and Gmail connections, then retry."
+    );
+  }
 }
 
 export async function approveMercuryReview(
@@ -225,31 +372,16 @@ export async function approveMercuryReview(
   input: MercuryApprovalInput
 ) {
   const result = await approveMercuryImport(db, input);
-  const folder = `${input.companyId}/supplier-interaction/${result.interactionId}`;
-  const bucket = client.storage.from("private");
   let attachmentError = false;
+  let intakeId: string | undefined;
   try {
-    const existing = await bucket.list(folder, { limit: 1000 });
-    if (existing.error) throw new Error("Attachment listing failed");
-    const names = new Set(existing.data.map(({ name }) => name));
-    const copies = await Promise.all(
-      result.attachments.map(async (attachment) => {
-        if (!isMercuryAttachmentPath(input.companyId, attachment.path))
-          return false;
-        const hash = createHash("sha256")
-          .update(attachment.path)
-          .digest("hex")
-          .slice(0, 16);
-        const name = `${hash}-${attachment.fileName.replace(/[^a-zA-Z0-9._-]/g, "-").slice(-160) || "invoice"}`;
-        if (names.has(name)) return true;
-        const copied = await bucket.copy(attachment.path, `${folder}/${name}`);
-        if (!copied.error) return true;
-        // A concurrent retry may have copied the same immutable source already.
-        const check = await bucket.list(folder, { search: name, limit: 10 });
-        return !check.error && check.data.some((file) => file.name === name);
-      })
+    const registered = await openMercuryInvoiceReview(
+      db,
+      client,
+      input,
+      input.importId
     );
-    attachmentError = copies.some((copied) => !copied);
+    intakeId = registered.intakeId;
   } catch {
     attachmentError = true;
   }
@@ -263,5 +395,5 @@ export async function approveMercuryReview(
     .where("id", "=", input.importId)
     .where("companyId", "=", input.companyId)
     .execute();
-  return { invoiceId: result.invoiceId, attachmentError };
+  return { invoiceId: result.invoiceId, intakeId, attachmentError };
 }

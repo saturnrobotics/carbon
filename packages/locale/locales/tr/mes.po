@@ -1339,7 +1339,7 @@ msgid "Source"
 msgstr "Kaynak"
 
 msgid "Source code"
-msgstr ""
+msgstr "Kaynak kodu"
 
 msgid "Spare Parts"
 msgstr "Yedek Parçalar"

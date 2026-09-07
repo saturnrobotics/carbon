@@ -10,6 +10,7 @@ import type {
 } from "~/modules/items";
 import MaterialDimensionForm from "~/modules/items/ui/MaterialDimensions/MaterialDimensionForm";
 import { path } from "~/utils/path";
+import { useDeferredMasterCreation } from "./DeferredMasterCreation";
 import { useEmptyState } from "./emptyStates";
 
 type MaterialDimensionSelectProps = Omit<
@@ -31,6 +32,7 @@ const MaterialDimensionPreview = (
 };
 
 const MaterialDimension = (props: MaterialDimensionSelectProps) => {
+  const deferCreation = useDeferredMasterCreation();
   const { t } = useLingui();
   const materialDimensionsLoader =
     useFetcher<Awaited<ReturnType<typeof getMaterialDimensionList>>>();
@@ -98,10 +100,14 @@ const MaterialDimension = (props: MaterialDimensionSelectProps) => {
         label={props?.label ?? "Dimensions"}
         emptyMessage={emptyMessage}
         onChange={onChange}
-        onCreateOption={(option) => {
-          newDimensionModal.onOpen();
-          setCreated(option);
-        }}
+        onCreateOption={
+          deferCreation
+            ? undefined
+            : (option) => {
+                newDimensionModal.onOpen();
+                setCreated(option);
+              }
+        }
       />
       {newDimensionModal.isOpen && (
         <MaterialDimensionForm

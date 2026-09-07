@@ -1339,7 +1339,7 @@ msgid "Source"
 msgstr "Source"
 
 msgid "Source code"
-msgstr ""
+msgstr "Code source"
 
 msgid "Spare Parts"
 msgstr "Pièces de rechange"

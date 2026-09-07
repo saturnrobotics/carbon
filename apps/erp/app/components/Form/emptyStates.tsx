@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { Link } from "react-router";
 import { usePermissions } from "~/hooks";
 import { path } from "~/utils/path";
+import { useDeferredMasterCreation } from "./DeferredMasterCreation";
 
 type Action = "view" | "create" | "update" | "delete";
 
@@ -435,6 +436,16 @@ export const useEmptyState = (
   const { t } = useLingui();
   const permissions = usePermissions();
   const copy = useEntityCopy(entity);
+  const deferCreation = useDeferredMasterCreation();
+
+  if (deferCreation) {
+    return (
+      <FieldEmptyState
+        title={t`No ${copy.pluralNoun} yet`}
+        description={t`Save this review, add the required definition in ${copy.moduleLabel}, and reopen the proposal to select it.`}
+      />
+    );
+  }
 
   if (!permissions.can(copy.action, copy.module)) {
     return (

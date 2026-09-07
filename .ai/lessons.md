@@ -1,5 +1,15 @@
 # Lessons Learned
 
+## Generated-ID proposal forms must retain the complete item contract
+
+**Context:** Reusing a native Material form as a proposal inside invoice review.
+
+**Problem:** The normal generated-ID validator returns only material naming and taxonomy fields. Passing that result into a deferred item proposal silently drops tracking, purchasing method, replenishment, and unit fields displayed in the form.
+
+**Rule:** In proposal mode, validate the full item contract together with the generated-ID requirements. Verify the saved proposal and the final approval, since a successful form submit alone does not prove the proposal contains the data required by the transactional creator.
+
+**Applies to:** Generated material IDs and other native forms reused for deferred master creation.
+
 Recurring patterns and mistakes to avoid. Review at session start for relevant tasks.
 
 Format: `Context → Problem → Rule → Applies to`
@@ -1446,3 +1456,23 @@ full-screen ERP route.
 **Rule:** When triaging sweep failures, grep the response bodies for known fallback strings (`"Failed to *"` service fallbacks, `getEdgeFunctionErrorMessage` second arguments) and treat each match as a defect to root-cause: either the advertised schema disagrees with the actual acceptor (enum/shape drift between a `.models.ts` validator and an edge function's `payloadValidator`), or an error-sanitization layer is eating a legible message. Published-schema enums must be exactly what the write path accepts — never a wider "domain" enum reused for convenience.
 
 **Applies to:** API/MCP sweep scripts, `apps/erp/app/modules/*/[a-z]*.models.ts` validators that feed `client.functions.invoke` wrappers, `packages/database/supabase/functions/lib/response.ts`, `apps/erp/app/utils/error.ts`.
+
+## Preserve full database revision precision across the driver boundary
+
+**Context:** Comparing a reviewed draft with its stored PostgreSQL revision before merging invoice lines.
+
+**Problem:** PostgreSQL drivers can return JavaScript Date objects despite generated string types, truncating timestamp precision if application code converts them.
+
+**Rule:** Select date-only values and optimistic-concurrency timestamp tokens as SQL `::text`, then compare the unchanged server token inside the transaction. Use the normal date utilities for user-facing dates.
+
+**Applies to:** Invoice intake, Kysely/pg revision checks, and edits of existing financial documents.
+
+## Nested create controls must honor proposal-only forms
+
+**Context:** Reusing native supplier and item forms to collect proposed records for later transactional approval.
+
+**Problem:** Preventing the outer form submit did not prevent nested creatable selectors or CAD upload controls from writing records early.
+
+**Rule:** Explicitly defer nested master creation and uploads in proposal mode. Keep ordinary forms unchanged, retain existing selector options, and create proposed masters only in the final authorized transaction.
+
+**Applies to:** Reused forms in staged document-review and approval flows.

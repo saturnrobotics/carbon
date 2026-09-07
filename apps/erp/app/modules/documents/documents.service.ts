@@ -1,6 +1,8 @@
 import type { Database } from "@carbon/database";
+import type { Kysely, KyselyDatabase } from "@carbon/database/client";
 import { trigger } from "@carbon/jobs";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { sql } from "kysely";
 import type { z } from "zod";
 import type { GenericQueryFilters } from "~/utils/query";
 import { setGenericQueryFilters } from "~/utils/query";
@@ -246,10 +248,10 @@ export async function updateDocumentLabels(
 }
 
 export async function insertDocumentExtraction(
-  client: SupabaseClient<Database>,
-  data: {
+  db: Kysely<KyselyDatabase>,
+  input: {
     storagePath: string;
-    documentType: "purchaseInvoice" | "salesRfq";
+    documentType: "salesRfq";
     sourceDocument: string;
     sourceDocumentId?: string;
     companyId: string;
@@ -259,38 +261,54 @@ export async function insertDocumentExtraction(
   data: { id: string; companyId: string } | null;
   error: { message: string } | null;
 }> {
-  const result = await client
-    .from("documentExtraction")
-    .insert(data)
-    .select("id, companyId")
-    .single();
-
-  if (result.error || !result.data) {
-    return { data: result.data, error: result.error };
+  if (
+    !input.storagePath.startsWith(`${input.companyId}/extractions/`) ||
+    input.storagePath
+      .split("/")
+      .some((part) => !part || part === "." || part === "..") ||
+    Array.from(input.storagePath).some(
+      (character) => character === "\\" || character.charCodeAt(0) < 32
+    ) ||
+    input.sourceDocument !== "Request for Quote"
+  ) {
+    return { data: null, error: { message: "Invalid RFQ source" } };
   }
-
-  // Enqueue the Inngest job. If enqueue fails the row would otherwise sit at
-  // `pending` forever, so mark it failed and surface the error to the caller.
+  const access = await sql<{ allowed: boolean }>`SELECT EXISTS (
+    SELECT 1 FROM employee e JOIN "user" u ON u.id=e.id
+    JOIN "userToCompany" c ON c."userId"=e.id AND c."companyId"=e."companyId"
+    JOIN "userPermission" p ON p.id=e.id
+    WHERE e.id=${input.createdBy} AND e."companyId"=${input.companyId}
+      AND e.active AND u.active AND c.role='employee'
+      AND p.permissions->'sales_view' @> ${JSON.stringify([input.companyId])}::jsonb
+  ) AS allowed`.execute(db);
+  if (!access.rows[0]?.allowed)
+    return { data: null, error: { message: "RFQ access denied" } };
+  const result = await db
+    .insertInto("documentExtraction")
+    .values(input)
+    .returning(["id", "companyId"])
+    .executeTakeFirstOrThrow();
   try {
     await trigger("extract-document", {
-      documentExtractionId: result.data.id,
-      companyId: result.data.companyId
+      documentExtractionId: result.id,
+      companyId: result.companyId
     });
-  } catch (err) {
-    const message =
-      err instanceof Error ? err.message : "Failed to enqueue extraction job";
-    await client
-      .from("documentExtraction")
-      .update({
+  } catch {
+    await db
+      .updateTable("documentExtraction")
+      .set({
         status: "failed",
-        error: message,
-        updatedBy: data.createdBy,
-        updatedAt: new Date().toISOString()
+        error: "Failed to queue extraction; please retry",
+        updatedBy: input.createdBy,
+        updatedAt: sql`now()`
       })
-      .eq("id", result.data.id)
-      .eq("companyId", result.data.companyId);
-    return { data: result.data, error: { message } };
+      .where("id", "=", result.id)
+      .where("companyId", "=", result.companyId)
+      .execute();
+    return {
+      data: result,
+      error: { message: "Failed to queue extraction; please retry" }
+    };
   }
-
-  return { data: result.data, error: null };
+  return { data: result, error: null };
 }

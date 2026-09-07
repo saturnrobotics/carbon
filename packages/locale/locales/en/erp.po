@@ -109,6 +109,11 @@ msgstr "{0} jobs created"
 msgid "{0} lines to map"
 msgstr "{0} lines to map"
 
+#. placeholder {0}: intake.newSupplierCount
+#. placeholder {1}: intake.newItemCount
+msgid "{0} new supplier(s), {1} new item(s)"
+msgstr "{0} new supplier(s), {1} new item(s)"
+
 #. placeholder {0}: mappingReadiness.mapped
 #. placeholder {1}: mappingReadiness.required
 msgid "{0} of {1} posting accounts mapped"
@@ -4203,6 +4208,9 @@ msgstr "Copy training unique identifier"
 msgid "Copy week"
 msgstr "Copy week"
 
+msgid "Copying the attachment to the invoice. The original document remains available in its review."
+msgstr "Copying the attachment to the invoice. The original document remains available in its review."
+
 msgid "Correct"
 msgstr "Correct"
 
@@ -4715,9 +4723,6 @@ msgstr "Current projection"
 
 msgid "Current quantity"
 msgstr "Current quantity"
-
-msgid "Currently linked invoice"
-msgstr "Currently linked invoice"
 
 msgid "Custom"
 msgstr "Custom"
@@ -8790,6 +8795,9 @@ msgstr "Invited"
 msgid "Invoice"
 msgstr "Invoice"
 
+msgid "Invoice attachment copy needs retrying. The original document remains available in its review; automatic retry is scheduled."
+msgstr "Invoice attachment copy needs retrying. The original document remains available in its review; automatic retry is scheduled."
+
 msgid "Invoice Contact"
 msgstr "Invoice Contact"
 
@@ -11696,6 +11704,9 @@ msgstr "Open Dispatches"
 msgid "Open document review"
 msgstr "Open document review"
 
+msgid "Open document review and original attachment"
+msgstr "Open document review and original attachment"
+
 msgid "Open in Carbon"
 msgstr "Open in Carbon"
 
@@ -13169,6 +13180,9 @@ msgstr "Purchasing Invoices"
 
 msgid "Purchasing Unit of Measure"
 msgstr "Purchasing Unit of Measure"
+
+msgid "Purchasing update permission is required to save recognition rules."
+msgstr "Purchasing update permission is required to save recognition rules."
 
 msgid "Push"
 msgstr "Push"
@@ -15794,6 +15808,9 @@ msgstr "Source document readable"
 msgid "Source document total"
 msgstr "Source document total"
 
+msgid "Source documents"
+msgstr "Source documents"
+
 msgid "Source Item"
 msgstr "Source Item"
 
@@ -16608,9 +16625,6 @@ msgstr "Tax percent"
 
 msgid "Tax Percent"
 msgstr "Tax Percent"
-
-msgid "Tax rate (0–1)"
-msgstr "Tax rate (0–1)"
 
 msgid "Tax Residual Value %"
 msgstr "Tax Residual Value %"
@@ -17596,6 +17610,9 @@ msgstr "this inspection plan"
 #. placeholder {0}: company?.name ?? "Carbon"
 msgid "This invitation to join {0} has expired. You can request a new invite to be sent to your email."
 msgstr "This invitation to join {0} has expired. You can request a new invite to be sent to your email."
+
+msgid "This invoice documents a historical purchase. Check current stock before receiving inventory; purchase history does not establish today's stock balance."
+msgstr "This invoice documents a historical purchase. Check current stock before receiving inventory; purchase history does not establish today's stock balance."
 
 msgid "This invoice has no usable due date — choose one for Stripe."
 msgstr "This invoice has no usable due date — choose one for Stripe."

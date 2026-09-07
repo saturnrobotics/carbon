@@ -7,6 +7,7 @@ import { useFetcher } from "react-router";
 import type { getMaterialTypeList } from "~/modules/items";
 import MaterialTypeForm from "~/modules/items/ui/MaterialTypes/MaterialTypeForm";
 import { path } from "~/utils/path";
+import { useDeferredMasterCreation } from "./DeferredMasterCreation";
 import { useEmptyState } from "./emptyStates";
 
 type MaterialTypeSelectProps = Omit<
@@ -35,6 +36,7 @@ const MaterialTypePreview = (
 };
 
 const MaterialType = (props: MaterialTypeSelectProps) => {
+  const deferCreation = useDeferredMasterCreation();
   const { t } = useLingui();
   const newTypeModal = useDisclosure();
   const [created, setCreated] = useState<string>("");
@@ -74,10 +76,14 @@ const MaterialType = (props: MaterialTypeSelectProps) => {
         isOptional={props?.isOptional ?? true}
         label={props?.label ?? "Type"}
         onChange={onChange}
-        onCreateOption={(option) => {
-          newTypeModal.onOpen();
-          setCreated(option);
-        }}
+        onCreateOption={
+          deferCreation
+            ? undefined
+            : (option) => {
+                newTypeModal.onOpen();
+                setCreated(option);
+              }
+        }
       />
       {newTypeModal.isOpen && (
         <MaterialTypeForm

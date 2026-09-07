@@ -8,6 +8,7 @@ import type { getMaterialFormsList } from "~/modules/items";
 import { MaterialShapeForm } from "~/modules/items/ui/MaterialShapes";
 import { path } from "~/utils/path";
 import { Enumerable } from "../Enumerable";
+import { useDeferredMasterCreation } from "./DeferredMasterCreation";
 import { useEmptyState } from "./emptyStates";
 
 type ShapeSelectProps = Omit<ComboboxProps, "options" | "inline"> & {
@@ -24,6 +25,7 @@ const ShapePreview = (
 };
 
 const Shape = (props: ShapeSelectProps) => {
+  const deferCreation = useDeferredMasterCreation();
   const options = useShape();
   const permissions = usePermissions();
 
@@ -44,10 +46,14 @@ const Shape = (props: ShapeSelectProps) => {
         inline={props.inline ? ShapePreview : undefined}
         label={props?.label ?? "Shape"}
         emptyMessage={emptyMessage}
-        onCreateOption={(option) => {
-          newShapeModal.onOpen();
-          setCreated(option);
-        }}
+        onCreateOption={
+          deferCreation
+            ? undefined
+            : (option) => {
+                newShapeModal.onOpen();
+                setCreated(option);
+              }
+        }
       />
       {newShapeModal.isOpen && (
         <MaterialShapeForm

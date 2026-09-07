@@ -10,6 +10,7 @@ import type {
 } from "~/modules/items";
 import MaterialGradeForm from "~/modules/items/ui/MaterialGrades/MaterialGradeForm";
 import { path } from "~/utils/path";
+import { useDeferredMasterCreation } from "./DeferredMasterCreation";
 import { useEmptyState } from "./emptyStates";
 
 type MaterialGradeSelectProps = Omit<
@@ -31,6 +32,7 @@ const MaterialGradePreview = (
 };
 
 const MaterialGrade = (props: MaterialGradeSelectProps) => {
+  const deferCreation = useDeferredMasterCreation();
   const { t } = useLingui();
   const materialGradesLoader =
     useFetcher<Awaited<ReturnType<typeof getMaterialGradeList>>>();
@@ -94,10 +96,14 @@ const MaterialGrade = (props: MaterialGradeSelectProps) => {
         label={props?.label ?? "Grade"}
         emptyMessage={emptyMessage}
         onChange={onChange}
-        onCreateOption={(option) => {
-          newGradeModal.onOpen();
-          setCreated(option);
-        }}
+        onCreateOption={
+          deferCreation
+            ? undefined
+            : (option) => {
+                newGradeModal.onOpen();
+                setCreated(option);
+              }
+        }
       />
       {newGradeModal.isOpen && (
         <MaterialGradeForm

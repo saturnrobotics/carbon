@@ -10,6 +10,7 @@ import type {
 } from "~/modules/items";
 import MaterialFinishForm from "~/modules/items/ui/MaterialFinishes/MaterialFinishForm";
 import { path } from "~/utils/path";
+import { useDeferredMasterCreation } from "./DeferredMasterCreation";
 import { useEmptyState } from "./emptyStates";
 
 type MaterialFinishSelectProps = Omit<
@@ -31,6 +32,7 @@ const MaterialFinishPreview = (
 };
 
 const MaterialFinish = (props: MaterialFinishSelectProps) => {
+  const deferCreation = useDeferredMasterCreation();
   const { t } = useLingui();
   const materialFinishesLoader =
     useFetcher<Awaited<ReturnType<typeof getMaterialFinishList>>>();
@@ -98,10 +100,14 @@ const MaterialFinish = (props: MaterialFinishSelectProps) => {
         label={props?.label ?? "Finish"}
         emptyMessage={emptyMessage}
         onChange={onChange}
-        onCreateOption={(option) => {
-          newFinishModal.onOpen();
-          setCreated(option);
-        }}
+        onCreateOption={
+          deferCreation
+            ? undefined
+            : (option) => {
+                newFinishModal.onOpen();
+                setCreated(option);
+              }
+        }
       />
       {newFinishModal.isOpen && (
         <MaterialFinishForm

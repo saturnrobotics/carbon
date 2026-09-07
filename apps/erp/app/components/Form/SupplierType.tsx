@@ -6,13 +6,14 @@ import { useFetcher } from "react-router";
 import { Enumerable } from "~/components/Enumerable";
 import type { getSupplierTypesList } from "~/modules/purchasing";
 import SupplierTypeForm from "~/modules/purchasing/ui/SupplierTypes/SupplierTypeForm";
-
 import { path } from "~/utils/path";
+import { useDeferredMasterCreation } from "./DeferredMasterCreation";
 import { useEmptyState } from "./emptyStates";
 
 type SupplierTypeSelectProps = Omit<ComboboxProps, "options">;
 
 const SupplierType = (props: SupplierTypeSelectProps) => {
+  const deferCreation = useDeferredMasterCreation();
   const newSupplierTypeModal = useDisclosure();
   const [created, setCreated] = useState<string>("");
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -36,10 +37,14 @@ const SupplierType = (props: SupplierTypeSelectProps) => {
         emptyMessage={emptyMessage}
         {...props}
         label={props?.label ?? "SupplierType"}
-        onCreateOption={(option) => {
-          newSupplierTypeModal.onOpen();
-          setCreated(option);
-        }}
+        onCreateOption={
+          deferCreation
+            ? undefined
+            : (option) => {
+                newSupplierTypeModal.onOpen();
+                setCreated(option);
+              }
+        }
       />
       {newSupplierTypeModal.isOpen && (
         <SupplierTypeForm

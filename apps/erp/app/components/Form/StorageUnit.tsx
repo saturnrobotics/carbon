@@ -1,3 +1,4 @@
+import { useDeferredMasterCreation } from "./DeferredMasterCreation";
 // `<StorageUnit>` — the storage-unit (bin) picker. One component, two modes:
 // - with `name`    -> form-bound (`@carbon/form` CreatableCombobox)
 // - without `name` -> controlled (`value` + `onChange`) for table cells
@@ -286,6 +287,7 @@ function StorageUnit({
   const { triggerRef, onCreateOption, onOpen, node } =
     useNewStorageUnitModal(locationId);
   const readOnly = isReadOnly || disabled;
+  const deferCreation = useDeferredMasterCreation();
 
   const emptyMessage = useEmptyState(
     "storageUnit",
@@ -310,7 +312,9 @@ function StorageUnit({
           onClick={onClick}
           inline={inline ? storageUnitPreview : undefined}
           emptyMessage={emptyMessage}
-          onCreateOption={allowCreate ? onCreateOption : undefined}
+          onCreateOption={
+            allowCreate && !deferCreation ? onCreateOption : undefined
+          }
           onChange={(option) =>
             onChange?.(
               option
@@ -338,7 +342,9 @@ function StorageUnit({
         className={className}
         onClick={onClick}
         emptyMessage={emptyMessage}
-        onCreateOption={allowCreate ? onCreateOption : undefined}
+        onCreateOption={
+          allowCreate && !deferCreation ? onCreateOption : undefined
+        }
         onChange={(selected) =>
           onChange?.(selected ? toListItem(selected, options) : null)
         }

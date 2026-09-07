@@ -8,6 +8,7 @@ import type { getMaterialSubstancesList } from "~/modules/items";
 import { MaterialSubstanceForm } from "~/modules/items/ui/MaterialSubstances";
 import { path } from "~/utils/path";
 import { Enumerable } from "../Enumerable";
+import { useDeferredMasterCreation } from "./DeferredMasterCreation";
 import { useEmptyState } from "./emptyStates";
 
 type SubstanceSelectProps = Omit<ComboboxProps, "options" | "inline"> & {
@@ -24,6 +25,7 @@ const SubstancePreview = (
 };
 
 const Substance = (props: SubstanceSelectProps) => {
+  const deferCreation = useDeferredMasterCreation();
   const options = useSubstance();
   const permissions = usePermissions();
 
@@ -44,10 +46,14 @@ const Substance = (props: SubstanceSelectProps) => {
         inline={props.inline ? SubstancePreview : undefined}
         label={props?.label ?? "Substance"}
         emptyMessage={emptyMessage}
-        onCreateOption={(option) => {
-          newSubstanceModal.onOpen();
-          setCreated(option);
-        }}
+        onCreateOption={
+          deferCreation
+            ? undefined
+            : (option) => {
+                newSubstanceModal.onOpen();
+                setCreated(option);
+              }
+        }
       />
       {newSubstanceModal.isOpen && (
         <MaterialSubstanceForm

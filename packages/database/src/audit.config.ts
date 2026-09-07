@@ -363,6 +363,39 @@ export const auditConfig = {
       }
     },
 
+    invoiceIntake: {
+      label: "Invoice Document",
+      tables: {
+        invoiceIntake: {
+          role: "root",
+          createFields: ["status", "historical", "documentKind"]
+        },
+        invoiceIntakeSource: { entityIdColumn: "intakeId" },
+        invoiceIntakeLine: { entityIdColumn: "intakeId" }
+      }
+    },
+
+    invoiceRecognitionRule: {
+      label: "Invoice Recognition Rule",
+      tables: {
+        invoiceRecognitionRule: {
+          role: "root",
+          createFields: [
+            "kind",
+            "supplierId",
+            "itemId",
+            "supplierPartId",
+            "purchaseUnit",
+            "stockUnit",
+            "conversionFactor",
+            "active",
+            "version",
+            "supersedesId"
+          ]
+        }
+      }
+    },
+
     salesQuote: {
       label: "Quote",
       tables: {
@@ -643,6 +676,10 @@ export const auditConfig = {
     salesInvoiceShipment: "Shipment",
     purchaseInvoice: "Purchase Invoice",
     purchaseInvoiceLine: "Line Item",
+    invoiceIntake: "Invoice Document",
+    invoiceIntakeSource: "Document Source",
+    invoiceIntakeLine: "Document Line",
+    invoiceRecognitionRule: "Recognition Rule",
     quote: "Quote",
     quoteLine: "Line Item",
     supplierQuote: "Supplier Quote",

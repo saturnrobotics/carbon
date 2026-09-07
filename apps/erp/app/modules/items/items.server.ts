@@ -1,13 +1,16 @@
 import { error } from "@carbon/auth";
 import { flash } from "@carbon/auth/session.server";
-import type { Database } from "@carbon/database";
-import type { Kysely, KyselyDatabase } from "@carbon/database/client";
+import type { Database, Json } from "@carbon/database";
+import type { Kysely, KyselyDatabase, KyselyTx } from "@carbon/database/client";
 import { trigger } from "@carbon/jobs";
 import { getLogger } from "@carbon/logger";
 import { NotificationEvent } from "@carbon/notifications";
 import { chunkArray } from "@carbon/utils";
+import { parseDate } from "@internationalized/date";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { sql } from "kysely";
 import { data } from "react-router";
+import { z } from "zod";
 import {
   activateMethodVersion,
   findChangeNoticesForItem,
@@ -21,8 +24,19 @@ import {
   canEditChangeNoticeWorkflow,
   changeNoticeLockedMessage,
   changeNoticeOpenStatuses,
-  supersessionModes
+  consumableValidator,
+  materialValidator,
+  partValidator,
+  serviceValidator,
+  supersessionModes,
+  toolValidator
 } from "./items.models";
+import {
+  prepareCreatedItem,
+  prepareCreatedItemCost,
+  prepareCreatedItemSubtype,
+  prepareCreatedMaterial
+} from "./items.service";
 
 const logger = getLogger("erp", "change-orders");
 
@@ -855,4 +869,432 @@ export function unreleasedChangeOrderItemsMessage(
         `${item.itemName} was created by change order ${item.changeOrderReadableId}, which has not been released yet.`
     )
     .join(" ");
+}
+
+export type ReviewedMasterActor = { companyId: string; userId: string };
+export type ReviewedItemType =
+  | "Part"
+  | "Material"
+  | "Consumable"
+  | "Tool"
+  | "Service";
+export type ReviewedItemInput = {
+  type: ReviewedItemType;
+  data: Record<string, unknown>;
+  customFields?: Json;
+};
+
+type ReviewedItemValues =
+  | z.infer<typeof partValidator>
+  | z.infer<typeof materialValidator>
+  | z.infer<typeof consumableValidator>
+  | z.infer<typeof toolValidator>
+  | z.infer<typeof serviceValidator>;
+type ReviewedCustomField = Pick<
+  Database["public"]["Tables"]["customField"]["Row"],
+  "id" | "table" | "dataTypeId" | "required" | "tags" | "listOptions"
+>;
+
+type ReviewedReference = {
+  kind: string;
+  id: string;
+  parentA: string | null;
+  parentB: string | null;
+};
+
+const reviewedItemValidators = {
+  Part: partValidator,
+  Material: materialValidator,
+  Consumable: consumableValidator,
+  Tool: toolValidator,
+  Service: serviceValidator
+};
+const reviewedItemTables = {
+  Part: "part",
+  Material: "material",
+  Consumable: "consumable",
+  Tool: "tool",
+  Service: "service"
+} as const;
+
+export function parseReviewedItemTags(data: Record<string, unknown>) {
+  return z
+    .array(z.string().min(1).max(100))
+    .max(100)
+    .default([])
+    .parse(data.tags);
+}
+
+/** This is shared by reviewed supplier/item creation; definitions come from the company. */
+export function validateReviewedCustomFields(
+  definitions: ReviewedCustomField[],
+  table: string,
+  fields: Json | undefined,
+  tags: string[] = []
+): Array<{ kind: "user" | "customer" | "supplier"; id: string }> {
+  if (
+    fields !== undefined &&
+    fields !== null &&
+    (typeof fields !== "object" || Array.isArray(fields))
+  ) {
+    throw new Error("Custom fields must be an object");
+  }
+  const values = (fields ?? {}) as Record<string, Json | undefined>;
+  const applicable = definitions.filter(
+    (field) =>
+      field.table === table &&
+      (!field.tags?.length || field.tags.some((tag) => tags.includes(tag)))
+  );
+  const knownIds = new Set(applicable.map((field) => field.id));
+  if (Object.keys(values).some((id) => !knownIds.has(id))) {
+    throw new Error("Custom field is unavailable for this record");
+  }
+  const references: Array<{
+    kind: "user" | "customer" | "supplier";
+    id: string;
+  }> = [];
+  for (const field of applicable) {
+    const value = values[field.id];
+    const empty =
+      value === undefined ||
+      value === null ||
+      (typeof value === "string" && value.trim() === "");
+    if (empty) {
+      // Boolean fields have the native form's false/unchecked semantics.
+      if (field.required && field.dataTypeId !== 1)
+        throw new Error("A required custom field is empty");
+      continue;
+    }
+    if (
+      field.dataTypeId === 1 &&
+      typeof value !== "boolean" &&
+      !["true", "false", "on"].includes(String(value))
+    ) {
+      throw new Error("Custom field boolean is invalid");
+    }
+    if (field.dataTypeId === 2) {
+      if (typeof value !== "string")
+        throw new Error("Custom field date is invalid");
+      parseDate(value);
+    }
+    if (
+      field.dataTypeId === 3 &&
+      (typeof value !== "string" || !field.listOptions?.includes(value))
+    ) {
+      throw new Error("Custom field option is invalid");
+    }
+    if (
+      field.dataTypeId === 4 &&
+      ((typeof value !== "string" && typeof value !== "number") ||
+        !Number.isFinite(Number(value)))
+    ) {
+      throw new Error("Custom field number is invalid");
+    }
+    if (
+      [5, 6, 7, 8, 9].includes(field.dataTypeId) &&
+      typeof value !== "string"
+    ) {
+      throw new Error("Custom field value is invalid");
+    }
+    if ([6, 7, 8].includes(field.dataTypeId)) {
+      references.push({
+        kind:
+          field.dataTypeId === 6
+            ? "user"
+            : field.dataTypeId === 7
+              ? "customer"
+              : "supplier",
+        id: String(value)
+      });
+    }
+  }
+  return references;
+}
+
+export type ReviewedItemCreationContext = {
+  companyId: string;
+  userId: string;
+  transaction: KyselyTx;
+  values: Map<ReviewedItemInput, ReviewedItemValues>;
+  references: Map<string, ReviewedReference>;
+};
+
+/** Batch all reference reads once before creating multiple reviewed items. */
+export async function prepareReviewedItemCreations(
+  trx: KyselyTx,
+  actor: ReviewedMasterActor,
+  inputs: ReviewedItemInput[]
+): Promise<ReviewedItemCreationContext> {
+  const values = new Map<ReviewedItemInput, ReviewedItemValues>();
+  const requested = new Map<string, { kind: string; id: string }>();
+  const add = (kind: string, id: unknown) => {
+    if (typeof id === "string" && id)
+      requested.set(`${kind}:${id}`, { kind, id });
+  };
+  const definitions = inputs.length
+    ? await trx
+        .selectFrom("customField")
+        .select([
+          "id",
+          "table",
+          "dataTypeId",
+          "required",
+          "tags",
+          "listOptions"
+        ])
+        .where("companyId", "=", actor.companyId)
+        .where("active", "=", true)
+        .where("table", "in", [
+          ...new Set(inputs.map((input) => reviewedItemTables[input.type]))
+        ])
+        .execute()
+    : [];
+  for (const input of inputs) {
+    const validator = reviewedItemValidators[input.type];
+    if (!validator) throw new Error("Unsupported item class");
+    const data = {
+      ...validator.parse(input.data),
+      tags: parseReviewedItemTags(input.data)
+    };
+    values.set(input, data);
+    add("unit", data.unitOfMeasureCode);
+    add("posting", data.postingGroupId);
+    add("storage", data.defaultStorageUnitId);
+    if ("modelUploadId" in data) add("model", data.modelUploadId);
+    const sizes =
+      input.type === "Material"
+        ? (data as z.infer<typeof materialValidator>).sizes
+        : undefined;
+    if (
+      sizes &&
+      (!sizes.length ||
+        sizes.some((size) => !size.trim()) ||
+        new Set(sizes).size !== sizes.length)
+    ) {
+      throw new Error(
+        "Material sizes must contain distinct non-empty revisions"
+      );
+    }
+    // A newly created master has no configured recipe operations yet.
+    if (
+      data.shelfLifeMode === "Fixed Duration" &&
+      data.shelfLifeTriggerProcessId
+    ) {
+      throw new Error(
+        "Add the shelf-life trigger after configuring this item's recipe"
+      );
+    }
+    for (const [field, kind] of [
+      ["materialFormId", "form"],
+      ["materialSubstanceId", "substance"],
+      ["materialTypeId", "materialType"],
+      ["finishId", "finish"],
+      ["gradeId", "grade"],
+      ["dimensionId", "dimension"]
+    ] as const)
+      add(kind, field in data ? data[field as keyof typeof data] : undefined);
+    for (const reference of validateReviewedCustomFields(
+      definitions,
+      reviewedItemTables[input.type],
+      input.customFields,
+      data.tags ?? []
+    )) {
+      add(reference.kind, reference.id);
+    }
+  }
+  const requestedValues = [...requested.values()];
+  const result = requestedValues.length
+    ? await sql<ReviewedReference>`
+    WITH requested(kind,id) AS (VALUES ${sql.join(requestedValues.map((ref) => sql`(${ref.kind}::text,${ref.id}::text)`))}),
+    available(kind,id,"parentA","parentB") AS (
+      SELECT 'unit',code,NULL::text,NULL::text FROM "unitOfMeasure" WHERE "companyId"=${actor.companyId}
+      UNION ALL SELECT 'posting',id,NULL,NULL FROM "itemPostingGroup" WHERE "companyId"=${actor.companyId}
+      UNION ALL SELECT 'storage',id,"locationId",NULL FROM "storageUnit" WHERE "companyId"=${actor.companyId}
+      UNION ALL SELECT 'model',id,NULL,NULL FROM "modelUpload" WHERE "companyId"=${actor.companyId}
+      UNION ALL SELECT 'form',id,NULL,NULL FROM "materialForm" WHERE "companyId" IS NULL OR "companyId"=${actor.companyId}
+      UNION ALL SELECT 'substance',id,NULL,NULL FROM "materialSubstance" WHERE "companyId" IS NULL OR "companyId"=${actor.companyId}
+      UNION ALL SELECT 'materialType',id,"materialFormId","materialSubstanceId" FROM "materialType" WHERE "companyId" IS NULL OR "companyId"=${actor.companyId}
+      UNION ALL SELECT 'finish',id,"materialSubstanceId",NULL FROM "materialFinish" WHERE "companyId" IS NULL OR "companyId"=${actor.companyId}
+      UNION ALL SELECT 'grade',id,"materialSubstanceId",NULL FROM "materialGrade" WHERE "companyId" IS NULL OR "companyId"=${actor.companyId}
+      UNION ALL SELECT 'dimension',id,"materialFormId",NULL FROM "materialDimension" WHERE "companyId" IS NULL OR "companyId"=${actor.companyId}
+      UNION ALL SELECT 'customer',id,NULL,NULL FROM "customer" WHERE "companyId"=${actor.companyId}
+      UNION ALL SELECT 'supplier',id,NULL,NULL FROM "supplier" WHERE "companyId"=${actor.companyId}
+      UNION ALL SELECT 'user',"userId",NULL,NULL FROM "userToCompany" WHERE "companyId"=${actor.companyId}
+    ) SELECT DISTINCT a.* FROM available a JOIN requested r USING(kind,id)
+  `.execute(trx)
+    : { rows: [] };
+  const references = new Map(
+    result.rows.map((ref) => [`${ref.kind}:${ref.id}`, ref])
+  );
+  if (requestedValues.some((ref) => !references.has(`${ref.kind}:${ref.id}`))) {
+    throw new Error("An item reference is unavailable in this company");
+  }
+  for (const [input, parsed] of values) {
+    if (input.type !== "Material") continue;
+    const data = parsed as z.infer<typeof materialValidator>;
+    const ref = (kind: string, id: string | undefined) =>
+      id ? references.get(`${kind}:${id}`) : undefined;
+    if (
+      (data.dimensionId &&
+        ref("dimension", data.dimensionId)?.parentA !== data.materialFormId) ||
+      (data.finishId &&
+        ref("finish", data.finishId)?.parentA !== data.materialSubstanceId) ||
+      (data.gradeId &&
+        ref("grade", data.gradeId)?.parentA !== data.materialSubstanceId) ||
+      (data.materialTypeId &&
+        (ref("materialType", data.materialTypeId)?.parentA !==
+          data.materialFormId ||
+          ref("materialType", data.materialTypeId)?.parentB !==
+            data.materialSubstanceId))
+    ) {
+      throw new Error(
+        "Material taxonomy does not match the selected form and substance"
+      );
+    }
+  }
+  return {
+    companyId: actor.companyId,
+    userId: actor.userId,
+    transaction: trx,
+    values,
+    references
+  };
+}
+
+/** Caller authorizes the actual item class before opening this transaction. */
+export async function createReviewedItem(
+  trx: KyselyTx,
+  actor: ReviewedMasterActor,
+  input: ReviewedItemInput,
+  prepared?: ReviewedItemCreationContext
+) {
+  const context =
+    prepared ?? (await prepareReviewedItemCreations(trx, actor, [input]));
+  if (
+    context.transaction !== trx ||
+    context.companyId !== actor.companyId ||
+    context.userId !== actor.userId
+  ) {
+    throw new Error("Item creation context does not match this transaction");
+  }
+  const parsed = context.values.get(input);
+  if (!parsed) throw new Error("Item proposal has not been validated");
+  const values = {
+    ...parsed,
+    companyId: actor.companyId,
+    createdBy: actor.userId,
+    customFields: input.customFields
+  };
+  const material =
+    input.type === "Material"
+      ? (values as z.infer<typeof materialValidator> & typeof values)
+      : undefined;
+  const revisions = material?.sizes ?? [undefined];
+  const items = await trx
+    .insertInto("item")
+    .values(
+      revisions.map((revision) =>
+        prepareCreatedItem(input.type, values, revision)
+      )
+    )
+    .returning(["id", "readableId", "revision", "type"])
+    .execute();
+  const itemIds = items.map((item) => item.id);
+  const tags = parseReviewedItemTags(input.data);
+  const subtype = { ...prepareCreatedItemSubtype(values), tags };
+  switch (input.type) {
+    case "Part":
+      await trx.insertInto("part").values(subtype).execute();
+      break;
+    case "Material":
+      await trx
+        .insertInto("material")
+        .values({ ...prepareCreatedMaterial(material!), tags })
+        .execute();
+      break;
+    case "Consumable":
+      await trx.insertInto("consumable").values(subtype).execute();
+      break;
+    case "Tool":
+      await trx.insertInto("tool").values(subtype).execute();
+      break;
+    case "Service":
+      await trx
+        .insertInto("service")
+        .values({ ...subtype, serviceType: "External" })
+        .execute();
+      break;
+  }
+  const cost = prepareCreatedItemCost(input.type, values);
+  if (Object.keys(cost).length) {
+    await trx
+      .updateTable("itemCost")
+      .set(cost)
+      .where("itemId", "in", itemIds)
+      .where("companyId", "=", actor.companyId)
+      .execute();
+  }
+  if (
+    input.type === "Part" &&
+    values.replenishmentSystem !== "Buy" &&
+    "lotSize" in values &&
+    values.lotSize !== undefined
+  ) {
+    await trx
+      .updateTable("itemReplenishment")
+      .set({ lotSize: values.lotSize })
+      .where("itemId", "in", itemIds)
+      .where("companyId", "=", actor.companyId)
+      .execute();
+  }
+  if (input.type !== "Service" && values.defaultStorageUnitId) {
+    const locationId = context.references.get(
+      `storage:${values.defaultStorageUnitId}`
+    )?.parentA;
+    if (!locationId) throw new Error("Storage unit has no location");
+    await trx
+      .insertInto("pickMethod")
+      .values(
+        itemIds.map((itemId) => ({
+          itemId,
+          locationId,
+          defaultStorageUnitId: values.defaultStorageUnitId,
+          companyId: actor.companyId,
+          createdBy: actor.userId,
+          updatedBy: actor.userId,
+          updatedAt: sql<string>`now()`
+        }))
+      )
+      .onConflict((oc) =>
+        oc.columns(["itemId", "locationId"]).doUpdateSet({
+          defaultStorageUnitId: values.defaultStorageUnitId,
+          updatedBy: actor.userId,
+          updatedAt: sql<string>`now()`
+        })
+      )
+      .execute();
+  }
+  const mode = values.shelfLifeMode;
+  if (input.type !== "Service" && mode && mode !== "NotManaged") {
+    await trx
+      .insertInto("itemShelfLife")
+      .values(
+        itemIds.map((itemId) => ({
+          itemId,
+          companyId: actor.companyId,
+          createdBy: actor.userId,
+          mode,
+          days:
+            mode === "Fixed Duration" ? (values.shelfLifeDays ?? null) : null,
+          triggerProcessId: null,
+          triggerTiming: "After" as const,
+          calculateFromBom:
+            mode === "Fixed Duration" && !!values.shelfLifeCalculateFromBom
+        }))
+      )
+      .execute();
+  }
+  const first = items[0];
+  if (!first) throw new Error("Item creation returned no item");
+  return { ...first, items };
 }

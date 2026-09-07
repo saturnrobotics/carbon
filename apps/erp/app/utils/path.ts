@@ -1254,6 +1254,12 @@ export const path = {
     investigationType: (id: string) =>
       generatePath(`${x}/quality/investigation-types/${id}`),
     investigationTypes: `${x}/quality/investigation-types`,
+    invoiceDocument: (intakeId: string) =>
+      `${x}/invoicing/documents/${intakeId}`,
+    invoiceDocuments: `${x}/invoicing/documents`,
+    invoiceIntakeAction: (intakeId: string) =>
+      `/api/invoice-intake/${intakeId}/action`,
+    invoiceIntakeUpload: "/api/invoice-intake/upload",
     invoicing: `${x}/invoicing`,
     invoicingPurchasing: `${x}/invoicing/purchasing`,
     invoicingSales: `${x}/invoicing/sales`,

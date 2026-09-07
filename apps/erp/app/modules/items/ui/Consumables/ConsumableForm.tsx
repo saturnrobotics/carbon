@@ -46,6 +46,8 @@ type ConsumableFormProps = {
   initialValues: z.infer<typeof consumableValidator> & { tags: string[] };
   type?: "card" | "modal";
   onClose?: () => void;
+  /** Capture a validated proposal without writing a master record. */
+  onPropose?: (values: Record<string, unknown>, formData: FormData) => void;
 };
 
 function startsWithLetter(value: string) {
@@ -55,7 +57,8 @@ function startsWithLetter(value: string) {
 const ConsumableForm = ({
   initialValues,
   type = "card",
-  onClose
+  onClose,
+  onPropose
 }: ConsumableFormProps) => {
   const { company } = useUser();
   const baseCurrency = company?.baseCurrencyCode ?? "USD";
@@ -81,7 +84,7 @@ const ConsumableForm = ({
   const permissions = usePermissions();
   const allowLowercaseItemIds =
     useCompanySettings()?.allowLowercaseItemIds === true;
-  const isEditing = !!initialValues.id;
+  const isEditing = !onPropose && !!initialValues.id;
 
   const [defaultMethodType, setDefaultMethodType] = useState<string>(
     initialValues.defaultMethodType ?? "Purchase to Order"
@@ -116,6 +119,17 @@ const ConsumableForm = ({
             validator={consumableValidator}
             defaultValues={initialValues}
             fetcher={fetcher}
+            onSubmit={
+              onPropose
+                ? (values, event) => {
+                    event.preventDefault();
+                    onPropose(
+                      values,
+                      new FormData(event.target as HTMLFormElement)
+                    );
+                  }
+                : undefined
+            }
           >
             <ModalCardHeader>
               <ModalCardTitle>
@@ -223,7 +237,7 @@ const ConsumableForm = ({
                     : !permissions.can("create", "parts")
                 }
               >
-                <Trans>Save</Trans>
+                {onPropose ? <Trans>Use proposal</Trans> : <Trans>Save</Trans>}
               </Submit>
             </ModalCardFooter>
           </ValidatedForm>

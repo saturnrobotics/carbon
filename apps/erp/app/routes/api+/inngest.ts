@@ -1,7 +1,14 @@
-import { functions, inngest, setWorkflowDispatch } from "@carbon/jobs/inngest";
+import {
+  functions,
+  inngest,
+  setInvoiceIntakeValidation,
+  setWorkflowDispatch
+} from "@carbon/jobs/inngest";
 import { serve } from "inngest/remix";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 import { callOperation } from "./v1+/lib/call.server";
+import { validateHydratedInvoiceIntake } from "~/modules/invoicing/invoicing.server";
+import { executeFunction } from "./mcp+/lib/direct-executor";
 
 /**
  * Inngest API endpoint.
@@ -36,6 +43,8 @@ function wireWorkflowDispatch() {
   setWorkflowDispatch((name, context, args) =>
     callOperation(name, { ...context, authKind: "session", scopes: {} }, args)
   );
+  setWorkflowDispatch(executeFunction);
+  setInvoiceIntakeValidation(validateHydratedInvoiceIntake);
   dispatchWired = true;
 }
 

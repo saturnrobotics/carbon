@@ -43,7 +43,7 @@ Backups survive loss of the source VM/disk or attachment bucket. They reside in
 the same GCP project as the deployment; deleting that project or compromising its
 administrators remains outside this protection. No irreversible retention lock is
 applied. Application service accounts receive no access to the backup bucket, and
-the application VM still has no service account.
+the application VM has no backup-storage permissions. If optional invoice inference is enabled, its dedicated VM identity receives only model inference permission.
 
 ## One-time setup
 

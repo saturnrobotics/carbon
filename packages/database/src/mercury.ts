@@ -1,6 +1,6 @@
 import { sql } from "kysely";
 import { z } from "zod";
-import type { Kysely, KyselyDatabase } from "./client";
+import type { Kysely, KyselyDatabase, KyselyTx } from "./client";
 import { getNextSequence } from "./sequence";
 import type { Database } from "./types";
 
@@ -90,12 +90,23 @@ export type MercuryApprovalInput = {
   supplierEmail?: string;
 };
 
+/** Acquire before any invoice/intake/payment row lock in an approval transaction. */
+export async function lockCompanyInvoiceApproval(
+  trx: KyselyTx,
+  companyId: string
+) {
+  await sql`SELECT pg_advisory_xact_lock(hashtextextended(${`invoice-approval:${companyId}`}, 0))`.execute(
+    trx
+  );
+}
+
 /** Caller authorizes invoicing_create and purchasing_create before entering. */
 export async function approveMercuryImport(
   db: Kysely<KyselyDatabase>,
   input: MercuryApprovalInput
 ) {
   return db.transaction().execute(async (trx) => {
+    await lockCompanyInvoiceApproval(trx, input.companyId);
     const record = await trx
       .selectFrom("mercuryTransactionImport")
       .selectAll()

@@ -19,6 +19,12 @@ export default function useInvoicingSubmodules() {
       name: t`Accounts Payable`,
       routes: [
         {
+          name: t`Documents`,
+          to: path.to.invoiceDocuments,
+          icon: <LuReceiptText />,
+          permission: "invoicing"
+        },
+        {
           name: t`Payables`,
           to: path.to.payables,
           icon: <BanknoteArrowUp />,

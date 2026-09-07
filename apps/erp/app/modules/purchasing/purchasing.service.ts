@@ -978,6 +978,17 @@ export async function getSupplierTypesList(
     .order("name");
 }
 
+/** Keep native supplier form and transactional approval payloads identical. */
+export function prepareCreatedSupplier(
+  supplier: Omit<z.infer<typeof supplierValidator>, "id"> & {
+    companyId: string;
+    createdBy: string;
+    customFields?: Json;
+  }
+) {
+  return { ...supplier };
+}
+
 export async function insertSupplier(
   client: SupabaseClient<Database>,
   supplier: Omit<z.infer<typeof supplierValidator>, "id"> & {
@@ -986,7 +997,11 @@ export async function insertSupplier(
     customFields?: Json;
   }
 ) {
-  return client.from("supplier").insert([supplier]).select("*").single();
+  return client
+    .from("supplier")
+    .insert([prepareCreatedSupplier(supplier)])
+    .select("*")
+    .single();
 }
 
 export async function insertSupplierContact(
@@ -2032,7 +2047,7 @@ export async function upsertSupplier(
   if ("createdBy" in supplier) {
     return client
       .from("supplier")
-      .insert([supplier])
+      .insert([prepareCreatedSupplier(supplier)])
       .select("id, name, website, supplierStatus, readableId")
       .single();
   }

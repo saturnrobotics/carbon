@@ -34,6 +34,18 @@ class PrivateStackTests(unittest.TestCase):
         module.render(self.config, REPO, self.output, self.state)
         self.stack = json.loads((self.output / "compose.json").read_text())
 
+    def test_invoice_inference_is_server_only_and_preserves_private_ingress(self):
+        config = {**self.config, "PROJECT_ID": "example-project", "INVOICE_INTAKE_ENABLED": "true",
+                  "INVOICE_AI_PROJECT": "example-project", "INVOICE_AI_LOCATION": "us",
+                  "INVOICE_AI_PRICE_VERIFIED_AT": "2026-09-06",
+                  "INVOICE_AI_INPUT_PRICE_USD_PER_MILLION": "1.65", "INVOICE_AI_OUTPUT_PRICE_USD_PER_MILLION": "9.90"}
+        module.render(config, REPO, self.output, self.state)
+        stack = json.loads((self.output / "compose.json").read_text())
+        self.assertEqual(stack["services"]["erp"]["environment"]["INVOICE_AI_LOCATION"], "us")
+        for name, service in stack["services"].items():
+            if name != "erp": self.assertNotIn("INVOICE_AI_PROJECT", service.get("environment", {}))
+        self.assertEqual([name for name, service in stack["services"].items() if "ports" in service], ["caddy"])
+
     def test_only_tailnet_https_is_published(self):
         published = [(name, svc["ports"]) for name, svc in self.stack["services"].items() if "ports" in svc]
         self.assertEqual(published, [("caddy", [{"target": 443, "published": "443", "host_ip": "100.72.10.8", "protocol": "tcp"}])])

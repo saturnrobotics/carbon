@@ -1,9 +1,155 @@
+import {
+  INVOICE_LIMITS,
+  invoiceDecimalSchema,
+  invoiceDocumentKinds,
+  invoiceItemTypes,
+  invoiceLineTypes
+} from "@carbon/jobs";
 import { z } from "zod";
 import { zfd } from "zod-form-data";
 // Import the constants from the models file directly (not the `../shared` barrel),
 // which also re-exports shared.service/shared.server — those transitively pull in
 // `@carbon/auth`'s Lingui-macro glossary and break plain unit tests of this module.
 import { incoterms, itemType, methodType } from "../shared/shared.models";
+
+const intakeText = z.string().max(4000).nullable().default(null);
+const intakeId = z.string().min(1).max(255).nullable().default(null);
+const intakeDecimal = invoiceDecimalSchema.nullable().default(null);
+export const invoiceNewItemValidator = z.object({
+  type: z.enum(invoiceItemTypes),
+  data: z.record(z.string(), z.unknown()),
+  customFields: z.record(z.string(), z.unknown()).optional()
+});
+export const invoiceNewSupplierValidator = z.object({
+  supplier: z.record(z.string(), z.unknown()),
+  contact: z.record(z.string(), z.unknown()).optional(),
+  address: z.record(z.string(), z.unknown()).optional(),
+  tax: z.record(z.string(), z.unknown()).optional(),
+  customFields: z.record(z.string(), z.unknown()).optional()
+});
+export const invoiceIntakeHeaderValidator = z.object({
+  invoiceNumber: intakeText,
+  issueDate: intakeText,
+  dueDate: intakeText,
+  currencyCode: intakeText,
+  subtotal: intakeDecimal,
+  discount: intakeDecimal,
+  shipping: intakeDecimal,
+  tax: intakeDecimal,
+  total: intakeDecimal,
+  exchangeRate: intakeDecimal,
+  sourceSupplierName: intakeText,
+  noInvoiceNumberConfirmed: z.boolean().default(false),
+  chargesConfirmed: z.boolean().default(false),
+  rememberSupplier: z.boolean().default(true),
+  duplicateOverrideReason: intakeText,
+  sourceIssues: z.array(z.string().max(4000)).max(100).default([]),
+  resolvedSourceIssues: z.boolean().default(false),
+  excludedLines: z
+    .array(
+      z.object({
+        lineKey: z.string().min(1).max(100),
+        reason: z.string().trim().min(1).max(1000)
+      })
+    )
+    .max(INVOICE_LIMITS.lines)
+    .default([])
+});
+export const invoiceIntakeLineValidator = z
+  .object({
+    lineKey: z.string().min(1).max(100),
+    sortOrder: z.number().int().min(0),
+    description: intakeText,
+    supplierSku: intakeText,
+    manufacturerPartNumber: intakeText,
+    quantity: intakeDecimal,
+    supplierUnitPrice: intakeDecimal,
+    discountAmount: intakeDecimal,
+    supplierTaxAmount: intakeDecimal,
+    taxPercent: intakeDecimal,
+    supplierShippingCost: intakeDecimal,
+    documentLineTotal: intakeDecimal,
+    itemId: intakeId,
+    purchaseOrderLineId: intakeId,
+    accountId: intakeId,
+    assetId: intakeId,
+    purchaseInvoiceLineId: intakeId,
+    locationId: intakeId,
+    storageUnitId: intakeId,
+    costCenterId: intakeId,
+    lineType: z.enum(invoiceLineTypes).nullable().default(null),
+    purchaseUnit: intakeText,
+    stockUnit: intakeText,
+    conversionFactor: intakeDecimal,
+    newItem: invoiceNewItemValidator.nullable().default(null),
+    raw: z.record(z.string(), z.unknown()).default({}),
+    review: z
+      .object({
+        rememberMatch: z.boolean().default(true),
+        discountIncludedInPrice: z.boolean().default(false),
+        commentConfirmed: z.boolean().default(false),
+        replaceRuleId: intakeId,
+        replacementReason: intakeText,
+        origin: z
+          .enum(["document", "savedMatch", "catalog", "model", "manual"])
+          .default("manual"),
+        matchReason: intakeText,
+        expectedInvoiceLineUpdatedAt: intakeText
+      })
+      .default({
+        rememberMatch: true,
+        discountIncludedInPrice: false,
+        commentConfirmed: false,
+        replaceRuleId: null,
+        replacementReason: null,
+        origin: "manual",
+        matchReason: null,
+        expectedInvoiceLineUpdatedAt: null
+      })
+  })
+  .refine(
+    (value) => !(value.itemId && value.newItem),
+    "Choose an existing item or propose a new one"
+  );
+
+export const invoiceIntakeReviewValidator = z
+  .object({
+    documentKind: z.enum(invoiceDocumentKinds).default("unknown"),
+    supplierId: intakeId,
+    newSupplier: invoiceNewSupplierValidator.nullable().default(null),
+    locationId: intakeId,
+    paymentTermId: intakeId,
+    invoiceSupplierId: intakeId,
+    invoiceSupplierContactId: intakeId,
+    invoiceSupplierLocationId: intakeId,
+    purchaseInvoiceId: intakeId,
+    historical: z.boolean().default(false),
+    expectedInvoiceUpdatedAt: intakeText,
+    mergeMode: z.enum(["new", "enrich", "merge", "evidence"]).default("new"),
+    header: invoiceIntakeHeaderValidator,
+    lines: z.array(invoiceIntakeLineValidator).max(INVOICE_LIMITS.lines)
+  })
+  .refine(
+    (value) => !(value.supplierId && value.newSupplier),
+    "Choose an existing supplier or propose a new one"
+  );
+
+export const invoiceIntakeSettingsValidator = z.object({
+  enabled: z.boolean(),
+  automaticMercuryIntake: z.boolean(),
+  dailyBudgetUsd: z.number().finite().min(0).max(10000),
+  monthlyBudgetUsd: z.number().finite().min(0).max(100000)
+});
+export const invoiceIntakeActionValidator = z.object({
+  action: z.enum(["save", "approve", "link", "retry", "ignore", "restore"]),
+  expectedRevision: z.number().int().min(0),
+  approvalKey: z.string().min(1).max(255).optional(),
+  review: invoiceIntakeReviewValidator.optional()
+});
+export type InvoiceIntakeReview = z.infer<typeof invoiceIntakeReviewValidator>;
+export type InvoiceIntakeReviewLine = z.infer<
+  typeof invoiceIntakeLineValidator
+>;
 
 export const mercurySettingsValidator = z.object({
   enabled: zfd.checkbox(),

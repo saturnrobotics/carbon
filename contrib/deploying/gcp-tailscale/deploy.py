@@ -17,6 +17,7 @@ import urllib.parse
 import urllib.request
 import private_postgres
 import payment_sync
+import invoice_inference
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[2]
@@ -51,10 +52,11 @@ def private_json(path):
 
 
 def validate(config, secrets):
-    if set(config) - CONFIG_KEYS - private_postgres.OPTIONAL_KEYS - payment_sync.CONFIG_KEYS or set(secrets) - SECRET_KEYS - payment_sync.SECRET_KEYS:
+    if set(config) - CONFIG_KEYS - private_postgres.OPTIONAL_KEYS - payment_sync.CONFIG_KEYS - invoice_inference.CONFIG_KEYS or set(secrets) - SECRET_KEYS - payment_sync.SECRET_KEYS:
         raise ValueError("Unknown configuration keys; see config.example.json and secrets.example.json")
     private_postgres.validate(config)
     payment_sync.validate({**config, **secrets})
+    invoice_inference.validate(config, project=config.get("PROJECT_ID"))
     for key in CONFIG_KEYS:
         if key not in config:
             raise ValueError(f"Missing {key}")
@@ -284,6 +286,7 @@ def deploy(config):
     cloud = Cloud(config)
     print("Provisioning the private GCP server...", flush=True)
     cloud.provision()
+    invoice_inference.provision(cloud)
     for attempt in range(30):
         try:
             cloud.ssh("true", capture=True)
@@ -347,6 +350,9 @@ def main():
     parser.add_argument("--apply", action="store_true", help="create/update GCP resources and deploy the committed source")
     args = parser.parse_args()
     config = validate(private_json(args.config), private_json(args.secrets))
+    inference_path = args.config.with_name("invoice-inference.json")
+    if inference_path.exists():
+        config = invoice_inference.configuration(config, private_json(inference_path))
     backup_path = args.config.with_name("backups.json")
     backup_settings = None
     if backup_path.exists():

@@ -1339,7 +1339,7 @@ msgid "Source"
 msgstr "소스"
 
 msgid "Source code"
-msgstr ""
+msgstr "소스 코드"
 
 msgid "Spare Parts"
 msgstr "예비 부품"

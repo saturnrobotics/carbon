@@ -66,6 +66,8 @@ type PartFormProps = {
   initialValues: z.infer<typeof partValidator> & { tags?: string[] };
   type?: "card" | "modal";
   onClose?: () => void;
+  /** Capture a validated proposal without writing a master record. */
+  onPropose?: (values: Record<string, unknown>, formData: FormData) => void;
 };
 
 const SIZE_LIMIT = getFileSizeLimit("CAD_MODEL_UPLOAD");
@@ -74,7 +76,12 @@ function startsWithLetter(value: string) {
   return /^[A-Za-z]/.test(value);
 }
 
-const PartForm = ({ initialValues, type = "card", onClose }: PartFormProps) => {
+const PartForm = ({
+  initialValues,
+  type = "card",
+  onClose,
+  onPropose
+}: PartFormProps) => {
   const { t } = useLingui();
   const { company } = useUser();
   const baseCurrency = company?.baseCurrencyCode ?? "USD";
@@ -180,7 +187,7 @@ const PartForm = ({ initialValues, type = "card", onClose }: PartFormProps) => {
   const permissions = usePermissions();
   const companySettings = useCompanySettings();
   const allowLowercaseItemIds = companySettings?.allowLowercaseItemIds === true;
-  const isEditing = !!initialValues.id;
+  const isEditing = !onPropose && !!initialValues.id;
 
   const translateItemTrackingType = (v: string) =>
     v === "Inventory"
@@ -232,6 +239,17 @@ const PartForm = ({ initialValues, type = "card", onClose }: PartFormProps) => {
             validator={partValidator}
             defaultValues={initialValues}
             fetcher={fetcher}
+            onSubmit={
+              onPropose
+                ? (values, event) => {
+                    event.preventDefault();
+                    onPropose(
+                      values,
+                      new FormData(event.target as HTMLFormElement)
+                    );
+                  }
+                : undefined
+            }
           >
             <ModalCardHeader>
               <ModalCardTitle>
@@ -367,55 +385,57 @@ const PartForm = ({ initialValues, type = "card", onClose }: PartFormProps) => {
               <div className="mt-4 w-full">
                 <TextArea name="description" label={t`Long Description`} />
               </div>
-              <VStack spacing={2} className="mt-4 w-full">
-                <label
-                  htmlFor="model-upload"
-                  className="text-xs font-medium text-muted-foreground"
-                >
-                  <Trans>CAD Model</Trans>
-                </label>
-                <div
-                  {...getRootProps()}
-                  className={`w-full border-2 border-dashed rounded-md p-6 text-center hover:border-primary hover:bg-primary/10 cursor-pointer ${
-                    isDragActive
-                      ? "border-primary bg-primary/10"
-                      : "border-muted"
-                  }`}
-                >
-                  <input id="model-upload" {...getInputProps()} />
-                  {upload !== null ? (
-                    <ModelUploadProgress
-                      percent={upload.percent}
-                      uploaded={upload.uploaded}
-                      total={upload.total}
-                    />
-                  ) : modelFile ? (
-                    <>
-                      <p className="text-sm font-semibold text-card-foreground">
-                        {modelFile.name}
-                      </p>
-                      <p className="text-xs text-muted-foreground group-hover:text-foreground">
-                        {convertKbToString(Math.ceil(modelFile.size / 1024))}
-                      </p>
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        className="mt-2"
-                        onClick={removeModel}
-                      >
-                        <Trans>Remove</Trans>
-                      </Button>
-                    </>
-                  ) : (
-                    <Loading isLoading={modelIsUploading}>
-                      <LuCloudUpload className="mx-auto h-12 w-12 text-muted-foreground group-hover:text-primary-foreground" />
-                      <p className="text-xs text-muted-foreground group-hover:text-foreground">
-                        {t`Supports ${supportedModelTypes.join(", ")} files`}
-                      </p>
-                    </Loading>
-                  )}
-                </div>
-              </VStack>
+              {!onPropose && (
+                <VStack spacing={2} className="mt-4 w-full">
+                  <label
+                    htmlFor="model-upload"
+                    className="text-xs font-medium text-muted-foreground"
+                  >
+                    <Trans>CAD Model</Trans>
+                  </label>
+                  <div
+                    {...getRootProps()}
+                    className={`w-full border-2 border-dashed rounded-md p-6 text-center hover:border-primary hover:bg-primary/10 cursor-pointer ${
+                      isDragActive
+                        ? "border-primary bg-primary/10"
+                        : "border-muted"
+                    }`}
+                  >
+                    <input id="model-upload" {...getInputProps()} />
+                    {upload !== null ? (
+                      <ModelUploadProgress
+                        percent={upload.percent}
+                        uploaded={upload.uploaded}
+                        total={upload.total}
+                      />
+                    ) : modelFile ? (
+                      <>
+                        <p className="text-sm font-semibold text-card-foreground">
+                          {modelFile.name}
+                        </p>
+                        <p className="text-xs text-muted-foreground group-hover:text-foreground">
+                          {convertKbToString(Math.ceil(modelFile.size / 1024))}
+                        </p>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          className="mt-2"
+                          onClick={removeModel}
+                        >
+                          <Trans>Remove</Trans>
+                        </Button>
+                      </>
+                    ) : (
+                      <Loading isLoading={modelIsUploading}>
+                        <LuCloudUpload className="mx-auto h-12 w-12 text-muted-foreground group-hover:text-primary-foreground" />
+                        <p className="text-xs text-muted-foreground group-hover:text-foreground">
+                          {t`Supports ${supportedModelTypes.join(", ")} files`}
+                        </p>
+                      </Loading>
+                    )}
+                  </div>
+                </VStack>
+              )}
             </ModalCardBody>
             <ModalCardFooter>
               <Submit
@@ -426,7 +446,7 @@ const PartForm = ({ initialValues, type = "card", onClose }: PartFormProps) => {
                     : !permissions.can("create", "parts")
                 }
               >
-                <Trans>Save</Trans>
+                {onPropose ? <Trans>Use proposal</Trans> : <Trans>Save</Trans>}
               </Submit>
             </ModalCardFooter>
           </ValidatedForm>

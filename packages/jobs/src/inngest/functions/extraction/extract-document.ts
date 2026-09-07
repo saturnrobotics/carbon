@@ -1,7 +1,9 @@
 import { getCarbonServiceRole } from "@carbon/auth/client.server";
 import { EXTRACTION_CONFIDENCE_THRESHOLD } from "@carbon/env";
+import { sql } from "kysely";
+import { getJobDatabaseClient } from "../../../db";
 import { inngest } from "../../client";
-import { invoiceExtractionSchema, rfqExtractionSchema } from "./schemas";
+import { rfqExtractionSchema } from "./schemas";
 
 function parseDateToISO8601(value: unknown): string | null {
   if (typeof value !== "string" || !value) return null;
@@ -51,6 +53,37 @@ export const extractDocumentFunction = inngest.createFunction(
         throw new Error("Extraction record not found");
       }
 
+      // Financial documents exclusively use the persisted intake budget and
+      // authorization checks. A legacy event must not bypass those controls.
+      if (extraction.documentType === "purchaseInvoice") {
+        return { state: "invoice_intake_required" };
+      }
+      const pieces = extraction.storagePath.split("/");
+      if (
+        extraction.intakeId ||
+        extraction.sourceDocument !== "Request for Quote" ||
+        pieces.length !== 3 ||
+        pieces[0] !== companyId ||
+        pieces[1] !== "extractions" ||
+        !pieces[2] ||
+        pieces[2] === "." ||
+        pieces[2] === ".." ||
+        Array.from(pieces[2]).some(
+          (character) => character.charCodeAt(0) < 32 || character === "\\"
+        )
+      ) {
+        throw new Error("rfq_extraction_source_invalid");
+      }
+      const access = await sql<{ allowed: boolean }>`SELECT EXISTS (
+        SELECT 1 FROM public.employee e JOIN public."user" u ON u.id=e.id
+        JOIN public."userToCompany" c ON c."userId"=e.id AND c."companyId"=e."companyId"
+        JOIN public."userPermission" p ON p.id=e.id
+        WHERE e."companyId"=${companyId} AND e.id=${extraction.createdBy} AND e.active AND u.active AND c.role='employee'
+          AND (p.permissions->'sales_view' @> ${JSON.stringify([companyId])}::jsonb)
+      ) AS allowed`.execute(getJobDatabaseClient(5));
+      if (!access.rows[0]?.allowed)
+        throw new Error("rfq_extraction_operator_unavailable");
+
       // 2. Update status to processing
       await client
         .from("documentExtraction")
@@ -99,8 +132,6 @@ export const extractDocumentFunction = inngest.createFunction(
         // All lists are company-scoped; cap and log rather than silently truncate.
         const CANDIDATE_LIMIT = 1000;
         type Candidate = { id: string; name: string };
-        const supplierCandidates: Candidate[] = [];
-        const paymentTermCandidates: Candidate[] = [];
         const customerCandidates: Candidate[] = [];
 
         const collect = (
@@ -116,48 +147,21 @@ export const extractDocumentFunction = inngest.createFunction(
           }
         };
 
-        if (extraction.documentType === "purchaseInvoice") {
-          const [{ data: suppliers }, { data: paymentTerms }] =
-            await Promise.all([
-              client
-                .from("supplier")
-                .select("id, name")
-                .eq("companyId", companyId)
-                .order("name")
-                .limit(CANDIDATE_LIMIT + 1),
-              client
-                .from("paymentTerm")
-                .select("id, name")
-                .eq("companyId", companyId)
-                .order("name")
-                .limit(CANDIDATE_LIMIT + 1)
-            ]);
-          collect(suppliers, supplierCandidates, "Supplier");
-          collect(paymentTerms, paymentTermCandidates, "Payment term");
-        } else {
-          const { data: customers } = await client
-            .from("customer")
-            .select("id, name")
-            .eq("companyId", companyId)
-            .order("name")
-            .limit(CANDIDATE_LIMIT + 1);
-          collect(customers, customerCandidates, "Customer");
-        }
-
-        const candidatesSection =
-          extraction.documentType === "purchaseInvoice"
-            ? `Known suppliers (choose the matching id for supplierId, or null):\n${JSON.stringify(supplierCandidates)}\n\nKnown payment terms (choose the matching id for paymentTermId, or null):\n${JSON.stringify(paymentTermCandidates)}`
-            : `Known customers (choose the matching id for customerId, or null):\n${JSON.stringify(customerCandidates)}`;
+        const { data: customers } = await client
+          .from("customer")
+          .select("id, name")
+          .eq("companyId", companyId)
+          .order("name")
+          .limit(CANDIDATE_LIMIT + 1);
+        collect(customers, customerCandidates, "Customer");
+        const candidatesSection = `Known customers (choose the matching id for customerId, or null):\n${JSON.stringify(customerCandidates)}`;
 
         const matchingInstruction =
           " For the id fields, you are given lists of known records; return the id of the single best match, or null if none of the listed records clearly correspond to the document. Do NOT invent ids — only return an id that appears in the provided lists.";
 
         const systemPrompt =
-          extraction.documentType === "purchaseInvoice"
-            ? "You are an ERP data extraction assistant. Extract invoice data from this PDF. For each field, provide the extracted value and a confidence score between 0.0 and 1.0. If a field is not found or you are unsure, set value to null and confidence to 0.0." +
-              matchingInstruction
-            : "You are an ERP data extraction assistant. Extract RFQ (Request for Quote) data from this PDF. For each field, provide the extracted value and a confidence score between 0.0 and 1.0. If a field is not found or you are unsure, set value to null and confidence to 0.0." +
-              matchingInstruction;
+          "You are an ERP data extraction assistant. Extract RFQ (Request for Quote) data from this PDF. For each field, provide the extracted value and a confidence score between 0.0 and 1.0. If a field is not found or you are unsure, set value to null and confidence to 0.0." +
+          matchingInstruction;
 
         // 6. Call AI with structured output validated against the zod schema
         const { generateObject } = await import("ai");
@@ -183,20 +187,12 @@ export const extractDocumentFunction = inngest.createFunction(
 
         const prompt = `${systemPrompt}\n\nCandidate records to match against:\n${candidatesSection}\n\nHere is the text extracted from the PDF document:\n\n${pdfText}`;
 
-        const { object: validated } =
-          extraction.documentType === "purchaseInvoice"
-            ? await generateObject({
-                model,
-                maxRetries: 5,
-                schema: invoiceExtractionSchema,
-                prompt
-              })
-            : await generateObject({
-                model,
-                maxRetries: 5,
-                schema: rfqExtractionSchema,
-                prompt
-              });
+        const { object: validated } = await generateObject({
+          model,
+          maxRetries: 5,
+          schema: rfqExtractionSchema,
+          prompt
+        });
 
         // 7. Filter by confidence threshold
         const threshold = EXTRACTION_CONFIDENCE_THRESHOLD;

@@ -1,44 +1,64 @@
-import { Trans } from "@lingui/react/macro";
-import SharedMapExtractedLinesModal from "~/components/MapExtractedLinesModal";
+import {
+  Button,
+  Modal,
+  ModalBody,
+  ModalClose,
+  ModalContent,
+  ModalHeader,
+  ModalOverlay
+} from "@carbon/react";
+import { Trans, useLingui } from "@lingui/react/macro";
+import { useEffect } from "react";
+import { Link, useFetcher } from "react-router";
+import { PdfExtractor } from "~/components/Form/PdfExtractor";
+import { path } from "~/utils/path";
 
 export type MapExtractedInvoiceLinesModalProps = {
   invoiceId: string;
   supplierId: string | undefined;
   onClose: () => void;
 };
-
 export default function MapExtractedInvoiceLinesModal({
   invoiceId,
-  supplierId,
   onClose
 }: MapExtractedInvoiceLinesModalProps) {
+  const { t } = useLingui();
+  const fetcher = useFetcher<{ intakeId: string | null }>();
+  useEffect(() => {
+    if (fetcher.state === "idle" && !fetcher.data)
+      fetcher.load(`/api/purchase-invoice/${invoiceId}/map-lines`);
+  }, [fetcher, invoiceId]);
   return (
-    <SharedMapExtractedLinesModal
-      endpoint={`/api/purchase-invoice/${invoiceId}/map-lines`}
-      party={{ field: "supplierId", id: supplierId }}
-      title={<Trans>Map Extracted Invoice Lines</Trans>}
-      onClose={onClose}
-      renderSummary={(map) => (
-        <>
-          <div className="min-w-0">
-            <p className="truncate text-sm font-medium text-foreground">
-              {map.description || <Trans>Untitled line</Trans>}
-            </p>
-          </div>
-          <div className="flex shrink-0 items-center gap-1.5">
-            {map.quantity != null && (
-              <span className="rounded-md bg-muted px-2 py-0.5 text-xs tabular-nums text-muted-foreground">
-                <Trans>Qty</Trans> {map.quantity}
-              </span>
-            )}
-            {map.unitPrice != null && (
-              <span className="rounded-md bg-muted px-2 py-0.5 text-xs tabular-nums text-muted-foreground">
-                {map.unitPrice}
-              </span>
-            )}
-          </div>
-        </>
-      )}
-    />
+    <Modal open onOpenChange={(open) => !open && onClose()}>
+      <ModalOverlay />
+      <ModalContent>
+        <ModalHeader>
+          <Trans>Review invoice document</Trans>
+          <ModalClose />
+        </ModalHeader>
+        <ModalBody className="space-y-4">
+          <p>
+            <Trans>
+              Review the original invoice to select the correct supplier and
+              item classes, confirm pack sizes and totals, and map each existing
+              line explicitly.
+            </Trans>
+          </p>
+          {fetcher.data?.intakeId && (
+            <Button asChild>
+              <Link to={path.to.invoiceDocument(fetcher.data.intakeId)}>
+                <Trans>Open document review</Trans>
+              </Link>
+            </Button>
+          )}
+          <PdfExtractor
+            documentType="purchaseInvoice"
+            sourceDocument="Purchase Invoice"
+            sourceDocumentId={invoiceId}
+            label={t`Invoice`}
+          />
+        </ModalBody>
+      </ModalContent>
+    </Modal>
   );
 }

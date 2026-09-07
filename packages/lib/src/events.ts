@@ -675,6 +675,36 @@ export type Events = {
   };
 
   // Document extraction (PDF auto-fill)
+  "carbon/invoice-intake.process": {
+    data: { companyId: string; intakeId: string; generation: number };
+  };
+  "carbon/invoice-intake.validate": {
+    data: {
+      companyId: string;
+      intakeId: string;
+      userId: string;
+      generation: number;
+      expectedRevision: number;
+      attemptId: string;
+    };
+  };
+  "carbon/invoice-intake.copy-attachments": {
+    data: { companyId: string; intakeId: string };
+  };
+  "carbon/invoice-intake.reconcile-sources": {
+    data: { companyId: string };
+  };
+  "carbon/invoice-intake.backfill": {
+    data: { companyId: string; userId: string };
+  };
+  "carbon/invoice-intake.match": {
+    data: {
+      companyId: string;
+      intakeId: string;
+      generation: number;
+      revision: number;
+    };
+  };
   "carbon/extract-document": {
     data: {
       documentExtractionId: string;

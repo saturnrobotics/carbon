@@ -191,6 +191,44 @@ export const EXCHANGE_RATES_API_KEY = getEnv("EXCHANGE_RATES_API_KEY", {
   isSecret: true
 });
 
+// Server-only managed document inference; never included in getBrowserEnv.
+export const INVOICE_INTAKE_ENABLED = getEnv("INVOICE_INTAKE_ENABLED", {
+  isRequired: false,
+  isSecret: false
+});
+export const INVOICE_AI_PROJECT = getEnv("INVOICE_AI_PROJECT", {
+  isRequired: false,
+  isSecret: false
+});
+export const INVOICE_AI_LOCATION = getEnv("INVOICE_AI_LOCATION", {
+  isRequired: false,
+  isSecret: false
+});
+export const INVOICE_AI_MODEL = getEnv("INVOICE_AI_MODEL", {
+  isRequired: false,
+  isSecret: false
+});
+export const INVOICE_AI_INPUT_PRICE_USD_PER_MILLION = getEnv(
+  "INVOICE_AI_INPUT_PRICE_USD_PER_MILLION",
+  { isRequired: false, isSecret: false }
+);
+export const INVOICE_AI_OUTPUT_PRICE_USD_PER_MILLION = getEnv(
+  "INVOICE_AI_OUTPUT_PRICE_USD_PER_MILLION",
+  { isRequired: false, isSecret: false }
+);
+export const INVOICE_AI_PRICE_VERIFIED_AT = getEnv(
+  "INVOICE_AI_PRICE_VERIFIED_AT",
+  { isRequired: false, isSecret: false }
+);
+export const INVOICE_AI_MAX_INPUT_TOKENS = getEnv(
+  "INVOICE_AI_MAX_INPUT_TOKENS",
+  { isRequired: false, isSecret: false }
+);
+export const INVOICE_AI_MAX_OUTPUT_TOKENS = getEnv(
+  "INVOICE_AI_MAX_OUTPUT_TOKENS",
+  { isRequired: false, isSecret: false }
+);
+
 export const EXTRACTION_CONFIDENCE_THRESHOLD = Number.parseFloat(
   getEnv("EXTRACTION_CONFIDENCE_THRESHOLD", {
     isRequired: false,

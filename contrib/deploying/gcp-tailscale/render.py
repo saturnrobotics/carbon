@@ -21,6 +21,7 @@ import time
 import yaml
 import private_postgres
 import payment_sync
+import invoice_inference
 
 
 def write_private(path, content):
@@ -164,6 +165,7 @@ def render(config, repo, output, state=Path("/var/lib/carbon")):
         if "resend_api_key" not in services[app]["secrets"]:
             services[app]["secrets"].append("resend_api_key")
     payment_sync.configure(config, services["erp"], directory, write_private)
+    invoice_inference.configure(config, services["erp"])
     # A 200 response alone is insufficient: ERP reports dependency failures in JSON.
     services["erp"]["healthcheck"]["test"] = ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/health').then(r=>r.json()).then(b=>process.exit(b.status==='healthy'?0:1)).catch(()=>process.exit(1))"]
 

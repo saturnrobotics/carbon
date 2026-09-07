@@ -11,6 +11,7 @@ import type {
 import UnitOfMeasureForm from "~/modules/items/ui/UnitOfMeasure/UnitOfMeasureForm";
 import { path } from "~/utils/path";
 import { Enumerable } from "../Enumerable";
+import { useDeferredMasterCreation } from "./DeferredMasterCreation";
 import { useEmptyState } from "./emptyStates";
 
 type UnitOfMeasureSelectProps = Omit<ComboboxProps, "options" | "inline"> & {
@@ -29,6 +30,7 @@ const UnitOfMeasurePreview = (
 };
 
 const UnitOfMeasure = (props: UnitOfMeasureSelectProps) => {
+  const deferCreation = useDeferredMasterCreation();
   const options = useUnitOfMeasure();
 
   const newUnitOfMeasureModal = useDisclosure();
@@ -48,10 +50,14 @@ const UnitOfMeasure = (props: UnitOfMeasureSelectProps) => {
         inline={props.inline ? UnitOfMeasurePreview : undefined}
         label={props?.label ?? "Unit of Measure"}
         emptyMessage={emptyMessage}
-        onCreateOption={(option) => {
-          newUnitOfMeasureModal.onOpen();
-          setCreated(option);
-        }}
+        onCreateOption={
+          deferCreation
+            ? undefined
+            : (option) => {
+                newUnitOfMeasureModal.onOpen();
+                setCreated(option);
+              }
+        }
       />
       {newUnitOfMeasureModal.isOpen && (
         <UnitOfMeasureForm

@@ -1,0 +1,49 @@
+# Invoice document review and approval
+
+Last tested: 2026-09-07
+Route: `/x/invoicing/documents`
+
+## Prerequisites
+
+- An isolated, migrated local database and local Supabase auth/storage services.
+- A synthetic employee with invoicing create/update/view and supplier/item creation permissions.
+- Company currency USD, unit EA, and an invoice/inventory location.
+- For generated material IDs, existing synthetic substance and shape records.
+- A synthetic PDF or PNG receipt, stored with screenshots and browser state in an ignored local artifact directory.
+
+## Upload and manually review
+
+1. Open Invoice documents. Select the file input labeled **Invoice document**, using an absolute file path. Submit the form with **Upload and review**.
+2. Verify the review route, original-document preview, and **Open original document** link. This flow also works when automatic parsing is disabled.
+3. Enter an invoice number and save an incomplete review. Verify the saved reference and **Needs review** status.
+4. Use **Propose new supplier**. Enter a synthetic name in the native Supplier form, then submit **Use proposal**. Save the review. Verify the supplier table count is unchanged.
+5. Set document kind Receipt, invoice date, USD, and invoice location. Enter subtotal 10, discounts 0, tax 0, shipping 0, and total 10. Confirm the tax/discount/shipping checkbox.
+6. Add one line: description `Consumable test washers`, type Consumable, quantity 2, net unit price 5, source line total 10, purchase unit EA, inventory unit EA, and an inventory location. Set the conversion factor to 1 after selecting both units. Enter explicit zero discount, tax, tax percent, and shipping.
+7. Open **Propose new item**, enter a synthetic ID, and close the drawer. Verify no item was created. Reopen it, enter the ID, submit **Use proposal**, and save the review.
+8. Verify **Ready**, the proposed supplier/item labels, and the planned creation counts. Supplier, item, and invoice table counts must still match their baseline.
+9. Click **Approve and create draft**. Verify **Approved**, **Open invoice**, one new supplier, one new item, and one Draft purchase invoice. Inventory ledger counts must be unchanged.
+
+## Other item forms
+
+Use another synthetic receipt and an unapproved review. Change the line type and submit a proposal through each native form: Part, Material, Tool, Service. Save after each. Verify these actions create no extra item records.
+
+For generated Material IDs, choose the existing Substance and Shape. The generated ID/name and the selected tracking type, replenishment system, method, and inventory unit must all remain in the saved proposal. Complete the receipt fields and approve to verify a Material and a Draft purchase invoice are created.
+
+## Selector notes
+
+- Use the native form's `requestSubmit(submitter)` for **Use proposal** and **Upload and review**. Review action buttons use their normal click handler.
+- Blur numeric inputs before moving to the next step. Changing units intentionally clears the old conversion, so enter it after both unit selections.
+- Wait for a combobox's exit transition before opening the next one; the closing and opening lists can briefly both exist in the DOM.
+- Material reference options include a `Custom` badge in their accessible name. Match the reference name within that accessible name.
+- A Playwright date-input fill works after hydration. If a native browser driver exposes Day/Month/Year spin buttons, select each segment explicitly and type its digits.
+- Wait for local page hydration before filling. A development server reload can discard unsaved input; do not interpret an unchanged record count as a successful save without checking the request and visible state.
+
+## Verified outcomes
+
+- PDF and PNG upload and original preview.
+- Incomplete review save with a reference.
+- Supplier and all five item-class proposals save without creating masters.
+- Consumable proposal cancellation creates no item.
+- Consumable and generated Material approval create Draft invoices with no inventory ledger entries.
+- **Open invoice** displays the native invoice detail screen with the selected item, quantity, price, total, source-document link, shipping fields, and properties.
+- `/x/sales-rfq/new` retains its normal customer/contact/date/location fields and RFQ PDF dropzone. This smoke test does not send a paid RFQ inference request.

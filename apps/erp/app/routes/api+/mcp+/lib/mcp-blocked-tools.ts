@@ -16,6 +16,14 @@ export const MCP_BLOCKED_TOOL_NAMES: readonly string[] = [
   // a privileged client off the public API rather than teaching the dispatcher to
   // hand one out.
   "purchasing_getSupplierApprovalContext",
+  // Pure payload builders shared by native forms and invoice-intake transactions.
+  // They are implementation helpers, not independently callable ERP operations.
+  "invoicing_prepareCreatedPurchaseInvoice",
+  "items_prepareCreatedItem",
+  "items_prepareCreatedItemCost",
+  "items_prepareCreatedItemSubtype",
+  "items_prepareCreatedMaterial",
+  "purchasing_prepareCreatedSupplier",
   // Internal sweep orchestration invoked by job/operation completion flows.
   // Their args require a userId the MCP executor cannot inject (AuthField has
   // no such payload field), so direct calls would only ever fail validation.

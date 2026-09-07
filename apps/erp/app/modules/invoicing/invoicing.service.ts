@@ -494,6 +494,21 @@ export async function updateSalesInvoiceStatus(
   return client.from("salesInvoice").update(update).eq("id", update.id);
 }
 
+/** Pure native header defaults, shared with reviewed transactional creation. */
+export function prepareCreatedPurchaseInvoice(
+  input: Database["public"]["Tables"]["purchaseInvoice"]["Insert"]
+): Database["public"]["Tables"]["purchaseInvoice"]["Insert"] {
+  return {
+    ...input,
+    supplierReference: input.supplierReference ?? null,
+    invoiceSupplierId: input.invoiceSupplierId ?? input.supplierId,
+    invoiceSupplierContactId: input.invoiceSupplierContactId ?? null,
+    invoiceSupplierLocationId: input.invoiceSupplierLocationId ?? null,
+    dateDue: input.dateDue ?? null,
+    locationId: input.locationId ?? null
+  };
+}
+
 export async function insertPurchaseInvoice(
   client: SupabaseClient<Database>,
   input: {
@@ -579,31 +594,33 @@ export async function insertPurchaseInvoice(
 
   const invoice = await client
     .from("purchaseInvoice")
-    .insert({
-      invoiceId,
-      supplierId: input.supplierId,
-      supplierReference: input.supplierReference ?? null,
-      invoiceSupplierId:
-        input.invoiceSupplierId ?? invoiceSupplierId ?? input.supplierId,
-      invoiceSupplierContactId: input.invoiceSupplierContactId ?? null,
-      invoiceSupplierLocationId: input.invoiceSupplierLocationId ?? null,
-      supplierInteractionId: supplierInteraction.data?.id,
-      currencyCode: input.currencyCode ?? "USD",
-      exchangeRate,
-      exchangeRateUpdatedAt,
-      paymentTermId: input.paymentTermId ?? paymentTermId,
-      dateIssued:
-        input.dateIssued ??
-        datetime
-          .today(await getCompanyTimeZone(client, input.companyId))
-          .toString(),
-      dateDue: input.dateDue ?? null,
-      locationId,
-      customFields: input.customFields,
-      companyId: input.companyId,
-      createdBy: input.createdBy,
-      updatedBy: input.createdBy
-    })
+    .insert(
+      prepareCreatedPurchaseInvoice({
+        invoiceId,
+        supplierId: input.supplierId,
+        supplierReference: input.supplierReference ?? null,
+        invoiceSupplierId:
+          input.invoiceSupplierId ?? invoiceSupplierId ?? input.supplierId,
+        invoiceSupplierContactId: input.invoiceSupplierContactId ?? null,
+        invoiceSupplierLocationId: input.invoiceSupplierLocationId ?? null,
+        supplierInteractionId: supplierInteraction.data?.id,
+        currencyCode: input.currencyCode ?? "USD",
+        exchangeRate,
+        exchangeRateUpdatedAt,
+        paymentTermId: input.paymentTermId ?? paymentTermId,
+        dateIssued:
+          input.dateIssued ??
+          datetime
+            .today(await getCompanyTimeZone(client, input.companyId))
+            .toString(),
+        dateDue: input.dateDue ?? null,
+        locationId,
+        customFields: input.customFields,
+        companyId: input.companyId,
+        createdBy: input.createdBy,
+        updatedBy: input.createdBy
+      })
+    )
     .select("id, invoiceId")
     .single();
 
