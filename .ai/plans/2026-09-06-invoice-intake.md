@@ -1,9 +1,9 @@
 # Invoice document intake — implementation plan
 
-**Spec:** `.ai/specs/2026-09-06-invoice-intake.md`
+**Spec:** `.ai/specs/implemented/2026-09-06-invoice-intake.md`
 **Research:** `.ai/research/invoice-intake.md`
 **Branch:** `feature/invoice-intake`, created from `saturn/main`
-**Status:** Approved; implementation in progress.
+**Status:** Complete; implemented, verified, and deployed.
 
 The user authorized execution of this full plan, including its managed GCP inference default and deployment. The requested interaction remains unchanged: upload/collect → parse → select/create typed masters → approve/correct → remember.
 
@@ -21,7 +21,7 @@ The user authorized execution of this full plan, including its managed GCP infer
 - [x] Task 10: Verify backups, restore paths, and existing-flow compatibility
 - [x] Task 11: Add repeatable laptop deployment configuration
 - [x] Task 12: Evaluate extraction quality and verify the complete workflow
-- [ ] Task 13: Integrate upstream, deploy, and enable a measured historical run
+- [x] Task 13: Integrate upstream, deploy, and enable a measured historical run
 
 ## Dependencies
 
@@ -713,4 +713,7 @@ Before handing off this document, verify all existing referenced files, relative
 - Task 12: the full live comparison recorded 60 original observations, thirty per model, through the deployed worker and canonical review/approval functions. Flash-Lite passed with 100% financial accuracy, all five held-out identity/unit selections correct, no missing lines, and no incorrect Ready documents. Flash failed on one schema-invalid response and one misread SKU; the matcher correctly kept that receipt in review. The offline CLI exited successfully and reproduced the live reports exactly. First-time item-class suggestions remain advisory; Flash-Lite's measured class accuracy was 72.4%.
 - Task 13 historical verification exposed overlapping Gmail candidate bundles and an interrupted payment-only placeholder. The run was paused with its cursor intact. The source-identity clarification above preserves separate payments until primary selection; actual-Postgres regression tests cover concurrent primary-hash approval, explicit linking to the same invoice, separate invoices with shared supporting candidates, and rejecting a primary unsupported by grouped payments. These are intake identity safeguards; they do not change native posting, payment, or inventory behavior.
 - Review of the historical fix additionally verified legacy approvals without a stored primary: only files present at approval can supply the sole-file fallback. Later supporting evidence cannot erase ownership. A metadata-only hash cannot replace an attached source file. The ERP regression/model suites pass 33 tests, with scoped typechecking and no missing translations.
+- The historical source fix passed 160 job/payment tests and 33 ERP review/model tests, both scoped typechecks, Biome, translation completeness, normal commit hooks, and public-source review. It was merged with current upstream and deployed from clean `saturn/main` at `ee61853d63a9a13833fae90d2f472935e29d2b3b`. ERP/MES/Supabase/events and Kanban passed readiness; the recovery snapshot and daily/monthly cold backups were confirmed. Standard benchmark resume on that exact Ops revision retained all sixty original observations and all attempt/billing/fact hashes without another paid call. Flash-Lite passed fresh canonical validation for every held-out repeat; Flash's original failure remained visible.
 - The selected Flash-Lite configuration was deployed with the exact evaluated application images at `ef3468783620e3a8486220a7343c341d944df28e`. Both deployments passed ERP/MES/Supabase/event readiness. Kanban's shared-database and private-access checks passed, and existing daily cold backups, retention, private storage and recent successful execution were verified. Real-company inference remained paused through the quality gate.
+
+- Task 13 complete: the historical bridge resumed from its retained cursor and finished its frozen window without skipping the formerly conflicting payment. Scheduled inference drained the remaining queue into explicit review; records without saved evidence remain NeedsDocument. The private before/after comparison confirmed unchanged Mercury statuses/links, mailbox configuration, and native master/financial records. Inference and automatic intake are enabled with the configured budgets and independent pause controls. Runtime counts, costs, identifiers, and real-document assessments remain in ignored operator artifacts.

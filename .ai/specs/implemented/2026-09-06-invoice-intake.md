@@ -1,16 +1,16 @@
 # Invoice document intake, recognition, and approval
 
-> Status: approved, implementation in progress
+> Status: implemented and verified
 > Author: Codex
 > Date: 2026-09-06
-> Research: ../research/invoice-intake.md
-> Implementation plan: ../plans/2026-09-06-invoice-intake.md
+> Research: ../../research/invoice-intake.md
+> Implementation plan: ../../plans/2026-09-06-invoice-intake.md
 
 ## TLDR
 
 Extend Invoicing with a document inbox shared by manual uploads and Mercury/Gmail evidence. Extract document facts, suggest suppliers and typed items, expose corrections beside the original, and remember confirmed identities and purchasing units. One approval creates/enriches a Draft invoice and any explicitly confirmed master records. It does not post accounting, receive inventory, initiate a payment, or settle an invoice. Implement using existing Carbon forms, Supabase storage/Postgres, and Inngest, with a configurable managed GCP inference adapter as the planning default.
 
-The user authorized execution of the full implementation plan, including its managed GCP inference default and deployment. Runtime configuration and acceptance criteria below still require verification before completion.
+The user authorized execution of the full implementation plan, including its managed GCP inference default and deployment. Runtime configuration and every acceptance criterion below were verified through scoped tests, browser checks, the deployed synthetic comparison, and the measured historical run.
 
 ## Problem Statement
 
@@ -166,20 +166,20 @@ Originals stay in private Supabase storage. Request/response logging, grounding,
 
 ## Acceptance Criteria
 
-- [ ] AC1: Native PDF, scanned PDF, JPEG, and PNG all reach the same editable review; missing fields remain missing.
-- [ ] AC2: A new supplier and new Part/Material/Consumable/Tool/Service can be proposed and created with the correct native records through one explicit approval.
-- [ ] AC3: A second invoice for a confirmed supplier SKU preselects its item and pack conversion while extracting new price/quantity/date independently.
-- [ ] AC4: Manual correction replaces a wrong suggestion; reparse, retry, price change, and concurrent worker results cannot overwrite it or duplicate an item.
-- [ ] AC5: Repeated upload, Mercury/Gmail duplicate attachments, installment payments, duplicate approval, and concurrent approval do not duplicate invoices or inventory.
-- [ ] AC6: Totals, unit conversion, typed required fields, unsupported document kinds, duplicate conflicts, and absent FX prevent Ready/approval until resolved.
-- [ ] AC7: Approval creates/enriches only Draft invoices; linked non-Draft invoices are evidence-only. No inventory ledger, journal, receipt, payment, or settlement is created by approval.
-- [ ] AC8: Historical backfill preserves every existing Mercury status/link, resumes after interruption, and respects mailbox pause settings.
-- [ ] AC9: Unauthorized same-company users and other-company users cannot read financial evidence, start inference on another file, create unauthorized masters, or spoof server-owned state.
-- [ ] AC10: A failed provider call or exhausted budget leaves recoverable queued/review data; retries stay within the per-generation attempt limit.
-- [ ] AC11: Source documents, corrected data, FKs, and learned mappings survive backup/restore; foreign-company restore cannot retain usable stale tenant IDs or storage prefixes.
-- [ ] AC12: Existing RFQ autofill and ordinary manual purchase-invoice creation still work; native type mapping no longer rewrites non-Parts as Parts.
-- [ ] AC13: `make deploy` from the clean integrated branch provisions/configures the adapter and passes private readiness checks; disabling inference pauses new calls without hiding documents.
-- [ ] AC14: Model/prompt changes have repeatable evaluation results, explicit versioning, bounded cost, and a rollback configuration.
+- [x] AC1: Native PDF, scanned PDF, JPEG, and PNG all reach the same editable review; missing fields remain missing.
+- [x] AC2: A new supplier and new Part/Material/Consumable/Tool/Service can be proposed and created with the correct native records through one explicit approval.
+- [x] AC3: A second invoice for a confirmed supplier SKU preselects its item and pack conversion while extracting new price/quantity/date independently.
+- [x] AC4: Manual correction replaces a wrong suggestion; reparse, retry, price change, and concurrent worker results cannot overwrite it or duplicate an item.
+- [x] AC5: Repeated upload, Mercury/Gmail duplicate attachments, installment payments, duplicate approval, and concurrent approval do not duplicate invoices or inventory.
+- [x] AC6: Totals, unit conversion, typed required fields, unsupported document kinds, duplicate conflicts, and absent FX prevent Ready/approval until resolved.
+- [x] AC7: Approval creates/enriches only Draft invoices; linked non-Draft invoices are evidence-only. No inventory ledger, journal, receipt, payment, or settlement is created by approval.
+- [x] AC8: Historical backfill preserves every existing Mercury status/link, resumes after interruption, and respects mailbox pause settings.
+- [x] AC9: Unauthorized same-company users and other-company users cannot read financial evidence, start inference on another file, create unauthorized masters, or spoof server-owned state.
+- [x] AC10: A failed provider call or exhausted budget leaves recoverable queued/review data; retries stay within the per-generation attempt limit.
+- [x] AC11: Source documents, corrected data, FKs, and learned mappings survive backup/restore; foreign-company restore cannot retain usable stale tenant IDs or storage prefixes.
+- [x] AC12: Existing RFQ autofill and ordinary manual purchase-invoice creation still work; native type mapping no longer rewrites non-Parts as Parts.
+- [x] AC13: `make deploy` from the clean integrated branch provisions/configures the adapter and passes private readiness checks; disabling inference pauses new calls without hiding documents.
+- [x] AC14: Model/prompt changes have repeatable evaluation results, explicit versioning, bounded cost, and a rollback configuration.
 
 ## Risks
 
@@ -205,3 +205,5 @@ Originals stay in private Supabase storage. Request/response logging, grounding,
 ## Changelog
 
 - 2026-09-06: Proposed design based on actual native extraction, item creation, Mercury import, permissions, and backup call sites; managed GCP inference recorded as a planning assumption.
+
+- 2026-09-07: Implemented all acceptance criteria. Verified native typed creation, transactional Draft/evidence approval, private source access, correction memory, resume and duplicate boundaries, backup compatibility, deployed Flash-Lite quality, and a completed historical ingestion/processing run. Detailed verification is recorded in the implementation plan; real-company evidence remains private.
