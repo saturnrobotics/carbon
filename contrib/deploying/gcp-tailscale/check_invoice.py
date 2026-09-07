@@ -65,12 +65,15 @@ def check_environment(environment, integration=False, environment_file=None):
 
 
 def commands(integration=False, erp_only=False):
+    # Package Vitest configs import the built shared preset. A checkout with
+    # only `pnpm install` has no dist/; do not depend on a previous dev build.
+    result = [] if erp_only else [["pnpm", "--filter", "@carbon/config", "build"]]
     if integration:
-        result = [["pnpm", "--dir", "apps/erp", "exec", "vitest", "run", *ERP_DATABASE_TESTS]]
+        result.append(["pnpm", "--dir", "apps/erp", "exec", "vitest", "run", *ERP_DATABASE_TESTS])
         if not erp_only:
             result.append(["pnpm", "--filter", "@carbon/jobs", "exec", "vitest", "run", *JOBS_DATABASE_TESTS])
         return result
-    result = [["pnpm", "--dir", "apps/erp", "test:invoice"]]
+    result.append(["pnpm", "--dir", "apps/erp", "test:invoice"])
     if not erp_only:
         result.append([
             "pnpm", "--filter", "@carbon/jobs", "exec", "vitest", "run",

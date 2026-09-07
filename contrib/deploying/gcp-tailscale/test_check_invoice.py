@@ -13,14 +13,23 @@ class InvoiceCheckTest(unittest.TestCase):
         self.assertTrue(all(key not in result for key in DATABASE_KEYS))
         self.assertEqual(result["MERCURY_API_TOKEN"], "")
         self.assertEqual(result["INVOICE_INTAKE_ENABLED"], "false")
-        self.assertTrue(all("--exclude" in command for command in commands()[1:]))
+        self.assertIn("--exclude", commands()[-1])
+
+    def test_jobs_tests_build_the_shared_preset_first_in_both_modes(self):
+        build = ["pnpm", "--filter", "@carbon/config", "build"]
+        for integration in (False, True):
+            with self.subTest(integration=integration):
+                sequence = commands(integration)
+                self.assertEqual(sequence[0], build)
+                self.assertEqual(sequence[-1][1:3], ["--filter", "@carbon/jobs"])
+                self.assertNotIn(build, commands(integration, erp_only=True))
 
     def test_integration_rejects_missing_remote_and_unix_socket_databases(self):
         for value in ("", "postgresql://example.com/invoices", "postgresql:///invoices"):
             with self.subTest(value=value), self.assertRaises(ValueError):
                 check_environment(dict.fromkeys(DATABASE_KEYS, value), True)
         result = check_environment(dict.fromkeys(DATABASE_KEYS, "postgresql://localhost:55432/invoice_test"), True)
-        self.assertEqual(len(commands(True)), 2)
+        self.assertEqual(len(commands(True)), 3)
         self.assertTrue(result[DATABASE_KEYS[0]].endswith("invoice_test"))
 
     def test_app_environment_loading_is_ci_only(self):
