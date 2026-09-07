@@ -11,6 +11,10 @@ bank/mailbox connection, or paid model is used. `crbn --run` removes its own fre
 volumes on exit. Do not copy the CI provisioning command into an existing local
 development stack.
 
+The checker builds `@carbon/config` before package tests, whose Vitest preset is a
+generated export. CI invokes the tracked `packages/dev/bin/crbn` router directly;
+it does not depend on a developer's shell installation or prebuilt CLI output.
+
 From the repository root, run credential-free unit checks:
 
 ```sh

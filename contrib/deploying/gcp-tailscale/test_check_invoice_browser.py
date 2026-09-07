@@ -1,8 +1,9 @@
 from pathlib import Path
 from tempfile import TemporaryDirectory
+import subprocess
 import unittest
 
-from check_invoice import DATABASE_KEYS
+from check_invoice import DATABASE_KEYS, ROOT
 from check_invoice_browser import browser_environment
 
 
@@ -44,6 +45,24 @@ class InvoiceBrowserCheckTest(unittest.TestCase):
             environment.pop("GITHUB_ACTIONS")
             with self.assertRaisesRegex(ValueError, "ignored"):
                 browser_environment(environment, Path(directory) / "public-artifacts")
+
+    def test_generated_crbn_login_does_not_override_explicit_browser_identity(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            app = root / "apps/erp"
+            app.mkdir(parents=True)
+            source = root / ".env.local"
+            original = "DEV_BYPASS_EMAIL=test@carbon.ms\n"
+            source.write_text(original)
+            script = """
+import {applyDotenvToProcessEnv} from './packages/dev/vite.js';
+process.env.DEV_BYPASS_EMAIL='invoice-browser-synthetic@example.com';
+applyDotenvToProcessEnv('development',process.argv[1]);
+if(process.env.DEV_BYPASS_EMAIL!=='invoice-browser-synthetic@example.com')
+  throw Error('Generated development login replaced the explicit browser identity');
+"""
+            subprocess.run(["node", "--input-type=module", "-e", script, str(app)], cwd=ROOT, check=True, capture_output=True, text=True)
+            self.assertEqual(source.read_text(), original)
 
 
 if __name__ == "__main__":
