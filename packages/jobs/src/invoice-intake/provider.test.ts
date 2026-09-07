@@ -99,6 +99,18 @@ describe("Google invoice REST boundary", () => {
     const prepared = provider.prepareExtraction(document);
     const estimate = await provider.estimate(prepared);
     expect(estimate.reservedInputTokens).toBe(8000);
+    expect(request.mock.calls[1]?.[0]).toBe(
+      "https://aiplatform.us.rep.googleapis.com/v1/projects/example-project/locations/us/publishers/google/models/gemini-3.5-flash:countTokens"
+    );
+    // Vertex v1 takes the contents and complete generation config at the top
+    // level. A generateContentRequest wrapper is rejected before admission.
+    const countBody = JSON.parse(request.mock.calls[1]?.[1]?.body as string);
+    expect(countBody).toEqual({
+      ...prepared.body,
+      model:
+        "projects/example-project/locations/us/publishers/google/models/gemini-3.5-flash"
+    });
+    expect(countBody.generateContentRequest).toBeUndefined();
     const result = await provider.execute(prepared);
     expect(result.result).toEqual(emptyInvoiceExtraction());
     expect(result.usage.thoughtTokens).toBe(200);

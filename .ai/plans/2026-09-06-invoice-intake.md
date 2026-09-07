@@ -703,3 +703,6 @@ Before handing off this document, verify all existing referenced files, relative
 
 - Final native browser checks confirm copied source downloads return the correct private bytes, copied files are read-only, ordinary file uploads retain their native actions, and manual invoice creation without a PDF still creates a Draft. Document metadata uses native rounded KiB; source integrity retains exact bytes.
 - First live provisioning exposed Google IAM propagation immediately after creating the dedicated identity. The adapter now retries only that exact newly-created-account error within a bounded interval, fails other errors immediately, and keeps policy diagnostics private. Thirty-seven focused deployment tests pass.
+
+- Initial integrated deployment passed ERP/MES/Supabase/event readiness, and Kanban's shared database check recovered successfully. Existing cold backup schedules, retention labels and a recent completed scheduled backup were verified read-only.
+- The first live benchmark stopped before any paid admission: Vertex rejected the Gemini Developer API token-count wrapper. The corrected top-level request returned HTTP 200 for both configured models using the same limited VM identity and US endpoint. The adapter correction and boundary regression precede the restarted live quality gate; real-company inference remains disabled meanwhile.

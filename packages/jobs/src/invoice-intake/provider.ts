@@ -380,11 +380,10 @@ export function createGoogleInvoiceProvider(
   async function estimate<T>(prepared: PreparedInvoiceRequest<T>) {
     // countTokens is free, but multimodal counts are estimates. Admission reserves
     // a documented 2x input margin; reported billing is reconciled after inference.
+    // Vertex v1 accepts generation fields directly, including the response schema.
     const value = await call("countTokens", {
-      generateContentRequest: {
-        ...prepared.body,
-        model: `projects/${config.project}/locations/us/publishers/google/models/${config.model}`
-      }
+      ...prepared.body,
+      model: `projects/${config.project}/locations/us/publishers/google/models/${config.model}`
     });
     const estimate = integer(value.totalTokens);
     if (estimate === undefined || estimate <= 0)
