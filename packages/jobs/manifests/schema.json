@@ -1,11 +1,11 @@
 {
   "kind": "carbon-company-backup",
   "version": 1,
-  "schemaVersion": "20260907031408",
+  "schemaVersion": "20260907035112",
   "sourceCompanyId": "schema-baseline",
   "sourceCompanyGroupId": null,
   "sourceCompanyName": null,
-  "exportedAt": "2026-09-07T03:31:23.949Z",
+  "exportedAt": "2026-09-07T03:59:33.666Z",
   "exportedBy": "schema-baseline",
   "label": "schema baseline",
   "includeStorage": "none",
@@ -1467,9 +1467,9 @@
       "name": "nonConformanceRequiredAction",
       "rows": 0,
       "columns": [
+        "updatedAt",
         "active",
         "createdAt",
-        "updatedAt",
         "systemType",
         "id",
         "companyId",
@@ -4500,12 +4500,12 @@
         "updatedAt",
         "customFields",
         "id",
-        "invoiceCustomerId",
         "invoiceCustomerLocationId",
         "invoiceCustomerContactId",
         "paymentTermId",
         "companyId",
-        "updatedBy"
+        "updatedBy",
+        "invoiceCustomerId"
       ]
     },
     {
@@ -5542,6 +5542,15 @@
         "requiredDate",
         "receivedDate",
         "sortOrder",
+        "id",
+        "purchaseOrderId",
+        "itemId",
+        "assetId",
+        "description",
+        "inventoryUnitOfMeasureCode",
+        "purchaseUnitOfMeasureCode",
+        "locationId",
+        "storageUnitId",
         "companyId",
         "createdBy",
         "updatedBy",
@@ -5552,16 +5561,7 @@
         "accountId",
         "costCenterId",
         "ownerId",
-        "supplierPartId",
-        "storageUnitId",
-        "id",
-        "purchaseOrderId",
-        "itemId",
-        "assetId",
-        "description",
-        "inventoryUnitOfMeasureCode",
-        "purchaseUnitOfMeasureCode",
-        "locationId"
+        "supplierPartId"
       ]
     },
     {
@@ -5741,13 +5741,13 @@
       "columns": [
         "createdAt",
         "updatedAt",
+        "updatedBy",
         "id",
         "key",
         "value",
         "operationId",
         "companyId",
-        "createdBy",
-        "updatedBy"
+        "createdBy"
       ]
     },
     {
