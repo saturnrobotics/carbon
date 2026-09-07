@@ -47,6 +47,22 @@ export const invoiceDocumentKinds = [
   "unknown"
 ] as const;
 
+/** Gmail matching is deferred; payment placeholders are context, not documents. */
+export function getInvoiceDocumentSources<
+  T extends {
+    kind: string;
+    storagePath: string | null;
+    sha256: string | null;
+  }
+>(sources: readonly T[]): T[] {
+  return sources.filter(
+    (source) =>
+      (source.kind === "mercury" || source.kind === "upload") &&
+      !!source.storagePath &&
+      !!source.sha256
+  );
+}
+
 /** Content identities remain stable when source IDs/paths are remapped on restore. */
 const sourceHash = z.string().regex(/^[0-9a-f]{64}$/);
 export const invoiceSourceReviewSchema = z.object({

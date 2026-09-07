@@ -117,12 +117,14 @@ async function loadDocument(
   const sources =
     await sql<Source>`SELECT "storageBucket","storagePath",sha256,"mediaType","byteSize"
     FROM public."invoiceIntakeSource" WHERE "companyId"=${context.companyId} AND "intakeId"=${context.intakeId}
-      AND "storagePath" IS NOT NULL ORDER BY "createdAt",id`.execute(
+      AND "storagePath" IS NOT NULL AND kind IN ('mercury','upload') ORDER BY "createdAt",id`.execute(
       context.db
     );
   const selection = invoiceSourceReviewSchema.safeParse(intake.header);
   if (!selection.success)
     throw new InvoiceProviderError("invoice_source_selection_invalid");
+  if (!sources.rows.length)
+    throw new InvoiceProviderError("invoice_document_missing");
   const hashes = new Set(sources.rows.map((source) => source.sha256));
   const primary =
     selection.data.primarySourceSha256 ??
@@ -673,7 +675,7 @@ async function failPreflight(
   intake: Intake,
   failure: InvoiceProviderError
 ) {
-  await sql`UPDATE public."invoiceIntake" SET "lastErrorCode"=${failure.code},status=${failure.retryable && intake.status === "Queued" ? "Queued" : "NeedsReview"},"updatedAt"=now()
+  await sql`UPDATE public."invoiceIntake" SET "lastErrorCode"=${failure.code},status=${failure.code === "invoice_document_missing" ? "NeedsDocument" : failure.retryable && intake.status === "Queued" ? "Queued" : "NeedsReview"},"updatedAt"=now()
     WHERE "companyId"=${context.companyId} AND id=${context.intakeId} AND generation=${context.generation}
     AND revision=${intake.revision} AND status=${intake.status}`.execute(
     context.db
@@ -773,6 +775,21 @@ export async function runInvoiceMatch(
   let prepared: PreparedInvoiceRequest<InvoiceMatchSuggestions>;
   let admitted: Claim | InvoiceWorkResult;
   try {
+    // Matching is a paid continuation of document review. It must not classify
+    // deferred email facts or proceed after the selected file became unavailable.
+    const { source } = await loadDocument(context, intake);
+    const extractedSource = (
+      await sql<{ sha256: string | null }>`
+      SELECT (SELECT s.sha256 FROM public."invoiceIntakeSource" s
+        WHERE s."companyId"=e."companyId" AND s."intakeId"=e."intakeId"
+          AND s."storagePath"=e."storagePath" LIMIT 1) AS sha256
+      FROM public."documentExtraction" e WHERE e."companyId"=${context.companyId}
+        AND e."intakeId"=${context.intakeId} AND e.operation='extract' AND e.status='completed'
+      ORDER BY e."createdAt" DESC,e.id DESC LIMIT 1`.execute(context.db)
+    ).rows[0];
+    if (extractedSource && extractedSource.sha256 !== source.sha256)
+      throw new InvoiceProviderError("invoice_extraction_source_changed");
+
     const review = await context.db
       .selectFrom("invoiceIntake")
       .select(["supplierId", "header"])

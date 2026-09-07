@@ -2562,6 +2562,9 @@ msgstr "ジョブ完了時"
 msgid "At least one condition must match"
 msgstr "少なくとも1つの条件が一致する必要があります"
 
+msgid "At least one payment is not confirmed as sent. Explain its status before creating a draft. Approval does not mark it as paid."
+msgstr "送金済みとして確定していない支払があります。下書きを作成する前に、そのステータスを説明してください。承認しても支払済みにはなりません。"
+
 msgid "At operation completion"
 msgstr "操作完了時"
 
@@ -2570,6 +2573,9 @@ msgstr "ファイルを添付"
 
 msgid "Attachment"
 msgstr "添付ファイル"
+
+msgid "Attachment saved."
+msgstr "添付ファイルを保存しました。"
 
 msgid "Attachments"
 msgstr "添付ファイル"
@@ -2670,8 +2676,8 @@ msgstr "自動インポート"
 msgid "Automatic Lead Time Updates"
 msgstr "自動リードタイム更新"
 
-msgid "Automatic processing needs attention. Your original document is safe. Review the fields manually or save your work and retry parsing."
-msgstr "自動処理には注意が必要です。オリジナルの文書は安全です。フィールドを手動で確認するか、作業内容を保存して解析を再試行してください。"
+msgid "Automatic processing needs attention. Check the available documents and review fields below before retrying parsing."
+msgstr "自動処理に確認が必要です。解析を再試行する前に、利用可能なドキュメントと以下の項目を確認してください。"
 
 msgid "Automatic Updates"
 msgstr "自動更新"
@@ -3425,6 +3431,9 @@ msgstr "メールを確認してください"
 
 msgid "Checking Stripe for this customer…"
 msgstr "この得意先の Stripe を確認中…"
+
+msgid "Checking the parsed document against your supplier and item settings."
+msgstr "解析済み文書を仕入先と品目の設定に照らして確認しています。"
 
 msgid "Checkpoint ·"
 msgstr "チェックポイント ·"
@@ -5673,6 +5682,8 @@ msgstr "図が保存されました"
 
 msgid "Differs from the selection — allowed, but confirm they nest together"
 msgstr "選択と異なります — 許可されていますが、それらが一緒に実行できることを確認してください"
+msgid "Difference"
+msgstr "差額"
 
 msgid "Digital Quote"
 msgstr "デジタル見積"
@@ -7052,6 +7063,15 @@ msgstr "選択した工法が開始すると使用期限が開始します。"
 msgid "Expiry trace"
 msgstr "使用期限トレース"
 
+msgid "Explain any partial payment, grouped payments, fees, or currency conversion before approval. This explanation does not change the invoice amounts or reconcile the bank payment."
+msgstr "承認前に、一部支払、まとめ払い、手数料、通貨換算について説明してください。この説明によって請求書の金額が変更されたり、銀行支払が消し込まれたりすることはありません。"
+
+msgid "Explain the payment difference or status before approval"
+msgstr "承認前に支払の差額またはステータスを説明してください"
+
+msgid "Explain the payment difference, status, or allocation"
+msgstr "支払の差額、ステータス、または充当についての説明"
+
 msgid "Explorer"
 msgstr "エクスプローラー"
 
@@ -7998,6 +8018,9 @@ msgstr "GL試算表"
 
 msgid "GL Tie-Out"
 msgstr "GL試算表"
+
+msgid "Gmail candidates are retained for later review. They are not used to parse or approve this purchase."
+msgstr "Gmailの候補は後のレビュー用に保持されます。この購入の解析や承認には使用されません。"
 
 msgid "Go live right the first time — with our team alongside you"
 msgstr "初回から正しく本番運用を開始 — 当社チームがサポートします"
@@ -10144,11 +10167,20 @@ msgstr "メモID"
 msgid "Mercury"
 msgstr "Mercury"
 
+msgid "Mercury also offers a generated payment receipt. Payment confirmation alone does not identify the purchased line items."
+msgstr "Mercuryは自動生成の支払領収書も提供しています。支払の確認だけでは、購入した品目の明細を特定できません。"
+
 msgid "Mercury authorization needs to be renewed. Check the read-only account connection."
 msgstr "Mercury の認証を更新してください。読み取り専用アカウントの接続を確認します。"
 
 msgid "Mercury connection configured"
 msgstr "Mercury 接続を設定済み"
+
+msgid "Mercury has no uploaded receipt or invoice for this payment."
+msgstr "この支払について、Mercuryにアップロードされた領収書または請求書はありません。"
+
+msgid "Mercury payment evidence"
+msgstr "Mercury支払証憑"
 
 msgid "Mercury payments"
 msgstr "Mercury 支払い"
@@ -10973,6 +11005,9 @@ msgstr "変換は不要です"
 msgid "No cost history found"
 msgstr "原価の履歴が見つかりません"
 
+msgid "No current receipt has been parsed. Saved values may come from an earlier document. Parse the selected receipt or check its details manually before approval."
+msgstr "現在の領収書は解析されていません。保存済みの値は以前の文書に基づいている可能性があります。承認前に、選択した領収書を解析するか、その詳細を手動で確認してください。"
+
 msgid "No Data"
 msgstr "データなし"
 
@@ -11008,6 +11043,8 @@ msgstr "このアイテムの編集可能なプロパティはありません。
 
 msgid "No eligible operations"
 msgstr "対象となる作業がありません"
+msgid "No eligible receipt or invoice is attached yet. Upload the original document or find its receipt in Mercury."
+msgstr "対象となる領収書または請求書がまだ添付されていません。元の文書をアップロードするか、Mercuryで領収書を探してください。"
 
 msgid "No employees assigned this week"
 msgstr "今週割り当てられた従業員がいません"
@@ -11284,9 +11321,6 @@ msgstr "在庫またはジョブステータスの単一の信頼できる数値
 
 msgid "No sorts applied to this view"
 msgstr "このビューに適用されたソートはありません"
-
-msgid "No source document is attached yet. Upload a receipt or find supporting evidence from Mercury."
-msgstr "参照伝票はまだ添付されていません。領収書をアップロードするか、Mercury からの証拠を見つけてください。"
 
 msgid "No stock"
 msgstr "在庫なし"
@@ -11756,6 +11790,9 @@ msgstr "オープン製造指図"
 
 msgid "Open menu"
 msgstr "メニューを開く"
+
+msgid "Open Mercury payments"
+msgstr "Mercuryの支払を開く"
 
 msgid "Open navigation"
 msgstr "ナビゲーションを開く"
@@ -12285,8 +12322,14 @@ msgstr "買掛金 (デフォルト)"
 msgid "Payables aging"
 msgstr "買掛金経過日数"
 
+msgid "Payee unavailable"
+msgstr "支払先を確認できません"
+
 msgid "Payment"
 msgstr "支払い"
+
+msgid "Payment and invoice currencies differ. Payments cannot be linked to an invoice in a different currency."
+msgstr "支払と請求書の通貨が異なります。異なる通貨の請求書に支払を関連付けることはできません。"
 
 msgid "Payment Applications"
 msgstr "支払い適用"
@@ -12297,14 +12340,14 @@ msgstr "支払い確認"
 msgid "Payment Date"
 msgstr "支払日"
 
-msgid "Payment evidence"
-msgstr "支払い証拠"
-
 msgid "Payment history is still being imported. The next hourly run will continue where it stopped."
 msgstr "支払い履歴をインポート中です。次の毎時実行で停止した場所から続行します。"
 
 msgid "Payment ID"
 msgstr "支払いID"
+
+msgid "Payment status"
+msgstr "支払ステータス"
 
 msgid "payment term"
 msgstr "支払条件"
@@ -12327,11 +12370,17 @@ msgstr "支払条件"
 msgid "Payment terms like Net 30 or due on receipt"
 msgstr "Net 30のような支払条件または領収時に支払い"
 
+msgid "Payment total"
+msgstr "支払合計"
+
 msgid "Payments"
 msgstr "支払い"
 
 msgid "Payments and credits applied to this invoice. Click a row to open the source document."
 msgstr "この請求書に充当された支払と調整額。行をクリックして参照伝票を開きます。"
+
+msgid "Payments cannot be linked to an invoice in a different currency"
+msgstr "異なる通貨の請求書に支払を関連付けることはできません"
 
 msgid "Payments examined"
 msgstr "審査された支払い"
@@ -13557,6 +13606,12 @@ msgstr "計算中…"
 msgid "Receipt"
 msgstr "領収書"
 
+msgid "Receipt collection needs attention."
+msgstr "領収書の取得に確認が必要です。"
+
+msgid "Receipt collection status is not available yet."
+msgstr "領収書の取得ステータスはまだ確認できません。"
+
 msgid "Receipt ID"
 msgstr "受取ID"
 
@@ -13577,6 +13632,9 @@ msgstr "入荷希望納期"
 
 msgid "Receipts"
 msgstr "領収書"
+
+msgid "Receipts last checked"
+msgstr "領収書の最終確認日"
 
 msgid "Receipts, shipments, sales invoices, purchase invoices, payments, and credit/debit memos that are still Draft or Pending must be posted or voided — both documents dated in this period and undated documents that would receive a date in it when posted. Until they post, their amounts aren't in the general ledger, so the period would be understated."
 msgstr "入荷、出荷、売上請求書、仕入先請求書、支払、およびクレジット/デビットメモは、まだ下書きまたは待機中である場合は、転記または取消される必要があります。この期間に日付けられた文書と、転記時にこの期間に日付けを受け取る無期限文書の両方。転記されるまで、それらの金額は総勘定元帳に含まれていないため、期間が過少計上されます。"
@@ -13701,6 +13759,9 @@ msgstr "参照"
 
 msgid "Refresh"
 msgstr "更新"
+
+msgid "Refresh document"
+msgstr "文書を更新"
 
 msgid "Refresh exchange rate"
 msgstr "為替レートを更新"
@@ -15068,6 +15129,9 @@ msgstr "担当者を選択"
 
 msgid "Select an event…"
 msgstr "イベントを選択…"
+
+msgid "Select an existing supplier or propose this vendor as a new supplier."
+msgstr "既存の仕入先を選択するか、この販売元を新しい仕入先として提案してください。"
 
 msgid "Select an issue type"
 msgstr "問題タイプを選択"
@@ -16770,6 +16834,9 @@ msgstr "計算方法の後の支払い期日までの日数"
 msgid "The append-only record of every stock movement; on-hand is the sum of its signed entries and the source of truth."
 msgstr "すべての在庫移動の追加専用レコード。手持在庫はその署名付きエントリの合計であり、信頼できる情報源です。"
 
+msgid "The attachment limit was reached. Review the saved files and upload the receipt needed for this purchase."
+msgstr "添付ファイル数の上限に達しました。保存済みファイルを確認し、この購入に必要な領収書をアップロードしてください。"
+
 msgid "The authorization was refused in Onshape. Try connecting again."
 msgstr "Onshape で認可が拒否されました。もう一度接続してください。"
 
@@ -17242,6 +17309,12 @@ msgstr "必要な親が構築される場合、部品は独自のジョブとし
 msgid "The part is taken from existing stock when its parent is built — no new job or purchase order."
 msgstr "部品はその親製品が製造されるときに既存在庫から取得されます。新しい製造指図または発注書は作成されません。"
 
+msgid "The payment total differs from the reviewed invoice total."
+msgstr "支払合計が確認済み請求書の合計と異なります。"
+
+msgid "The payment total matches the reviewed invoice total."
+msgstr "支払合計が確認済み請求書の合計と一致しています。"
+
 msgid "The people on the Carbon side who will run your implementation, and how to reach them."
 msgstr "実装を実施する Carbon 側の人員および連絡方法"
 
@@ -17567,6 +17640,9 @@ msgstr "これらの工程に段取り、労務、機械時間がないため、
 msgid "There's nothing outstanding to apply these credits to."
 msgstr "これらのクレジットを適用する未処理項目がありません。"
 
+msgid "These are bank payment details. Invoice totals and the supplier are reviewed separately from the receipt."
+msgstr "これは銀行支払の詳細です。請求書の合計と仕入先は、領収書に基づいて別途確認します。"
+
 msgid "These custom fields will only be available for entities with the same tags"
 msgstr "これらのカスタムフィールドは、同じタグを持つエンティティでのみ利用可能です"
 
@@ -17602,6 +17678,9 @@ msgstr "このスキル"
 msgid "This approval will create {0} supplier(s) and {1} item(s)."
 msgstr "この承認により、{0} 個の仕入先と {1} 個のアイテムが作成されます。"
 
+msgid "This attachment could not be downloaded from Mercury. Find the document again or upload the original file."
+msgstr "この添付ファイルをMercuryからダウンロードできませんでした。文書を再検索するか、元のファイルをアップロードしてください。"
+
 msgid "This backup could not be completed."
 msgstr "このバックアップを完了できませんでした。"
 
@@ -17629,11 +17708,17 @@ msgstr "この担当者はメールアドレスを持っていません"
 msgid "This counterparty has nothing outstanding — the payment will be recorded on-account."
 msgstr "この取引先には未払い金がありません。支払いは掛け金として記録されます。"
 
+msgid "This document is attached, but its preview is unavailable. Refresh to try opening it again."
+msgstr "この文書は添付されていますが、プレビューを表示できません。更新して再度開いてください。"
+
 msgid "This download link is invalid or has been tampered with."
 msgstr "このダウンロードリンクは無効であるか、改ざんされています。"
 
 msgid "This file is no longer available, or you don't have permission to download it."
 msgstr "このファイルはもう利用できないか、またはそれをダウンロードする権限がありません。"
+
+msgid "This file type cannot be parsed. Upload a PDF, PNG, or JPEG version."
+msgstr "このファイル形式は解析できません。PDF、PNG、またはJPEGのバージョンをアップロードしてください。"
 
 msgid "This Fiscal Year"
 msgstr "この会計年度"
@@ -18856,6 +18941,9 @@ msgstr "差異のみ"
 
 msgid "VAT Number"
 msgstr "VAT番号"
+
+msgid "Vendor on document"
+msgstr "文書に記載された販売元"
 
 msgid "Vendor Write-Off Income"
 msgstr "仕入先償却収益"

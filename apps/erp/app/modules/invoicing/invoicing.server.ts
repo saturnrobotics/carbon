@@ -1,8 +1,12 @@
 import type { Database, Json } from "@carbon/database";
 import type { Kysely, KyselyDatabase, KyselyTx } from "@carbon/database/client";
-import { lockCompanyInvoiceApproval } from "@carbon/database/mercury";
+import {
+  lockCompanyInvoiceApproval,
+  parseMercuryVendorSuggestion
+} from "@carbon/database/mercury";
 import { getNextSequence } from "@carbon/database/sequence";
 import {
+  getInvoiceDocumentSources,
   type InvoiceActor,
   type InvoiceIntakeStatus,
   type InvoiceItemType,
@@ -40,6 +44,7 @@ import {
 import { createReviewedSupplier } from "~/modules/purchasing/purchasing.server";
 import {
   getInvoiceIntakeTransition,
+  getInvoicePaymentReconciliation,
   getInvoiceReviewReadiness,
   type InvoiceReviewContext,
   type InvoiceReviewIssue,
@@ -717,7 +722,14 @@ async function getInvoiceExtraction(
 ) {
   const attempt = await db
     .selectFrom("documentExtraction")
-    .select(["extractedData", "storagePath", "generation"])
+    .select([
+      "id",
+      "extractedData",
+      "storagePath",
+      "generation",
+      "inputRevision",
+      "filteredData"
+    ])
     .where("companyId", "=", actor.companyId)
     .where("intakeId", "=", intakeId)
     .where("generation", "<=", generation)
@@ -731,6 +743,9 @@ async function getInvoiceExtraction(
   );
   return parsed.success && attempt
     ? {
+        id: attempt.id,
+        inputRevision: attempt.inputRevision,
+        validationRevision: object(attempt.filteredData).validationRevision,
         data: parsed.data,
         storagePath: attempt.storagePath,
         generation: attempt.generation
@@ -752,12 +767,13 @@ async function validateSourceCoverage(
   );
   const sources = await db
     .selectFrom("invoiceIntakeSource")
-    .select(["sha256", "storagePath", "mercuryImportId"])
+    .select(["id", "kind", "sha256", "storagePath", "mercuryImportId"])
     .where("companyId", "=", actor.companyId)
     .where("intakeId", "=", intake.id)
     .execute();
+  const eligibleSources = getInvoiceDocumentSources(sources);
   const hashes = new Set(
-    sources.flatMap((source) =>
+    eligibleSources.flatMap((source) =>
       source.sha256 && source.storagePath ? [source.sha256] : []
     )
   );
@@ -766,7 +782,14 @@ async function validateSourceCoverage(
     (hashes.size === 1 ? [...hashes][0]! : null);
   if (primary && hashes.has(primary))
     review.header.primarySourceSha256 = primary;
-  const acknowledgements = review.header.sourceAcknowledgements;
+  const deferredHashes = new Set(
+    sources
+      .filter((source) => source.kind === "gmail")
+      .map((source) => source.sha256)
+  );
+  const acknowledgements = review.header.sourceAcknowledgements.filter(
+    (source) => !deferredHashes.has(source.sha256) || hashes.has(source.sha256)
+  );
   const acknowledged = new Set(acknowledgements.map((source) => source.sha256));
   const sourceIssue = (path: string, message: string) =>
     validation.issues.push({ path, code: "source", message });
@@ -834,7 +857,7 @@ async function validateSourceCoverage(
   if (primary && importIds.length > 1) {
     const unsupported = importIds.filter(
       (id) =>
-        !sources.some(
+        !eligibleSources.some(
           (source) =>
             source.mercuryImportId === id &&
             source.sha256 === primary &&
@@ -858,8 +881,9 @@ async function validateSourceCoverage(
       );
   }
   const extractionSha256 = attempt
-    ? (sources.find((source) => source.storagePath === attempt.storagePath)
-        ?.sha256 ?? null)
+    ? (eligibleSources.find(
+        (source) => source.storagePath === attempt.storagePath
+      )?.sha256 ?? null)
     : null;
   if (
     attempt &&
@@ -911,7 +935,93 @@ async function validateSourceCoverage(
   }
   validation.ready = validation.issues.length === 0;
   validation.status = validation.ready ? "Ready" : "NeedsReview";
-  return { extraction, sourceCoverage: { extractionSha256 }, sourceInvoices };
+  const importedPayments = importIds.length
+    ? await db
+        .selectFrom("mercuryTransactionImport")
+        .select([
+          "id",
+          "amount",
+          "currencyCode",
+          "transactionDate",
+          "remoteStatus",
+          "mercuryTransactionId",
+          "reference",
+          "memo",
+          "vendorSuggestion",
+          "lastError"
+        ])
+        .where("companyId", "=", actor.companyId)
+        .where("id", "in", importIds)
+        .orderBy("transactionDate")
+        .orderBy("id")
+        .execute()
+    : [];
+  const payments = importedPayments.map((payment) => ({
+    id: payment.id,
+    amount: String(payment.amount),
+    currencyCode: payment.currencyCode,
+    transactionDate: payment.transactionDate,
+    remoteStatus: payment.remoteStatus,
+    mercuryTransactionId: payment.mercuryTransactionId,
+    reference: payment.reference,
+    memo: payment.memo,
+    payee:
+      typeof object(payment.vendorSuggestion).name === "string"
+        ? (object(payment.vendorSuggestion).name as string)
+        : null,
+    lastErrorCode: payment.lastError,
+    receiptAcquisition:
+      parseMercuryVendorSuggestion(payment.vendorSuggestion)
+        .mercuryReceiptAcquisition ?? null
+  }));
+  const currency = review.header.currencyCode
+    ? await db
+        .selectFrom("currency as c")
+        .innerJoin("company as co", "co.companyGroupId", "c.companyGroupId")
+        .select("c.decimalPlaces")
+        .where("co.id", "=", actor.companyId)
+        .where("c.code", "=", review.header.currencyCode)
+        .executeTakeFirst()
+    : undefined;
+  const paymentReconciliation = getInvoicePaymentReconciliation(
+    review.header,
+    payments,
+    currency?.decimalPlaces ?? null
+  );
+  if (
+    review.mergeMode !== "evidence" &&
+    ["difference", "unsettled"].includes(paymentReconciliation.status) &&
+    !review.header.paymentReviewReason?.trim()
+  )
+    sourceIssue(
+      "header.paymentReviewReason",
+      paymentReconciliation.status === "unsettled"
+        ? "Review the bank transaction status and explain its relationship to this document before approval"
+        : "Explain the difference between the linked payment and document amounts before approval"
+    );
+  if (paymentReconciliation.status === "currencyMismatch")
+    sourceIssue(
+      "header.currencyCode",
+      "Payment and invoice currencies must agree before linking; review the original documents and payment association"
+    );
+  validation.ready = validation.issues.length === 0;
+  validation.status = validation.ready ? "Ready" : "NeedsReview";
+  return {
+    extraction,
+    sourceCoverage: { extractionSha256 },
+    sourceInvoices,
+    payments,
+    paymentReconciliation,
+    eligibleSourceIds: eligibleSources.map((source) => source.id),
+    readinessPending:
+      !!attempt &&
+      intake.activeExtractionId === attempt.id &&
+      attempt.generation === intake.generation &&
+      intake.status === "NeedsReview" &&
+      attempt.inputRevision !== null &&
+      intake.revision === attempt.inputRevision + 1 &&
+      attempt.validationRevision !== intake.revision
+  };
 }
 
 export async function getInvoiceIntakeReview(
@@ -922,14 +1032,21 @@ export async function getInvoiceIntakeReview(
   const permissions = await getInvoiceIntakePermissions(db, actor);
   const rows = await readIntakeRows(db, actor, id);
   const bundle = await buildReviewContext(db, actor, rows.review, permissions);
-  const { extraction, sourceCoverage, sourceInvoices } =
-    await validateSourceCoverage(
-      db,
-      actor,
-      rows.intake,
-      rows.review,
-      bundle.validation
-    );
+  const {
+    extraction,
+    sourceCoverage,
+    sourceInvoices,
+    payments,
+    paymentReconciliation,
+    eligibleSourceIds,
+    readinessPending
+  } = await validateSourceCoverage(
+    db,
+    actor,
+    rows.intake,
+    rows.review,
+    bundle.validation
+  );
   const candidates = await resolveInvoiceCandidates(db, actor.companyId, {
     supplierId: rows.review.supplierId,
     supplierName: rows.review.header.sourceSupplierName,
@@ -991,6 +1108,10 @@ export async function getInvoiceIntakeReview(
     )
   });
   return {
+    payments,
+    paymentReconciliation,
+    eligibleSourceIds,
+    readinessPending,
     modelSuggestions: hint.success ? hint.data : null,
     selectedSuppliers: bundle.options.selectedSuppliers,
     selectedItems: bundle.options.selectedItems,
@@ -1152,7 +1273,7 @@ async function persistReview(
   id: string,
   revision: number,
   review: InvoiceIntakeReview,
-  status: "Ready" | "NeedsReview",
+  status: "Ready" | "NeedsReview" | "NeedsDocument",
   existing: IntakeLine[]
 ) {
   const updated = await trx
@@ -1296,7 +1417,16 @@ export async function saveInvoiceIntakeReview(
       .where("intakeId", "=", input.id)
       .execute();
     const bundle = await buildReviewContext(trx, actor, review, permissions);
-    await validateSourceCoverage(trx, actor, intake, review, bundle.validation);
+    const coverage = await validateSourceCoverage(
+      trx,
+      actor,
+      intake,
+      review,
+      bundle.validation
+    );
+    const status = coverage.eligibleSourceIds.length
+      ? bundle.validation.status
+      : "NeedsDocument";
     // Missing choices can be saved, but supplied foreign or invalid canonical IDs cannot.
     if (bundle.selectionIssues.length)
       throw new InvoiceIntakeError(
@@ -1308,13 +1438,13 @@ export async function saveInvoiceIntakeReview(
       input.id,
       input.expectedRevision,
       review,
-      bundle.validation.status,
+      status,
       existing
     );
     return {
       id: input.id,
       revision,
-      status: bundle.validation.status,
+      status,
       validation: bundle.validation
     };
   });
@@ -1659,7 +1789,13 @@ export async function approveInvoiceIntake(
         .execute();
     }
     const bundle = await buildReviewContext(trx, actor, review, permissions);
-    await validateSourceCoverage(trx, actor, intake, review, bundle.validation);
+    const approvalEvidence = await validateSourceCoverage(
+      trx,
+      actor,
+      intake,
+      review,
+      bundle.validation
+    );
     if (!bundle.validation.ready)
       throw new InvoiceIntakeError(
         bundle.validation.issues
@@ -1965,6 +2101,8 @@ export async function approveInvoiceIntake(
         status,
         approvalKey: input.approvalKey,
         approvalSnapshot: asJson({
+          payments: approvalEvidence.payments,
+          paymentReconciliation: approvalEvidence.paymentReconciliation,
           review: originalReview,
           resolved: review,
           defaultSources: object(intake.header)._defaults ?? null,
@@ -1973,9 +2111,10 @@ export async function approveInvoiceIntake(
         }),
         approvedBy: actor.userId,
         approvedAt: sql<string>`now()`,
-        attachmentStatus: rows.sources.some((source) => source.storagePath)
-          ? "Pending"
-          : "None"
+        attachmentStatus:
+          getInvoiceDocumentSources(rows.sources).length > 0
+            ? "Pending"
+            : "None"
       })
       .where("companyId", "=", actor.companyId)
       .where("id", "=", intake.id)
@@ -2033,6 +2172,7 @@ export async function setInvoiceIntakeStatus(
       const sources = await trx
         .selectFrom("invoiceIntakeSource")
         .select("sha256")
+        .where("kind", "!=", "gmail")
         .where("companyId", "=", actor.companyId)
         .where("intakeId", "=", input.id)
         .where("storagePath", "is not", null)

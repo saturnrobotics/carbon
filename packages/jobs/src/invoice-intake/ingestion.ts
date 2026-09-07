@@ -237,7 +237,8 @@ export async function registerInvoiceSource(
       throw new InvoiceSourceError("invoice_source_changed");
     const singleMercuryDocument = input.mercuryDocumentSet
       ? new Set(input.mercuryDocumentSet.sha256s).size === 1
-      : savedAttachments.length === 1;
+      : savedAttachments.filter((attachment) => attachment.source === "mercury")
+          .length === 1;
     const needsSourceSelection =
       !!imported &&
       !!input.mercuryDocumentSet &&
@@ -285,13 +286,14 @@ export async function registerInvoiceSource(
             ? [
                 eb.and([
                   eb("sha256", "=", file.sha256),
+                  eb("kind", "!=", "gmail"),
                   ...(imported && input.mercuryDocumentSet
                     ? [
                         sql<boolean>`NOT EXISTS (
                         SELECT 1 FROM public."invoiceIntakeSource" other
                         WHERE other."companyId"=${actor.companyId}
                           AND other."intakeId"="invoiceIntakeSource"."intakeId"
-                          AND other.sha256 IS NOT NULL AND other.sha256<>${file.sha256})
+                          AND other.kind<>'gmail' AND other.sha256 IS NOT NULL AND other.sha256<>${file.sha256})
                       AND NOT EXISTS (
                         SELECT 1 FROM public."invoiceIntakeSource" payment
                         JOIN public."mercuryTransactionImport" m
@@ -299,6 +301,7 @@ export async function registerInvoiceSource(
                         CROSS JOIN LATERAL jsonb_array_elements(CASE WHEN jsonb_typeof(m.attachments)='array' THEN m.attachments ELSE '[]'::jsonb END) a
                         WHERE payment."companyId"=${actor.companyId}
                           AND payment."intakeId"="invoiceIntakeSource"."intakeId"
+                          AND a->>'source'='mercury'
                           AND NOT EXISTS (SELECT 1 FROM public."invoiceIntakeSource" saved
                             WHERE saved."companyId"=payment."companyId" AND saved."intakeId"=payment."intakeId"
                               AND saved."mercuryImportId"=m.id AND saved."storagePath"=a->>'path'
@@ -310,6 +313,9 @@ export async function registerInvoiceSource(
             : []),
           ...(input.mercuryImportId
             ? [eb("mercuryImportId", "=", input.mercuryImportId)]
+            : []),
+          ...(input.existingIntakeId
+            ? [eb("intakeId", "=", input.existingIntakeId)]
             : [])
         ])
       )
@@ -605,7 +611,14 @@ export async function registerInvoiceSource(
                       status: "NeedsReview",
                       lastErrorCode: "invoice_source_changed"
                     }
-                  : intake.status === "NeedsDocument" && file
+                  : file &&
+                      (intake.status === "NeedsDocument" ||
+                        (intake.status === "NeedsReview" &&
+                          !intake.activeExtractionId &&
+                          !sources.some(
+                            (source) =>
+                              source.kind !== "gmail" && source.storagePath
+                          )))
                     ? {
                         status: requiresSourceSelection
                           ? "NeedsReview"

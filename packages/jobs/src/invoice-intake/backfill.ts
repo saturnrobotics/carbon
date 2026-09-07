@@ -137,11 +137,14 @@ export async function registerMercuryInvoiceSources(
     mercuryImportId: record.id,
     historical
   });
-  const attachments = parseMercuryAttachments(record.attachments);
+  const savedAttachments = parseMercuryAttachments(record.attachments);
+  const attachments = savedAttachments.filter(
+    (attachment) => attachment.source === "mercury"
+  );
   if (attachments.length > 100)
     throw new InvoiceSourceError("invoice_source_attachment_limit");
-  // Gmail matching can attach several candidates to different payments. Verify
-  // the complete saved set before using a shared file as invoice identity.
+  // Only directly attached Mercury receipts enter this collector. Existing Gmail
+  // candidates remain stored for a future review of email matching.
   const sha256s = new Set<string>();
   const cachedFiles = new Map<string, Blob>();
   let cachedBytes = 0;
@@ -183,7 +186,7 @@ export async function registerMercuryInvoiceSources(
     }
   } as Context["storage"];
   const mercuryDocumentSet = {
-    attachments: JSON.stringify(attachments),
+    attachments: JSON.stringify(savedAttachments),
     sha256s: [...sha256s]
   };
   for (const attachment of attachments) {
@@ -368,7 +371,7 @@ export async function reconcileMercuryInvoiceSources(
     .where(sql<boolean>`(NOT EXISTS (SELECT 1 FROM public."invoiceIntakeSource" s
       WHERE s."companyId"=m."companyId" AND s."mercuryImportId"=m.id AND s.kind='mercury' AND s."storagePath" IS NULL)
       OR EXISTS (SELECT 1 FROM jsonb_array_elements(CASE WHEN jsonb_typeof(m.attachments)='array' THEN m.attachments ELSE '[]'::jsonb END) a
-        WHERE NOT EXISTS(SELECT 1 FROM public."invoiceIntakeSource" s WHERE s."companyId"=m."companyId"
+        WHERE a->>'source'='mercury' AND NOT EXISTS(SELECT 1 FROM public."invoiceIntakeSource" s WHERE s."companyId"=m."companyId"
           AND s."mercuryImportId"=m.id AND s."storagePath"=a->>'path' AND s.kind=a->>'source')))`)
     .orderBy("m.createdAt")
     .orderBy("m.id")

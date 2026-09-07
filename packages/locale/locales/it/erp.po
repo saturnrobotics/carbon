@@ -2562,6 +2562,9 @@ msgstr "Al completamento del lavoro"
 msgid "At least one condition must match"
 msgstr "Almeno una condizione deve corrispondere"
 
+msgid "At least one payment is not confirmed as sent. Explain its status before creating a draft. Approval does not mark it as paid."
+msgstr "Almeno un pagamento non è confermato come inviato. Spiegane lo stato prima di creare una bozza. L’approvazione non lo contrassegna come pagato."
+
 msgid "At operation completion"
 msgstr "Al completamento dell'operazione"
 
@@ -2570,6 +2573,9 @@ msgstr "Allega File"
 
 msgid "Attachment"
 msgstr "Allegato"
+
+msgid "Attachment saved."
+msgstr "Allegato salvato."
 
 msgid "Attachments"
 msgstr "Allegati"
@@ -2670,8 +2676,8 @@ msgstr "Importazione automatica"
 msgid "Automatic Lead Time Updates"
 msgstr "Aggiornamenti automatici dei lead time"
 
-msgid "Automatic processing needs attention. Your original document is safe. Review the fields manually or save your work and retry parsing."
-msgstr "L'elaborazione automatica richiede attenzione. Il tuo documento originale è al sicuro. Rivedi i campi manualmente o salva il tuo lavoro e riprova ad analizzare."
+msgid "Automatic processing needs attention. Check the available documents and review fields below before retrying parsing."
+msgstr "L’elaborazione automatica richiede attenzione. Controlla i documenti disponibili e i campi sottostanti prima di ripetere l’analisi."
 
 msgid "Automatic Updates"
 msgstr "Aggiornamenti Automatici"
@@ -3425,6 +3431,9 @@ msgstr "Controlla la tua email"
 
 msgid "Checking Stripe for this customer…"
 msgstr "Verifica di Stripe per questo cliente…"
+
+msgid "Checking the parsed document against your supplier and item settings."
+msgstr "Verifica del documento analizzato rispetto alle impostazioni di fornitori e articoli."
 
 msgid "Checkpoint ·"
 msgstr "Checkpoint ·"
@@ -5673,6 +5682,8 @@ msgstr "Diagramma salvato"
 
 msgid "Differs from the selection — allowed, but confirm they nest together"
 msgstr "Diverso dalla selezione — consentito, ma confermare che si annidino insieme"
+msgid "Difference"
+msgstr "Differenza"
 
 msgid "Digital Quote"
 msgstr "Preventivo Digitale"
@@ -7052,6 +7063,15 @@ msgstr "La scadenza inizia quando il processo selezionato si avvia."
 msgid "Expiry trace"
 msgstr "Traccia scadenza"
 
+msgid "Explain any partial payment, grouped payments, fees, or currency conversion before approval. This explanation does not change the invoice amounts or reconcile the bank payment."
+msgstr "Spiega eventuali pagamenti parziali, pagamenti raggruppati, commissioni o conversioni di valuta prima dell’approvazione. Questa spiegazione non modifica gli importi della fattura e non riconcilia il pagamento bancario."
+
+msgid "Explain the payment difference or status before approval"
+msgstr "Spiega la differenza o lo stato del pagamento prima dell’approvazione"
+
+msgid "Explain the payment difference, status, or allocation"
+msgstr "Spiega la differenza, lo stato o l’allocazione del pagamento"
+
 msgid "Explorer"
 msgstr "Esploratore"
 
@@ -7998,6 +8018,9 @@ msgstr "Riconciliazione della contabilità generale"
 
 msgid "GL Tie-Out"
 msgstr "Riconciliazione della Contabilità Generale"
+
+msgid "Gmail candidates are retained for later review. They are not used to parse or approve this purchase."
+msgstr "Le possibili corrispondenze di Gmail vengono conservate per una revisione successiva. Non vengono utilizzate per analizzare o approvare questo acquisto."
 
 msgid "Go live right the first time — with our team alongside you"
 msgstr "Vai in produzione al primo tentativo — con il nostro team al tuo fianco"
@@ -10145,11 +10168,20 @@ msgstr "ID Memo"
 msgid "Mercury"
 msgstr "Mercury"
 
+msgid "Mercury also offers a generated payment receipt. Payment confirmation alone does not identify the purchased line items."
+msgstr "Mercury offre anche una ricevuta di pagamento generata automaticamente. La sola conferma del pagamento non identifica le righe degli articoli acquistati."
+
 msgid "Mercury authorization needs to be renewed. Check the read-only account connection."
 msgstr "È necessario rinnovare l’autorizzazione Mercury. Controlla la connessione dell’account di sola lettura."
 
 msgid "Mercury connection configured"
 msgstr "Connessione Mercury configurata"
+
+msgid "Mercury has no uploaded receipt or invoice for this payment."
+msgstr "Non è stata caricata alcuna ricevuta o fattura in Mercury per questo pagamento."
+
+msgid "Mercury payment evidence"
+msgstr "Documentazione del pagamento Mercury"
 
 msgid "Mercury payments"
 msgstr "Pagamenti Mercury"
@@ -10974,6 +11006,9 @@ msgstr "Nessuna conversione richiesta"
 msgid "No cost history found"
 msgstr "Nessuna cronologia dei costi trovata"
 
+msgid "No current receipt has been parsed. Saved values may come from an earlier document. Parse the selected receipt or check its details manually before approval."
+msgstr "Nessuna ricevuta attuale è stata analizzata. I valori salvati possono provenire da un documento precedente. Analizza la ricevuta selezionata o verificane i dettagli manualmente prima dell’approvazione."
+
 msgid "No Data"
 msgstr "Nessun dato"
 
@@ -11009,6 +11044,8 @@ msgstr "Nessuna proprietà modificabile per questo elemento."
 
 msgid "No eligible operations"
 msgstr "Nessuna operazione idonea"
+msgid "No eligible receipt or invoice is attached yet. Upload the original document or find its receipt in Mercury."
+msgstr "Non è ancora allegata una ricevuta o fattura idonea. Carica il documento originale o cerca la ricevuta in Mercury."
 
 msgid "No employees assigned this week"
 msgstr "Nessun dipendente assegnato questa settimana"
@@ -11285,9 +11322,6 @@ msgstr "Nessun numero unico e affidabile per l'inventario o lo stato del lavoro"
 
 msgid "No sorts applied to this view"
 msgstr "Nessun ordinamento applicato a questa visualizzazione"
-
-msgid "No source document is attached yet. Upload a receipt or find supporting evidence from Mercury."
-msgstr "Nessun Documento di origine è stato ancora allegato. Carica una ricevuta o trova prove a sostegno di Mercury."
 
 msgid "No stock"
 msgstr "Nessun stock"
@@ -11757,6 +11791,9 @@ msgstr "Ordini di produzione aperti"
 
 msgid "Open menu"
 msgstr "Apri menu"
+
+msgid "Open Mercury payments"
+msgstr "Apri pagamenti Mercury"
 
 msgid "Open navigation"
 msgstr "Apri navigazione"
@@ -12286,8 +12323,14 @@ msgstr "Debiti (predefinito)"
 msgid "Payables aging"
 msgstr "Invecchiamento dei debiti"
 
+msgid "Payee unavailable"
+msgstr "Beneficiario non disponibile"
+
 msgid "Payment"
 msgstr "Pagamento"
+
+msgid "Payment and invoice currencies differ. Payments cannot be linked to an invoice in a different currency."
+msgstr "Le valute del pagamento e della fattura sono diverse. I pagamenti non possono essere collegati a una fattura in un’altra valuta."
 
 msgid "Payment Applications"
 msgstr "Applicazioni di Pagamento"
@@ -12298,14 +12341,14 @@ msgstr "Conferma del pagamento"
 msgid "Payment Date"
 msgstr "Data di Pagamento"
 
-msgid "Payment evidence"
-msgstr "Prova del pagamento"
-
 msgid "Payment history is still being imported. The next hourly run will continue where it stopped."
 msgstr "La cronologia dei pagamenti è ancora in fase di importazione. La prossima esecuzione oraria riprenderà da dove si è interrotta."
 
 msgid "Payment ID"
 msgstr "ID Pagamento"
+
+msgid "Payment status"
+msgstr "Stato del pagamento"
 
 msgid "payment term"
 msgstr "condizioni di pagamento"
@@ -12328,11 +12371,17 @@ msgstr "Condizioni di Pagamento"
 msgid "Payment terms like Net 30 or due on receipt"
 msgstr "Condizioni di pagamento come Netto 30 o pagamento al ricevimento"
 
+msgid "Payment total"
+msgstr "Totale pagamenti"
+
 msgid "Payments"
 msgstr "Pagamenti"
 
 msgid "Payments and credits applied to this invoice. Click a row to open the source document."
 msgstr "Pagamenti e crediti applicati a questa fattura. Fai clic su una riga per aprire il documento di origine."
+
+msgid "Payments cannot be linked to an invoice in a different currency"
+msgstr "I pagamenti non possono essere collegati a una fattura in un’altra valuta"
 
 msgid "Payments examined"
 msgstr "Pagamenti esaminati"
@@ -13558,6 +13607,12 @@ msgstr "Ricalcolo in corso…"
 msgid "Receipt"
 msgstr "Ricevuta"
 
+msgid "Receipt collection needs attention."
+msgstr "La raccolta delle ricevute richiede attenzione."
+
+msgid "Receipt collection status is not available yet."
+msgstr "Lo stato di raccolta delle ricevute non è ancora disponibile."
+
 msgid "Receipt ID"
 msgstr "ID Ricevuta"
 
@@ -13578,6 +13633,9 @@ msgstr "Data di ricezione richiesta"
 
 msgid "Receipts"
 msgstr "Ricevute"
+
+msgid "Receipts last checked"
+msgstr "Ultimo controllo delle ricevute"
 
 msgid "Receipts, shipments, sales invoices, purchase invoices, payments, and credit/debit memos that are still Draft or Pending must be posted or voided — both documents dated in this period and undated documents that would receive a date in it when posted. Until they post, their amounts aren't in the general ledger, so the period would be understated."
 msgstr "Le entrate merci, le spedizioni, le fatture di vendita, le fatture di acquisto, i pagamenti e le note di credito/debito che sono ancora in Bozza o In attesa devono essere registrate o stornate — sia i documenti datati in questo periodo che i documenti senza data che riceverebbero una data al momento della registrazione. Fino a quando non vengono registrati, i loro importi non sono nella contabilità generale, quindi il periodo risulterebbe sottostimato."
@@ -13702,6 +13760,9 @@ msgstr "Riferimento"
 
 msgid "Refresh"
 msgstr "Aggiorna"
+
+msgid "Refresh document"
+msgstr "Aggiorna documento"
 
 msgid "Refresh exchange rate"
 msgstr "Aggiorna tasso di cambio"
@@ -15069,6 +15130,9 @@ msgstr "Seleziona un assegnatario"
 
 msgid "Select an event…"
 msgstr "Seleziona un evento…"
+
+msgid "Select an existing supplier or propose this vendor as a new supplier."
+msgstr "Seleziona un fornitore esistente o proponi questo venditore come nuovo fornitore."
 
 msgid "Select an issue type"
 msgstr "Seleziona un tipo di problema"
@@ -16771,6 +16835,9 @@ msgstr "L'importo dei giorni dopo il metodo di calcolo in cui il pagamento è do
 msgid "The append-only record of every stock movement; on-hand is the sum of its signed entries and the source of truth."
 msgstr "Il record di sola aggiunta di ogni movimento di inventario; la giacenza è la somma delle sue voci firmate ed è la fonte di verità."
 
+msgid "The attachment limit was reached. Review the saved files and upload the receipt needed for this purchase."
+msgstr "È stato raggiunto il limite degli allegati. Verifica i file salvati e carica la ricevuta necessaria per questo acquisto."
+
 msgid "The authorization was refused in Onshape. Try connecting again."
 msgstr "L'autorizzazione è stata rifiutata in Onshape. Riprova a connetterti."
 
@@ -17243,6 +17310,12 @@ msgstr "La parte viene fabbricata come suo proprio lavoro quando il genitore che
 msgid "The part is taken from existing stock when its parent is built — no new job or purchase order."
 msgstr "La parte viene presa da scorte esistenti quando il suo genitore viene costruito - nessun nuovo lavoro o ordine di acquisto."
 
+msgid "The payment total differs from the reviewed invoice total."
+msgstr "Il totale dei pagamenti differisce dal totale della fattura verificata."
+
+msgid "The payment total matches the reviewed invoice total."
+msgstr "Il totale dei pagamenti corrisponde al totale della fattura verificata."
+
 msgid "The people on the Carbon side who will run your implementation, and how to reach them."
 msgstr "Le persone del team Carbon che gestiranno la tua implementazione e come contattarle."
 
@@ -17568,6 +17641,9 @@ msgstr "Non c'è attrezzaggio, manodopera, o tempo macchina su queste operazioni
 msgid "There's nothing outstanding to apply these credits to."
 msgstr "Non c'è nulla in sospeso a cui applicare questi crediti."
 
+msgid "These are bank payment details. Invoice totals and the supplier are reviewed separately from the receipt."
+msgstr "Questi sono i dettagli del pagamento bancario. I totali della fattura e il fornitore vengono verificati separatamente sulla base della ricevuta."
+
 msgid "These custom fields will only be available for entities with the same tags"
 msgstr "Questi campi personalizzati saranno disponibili solo per le entità con gli stessi tag"
 
@@ -17603,6 +17679,9 @@ msgstr "questa competenza"
 msgid "This approval will create {0} supplier(s) and {1} item(s)."
 msgstr "Questa approvazione creerà {0} fornitore/i e {1} articolo/i."
 
+msgid "This attachment could not be downloaded from Mercury. Find the document again or upload the original file."
+msgstr "Impossibile scaricare questo allegato da Mercury. Cerca nuovamente il documento o carica il file originale."
+
 msgid "This backup could not be completed."
 msgstr "Non è stato possibile completare questo backup."
 
@@ -17630,11 +17709,17 @@ msgstr "Questo contatto non ha un indirizzo email"
 msgid "This counterparty has nothing outstanding — the payment will be recorded on-account."
 msgstr "Questa controparte non ha nulla in sospeso — il pagamento verrà registrato come credito in conto."
 
+msgid "This document is attached, but its preview is unavailable. Refresh to try opening it again."
+msgstr "Questo documento è allegato, ma l’anteprima non è disponibile. Aggiorna per provare ad aprirlo di nuovo."
+
 msgid "This download link is invalid or has been tampered with."
 msgstr "Questo link di download non è valido o è stato manomesso."
 
 msgid "This file is no longer available, or you don't have permission to download it."
 msgstr "Questo file non è più disponibile, oppure non hai l'autorizzazione per scaricarlo."
+
+msgid "This file type cannot be parsed. Upload a PDF, PNG, or JPEG version."
+msgstr "Questo tipo di file non può essere analizzato. Carica una versione PDF, PNG o JPEG."
 
 msgid "This Fiscal Year"
 msgstr "Questo esercizio fiscale"
@@ -18857,6 +18942,9 @@ msgstr "Solo scostamento"
 
 msgid "VAT Number"
 msgstr "Partita IVA"
+
+msgid "Vendor on document"
+msgstr "Venditore sul documento"
 
 msgid "Vendor Write-Off Income"
 msgstr "Proventi da Stralcio"

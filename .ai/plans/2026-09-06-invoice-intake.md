@@ -3,7 +3,7 @@
 **Spec:** `.ai/specs/implemented/2026-09-06-invoice-intake.md`
 **Research:** `.ai/research/invoice-intake.md`
 **Branch:** `feature/invoice-intake`, created from `saturn/main`
-**Status:** Complete; implemented, verified, and deployed.
+**Status:** Initial implementation deployed; end-to-end completion claim superseded by the receipt-flow audit. See `2026-09-07-mercury-receipt-corrections.md` for the authorized Mercury-only correction scope. Gmail completion is deferred.
 
 The user authorized execution of this full plan, including its managed GCP inference default and deployment. The requested interaction remains unchanged: upload/collect → parse → select/create typed masters → approve/correct → remember.
 

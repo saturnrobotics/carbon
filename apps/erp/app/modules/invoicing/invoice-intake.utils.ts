@@ -24,6 +24,58 @@ export type InvoiceReviewIssue = {
   code: string;
   message: string;
 };
+
+/** Bank amounts remain separate evidence, including partial and grouped payments. */
+export function getInvoicePaymentReconciliation(
+  header: Pick<InvoiceIntakeReview["header"], "total" | "currencyCode">,
+  payments: readonly {
+    amount: string;
+    currencyCode: string;
+    remoteStatus?: string;
+  }[],
+  decimalPlaces: number | null
+) {
+  const empty = {
+    paymentTotal: null,
+    difference: null,
+    currencyCode: header.currencyCode
+  };
+  if (
+    !payments.length ||
+    header.total === null ||
+    !header.currencyCode ||
+    decimalPlaces === null
+  )
+    return { ...empty, status: "unavailable" as const };
+  if (payments.some((payment) => payment.currencyCode !== header.currencyCode))
+    return { ...empty, status: "currencyMismatch" as const };
+  if (
+    payments.some(
+      (payment) => payment.remoteStatus && payment.remoteStatus !== "sent"
+    )
+  )
+    return { ...empty, status: "unsettled" as const };
+  const values = payments.map((payment) => Number(payment.amount));
+  if (
+    !Number.isFinite(Number(header.total)) ||
+    values.some((amount) => !Number.isFinite(amount))
+  )
+    return { ...empty, status: "unavailable" as const };
+  const paymentTotal = round(
+    values.reduce((sum, amount) => sum + amount, 0),
+    decimalPlaces
+  );
+  const difference = round(
+    paymentTotal - round(Number(header.total), decimalPlaces),
+    decimalPlaces
+  );
+  return {
+    status: difference === 0 ? ("matched" as const) : ("difference" as const),
+    paymentTotal: String(paymentTotal),
+    difference: String(difference),
+    currencyCode: header.currencyCode
+  };
+}
 export type ReviewValidation = {
   ready: boolean;
   issues: InvoiceReviewIssue[];

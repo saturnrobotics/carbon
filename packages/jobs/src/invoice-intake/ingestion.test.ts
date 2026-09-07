@@ -253,6 +253,70 @@ describe.skipIf(!databaseUrl)(
         .executeTakeFirstOrThrow();
     }
 
+    it("collects only Mercury attachments and ignores unrelated Gmail candidates", async () => {
+      const mercuryPath = `${actor.companyId}/mercury/payment/receipt.pdf`;
+      const gmailPath = `${actor.companyId}/mercury/payment/other.pdf`;
+      objects.set(mercuryPath, bytes);
+      objects.set(
+        gmailPath,
+        new TextEncoder().encode("%PDF-1.4 unrelated email")
+      );
+      const imported = await mercury([
+        { path: mercuryPath, source: "mercury", fileName: "receipt.pdf" },
+        { path: gmailPath, source: "gmail", fileName: "other.pdf" }
+      ]);
+      const result = await registerMercuryInvoiceSources(
+        { ...actor, db, storage },
+        imported.id
+      );
+      expect(result).toMatchObject({ status: "Queued", documents: 1 });
+      expect(download).not.toHaveBeenCalledWith(gmailPath);
+      const sources = await db
+        .selectFrom("invoiceIntakeSource")
+        .selectAll()
+        .where("companyId", "=", actor.companyId)
+        .where("intakeId", "=", result.intakeId)
+        .execute();
+      expect(sources.map((source) => source.kind)).toEqual([
+        "mercury",
+        "mercury"
+      ]);
+    });
+    it("queues the first receipt after an empty review was saved", async () => {
+      const imported = await mercury();
+      const initial = await registerMercuryInvoiceSources(
+        { ...actor, db, storage },
+        imported.id
+      );
+      await db
+        .updateTable("invoiceIntake")
+        .set({ status: "NeedsReview", revision: 1 })
+        .where("companyId", "=", actor.companyId)
+        .where("id", "=", initial.intakeId)
+        .execute();
+      const path = `${actor.companyId}/mercury/payment/receipt.pdf`;
+      objects.set(path, bytes);
+      await db
+        .updateTable("mercuryTransactionImport")
+        .set({
+          attachments: JSON.stringify([
+            { path, source: "mercury", fileName: "receipt.pdf" }
+          ])
+        })
+        .where("companyId", "=", actor.companyId)
+        .where("id", "=", imported.id)
+        .execute();
+      expect(
+        await registerMercuryInvoiceSources(
+          { ...actor, db, storage },
+          imported.id
+        )
+      ).toMatchObject({
+        intakeId: initial.intakeId,
+        status: "Queued",
+        needsDispatch: true
+      });
+    });
     it("serializes equal-byte uploads into one intake while retaining both provenance identities", async () => {
       const [a, b] = await Promise.all([
         registerInvoiceSource(db, storage, actor, manual("a")),

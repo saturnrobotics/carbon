@@ -257,6 +257,28 @@ describe("durable invoice worker", () => {
       expect((await runInvoiceIntake(c)).state).toBe("disabled");
       expect(p.paid).not.toHaveBeenCalled();
     }));
+  it("does not let deferred Gmail candidates block a verified receipt", async () =>
+    fixture(async (c, userId) => {
+      await db
+        .insertInto("invoiceIntakeSource")
+        .values({
+          companyId: c.companyId,
+          intakeId: c.intakeId,
+          kind: "gmail",
+          sourceKey: randomUUID(),
+          createdBy: userId,
+          storageBucket: "private",
+          storagePath: `${c.companyId}/mercury/mail/other.png`,
+          sha256: "a".repeat(64),
+          mediaType: "image/png",
+          byteSize: bytes.length
+        })
+        .execute();
+      const p = provider();
+      c.provider = p.provider;
+      expect((await runInvoiceIntake(c)).state).toBe("complete");
+      expect(p.paid).toHaveBeenCalledTimes(1);
+    }));
   it("requires a primary for distinct files and reparses the selected later source", async () =>
     fixture(async (c, userId) => {
       const secondBytes = new Uint8Array([...bytes, 1]);
@@ -657,6 +679,68 @@ describe("durable invoice worker", () => {
       expect(await attempts(c)).toHaveLength(operation === "extract" ? 1 : 2);
       expect(p.paid).toHaveBeenCalledTimes(1);
     }));
+  it.each([
+    "gmail",
+    "unavailable"
+  ])("refuses paid matching without a current verified receipt (%s)", async (reason) =>
+    fixture(async (c) => {
+      await runInvoiceIntake(c);
+      if (reason === "gmail")
+        await db
+          .updateTable("invoiceIntakeSource")
+          .set({ kind: "gmail" })
+          .where("companyId", "=", c.companyId)
+          .where("intakeId", "=", c.intakeId)
+          .execute();
+      else
+        c.storage = {
+          from: () => ({ download: async () => ({ data: null, error: null }) })
+        } as unknown as InvoiceWorkerContext["storage"];
+      const p = provider();
+      expect(
+        (await runInvoiceMatch({ ...c, provider: p.provider, revision: 1 }))
+          .state
+      ).toBe("review");
+      expect(p.paid).not.toHaveBeenCalled();
+      expect(await attempts(c)).toHaveLength(1);
+    }));
+  it("refuses paid matching of facts extracted from a different source document", async () =>
+    fixture(async (c, userId) => {
+      await runInvoiceIntake(c);
+      await db
+        .updateTable("invoiceIntakeSource")
+        .set({ kind: "gmail" })
+        .where("companyId", "=", c.companyId)
+        .where("intakeId", "=", c.intakeId)
+        .execute();
+      const replacement = new Uint8Array([...bytes, 1]);
+      await db
+        .insertInto("invoiceIntakeSource")
+        .values({
+          companyId: c.companyId,
+          intakeId: c.intakeId,
+          kind: "mercury",
+          sourceKey: randomUUID(),
+          createdBy: userId,
+          storageBucket: "private",
+          storagePath: `${c.companyId}/mercury/payment/current.png`,
+          sha256: createHash("sha256").update(replacement).digest("hex"),
+          mediaType: "image/png",
+          byteSize: replacement.length
+        })
+        .execute();
+      c.storage = {
+        from: () => ({
+          download: async () => ({ data: new Blob([replacement]), error: null })
+        })
+      } as unknown as InvoiceWorkerContext["storage"];
+      const p = provider();
+      await runInvoiceMatch({ ...c, provider: p.provider, revision: 1 });
+      expect(p.paid).not.toHaveBeenCalled();
+      expect((await review(c)).lastErrorCode).toBe(
+        "invoice_extraction_source_changed"
+      );
+    }));
   it("preserves extracted fields when optional matching fails and counts both operations", async () =>
     fixture(async (c) => {
       const p = provider();
@@ -747,7 +831,10 @@ describe("durable invoice worker", () => {
       expect((await runInvoiceIntake(c)).state).toBe("disabled");
       expect(p.paid).not.toHaveBeenCalled();
     }));
-  it("copies approved attachments idempotently without changing invoice lines or status", async () =>
+  it.each([
+    false,
+    true
+  ])("copies approved attachments idempotently without changing invoice lines or status (deferred Gmail: %s)", async (withGmail) =>
     fixture(async (c, userId) => {
       const supplier = await db
         .insertInto("supplier")
@@ -788,6 +875,22 @@ describe("durable invoice worker", () => {
         .where("companyId", "=", c.companyId)
         .where("id", "=", c.intakeId)
         .execute();
+      if (withGmail)
+        await db
+          .insertInto("invoiceIntakeSource")
+          .values({
+            companyId: c.companyId,
+            intakeId: c.intakeId,
+            kind: "gmail",
+            sourceKey: randomUUID(),
+            createdBy: userId,
+            storageBucket: "private",
+            storagePath: `${c.companyId}/mercury/mail/other.png`,
+            sha256: "a".repeat(64),
+            mediaType: "image/png",
+            byteSize: bytes.length
+          })
+          .execute();
       const objects = new Map<string, Uint8Array>([
         [`${c.companyId}/invoice-intake/fixture.png`, bytes]
       ]);

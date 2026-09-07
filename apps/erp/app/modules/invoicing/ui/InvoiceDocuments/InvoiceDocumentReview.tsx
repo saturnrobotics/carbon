@@ -12,6 +12,7 @@ import { INPUT_FORMAT } from "@carbon/utils";
 import { Trans, useLingui } from "@lingui/react/macro";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useFetcher, useRevalidator } from "react-router";
+import { useCountries } from "~/components/Form/Country";
 import { DeferredMasterCreation } from "~/components/Form/DeferredMasterCreation";
 import {
   consumableValidator,
@@ -25,7 +26,10 @@ import SupplierForm from "~/modules/purchasing/ui/Supplier/SupplierForm";
 import { useItems, useSuppliers } from "~/stores";
 import { setCustomFields } from "~/utils/form";
 import { path } from "~/utils/path";
-import { getInvoiceReviewReadiness } from "../../invoice-intake.utils";
+import {
+  getInvoicePaymentReconciliation,
+  getInvoiceReviewReadiness
+} from "../../invoice-intake.utils";
 import type { InvoiceIntakeReview } from "../../invoicing.models";
 import type { getInvoiceIntakeReview } from "../../invoicing.server";
 import { InvoiceAttachmentStatus } from "./InvoiceAttachmentStatus";
@@ -40,19 +44,21 @@ import {
   InvoiceDocumentSourceReview,
   type InvoiceReviewSource
 } from "./InvoiceDocumentSourceReview";
+import { InvoicePaymentEvidence } from "./InvoicePaymentEvidence";
 import {
   InvoiceRecognitionRules,
   invoiceRuleLabel
 } from "./InvoiceRecognitionRules";
+import {
+  type InvoicePreviewSource,
+  invoiceCountryCode,
+  invoiceSupplierProposalDefaults,
+  selectInvoicePreviewSource
+} from "./invoice-document.utils";
 import { useInvoiceDocumentLabels } from "./useInvoiceDocumentLabels";
 
 type ReviewData = Awaited<ReturnType<typeof getInvoiceIntakeReview>> & {
-  signedSources: {
-    id: string;
-    fileName: string | null;
-    mediaType: string | null;
-    url: string | null;
-  }[];
+  signedSources: InvoicePreviewSource[];
 };
 const nativeItemValidators = {
   Part: partValidator,
@@ -69,7 +75,7 @@ export function InvoiceDocumentReview({ data }: { data: ReviewData }) {
     invoiceNumber: t`Invoice number`,
     issueDate: t`Invoice date`,
     dueDate: t`Due date`,
-    currency: t`Currency`,
+    currencyCode: t`Currency`,
     subtotal: t`Subtotal`,
     discount: t`Discount`,
     shipping: t`Shipping`,
@@ -80,8 +86,7 @@ export function InvoiceDocumentReview({ data }: { data: ReviewData }) {
     addressLine2: t`Address line 2`,
     city: t`City`,
     stateProvince: t`State or province`,
-    postalCode: t`Postal code`,
-    countryCode: t`Country code`
+    postalCode: t`Postal code`
   };
   const fetcher = useFetcher<{ success?: boolean; error?: string }>();
   const revalidator = useRevalidator();
@@ -90,15 +95,9 @@ export function InvoiceDocumentReview({ data }: { data: ReviewData }) {
   const [baseRevision, setBaseRevision] = useState(data.intake.revision);
   const [dirty, setDirty] = useState(false);
   const [supplierProposalOpen, setSupplierProposalOpen] = useState(false);
-  const [sourceId, setSourceId] = useState(
-    () =>
-      data.sources.find(
-        (source) => source.sha256 === data.review.header.primarySourceSha256
-      )?.id ??
-      data.signedSources[0]?.id ??
-      ""
-  );
+  const [sourceId, setSourceId] = useState<string | null>(null);
   const [storedSuppliers] = useSuppliers();
+  const countries = useCountries();
   const suppliers = useMemo(
     () => [
       ...new Map(
@@ -154,14 +153,48 @@ export function InvoiceDocumentReview({ data }: { data: ReviewData }) {
   const distinctSources = useMemo(() => {
     const sources = new Map<string, InvoiceReviewSource>();
     for (const source of data.sources) {
-      if (source.sha256 && source.storagePath && !sources.has(source.sha256))
+      if (
+        data.eligibleSourceIds.includes(source.id) &&
+        source.sha256 &&
+        source.storagePath &&
+        !sources.has(source.sha256)
+      )
         sources.set(source.sha256, { ...source, sha256: source.sha256 });
     }
     return [...sources.values()];
-  }, [data.sources]);
+  }, [data.sources, data.eligibleSourceIds]);
   const primarySha256 =
     review.header.primarySourceSha256 ??
     (distinctSources.length === 1 ? distinctSources[0].sha256 : null);
+  const paymentReconciliation = useMemo(
+    () =>
+      getInvoicePaymentReconciliation(
+        review.header,
+        data.payments,
+        data.currencies.find(
+          (currency) => currency.value === data.payments[0]?.currencyCode
+        )?.decimalPlaces ?? null
+      ),
+    [review.header, data.payments, data.currencies]
+  );
+  const paymentIssues =
+    review.mergeMode !== "evidence" &&
+    ["difference", "unsettled"].includes(paymentReconciliation.status) &&
+    !review.header.paymentReviewReason?.trim()
+      ? [
+          {
+            path: "header.paymentReviewReason",
+            code: "payment",
+            message: t`Explain the payment difference or status before approval`
+          }
+        ]
+      : [];
+  if (paymentReconciliation.status === "currencyMismatch")
+    paymentIssues.push({
+      path: "header.currencyCode",
+      code: "payment",
+      message: t`Payments cannot be linked to an invoice in a different currency`
+    });
   const sourceIssues = useMemo(() => {
     const issues: { path: string; code: string; message: string }[] = [];
     if (
@@ -247,13 +280,20 @@ export function InvoiceDocumentReview({ data }: { data: ReviewData }) {
   const validation = dirty
     ? {
         ...localValidation,
-        ready: localValidation.ready && sourceIssues.length === 0,
-        issues: [...localValidation.issues, ...sourceIssues]
+        ready:
+          localValidation.ready &&
+          sourceIssues.length === 0 &&
+          paymentIssues.length === 0,
+        issues: [...localValidation.issues, ...sourceIssues, ...paymentIssues]
       }
     : data.validation;
-  const activeSource =
-    data.signedSources.find((source) => source.id === sourceId) ??
-    data.signedSources[0];
+  const activeSource = selectInvoicePreviewSource(
+    data.signedSources,
+    sourceId,
+    primarySha256
+  );
+  const sourceSupplierName =
+    review.header.sourceSupplierName ?? data.extraction?.supplier.name.value;
   const [previewSource, setPreviewSource] = useState(activeSource);
   useEffect(() => {
     // Retain a signed preview through status polling; repeatedly navigating a
@@ -317,6 +357,16 @@ export function InvoiceDocumentReview({ data }: { data: ReviewData }) {
         </Heading>
         <Badge>{statusLabel(data.intake.status)}</Badge>
       </HStack>
+      <InvoicePaymentEvidence
+        payments={data.payments}
+        reconciliation={paymentReconciliation}
+        requireExplanation={review.mergeMode !== "evidence"}
+        reason={review.header.paymentReviewReason}
+        onReasonChange={(paymentReviewReason) =>
+          header({ paymentReviewReason })
+        }
+        disabled={readOnly || busy}
+      />
       <InvoiceAttachmentStatus status={data.intake.attachmentStatus} />
       <HStack>
         <Button variant="secondary" asChild>
@@ -349,12 +399,31 @@ export function InvoiceDocumentReview({ data }: { data: ReviewData }) {
       {data.intake.lastErrorCode && (
         <p role="status" className="text-sm text-muted-foreground">
           <Trans>
-            Automatic processing needs attention. Your original document is
-            safe. Review the fields manually or save your work and retry
-            parsing.
+            Automatic processing needs attention. Check the available documents
+            and review fields below before retrying parsing.
           </Trans>
         </p>
       )}
+      {data.readinessPending && (
+        <p role="status" className="text-sm text-muted-foreground">
+          <Trans>
+            Checking the parsed document against your supplier and item
+            settings.
+          </Trans>
+        </p>
+      )}
+      {!readOnly &&
+        !data.extraction &&
+        !data.readinessPending &&
+        !["Queued", "Processing"].includes(data.intake.status) && (
+          <p role="status" className="text-sm text-muted-foreground">
+            <Trans>
+              No current receipt has been parsed. Saved values may come from an
+              earlier document. Parse the selected receipt or check its details
+              manually before approval.
+            </Trans>
+          </p>
+        )}
       {conflict && (
         <Card>
           <CardContent className="pt-4 space-y-2">
@@ -405,15 +474,17 @@ export function InvoiceDocumentReview({ data }: { data: ReviewData }) {
               header({ sourceAcknowledgements })
             }
           />
-          <InvoiceChoiceField
-            label={t`Preview document`}
-            value={activeSource?.id ?? null}
-            options={data.signedSources.map((source) => ({
-              value: source.id,
-              label: source.fileName ?? t`Payment evidence`
-            }))}
-            onChange={(id) => setSourceId(id ?? "")}
-          />
+          {data.signedSources.length > 0 && (
+            <InvoiceChoiceField
+              label={t`Preview document`}
+              value={activeSource?.id ?? null}
+              options={data.signedSources.map((source) => ({
+                value: source.id,
+                label: source.fileName ?? t`Receipt or invoice`
+              }))}
+              onChange={(id) => setSourceId(id ?? "")}
+            />
+          )}
           {activeSource?.url ? (
             <>
               <Button variant="link" asChild>
@@ -442,12 +513,56 @@ export function InvoiceDocumentReview({ data }: { data: ReviewData }) {
           ) : (
             <Card>
               <CardContent className="pt-4">
-                <Trans>
-                  No source document is attached yet. Upload a receipt or find
-                  supporting evidence from Mercury.
-                </Trans>
+                {activeSource ? (
+                  <>
+                    <p>
+                      <strong>
+                        {activeSource.fileName ?? t`Receipt or invoice`}
+                      </strong>
+                    </p>
+                    <p>
+                      <Trans>
+                        This document is attached, but its preview is
+                        unavailable. Refresh to try opening it again.
+                      </Trans>
+                    </p>
+                    <Button
+                      variant="secondary"
+                      onClick={() => {
+                        refreshPreview.current = true;
+                        revalidator.revalidate();
+                      }}
+                    >
+                      <Trans>Refresh document</Trans>
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <p>
+                      <Trans>
+                        No eligible receipt or invoice is attached yet. Upload
+                        the original document or find its receipt in Mercury.
+                      </Trans>
+                    </p>
+                    {data.payments.length > 0 && (
+                      <Button variant="link" asChild>
+                        <Link to={path.to.mercuryPayments}>
+                          <Trans>Open Mercury payments</Trans>
+                        </Link>
+                      </Button>
+                    )}
+                  </>
+                )}
               </CardContent>
             </Card>
+          )}
+          {data.sources.some((source) => source.kind === "gmail") && (
+            <p className="text-sm text-muted-foreground">
+              <Trans>
+                Gmail candidates are retained for later review. They are not
+                used to parse or approve this purchase.
+              </Trans>
+            </p>
           )}
           {!readOnly && (
             <form
@@ -514,6 +629,52 @@ export function InvoiceDocumentReview({ data }: { data: ReviewData }) {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              {sourceSupplierName && (
+                <div className="rounded border p-3 space-y-1">
+                  <p className="text-sm text-muted-foreground">
+                    <Trans>Vendor on document</Trans>
+                  </p>
+                  <p className="font-medium">{sourceSupplierName}</p>
+                  {data.extraction && (
+                    <>
+                      <p>
+                        {[
+                          data.extraction.supplier.addressLine1.value,
+                          data.extraction.supplier.addressLine2.value,
+                          data.extraction.supplier.city.value,
+                          data.extraction.supplier.state.value,
+                          data.extraction.supplier.postalCode.value,
+                          data.extraction.supplier.countryCode.value
+                        ]
+                          .filter(Boolean)
+                          .join(", ")}
+                      </p>
+                      <p>
+                        {[
+                          data.extraction.supplier.email.value,
+                          data.extraction.supplier.phone.value
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </p>
+                      {data.extraction.supplier.taxId.value && (
+                        <p>
+                          <Trans>Tax ID</Trans>:{" "}
+                          {data.extraction.supplier.taxId.value}
+                        </p>
+                      )}
+                    </>
+                  )}
+                  {!review.supplierId && !review.newSupplier && (
+                    <p className="text-sm">
+                      <Trans>
+                        Select an existing supplier or propose this vendor as a
+                        new supplier.
+                      </Trans>
+                    </p>
+                  )}
+                </div>
+              )}
               <InvoiceChoiceField
                 label={t`Document kind`}
                 value={review.documentKind}
@@ -652,8 +813,7 @@ export function InvoiceDocumentReview({ data }: { data: ReviewData }) {
                       "addressLine2",
                       "city",
                       "stateProvince",
-                      "postalCode",
-                      "countryCode"
+                      "postalCode"
                     ] as const
                   ).map((key) => (
                     <InvoiceTextField
@@ -678,6 +838,47 @@ export function InvoiceDocumentReview({ data }: { data: ReviewData }) {
                       disabled={readOnly}
                     />
                   ))}
+                  <InvoiceChoiceField
+                    label={t`Country`}
+                    value={
+                      String(review.newSupplier.address?.countryCode ?? "") ||
+                      null
+                    }
+                    options={[
+                      ...countries,
+                      ...(review.newSupplier.address?.countryCode &&
+                      !countries.some(
+                        (country) =>
+                          country.value ===
+                          review.newSupplier!.address!.countryCode
+                      )
+                        ? [
+                            {
+                              value: String(
+                                review.newSupplier.address.countryCode
+                              ),
+                              label: String(
+                                review.newSupplier.address.countryCode
+                              )
+                            }
+                          ]
+                        : [])
+                    ]}
+                    onChange={(countryCode) =>
+                      change({
+                        ...review,
+                        newSupplier: {
+                          ...review.newSupplier!,
+                          address: {
+                            ...review.newSupplier!.address,
+                            name: "Invoice address",
+                            countryCode: countryCode ?? ""
+                          }
+                        }
+                      })
+                    }
+                    disabled={readOnly}
+                  />
                 </div>
               )}
               <div className="grid gap-4 md:grid-cols-2">
@@ -1007,7 +1208,8 @@ export function InvoiceDocumentReview({ data }: { data: ReviewData }) {
                     busy ||
                     conflict ||
                     !validation.ready ||
-                    !data.sources.some((source) => source.storagePath) ||
+                    distinctSources.length === 0 ||
+                    data.readinessPending ||
                     !data.permissions.canApprove
                   }
                   isLoading={fetcher.state !== "idle"}
@@ -1056,15 +1258,10 @@ export function InvoiceDocumentReview({ data }: { data: ReviewData }) {
         <DeferredMasterCreation.Provider value={true}>
           <SupplierForm
             type="modal"
-            initialValues={{
-              name: String(
-                review.newSupplier?.supplier.name ??
-                  review.header.sourceSupplierName ??
-                  ""
-              ),
-              currencyCode: review.header.currencyCode ?? undefined,
-              ...review.newSupplier?.supplier
-            }}
+            initialValues={invoiceSupplierProposalDefaults(
+              review,
+              data.extraction
+            )}
             onClose={() => setSupplierProposalOpen(false)}
             onPropose={(values, form) => {
               const source = data.extraction?.supplier;
@@ -1082,7 +1279,9 @@ export function InvoiceDocumentReview({ data }: { data: ReviewData }) {
                     city: source.city.value ?? "",
                     stateProvince: source.state.value ?? "",
                     postalCode: source.postalCode.value ?? "",
-                    countryCode: source.countryCode.value ?? ""
+                    countryCode:
+                      invoiceCountryCode(source.countryCode.value, countries) ??
+                      ""
                   }
                 : undefined;
               change({

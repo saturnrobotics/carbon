@@ -24,25 +24,34 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
     params.intakeId
   );
   const signedSources = await Promise.all(
-    result.sources.map(async (source) => {
-      const url =
-        source.storageBucket === "private" &&
-        source.storagePath &&
-        (isInvoiceSourcePath(actor.companyId, source.storagePath) ||
-          isMercuryAttachmentPath(actor.companyId, source.storagePath))
-          ? ((
-              await actor.client.storage
-                .from("private")
-                .createSignedUrl(source.storagePath, 600)
-            ).data?.signedUrl ?? null)
-          : null;
-      return {
-        id: source.id,
-        fileName: source.fileName,
-        mediaType: source.mediaType,
-        url
-      };
-    })
+    result.sources
+      .filter(
+        (source) =>
+          result.eligibleSourceIds.includes(source.id) &&
+          source.storagePath &&
+          source.sha256
+      )
+      .map(async (source) => {
+        const url =
+          source.storageBucket === "private" &&
+          source.storagePath &&
+          (isInvoiceSourcePath(actor.companyId, source.storagePath) ||
+            isMercuryAttachmentPath(actor.companyId, source.storagePath))
+            ? ((
+                await actor.client.storage
+                  .from("private")
+                  .createSignedUrl(source.storagePath, 600)
+              ).data?.signedUrl ?? null)
+            : null;
+        return {
+          id: source.id,
+          sha256: source.sha256,
+          storagePath: source.storagePath,
+          fileName: source.fileName,
+          mediaType: source.mediaType,
+          url
+        };
+      })
   );
   return { ...result, signedSources };
 }
@@ -50,11 +59,15 @@ export default function InvoiceDocumentRoute() {
   const result = useLoaderData<typeof loader>();
   const revalidator = useRevalidator();
   useEffect(() => {
-    if (!["Queued", "Processing"].includes(result.intake.status)) return;
+    if (
+      !["Queued", "Processing"].includes(result.intake.status) &&
+      !result.readinessPending
+    )
+      return;
     const timer = setInterval(() => {
       if (revalidator.state === "idle") void revalidator.revalidate();
     }, 5000);
     return () => clearInterval(timer);
-  }, [result.intake.status, revalidator]);
-  return <InvoiceDocumentReview data={result} />;
+  }, [result.intake.status, result.readinessPending, revalidator]);
+  return <InvoiceDocumentReview key={result.intake.id} data={result} />;
 }

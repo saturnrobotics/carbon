@@ -3,9 +3,11 @@ import type { Database } from "@carbon/database";
 import {
   type MercuryAttachment,
   type MercuryInvoiceEvidence,
+  type MercuryReceiptAcquisition,
   type MercurySyncSettings,
   parseMercuryAttachments,
-  parseMercuryInvoiceEvidence
+  parseMercuryInvoiceEvidence,
+  parseMercuryVendorSuggestion
 } from "@carbon/database/mercury";
 import { datetime } from "@carbon/utils";
 import { parseAbsolute } from "@internationalized/date";
@@ -69,6 +71,16 @@ function fileType(
   if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff)
     return { extension: "jpg", contentType: "image/jpeg" };
   return null;
+}
+
+/** One stored object may independently arrive from the bank and an email. */
+function attachmentIdentity(attachment: MercuryAttachment): string {
+  return JSON.stringify([
+    attachment.source,
+    attachment.path,
+    attachment.mailbox ?? "",
+    attachment.messageId ?? ""
+  ]);
 }
 
 /** Content-addressed names make storage retries harmless without storing signed URLs. */
@@ -260,10 +272,16 @@ async function processPage(
     let issue: string | null = null;
     const attachments = new Map(
       parseMercuryAttachments(old?.attachments).map((attachment) => [
-        attachment.path,
+        attachmentIdentity(attachment),
         attachment
       ])
     );
+    const mercuryReceiptAcquisition: MercuryReceiptAcquisition = {
+      attachmentCount: payment.attachments.length,
+      hasGeneratedReceipt: payment.hasGeneratedReceipt ?? null,
+      checkedAt: datetime.timestamp(),
+      attachments: []
+    };
     for (const attachment of payment.attachments.slice(0, 10)) {
       try {
         await assertPageActive();
@@ -276,12 +294,35 @@ async function processPage(
           bytes,
           { source: "mercury" }
         );
-        attachments.set(saved.path, saved);
+        attachments.set(attachmentIdentity(saved), saved);
+        mercuryReceiptAcquisition.attachments.push({
+          id: attachment.id,
+          fileName: attachment.fileName,
+          status: "saved",
+          path: saved.path
+        });
       } catch (error) {
         if (error instanceof SyncPaused) throw error;
         issue = providerErrorCode(error);
+        mercuryReceiptAcquisition.attachments.push({
+          id: attachment.id,
+          fileName: attachment.fileName,
+          status:
+            issue === "attachment_unsupported_file"
+              ? "unsupported"
+              : "unavailable",
+          errorCode: issue
+        });
       }
     }
+    mercuryReceiptAcquisition.attachments.push(
+      ...payment.attachments.slice(10, 100).map((attachment) => ({
+        id: attachment.id,
+        fileName: attachment.fileName,
+        status: "limit" as const,
+        errorCode: "attachment_limit_review_required"
+      }))
+    );
     if (payment.attachments.length > 10)
       issue = "attachment_limit_review_required";
     const candidates: InvoiceCandidate[] = [];
@@ -344,7 +385,7 @@ async function processPage(
               messageId: candidate.messageId
             }
           );
-          attachments.set(saved.path, saved);
+          attachments.set(attachmentIdentity(saved), saved);
         } catch (error) {
           if (error instanceof SyncPaused) throw error;
           issue = providerErrorCode(error);
@@ -372,8 +413,12 @@ async function processPage(
       transactionDate: payment.postedAt || payment.createdAt,
       reference: null,
       memo: payment.note,
-      vendorSuggestion:
-        old?.reviewStatus === "Imported" ? old.vendorSuggestion : suggestion,
+      vendorSuggestion: {
+        ...(old?.reviewStatus === "Imported"
+          ? parseMercuryVendorSuggestion(old.vendorSuggestion)
+          : suggestion),
+        mercuryReceiptAcquisition
+      },
       invoiceEvidence: JSON.stringify([
         ...new Map(
           [
@@ -420,7 +465,7 @@ async function processPage(
               memo: eb.ref("excluded.memo"),
               attachments: eb.ref("excluded.attachments"),
               invoiceEvidence: eb.ref("excluded.invoiceEvidence"),
-              vendorSuggestion: sql`CASE WHEN "mercuryTransactionImport"."reviewStatus" = 'Imported' THEN "mercuryTransactionImport"."vendorSuggestion" ELSE excluded."vendorSuggestion" END`,
+              vendorSuggestion: sql`CASE WHEN "mercuryTransactionImport"."reviewStatus" = 'Imported' THEN coalesce("mercuryTransactionImport"."vendorSuggestion",'{}'::jsonb) || jsonb_build_object('mercuryReceiptAcquisition',excluded."vendorSuggestion"->'mercuryReceiptAcquisition') ELSE excluded."vendorSuggestion" END`,
               lastError: sql`CASE WHEN "mercuryTransactionImport"."lastError" = 'ATTACHMENT_COPY_FAILED' AND "mercuryTransactionImport"."reviewStatus" = 'Imported' THEN "mercuryTransactionImport"."lastError" ELSE excluded."lastError" END`,
               updatedAt: eb.ref("excluded.updatedAt")
             }))

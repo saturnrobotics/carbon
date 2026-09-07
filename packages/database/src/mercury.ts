@@ -6,11 +6,33 @@ import type { Database } from "./types";
 
 // These contracts contain normalized evidence only. Bank and mailbox credentials
 // belong in the deployment secret store and must never enter these records.
+export const mercuryReceiptAcquisitionSchema = z.object({
+  attachmentCount: z.number().int().nonnegative(),
+  // Mercury's generated bank receipt flag does not establish an itemized invoice.
+  hasGeneratedReceipt: z.boolean().nullable(),
+  checkedAt: z.string(),
+  attachments: z
+    .array(
+      z.object({
+        id: z.string().max(500),
+        fileName: z.string().max(200),
+        status: z.enum(["saved", "unsupported", "unavailable", "limit"]),
+        errorCode: z.string().max(200).optional(),
+        path: z.string().optional()
+      })
+    )
+    .max(100)
+});
+export type MercuryReceiptAcquisition = z.infer<
+  typeof mercuryReceiptAcquisitionSchema
+>;
+
 export const mercuryVendorSuggestionSchema = z.object({
   name: z.string().max(500).default(""),
   email: z.string().max(320).nullable().optional(),
   source: z.string().max(200).optional(),
-  reason: z.string().max(2000).optional()
+  reason: z.string().max(2000).optional(),
+  mercuryReceiptAcquisition: mercuryReceiptAcquisitionSchema.optional()
 });
 
 export const mercuryInvoiceEvidenceSchema = z.object({

@@ -65,16 +65,21 @@ export function InvoiceDocumentSourceReview({
           value={primarySha256}
           options={options}
           onChange={onPrimaryChange}
-          disabled={disabled || sources.length === 1}
+          disabled={
+            disabled ||
+            (sources.length === 1 && sources[0].sha256 === primarySha256)
+          }
         />
-        {!disabled && sources.length > 1 && (
-          <p className="text-sm text-muted-foreground">
-            <Trans>
-              Changing this selection keeps your current review fields. Save the
-              review, then use Parse again to read the selected document.
-            </Trans>
-          </p>
-        )}
+        {!disabled &&
+          (sources.length > 1 ||
+            !sources.some((source) => source.sha256 === primarySha256)) && (
+            <p className="text-sm text-muted-foreground">
+              <Trans>
+                Changing this selection keeps your current review fields. Save
+                the review, then use Parse again to read the selected document.
+              </Trans>
+            </p>
+          )}
         {primarySha256 && (
           <div className="space-y-2">
             {extractionDiffers && (

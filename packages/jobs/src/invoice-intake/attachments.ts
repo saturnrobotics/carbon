@@ -91,6 +91,7 @@ export async function copyInvoiceAttachments(context: Context) {
         .where("companyId", "=", context.companyId)
         .where("intakeId", "=", context.intakeId)
         .where("storagePath", "is not", null)
+        .where("kind", "in", ["mercury", "upload"])
         .orderBy("createdAt")
         .orderBy("id")
         .limit(26)
@@ -215,6 +216,7 @@ export async function copyInvoiceAttachments(context: Context) {
           .where("companyId", "=", context.companyId)
           .where("intakeId", "=", context.intakeId)
           .where("storagePath", "is not", null)
+          .where("kind", "in", ["mercury", "upload"])
           .execute();
         const ids = new Set(sources.map((source) => source.id));
         const complete = currentSources.every((source) => ids.has(source.id));

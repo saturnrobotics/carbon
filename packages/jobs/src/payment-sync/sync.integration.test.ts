@@ -436,6 +436,88 @@ describe.skipIf(!databaseUrl)("Mercury sync against PostgreSQL", () => {
     expect(mercury.listTransactions).not.toHaveBeenCalled();
   });
 
+  it("records each unsupported or unavailable Mercury attachment without hiding the payment", async () => {
+    const transaction = payment({
+      hasGeneratedReceipt: true,
+      attachments: [
+        {
+          id: "spreadsheet",
+          fileName: "invoice.xlsx",
+          url: "https://example.s3.amazonaws.com/invoice.xlsx"
+        },
+        {
+          id: "unavailable",
+          fileName: "receipt.pdf",
+          url: "https://example.s3.amazonaws.com/receipt.pdf"
+        }
+      ]
+    });
+    vi.mocked(mercury.listTransactions).mockResolvedValue({
+      payments: [transaction],
+      nextPage: null
+    });
+    vi.mocked(mercury.getTransaction).mockResolvedValue(transaction);
+    vi.mocked(mercury.downloadAttachment).mockImplementation(
+      async (attachment) => {
+        if (attachment.id === "spreadsheet")
+          return new TextEncoder().encode("PK spreadsheet");
+        throw new ProviderError("Attachment", "request_failed", 403);
+      }
+    );
+    await runMercurySync(context);
+    expect((await imports())[0]!.vendorSuggestion).toMatchObject({
+      mercuryReceiptAcquisition: {
+        attachmentCount: 2,
+        hasGeneratedReceipt: true,
+        attachments: [
+          {
+            id: "spreadsheet",
+            fileName: "invoice.xlsx",
+            status: "unsupported",
+            errorCode: "attachment_unsupported_file"
+          },
+          {
+            id: "unavailable",
+            fileName: "receipt.pdf",
+            status: "unavailable",
+            errorCode: "attachment_request_failed_403"
+          }
+        ]
+      }
+    });
+  });
+
+  it("retains Mercury provenance when Gmail returns the same receipt bytes", async () => {
+    context.mailboxes = [mailboxConfig];
+    context.gmailClients = [gmail];
+    vi.mocked(mercury.listTransactions).mockResolvedValue({
+      payments: [
+        payment({
+          attachments: [
+            {
+              id: "receipt",
+              fileName: "receipt.pdf",
+              url: "https://example.s3.amazonaws.com/receipt.pdf"
+            }
+          ]
+        })
+      ],
+      nextPage: null
+    });
+    await runMercurySync(context);
+    const rows = await imports();
+    expect(rows[0]!.attachments).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ source: "mercury" }),
+        expect.objectContaining({
+          source: "gmail",
+          mailbox: mailboxConfig.email
+        })
+      ])
+    );
+    expect(rows[0]!.attachments).toHaveLength(2);
+  });
+
   it("deduplicates repeat imports and persists JSON invoice evidence and attachments", async () => {
     context.mailboxes = [mailboxConfig];
     context.gmailClients = [gmail];

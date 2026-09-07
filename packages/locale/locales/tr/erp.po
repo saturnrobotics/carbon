@@ -2562,6 +2562,9 @@ msgstr "İş tamamlandığında"
 msgid "At least one condition must match"
 msgstr "En az bir koşul eşleşmelidir"
 
+msgid "At least one payment is not confirmed as sent. Explain its status before creating a draft. Approval does not mark it as paid."
+msgstr "En az bir ödemenin gönderildiği teyit edilmedi. Taslak oluşturmadan önce durumunu açıklayın. Onay, ödemeyi ödenmiş olarak işaretlemez."
+
 msgid "At operation completion"
 msgstr "İşlem tamamlandığında"
 
@@ -2570,6 +2573,9 @@ msgstr "Dosya Ekle"
 
 msgid "Attachment"
 msgstr "Ek"
+
+msgid "Attachment saved."
+msgstr "Ek kaydedildi."
 
 msgid "Attachments"
 msgstr "Ekler"
@@ -2670,8 +2676,8 @@ msgstr "Otomatik içe aktarma"
 msgid "Automatic Lead Time Updates"
 msgstr "Otomatik Tedarik Süresi Güncellemeleri"
 
-msgid "Automatic processing needs attention. Your original document is safe. Review the fields manually or save your work and retry parsing."
-msgstr "Otomatik işleme dikkat gerektirir. Orijinal belgeniz güvende. Alanları manuel olarak inceleyin veya çalışmanızı kaydedip ayrıştırmayı yeniden deneyin."
+msgid "Automatic processing needs attention. Check the available documents and review fields below before retrying parsing."
+msgstr "Otomatik işleme dikkat gerektiriyor. Ayrıştırmayı yeniden denemeden önce kullanılabilir belgeleri ve aşağıdaki inceleme alanlarını kontrol edin."
 
 msgid "Automatic Updates"
 msgstr "Otomatik Güncellemeler"
@@ -3425,6 +3431,9 @@ msgstr "E-postanızı kontrol edin"
 
 msgid "Checking Stripe for this customer…"
 msgstr "Bu müşteri için Stripe kontrol ediliyor…"
+
+msgid "Checking the parsed document against your supplier and item settings."
+msgstr "Ayrıştırılan belge, tedarikçi ve stok kartı ayarlarınızla karşılaştırılıyor."
 
 msgid "Checkpoint ·"
 msgstr "Kontrol Noktası ·"
@@ -5673,6 +5682,8 @@ msgstr "Şema kaydedildi"
 
 msgid "Differs from the selection — allowed, but confirm they nest together"
 msgstr "Seçimden farklı — izin verilir, ancak birlikte iç içe geçtiğini doğrulayın"
+msgid "Difference"
+msgstr "Fark"
 
 msgid "Digital Quote"
 msgstr "Dijital Teklif"
@@ -7052,6 +7063,15 @@ msgstr "Son kullanma tarihi seçilen işlem başladığında başlar."
 msgid "Expiry trace"
 msgstr "Son kullanma tarihi izi"
 
+msgid "Explain any partial payment, grouped payments, fees, or currency conversion before approval. This explanation does not change the invoice amounts or reconcile the bank payment."
+msgstr "Onaydan önce kısmi ödemeleri, gruplanmış ödemeleri, ücretleri veya para birimi dönüşümünü açıklayın. Bu açıklama fatura tutarlarını değiştirmez ve banka ödemesinin mutabakatını yapmaz."
+
+msgid "Explain the payment difference or status before approval"
+msgstr "Onaydan önce ödeme farkını veya durumunu açıklayın"
+
+msgid "Explain the payment difference, status, or allocation"
+msgstr "Ödeme farkını, durumunu veya dağılımını açıklayın"
+
 msgid "Explorer"
 msgstr "Gezgin"
 
@@ -7998,6 +8018,9 @@ msgstr "Muhasebe mutabakatı"
 
 msgid "GL Tie-Out"
 msgstr "Muhasebe Mutabakatı"
+
+msgid "Gmail candidates are retained for later review. They are not used to parse or approve this purchase."
+msgstr "Gmail adayları daha sonra incelenmek üzere saklanır. Bu satın alma işlemini ayrıştırmak veya onaylamak için kullanılmazlar."
 
 msgid "Go live right the first time — with our team alongside you"
 msgstr "İlk seferde canlı yayına geç — ekibimiz yanınızda"
@@ -10145,11 +10168,20 @@ msgstr "Muhasebe Belgesi Kimliği"
 msgid "Mercury"
 msgstr "Mercury"
 
+msgid "Mercury also offers a generated payment receipt. Payment confirmation alone does not identify the purchased line items."
+msgstr "Mercury ayrıca otomatik oluşturulmuş bir ödeme makbuzu sunar. Tek başına ödeme onayı, satın alınan stok kartlarının satırlarını belirlemez."
+
 msgid "Mercury authorization needs to be renewed. Check the read-only account connection."
 msgstr "Mercury yetkilendirmesi yenilenmelidir. Salt okunur hesap bağlantısını kontrol edin."
 
 msgid "Mercury connection configured"
 msgstr "Mercury bağlantısı yapılandırıldı"
+
+msgid "Mercury has no uploaded receipt or invoice for this payment."
+msgstr "Bu ödeme için Mercury’ye yüklenmiş makbuz veya fatura yok."
+
+msgid "Mercury payment evidence"
+msgstr "Mercury ödeme kanıtları"
 
 msgid "Mercury payments"
 msgstr "Mercury ödemeleri"
@@ -10974,6 +11006,9 @@ msgstr "Dönüşüm gerekmiyor"
 msgid "No cost history found"
 msgstr "Hiç maliyet geçmişi bulunamadı"
 
+msgid "No current receipt has been parsed. Saved values may come from an earlier document. Parse the selected receipt or check its details manually before approval."
+msgstr "Güncel makbuz henüz ayrıştırılmadı. Kaydedilen değerler önceki bir belgeden gelmiş olabilir. Onaydan önce seçili makbuzu ayrıştırın veya ayrıntılarını elle kontrol edin."
+
 msgid "No Data"
 msgstr "Veri Yok"
 
@@ -11009,6 +11044,8 @@ msgstr "Bu öğe için düzenlenebilir özellik yok."
 
 msgid "No eligible operations"
 msgstr "Uygun operasyon yok"
+msgid "No eligible receipt or invoice is attached yet. Upload the original document or find its receipt in Mercury."
+msgstr "Henüz uygun bir makbuz veya fatura eklenmedi. Orijinal belgeyi yükleyin veya makbuzunu Mercury’de bulun."
 
 msgid "No employees assigned this week"
 msgstr "Bu hafta hiçbir çalışan atanmamış"
@@ -11285,9 +11322,6 @@ msgstr "Envanter veya iş durumu için tek bir güvenilir sayı yok"
 
 msgid "No sorts applied to this view"
 msgstr "Bu görünüme herhangi bir sıralama uygulanmadı"
-
-msgid "No source document is attached yet. Upload a receipt or find supporting evidence from Mercury."
-msgstr "Henüz kaynak belge eklenmemiş. Bir makbuz yükleyin veya Mercury'den destekleyici kanıtlar bulun."
 
 msgid "No stock"
 msgstr "Stok yok"
@@ -11757,6 +11791,9 @@ msgstr "Açık İş emirleri"
 
 msgid "Open menu"
 msgstr "Menüyü aç"
+
+msgid "Open Mercury payments"
+msgstr "Mercury ödemelerini aç"
 
 msgid "Open navigation"
 msgstr "Gezinmeyi aç"
@@ -12286,8 +12323,14 @@ msgstr "Borçlar (varsayılan)"
 msgid "Payables aging"
 msgstr "Borçlar yaşlandırması"
 
+msgid "Payee unavailable"
+msgstr "Ödeme alıcısı kullanılamıyor"
+
 msgid "Payment"
 msgstr "Ödeme"
+
+msgid "Payment and invoice currencies differ. Payments cannot be linked to an invoice in a different currency."
+msgstr "Ödeme ve faturanın para birimleri farklı. Ödemeler farklı para birimindeki bir faturaya bağlanamaz."
 
 msgid "Payment Applications"
 msgstr "Ödeme Uygulamaları"
@@ -12298,14 +12341,14 @@ msgstr "Ödeme onayı"
 msgid "Payment Date"
 msgstr "Ödeme Tarihi"
 
-msgid "Payment evidence"
-msgstr "Ödeme kanıtı"
-
 msgid "Payment history is still being imported. The next hourly run will continue where it stopped."
 msgstr "Ödeme geçmişi içe aktarılıyor. Sonraki saatlik çalıştırma kaldığı yerden devam edecek."
 
 msgid "Payment ID"
 msgstr "Ödeme Kimliği"
+
+msgid "Payment status"
+msgstr "Ödeme durumu"
 
 msgid "payment term"
 msgstr "ödeme koşulu"
@@ -12328,11 +12371,17 @@ msgstr "Ödeme Koşulları"
 msgid "Payment terms like Net 30 or due on receipt"
 msgstr "Net 30 gibi ödeme koşulları veya alındığında ödeme"
 
+msgid "Payment total"
+msgstr "Toplam ödeme"
+
 msgid "Payments"
 msgstr "Ödemeler"
 
 msgid "Payments and credits applied to this invoice. Click a row to open the source document."
 msgstr "Bu faturaya uygulanan ödemeler ve krediler. Kaynak belgeyi açmak için bir satıra tıklayın."
+
+msgid "Payments cannot be linked to an invoice in a different currency"
+msgstr "Ödemeler farklı para birimindeki bir faturaya bağlanamaz"
 
 msgid "Payments examined"
 msgstr "Ödemeler incelendi"
@@ -13558,6 +13607,12 @@ msgstr "Yeniden hesaplanıyor…"
 msgid "Receipt"
 msgstr "Makbuz"
 
+msgid "Receipt collection needs attention."
+msgstr "Makbuz toplama işlemi dikkat gerektiriyor."
+
+msgid "Receipt collection status is not available yet."
+msgstr "Makbuz toplama durumu henüz kullanılamıyor."
+
 msgid "Receipt ID"
 msgstr "Fiş No"
 
@@ -13578,6 +13633,9 @@ msgstr "Talep Edilen Teslim Tarihi"
 
 msgid "Receipts"
 msgstr "Makbuzlar"
+
+msgid "Receipts last checked"
+msgstr "Makbuzların son kontrolü"
 
 msgid "Receipts, shipments, sales invoices, purchase invoices, payments, and credit/debit memos that are still Draft or Pending must be posted or voided — both documents dated in this period and undated documents that would receive a date in it when posted. Until they post, their amounts aren't in the general ledger, so the period would be understated."
 msgstr "Hala Taslak veya Beklemede olan mal kabuller, sevkiyatlar, satış faturaları, alış faturaları, ödemeler ve alacak/borç muhasebe fişleri muhasebeleştirilmeli veya hükümsüz kılınmalıdır — hem bu dönemde tarihli belgeler hem de muhasebeleştirildiğinde bu dönemde tarih alacak tarihi olmayan belgeler. Muhasebeleştirilene kadar, tutarları büyük defterde yoktur, bu nedenle dönem eksik gösterilecektir."
@@ -13702,6 +13760,9 @@ msgstr "Referans"
 
 msgid "Refresh"
 msgstr "Yenile"
+
+msgid "Refresh document"
+msgstr "Belgeyi yenile"
 
 msgid "Refresh exchange rate"
 msgstr "Döviz kurunu yenile"
@@ -15069,6 +15130,9 @@ msgstr "Atanayı seçin"
 
 msgid "Select an event…"
 msgstr "Bir olay seçin…"
+
+msgid "Select an existing supplier or propose this vendor as a new supplier."
+msgstr "Mevcut bir tedarikçi seçin veya bu satıcıyı yeni tedarikçi olarak önerin."
 
 msgid "Select an issue type"
 msgstr "Bir sorun türü seçin"
@@ -16771,6 +16835,9 @@ msgstr "Ödeme vadesinin hesaplama yönteminden sonraki gün sayısı"
 msgid "The append-only record of every stock movement; on-hand is the sum of its signed entries and the source of truth."
 msgstr "Her stok hareketinin yalnızca ekleme kaydı; eldeki tutar, imzalı girdilerinin toplamı ve gerçeğin kaynağıdır."
 
+msgid "The attachment limit was reached. Review the saved files and upload the receipt needed for this purchase."
+msgstr "Ek sınırına ulaşıldı. Kaydedilen dosyaları inceleyin ve bu satın alma için gereken makbuzu yükleyin."
+
 msgid "The authorization was refused in Onshape. Try connecting again."
 msgstr "Yetkilendirme Onshape'te reddedildi. Yeniden bağlanmayı deneyin."
 
@@ -17243,6 +17310,12 @@ msgstr "Parça, ihtiyacı olan üst öğe inşa edildiğinde kendi işi olarak �
 msgid "The part is taken from existing stock when its parent is built — no new job or purchase order."
 msgstr "Parça, ebeveyninin inşa edildiğinde mevcut stoktan alınır - yeni iş veya satın alma siparişi yok."
 
+msgid "The payment total differs from the reviewed invoice total."
+msgstr "Ödeme toplamı, incelenen faturanın toplamından farklı."
+
+msgid "The payment total matches the reviewed invoice total."
+msgstr "Ödeme toplamı, incelenen faturanın toplamıyla eşleşiyor."
+
 msgid "The people on the Carbon side who will run your implementation, and how to reach them."
 msgstr "Carbon tarafındaki uygulamanızı yönetecek Personel ve onlara ulaşmanız için nasıl yapılır."
 
@@ -17568,6 +17641,9 @@ msgstr "Bu operasyonlarda kurulum, işçilik veya makine süresi yok, bu nedenle
 msgid "There's nothing outstanding to apply these credits to."
 msgstr "Bu kredileri uygulanacak hiçbir ödenmemiş tutar yok."
 
+msgid "These are bank payment details. Invoice totals and the supplier are reviewed separately from the receipt."
+msgstr "Bunlar banka ödemesinin ayrıntılarıdır. Fatura toplamları ve tedarikçi, makbuz temel alınarak ayrıca incelenir."
+
 msgid "These custom fields will only be available for entities with the same tags"
 msgstr "Bu özel alanlar yalnızca aynı etiketlere sahip varlıklar için kullanılabilir"
 
@@ -17603,6 +17679,9 @@ msgstr "bu yetenek"
 msgid "This approval will create {0} supplier(s) and {1} item(s)."
 msgstr "Bu onay, {0} tedarikçi(ler) ve {1} öğe oluşturacaktır."
 
+msgid "This attachment could not be downloaded from Mercury. Find the document again or upload the original file."
+msgstr "Bu ek Mercury’den indirilemedi. Belgeyi yeniden bulun veya orijinal dosyayı yükleyin."
+
 msgid "This backup could not be completed."
 msgstr "Bu yedekleme tamamlanamadı."
 
@@ -17630,11 +17709,17 @@ msgstr "Bu ilgili kişinin e-posta adresi yok"
 msgid "This counterparty has nothing outstanding — the payment will be recorded on-account."
 msgstr "Bu muhasebe ortağının ödenmemiş bir borcu yok — ödeme hesap üzerinde kaydedilecektir."
 
+msgid "This document is attached, but its preview is unavailable. Refresh to try opening it again."
+msgstr "Bu belge ekli, ancak önizlemesi kullanılamıyor. Yeniden açmayı denemek için yenileyin."
+
 msgid "This download link is invalid or has been tampered with."
 msgstr "Bu indirme bağlantısı geçersiz veya değiştirilmiş."
 
 msgid "This file is no longer available, or you don't have permission to download it."
 msgstr "Bu dosya artık kullanılabilir değil veya bunu indirme izniniz yok."
+
+msgid "This file type cannot be parsed. Upload a PDF, PNG, or JPEG version."
+msgstr "Bu dosya türü ayrıştırılamıyor. PDF, PNG veya JPEG sürümünü yükleyin."
 
 msgid "This Fiscal Year"
 msgstr "Bu Mali Yıl"
@@ -18858,6 +18943,9 @@ msgstr "Yalnızca sapma"
 
 msgid "VAT Number"
 msgstr "Vergi numarası"
+
+msgid "Vendor on document"
+msgstr "Belgedeki satıcı"
 
 msgid "Vendor Write-Off Income"
 msgstr "Tedarikçi Kayıttan Düşme Geliri"

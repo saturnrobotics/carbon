@@ -10,7 +10,7 @@
 
 Extend Invoicing with a document inbox shared by manual uploads and Mercury/Gmail evidence. Extract document facts, suggest suppliers and typed items, expose corrections beside the original, and remember confirmed identities and purchasing units. One approval creates/enriches a Draft invoice and any explicitly confirmed master records. It does not post accounting, receive inventory, initiate a payment, or settle an invoice. Implement using existing Carbon forms, Supabase storage/Postgres, and Inngest, with a configurable managed GCP inference adapter as the planning default.
 
-The user authorized execution of the full implementation plan, including its managed GCP inference default and deployment. Runtime configuration and every acceptance criterion below were verified through scoped tests, browser checks, the deployed synthetic comparison, and the measured historical run.
+The user authorized execution of the full implementation plan, including its managed GCP inference default and deployment. The initial verification covered scoped tests, synthetic browser flows, a model comparison, and aggregate historical processing. A subsequent audit found that these did not establish complete receipt acquisition or a usable imported-payment review. The Mercury-only corrections are tracked in `.ai/plans/2026-09-07-mercury-receipt-corrections.md`; Gmail work is deferred. Historical checked acceptance markers below describe the initial release claims and must be read with this correction.
 
 ## Problem Statement
 

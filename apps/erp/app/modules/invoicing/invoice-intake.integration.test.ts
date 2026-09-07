@@ -378,6 +378,8 @@ async function candidateIntake(
 ) {
   const value = review(f);
   value.header.invoiceNumber = reference;
+  value.header.paymentReviewReason =
+    "Partial payment reviewed against the invoice";
   value.header.primarySourceSha256 = primary;
   value.header.sourceAcknowledgements = [
     { sha256: other, reason: "Unrelated Gmail search candidate" }
@@ -396,7 +398,7 @@ async function candidateIntake(
         companyId: f.actor.companyId,
         intakeId: row.id,
         createdBy: f.actor.userId,
-        kind: "gmail",
+        kind: hash === primary ? "mercury" : "gmail",
         sourceKey: randomUUID(),
         mercuryImportId: paid.id,
         storageBucket: "private",
@@ -416,6 +418,142 @@ async function candidateIntake(
 }
 
 describe("Atomic invoice intake approval", () => {
+  it("requires an explanation for a payment difference and retains the reviewed evidence", async () =>
+    fixture(async (f) => {
+      const row = await intake(f);
+      const paid = await payment(f, 12);
+      await attach(f, row.id, paid.id);
+      const before = await getInvoiceIntakeReview(db, f.actor, row.id);
+      expect(before.paymentReconciliation).toMatchObject({
+        status: "difference",
+        difference: "2"
+      });
+      await expect(
+        approveInvoiceIntake(db, f.actor, {
+          intakeId: row.id,
+          expectedRevision: row.revision,
+          approvalKey: randomUUID()
+        })
+      ).rejects.toThrow(/difference/);
+      const saved = await saveInvoiceIntakeReview(db, f.actor, {
+        id: row.id,
+        expectedRevision: row.revision,
+        review: {
+          ...before.review,
+          header: {
+            ...before.review.header,
+            paymentReviewReason:
+              "Payment includes a separate charge awaiting reconciliation"
+          }
+        }
+      });
+      const approved = await approveInvoiceIntake(db, f.actor, {
+        intakeId: row.id,
+        expectedRevision: saved.revision,
+        approvalKey: randomUUID()
+      });
+      const persisted = await db
+        .selectFrom("invoiceIntake")
+        .select("approvalSnapshot")
+        .where("companyId", "=", f.actor.companyId)
+        .where("id", "=", row.id)
+        .executeTakeFirstOrThrow();
+      expect(persisted.approvalSnapshot).toMatchObject({
+        payments: [expect.objectContaining({ amount: "12" })],
+        paymentReconciliation: { difference: "2" },
+        resolved: { header: { total: "10" } }
+      });
+      expect(approved.status).toBe("Approved");
+      expect(await counts(f)).toBe("0");
+    }));
+  it("does not approve deferred Gmail evidence as a Mercury receipt", async () =>
+    fixture(async (f) => {
+      const row = await intake(f);
+      await db
+        .updateTable("invoiceIntakeSource")
+        .set({ kind: "gmail" })
+        .where("companyId", "=", f.actor.companyId)
+        .where("intakeId", "=", row.id)
+        .execute();
+      const current = await getInvoiceIntakeReview(db, f.actor, row.id);
+      expect(current.eligibleSourceIds).toEqual([]);
+      expect(current.validation.ready).toBe(false);
+      await expect(
+        approveInvoiceIntake(db, f.actor, {
+          intakeId: row.id,
+          expectedRevision: row.revision,
+          approvalKey: randomUUID()
+        })
+      ).rejects.toThrow(/Attach/);
+    }));
+
+  it("preserves missing-document status when an incomplete review is saved", async () =>
+    fixture(async (f) => {
+      const row = await db
+        .insertInto("invoiceIntake")
+        .values({
+          companyId: f.actor.companyId,
+          createdBy: f.actor.userId,
+          status: "NeedsDocument"
+        })
+        .returningAll()
+        .executeTakeFirstOrThrow();
+      const saved = await saveInvoiceIntakeReview(db, f.actor, {
+        id: row.id,
+        expectedRevision: 0,
+        review: invoiceIntakeReviewValidator.parse({ header: {}, lines: [] })
+      });
+      expect(saved.status).toBe("NeedsDocument");
+      const current = await getInvoiceIntakeReview(db, f.actor, row.id);
+      expect(current.intake.status).toBe("NeedsDocument");
+    }));
+  it("keeps linked Mercury payment context visible with no receipt", async () =>
+    fixture(async (f) => {
+      const imported = await payment(f, 12);
+      await db
+        .updateTable("mercuryTransactionImport")
+        .set({
+          memo: "EXAMPLE RECEIPT",
+          reference: "EXAMPLE-REF",
+          vendorSuggestion: { name: "Example Vendor" }
+        })
+        .where("companyId", "=", f.actor.companyId)
+        .where("id", "=", imported.id)
+        .execute();
+      const row = await db
+        .insertInto("invoiceIntake")
+        .values({
+          companyId: f.actor.companyId,
+          createdBy: f.actor.userId,
+          status: "NeedsDocument"
+        })
+        .returningAll()
+        .executeTakeFirstOrThrow();
+      await db
+        .insertInto("invoiceIntakeSource")
+        .values({
+          companyId: f.actor.companyId,
+          intakeId: row.id,
+          createdBy: f.actor.userId,
+          kind: "mercury",
+          sourceKey: randomUUID(),
+          mercuryImportId: imported.id
+        })
+        .execute();
+      const current = await getInvoiceIntakeReview(db, f.actor, row.id);
+      expect(current.payments).toEqual([
+        expect.objectContaining({
+          id: imported.id,
+          amount: "12",
+          currencyCode: "USD",
+          payee: "Example Vendor",
+          memo: "EXAMPLE RECEIPT",
+          reference: "EXAMPLE-REF"
+        })
+      ]);
+      expect(current.eligibleSourceIds).toEqual([]);
+    }));
+
   it("preserves legacy single-file ownership after later supporting evidence arrives", async () =>
     fixture(async (f) => {
       const first = await intake(f);
@@ -1312,7 +1450,7 @@ describe("Atomic invoice intake approval", () => {
         expectedRevision: 0,
         review: review(f)
       });
-      expect(missing.status).toBe("NeedsReview");
+      expect(missing.status).toBe("NeedsDocument");
       await expect(
         approveInvoiceIntake(db, f.actor, {
           intakeId: blank.id,

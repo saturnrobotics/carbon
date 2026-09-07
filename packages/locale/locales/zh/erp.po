@@ -2562,6 +2562,9 @@ msgstr "在工作完成时"
 msgid "At least one condition must match"
 msgstr "至少一个条件必须匹配"
 
+msgid "At least one payment is not confirmed as sent. Explain its status before creating a draft. Approval does not mark it as paid."
+msgstr "至少有一笔付款尚未确认已发送。创建草稿前请说明其状态。审批不会将其标记为已付款。"
+
 msgid "At operation completion"
 msgstr "在操作完成时"
 
@@ -2570,6 +2573,9 @@ msgstr "附加文件"
 
 msgid "Attachment"
 msgstr "附件"
+
+msgid "Attachment saved."
+msgstr "附件已保存。"
 
 msgid "Attachments"
 msgstr "附件"
@@ -2670,8 +2676,8 @@ msgstr "自动导入"
 msgid "Automatic Lead Time Updates"
 msgstr "自动提前期更新"
 
-msgid "Automatic processing needs attention. Your original document is safe. Review the fields manually or save your work and retry parsing."
-msgstr "自动化加工需要注意。您的原始文件是安全的。手动检查字段或保存您的工作并重试解析。"
+msgid "Automatic processing needs attention. Check the available documents and review fields below before retrying parsing."
+msgstr "自动处理需要检查。重新解析前，请检查可用文档和下方的审核字段。"
 
 msgid "Automatic Updates"
 msgstr "自动更新"
@@ -3425,6 +3431,9 @@ msgstr "检查您的电子邮件"
 
 msgid "Checking Stripe for this customer…"
 msgstr "正在为此客户检查Stripe…"
+
+msgid "Checking the parsed document against your supplier and item settings."
+msgstr "正在根据供应商和物料设置检查已解析的文件。"
 
 msgid "Checkpoint ·"
 msgstr "检查点 ·"
@@ -5673,6 +5682,8 @@ msgstr "图表已保存"
 
 msgid "Differs from the selection — allowed, but confirm they nest together"
 msgstr "与选择不同 — 允许，但请确认它们能够嵌套在一起"
+msgid "Difference"
+msgstr "差额"
 
 msgid "Digital Quote"
 msgstr "数字报价"
@@ -7052,6 +7063,15 @@ msgstr "有效期从选定的流程开始时开始。"
 msgid "Expiry trace"
 msgstr "有效期追踪"
 
+msgid "Explain any partial payment, grouped payments, fees, or currency conversion before approval. This explanation does not change the invoice amounts or reconcile the bank payment."
+msgstr "审批前，请说明部分付款、合并付款、手续费或货币换算的情况。此说明不会更改发票金额，也不会核销银行付款。"
+
+msgid "Explain the payment difference or status before approval"
+msgstr "审批前请说明付款差额或状态"
+
+msgid "Explain the payment difference, status, or allocation"
+msgstr "说明付款差额、状态或分配方式"
+
 msgid "Explorer"
 msgstr "浏览器"
 
@@ -7998,6 +8018,9 @@ msgstr "总账对账"
 
 msgid "GL Tie-Out"
 msgstr "总账对账"
+
+msgid "Gmail candidates are retained for later review. They are not used to parse or approve this purchase."
+msgstr "Gmail候选文件会保留供后续评审。本次采购的解析和审批不会使用这些文件。"
 
 msgid "Go live right the first time — with our team alongside you"
 msgstr "第一次就上线成功 — 我们的团队陪伴您"
@@ -10145,11 +10168,20 @@ msgstr "备忘录 ID"
 msgid "Mercury"
 msgstr "Mercury"
 
+msgid "Mercury also offers a generated payment receipt. Payment confirmation alone does not identify the purchased line items."
+msgstr "Mercury还提供自动生成的付款收据。仅凭付款确认无法识别所购物料的明细行。"
+
 msgid "Mercury authorization needs to be renewed. Check the read-only account connection."
 msgstr "Mercury 授权需要续期。请检查只读账户连接。"
 
 msgid "Mercury connection configured"
 msgstr "Mercury 连接已配置"
+
+msgid "Mercury has no uploaded receipt or invoice for this payment."
+msgstr "Mercury中没有为这笔付款上传收据或发票。"
+
+msgid "Mercury payment evidence"
+msgstr "Mercury付款凭证"
 
 msgid "Mercury payments"
 msgstr "Mercury 付款"
@@ -10974,6 +11006,9 @@ msgstr "不需要转换"
 msgid "No cost history found"
 msgstr "未找到成本历史记录"
 
+msgid "No current receipt has been parsed. Saved values may come from an earlier document. Parse the selected receipt or check its details manually before approval."
+msgstr "尚未解析当前收据。已保存的值可能来自较早的文件。审批前，请解析所选收据或手动核对其详细信息。"
+
 msgid "No Data"
 msgstr "无数据"
 
@@ -11009,6 +11044,8 @@ msgstr "此项目没有可编辑的属性。"
 
 msgid "No eligible operations"
 msgstr "没有符合条件的操作"
+msgid "No eligible receipt or invoice is attached yet. Upload the original document or find its receipt in Mercury."
+msgstr "尚未附加符合条件的收据或发票。请上传原始文件，或在Mercury中查找收据。"
 
 msgid "No employees assigned this week"
 msgstr "本周没有分配员工"
@@ -11285,9 +11322,6 @@ msgstr "库存管理或工单状态没有单一的可信数字"
 
 msgid "No sorts applied to this view"
 msgstr "此查看未应用任何排序"
-
-msgid "No source document is attached yet. Upload a receipt or find supporting evidence from Mercury."
-msgstr "尚未附上源单据。上传收据或查找 Mercury 提供的支持证据。"
 
 msgid "No stock"
 msgstr "无库存"
@@ -11757,6 +11791,9 @@ msgstr "未结工单"
 
 msgid "Open menu"
 msgstr "打开菜单"
+
+msgid "Open Mercury payments"
+msgstr "打开Mercury付款"
 
 msgid "Open navigation"
 msgstr "打开导航"
@@ -12286,8 +12323,14 @@ msgstr "应付款项（默认）"
 msgid "Payables aging"
 msgstr "应付款项账龄"
 
+msgid "Payee unavailable"
+msgstr "收款方信息不可用"
+
 msgid "Payment"
 msgstr "付款"
+
+msgid "Payment and invoice currencies differ. Payments cannot be linked to an invoice in a different currency."
+msgstr "付款与发票的货币不同。付款不能关联到使用不同货币的发票。"
 
 msgid "Payment Applications"
 msgstr "付款应用"
@@ -12298,14 +12341,14 @@ msgstr "付款确认"
 msgid "Payment Date"
 msgstr "付款日期"
 
-msgid "Payment evidence"
-msgstr "付款凭证"
-
 msgid "Payment history is still being imported. The next hourly run will continue where it stopped."
 msgstr "付款历史仍在导入。下一次每小时运行将从中断处继续。"
 
 msgid "Payment ID"
 msgstr "付款ID"
+
+msgid "Payment status"
+msgstr "付款状态"
 
 msgid "payment term"
 msgstr "付款条件"
@@ -12328,11 +12371,17 @@ msgstr "付款条件"
 msgid "Payment terms like Net 30 or due on receipt"
 msgstr "付款条件，如净30天或收货即付"
 
+msgid "Payment total"
+msgstr "付款总计"
+
 msgid "Payments"
 msgstr "付款"
 
 msgid "Payments and credits applied to this invoice. Click a row to open the source document."
 msgstr "应用于此发票的付款和贷方。单击一行以打开源单据。"
+
+msgid "Payments cannot be linked to an invoice in a different currency"
+msgstr "付款不能关联到使用不同货币的发票"
 
 msgid "Payments examined"
 msgstr "检查付款"
@@ -13558,6 +13607,12 @@ msgstr "重新计算中…"
 msgid "Receipt"
 msgstr "收据"
 
+msgid "Receipt collection needs attention."
+msgstr "收据收集需要检查。"
+
+msgid "Receipt collection status is not available yet."
+msgstr "收据收集状态暂不可用。"
+
 msgid "Receipt ID"
 msgstr "收据ID"
 
@@ -13578,6 +13633,9 @@ msgstr "收货要求日期"
 
 msgid "Receipts"
 msgstr "收据"
+
+msgid "Receipts last checked"
+msgstr "上次检查收据的时间"
 
 msgid "Receipts, shipments, sales invoices, purchase invoices, payments, and credit/debit memos that are still Draft or Pending must be posted or voided — both documents dated in this period and undated documents that would receive a date in it when posted. Until they post, their amounts aren't in the general ledger, so the period would be understated."
 msgstr "还处于草稿或待处理状态的收货、发货、销售发票、采购发票、付款以及借方/贷方备忘录必须过账或作废——包括本期日期的文件和未日期但过账时会获得本期日期的文件。在它们过账之前，它们的金额不在总账中，因此本期将被低估。"
@@ -13702,6 +13760,9 @@ msgstr "参考"
 
 msgid "Refresh"
 msgstr "刷新"
+
+msgid "Refresh document"
+msgstr "刷新文件"
 
 msgid "Refresh exchange rate"
 msgstr "刷新汇率"
@@ -15069,6 +15130,9 @@ msgstr "选择经办人"
 
 msgid "Select an event…"
 msgstr "选择一个事件…"
+
+msgid "Select an existing supplier or propose this vendor as a new supplier."
+msgstr "选择现有供应商，或提议将此销售方创建为新供应商。"
 
 msgid "Select an issue type"
 msgstr "选择问题类型"
@@ -16771,6 +16835,9 @@ msgstr "计算方法后的天数，在该天数后付款到期"
 msgid "The append-only record of every stock movement; on-hand is the sum of its signed entries and the source of truth."
 msgstr "每个库存变动的追加专用记录；在手数量是其带符号条目的总和，也是单一信息源。"
 
+msgid "The attachment limit was reached. Review the saved files and upload the receipt needed for this purchase."
+msgstr "已达到附件数量上限。请检查已保存的文件，并上传此次采购所需的收据。"
+
 msgid "The authorization was refused in Onshape. Try connecting again."
 msgstr "授权在 Onshape 中被拒绝。请重新连接。"
 
@@ -17243,6 +17310,12 @@ msgstr "当需要该零件的父级被构造时，该零件被制造为其自己
 msgid "The part is taken from existing stock when its parent is built — no new job or purchase order."
 msgstr "构建其父级时，从现有库存中获取该零件 - 无新工作或采购订单。"
 
+msgid "The payment total differs from the reviewed invoice total."
+msgstr "付款总计与已审核发票的总计不同。"
+
+msgid "The payment total matches the reviewed invoice total."
+msgstr "付款总计与已审核发票的总计一致。"
+
 msgid "The people on the Carbon side who will run your implementation, and how to reach them."
 msgstr "Carbon 方面将运行您的实施的人员，以及如何联系他们。"
 
@@ -17568,6 +17641,9 @@ msgstr "这些工序上没有换型、人工或机器工时，因此没有任何
 msgid "There's nothing outstanding to apply these credits to."
 msgstr "没有可应用这些贷方的未结款项。"
 
+msgid "These are bank payment details. Invoice totals and the supplier are reviewed separately from the receipt."
+msgstr "这些是银行付款详情。发票总计和供应商信息将根据收据单独审核。"
+
 msgid "These custom fields will only be available for entities with the same tags"
 msgstr "这些自定义字段仅对具有相同标签的实体可用"
 
@@ -17603,6 +17679,9 @@ msgstr "此能力"
 msgid "This approval will create {0} supplier(s) and {1} item(s)."
 msgstr "此审批将创建 {0} 个供应商和 {1} 个项目。"
 
+msgid "This attachment could not be downloaded from Mercury. Find the document again or upload the original file."
+msgstr "无法从Mercury下载此附件。请重新查找该文件或上传原始文件。"
+
 msgid "This backup could not be completed."
 msgstr "无法完成此备份。"
 
@@ -17630,11 +17709,17 @@ msgstr "此联系人没有电子邮件地址"
 msgid "This counterparty has nothing outstanding — the payment will be recorded on-account."
 msgstr "该交易对手没有未结余额——该付款将记录为应收账款。"
 
+msgid "This document is attached, but its preview is unavailable. Refresh to try opening it again."
+msgstr "此文件已附加，但预览不可用。请刷新后重试打开。"
+
 msgid "This download link is invalid or has been tampered with."
 msgstr "此下载链接无效或已被篡改。"
 
 msgid "This file is no longer available, or you don't have permission to download it."
 msgstr "此文件不再可用，或您没有权限下载它。"
+
+msgid "This file type cannot be parsed. Upload a PDF, PNG, or JPEG version."
+msgstr "无法解析此文件类型。请上传PDF、PNG或JPEG版本。"
 
 msgid "This Fiscal Year"
 msgstr "此会计年度"
@@ -18858,6 +18943,9 @@ msgstr "仅差异"
 
 msgid "VAT Number"
 msgstr "增值税号"
+
+msgid "Vendor on document"
+msgstr "文件上的销售方"
 
 msgid "Vendor Write-Off Income"
 msgstr "供应商核销收益"

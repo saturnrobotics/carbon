@@ -154,7 +154,7 @@ const settings = (c: Context) =>
     .executeTakeFirstOrThrow();
 
 describe("resumable historical invoice bridge", () => {
-  it("keeps overlapping Gmail candidates attached to their own payment for explicit source review", async () =>
+  it("defers overlapping Gmail candidates without changing the saved payment evidence", async () =>
     fixture(async (c, files) => {
       const records: { id: string }[] = [];
       for (const payment of ["first", "second"]) {
@@ -174,7 +174,8 @@ describe("resumable historical invoice bridge", () => {
       });
       expect((await settings(c)).backfillCounts).toMatchObject({
         processed: 2,
-        documents: 6
+        documents: 0,
+        needsDocument: 2
       });
       const intakes = await db
         .selectFrom("invoiceIntake")
@@ -187,11 +188,11 @@ describe("resumable historical invoice bridge", () => {
         .where("companyId", "=", c.companyId)
         .execute();
       expect(intakes).toHaveLength(2);
-      expect(sources).toHaveLength(8);
+      expect(sources).toHaveLength(2);
       for (const intake of intakes) {
-        expect(intake.status).toBe("NeedsReview");
+        expect(intake.status).toBe("NeedsDocument");
         const owned = sources.filter((source) => source.intakeId === intake.id);
-        expect(owned).toHaveLength(4);
+        expect(owned).toHaveLength(1);
         expect(
           new Set(owned.map((source) => source.mercuryImportId)).size
         ).toBe(1);
@@ -199,25 +200,29 @@ describe("resumable historical invoice bridge", () => {
           new Set(
             owned.flatMap((source) => (source.sha256 ? [source.sha256] : []))
           ).size
-        ).toBe(3);
+        ).toBe(0);
       }
       expect(new Set(sources.map((source) => source.mercuryImportId))).toEqual(
         new Set(records.map((record) => record.id))
       );
-      const selected = sources.find((source) => source.sha256)!;
-      await db
-        .updateTable("invoiceIntake")
-        .set({
-          status: "Queued",
-          header: JSON.stringify({ primarySourceSha256: selected.sha256 })
-        })
-        .where("companyId", "=", c.companyId)
-        .where("id", "=", selected.intakeId)
-        .execute();
       expect(
-        (await registerMercuryInvoiceSources(c, selected.mercuryImportId!))
-          .status
-      ).toBe("Queued");
+        await db
+          .selectFrom("mercuryTransactionImport")
+          .select("attachments")
+          .where("companyId", "=", c.companyId)
+          .execute()
+      ).toEqual([
+        expect.objectContaining({
+          attachments: expect.arrayContaining([
+            expect.objectContaining({ source: "gmail" })
+          ])
+        }),
+        expect.objectContaining({
+          attachments: expect.arrayContaining([
+            expect.objectContaining({ source: "gmail" })
+          ])
+        })
+      ]);
     }));
   it("deduplicates one verified file even when each payment saved it through two channels", async () =>
     fixture(async (c, files) => {
@@ -241,7 +246,7 @@ describe("resumable historical invoice bridge", () => {
           .select("id")
           .where("companyId", "=", c.companyId)
           .execute()
-      ).toHaveLength(6);
+      ).toHaveLength(4);
       expect(
         await db
           .selectFrom("invoiceIntake")
@@ -259,7 +264,7 @@ describe("resumable historical invoice bridge", () => {
       await imports(c, 1, [
         {
           path: "another-company/mercury/payment/invoice.pdf",
-          source: "gmail",
+          source: "mercury",
           fileName: "invoice.pdf"
         }
       ]);
@@ -277,8 +282,12 @@ describe("resumable historical invoice bridge", () => {
     fixture(async (c, files) => {
       const path = `${c.companyId}/mercury/payment/invoice.pdf`;
       const addedPath = `${c.companyId}/mercury/payment/added.pdf`;
-      const first = { path, source: "gmail", fileName: "invoice.pdf" };
-      const added = { path: addedPath, source: "gmail", fileName: "added.pdf" };
+      const first = { path, source: "mercury", fileName: "invoice.pdf" };
+      const added = {
+        path: addedPath,
+        source: "mercury",
+        fileName: "added.pdf"
+      };
       const [record] = await imports(c, 1, [first]);
       files.set(path, new TextEncoder().encode("%PDF-1.4 First invoice"));
       files.set(addedPath, new TextEncoder().encode("%PDF-1.4 Added invoice"));
@@ -348,7 +357,7 @@ describe("resumable historical invoice bridge", () => {
         { path: firstPath, source: "mercury", fileName: "invoice.pdf" }
       ]);
       const [second] = await imports(c, 1, [
-        { path: secondPath, source: "gmail", fileName: "invoice.pdf" }
+        { path: secondPath, source: "mercury", fileName: "invoice.pdf" }
       ]);
       const canonical = await registerMercuryInvoiceSources(c, first!.id);
       const header = { invoiceNumber: "REVIEWED-INSTALLMENT" };

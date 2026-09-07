@@ -2562,6 +2562,9 @@ msgstr "При завершении работы"
 msgid "At least one condition must match"
 msgstr "По крайней мере одно условие должно совпадать"
 
+msgid "At least one payment is not confirmed as sent. Explain its status before creating a draft. Approval does not mark it as paid."
+msgstr "Отправка как минимум одного платежа не подтверждена. Объясните его статус перед созданием черновика. Утверждение не помечает его как оплаченный."
+
 msgid "At operation completion"
 msgstr "При завершении операции"
 
@@ -2570,6 +2573,9 @@ msgstr "Прикрепить файл"
 
 msgid "Attachment"
 msgstr "Вложение"
+
+msgid "Attachment saved."
+msgstr "Вложение сохранено."
 
 msgid "Attachments"
 msgstr "Вложения"
@@ -2670,8 +2676,8 @@ msgstr "Автоматический импорт"
 msgid "Automatic Lead Time Updates"
 msgstr "Автоматическое обновление сроков поставки"
 
-msgid "Automatic processing needs attention. Your original document is safe. Review the fields manually or save your work and retry parsing."
-msgstr "Автоматическая обработка требует внимания. Ваш оригинал документа в безопасности. Просмотрите поля вручную или сохраните работу и повторите анализ."
+msgid "Automatic processing needs attention. Check the available documents and review fields below before retrying parsing."
+msgstr "Автоматическая обработка требует внимания. Проверьте доступные документы и поля ниже перед повторным анализом."
 
 msgid "Automatic Updates"
 msgstr "Автоматические обновления"
@@ -3425,6 +3431,9 @@ msgstr "Проверьте вашу почту"
 
 msgid "Checking Stripe for this customer…"
 msgstr "Проверка Stripe для этого покупателя…"
+
+msgid "Checking the parsed document against your supplier and item settings."
+msgstr "Проверка проанализированного документа по настройкам поставщиков и номенклатуры."
 
 msgid "Checkpoint ·"
 msgstr "Контрольная точка ·"
@@ -5673,6 +5682,8 @@ msgstr "Диаграмма сохранена"
 
 msgid "Differs from the selection — allowed, but confirm they nest together"
 msgstr "Отличается от выбора — допустимо, но убедитесь в их совместимости"
+msgid "Difference"
+msgstr "Разница"
 
 msgid "Digital Quote"
 msgstr "Цифровая котировка"
@@ -7052,6 +7063,15 @@ msgstr "Срок годности начинается при запуске в�
 msgid "Expiry trace"
 msgstr "Трассировка срока годности"
 
+msgid "Explain any partial payment, grouped payments, fees, or currency conversion before approval. This explanation does not change the invoice amounts or reconcile the bank payment."
+msgstr "Перед утверждением объясните частичные платежи, объединенные платежи, комиссии или конвертацию валют. Это объяснение не меняет суммы счета-фактуры и не выполняет сверку банковского платежа."
+
+msgid "Explain the payment difference or status before approval"
+msgstr "Перед утверждением объясните разницу или статус платежа"
+
+msgid "Explain the payment difference, status, or allocation"
+msgstr "Объясните разницу, статус или распределение платежа"
+
 msgid "Explorer"
 msgstr "Обозреватель"
 
@@ -7998,6 +8018,9 @@ msgstr "Выверка главной книги"
 
 msgid "GL Tie-Out"
 msgstr "Выверка главной книги"
+
+msgid "Gmail candidates are retained for later review. They are not used to parse or approve this purchase."
+msgstr "Кандидаты из Gmail сохраняются для последующего рассмотрения. Они не используются для анализа или утверждения этой покупки."
 
 msgid "Go live right the first time — with our team alongside you"
 msgstr "Запустите систему с первой попытки — с нашей командой рядом с вами"
@@ -10145,11 +10168,20 @@ msgstr "ID Памятки"
 msgid "Mercury"
 msgstr "Mercury"
 
+msgid "Mercury also offers a generated payment receipt. Payment confirmation alone does not identify the purchased line items."
+msgstr "Mercury также предлагает автоматически сформированную квитанцию об оплате. Одного подтверждения платежа недостаточно для определения строк приобретенной номенклатуры."
+
 msgid "Mercury authorization needs to be renewed. Check the read-only account connection."
 msgstr "Авторизацию Mercury нужно обновить. Проверьте подключение аккаунта только для чтения."
 
 msgid "Mercury connection configured"
 msgstr "Подключение Mercury настроено"
+
+msgid "Mercury has no uploaded receipt or invoice for this payment."
+msgstr "Для этого платежа в Mercury не загружены чек или счет-фактура."
+
+msgid "Mercury payment evidence"
+msgstr "Подтверждающие документы платежа Mercury"
 
 msgid "Mercury payments"
 msgstr "Платежи Mercury"
@@ -10974,6 +11006,9 @@ msgstr "Преобразование не требуется"
 msgid "No cost history found"
 msgstr "История себестоимости не найдена"
 
+msgid "No current receipt has been parsed. Saved values may come from an earlier document. Parse the selected receipt or check its details manually before approval."
+msgstr "Текущий чек не был проанализирован. Сохраненные значения могут быть взяты из предыдущего документа. Перед утверждением проанализируйте выбранный чек или проверьте его данные вручную."
+
 msgid "No Data"
 msgstr "Нет данных"
 
@@ -11009,6 +11044,8 @@ msgstr "Нет редактируемых свойств для этого эл�
 
 msgid "No eligible operations"
 msgstr "Нет подходящих операций"
+msgid "No eligible receipt or invoice is attached yet. Upload the original document or find its receipt in Mercury."
+msgstr "Подходящий чек или счет-фактура еще не приложены. Загрузите исходный документ или найдите чек в Mercury."
 
 msgid "No employees assigned this week"
 msgstr "На эту неделю не назначены сотрудники"
@@ -11285,9 +11322,6 @@ msgstr "Нет единого надежного показателя для и�
 
 msgid "No sorts applied to this view"
 msgstr "Сортировка не применена к этому представлению"
-
-msgid "No source document is attached yet. Upload a receipt or find supporting evidence from Mercury."
-msgstr "Документ-основание пока не приложен. Загрузите квитанцию ​​или найдите подтверждающие доказательства от Mercury."
 
 msgid "No stock"
 msgstr "Нет запасов"
@@ -11757,6 +11791,9 @@ msgstr "Открытые производственные заказы"
 
 msgid "Open menu"
 msgstr "Открыть меню"
+
+msgid "Open Mercury payments"
+msgstr "Открыть платежи Mercury"
 
 msgid "Open navigation"
 msgstr "Открыть навигацию"
@@ -12286,8 +12323,14 @@ msgstr "Кредиторская задолженность (по умолчан
 msgid "Payables aging"
 msgstr "Старение кредиторской задолженности"
 
+msgid "Payee unavailable"
+msgstr "Получатель платежа недоступен"
+
 msgid "Payment"
 msgstr "Платеж"
+
+msgid "Payment and invoice currencies differ. Payments cannot be linked to an invoice in a different currency."
+msgstr "Валюты платежа и счета-фактуры различаются. Платежи нельзя связать со счетом-фактурой в другой валюте."
 
 msgid "Payment Applications"
 msgstr "Применение платежей"
@@ -12298,14 +12341,14 @@ msgstr "Подтверждение оплаты"
 msgid "Payment Date"
 msgstr "Дата платежа"
 
-msgid "Payment evidence"
-msgstr "Доказательства оплаты"
-
 msgid "Payment history is still being imported. The next hourly run will continue where it stopped."
 msgstr "История платежей ещё импортируется. Следующий ежечасный запуск продолжит с места остановки."
 
 msgid "Payment ID"
 msgstr "ID платежа"
+
+msgid "Payment status"
+msgstr "Статус платежа"
 
 msgid "payment term"
 msgstr "условия оплаты"
@@ -12328,11 +12371,17 @@ msgstr "Условия оплаты"
 msgid "Payment terms like Net 30 or due on receipt"
 msgstr "Условия оплаты, такие как Net 30 или оплата при получении"
 
+msgid "Payment total"
+msgstr "Итого по платежам"
+
 msgid "Payments"
 msgstr "Платежи"
 
 msgid "Payments and credits applied to this invoice. Click a row to open the source document."
 msgstr "Платежи и кредиты, применные к этому счету-фактуре. Нажмите на строку, чтобы открыть документ-основание."
+
+msgid "Payments cannot be linked to an invoice in a different currency"
+msgstr "Платежи нельзя связать со счетом-фактурой в другой валюте"
 
 msgid "Payments examined"
 msgstr "Платежи проверены"
@@ -13558,6 +13607,12 @@ msgstr "Пересчет…"
 msgid "Receipt"
 msgstr "Квитанция"
 
+msgid "Receipt collection needs attention."
+msgstr "Сбор чеков требует внимания."
+
+msgid "Receipt collection status is not available yet."
+msgstr "Статус сбора чеков пока недоступен."
+
 msgid "Receipt ID"
 msgstr "ID квитанции"
 
@@ -13578,6 +13633,9 @@ msgstr "Запрошенная дата получения"
 
 msgid "Receipts"
 msgstr "Квитанции"
+
+msgid "Receipts last checked"
+msgstr "Последняя проверка чеков"
 
 msgid "Receipts, shipments, sales invoices, purchase invoices, payments, and credit/debit memos that are still Draft or Pending must be posted or voided — both documents dated in this period and undated documents that would receive a date in it when posted. Until they post, their amounts aren't in the general ledger, so the period would be understated."
 msgstr "Поступления, отгрузки, счета-фактуры выданные, счета-фактуры полученные, платежи и кредит-ноты/дебет-ноты, которые остаются в статусе Черновик или В ожидании, должны быть проведены или аннулированы — как документы, датированные в этом периоде, так и недатированные документы, которые получат дату при проведении в этом периоде. Пока они не проведены, их суммы не включены в главную книгу, поэтому период будет занижен."
@@ -13702,6 +13760,9 @@ msgstr "Ссылка"
 
 msgid "Refresh"
 msgstr "Обновить"
+
+msgid "Refresh document"
+msgstr "Обновить документ"
 
 msgid "Refresh exchange rate"
 msgstr "Обновить валютный курс"
@@ -15069,6 +15130,9 @@ msgstr "Выберите исполнителя"
 
 msgid "Select an event…"
 msgstr "Выберите событие…"
+
+msgid "Select an existing supplier or propose this vendor as a new supplier."
+msgstr "Выберите существующего поставщика или предложите этого продавца в качестве нового поставщика."
 
 msgid "Select an issue type"
 msgstr "Выберите тип проблемы"
@@ -16771,6 +16835,9 @@ msgstr "Количество дней после метода расчета, в
 msgid "The append-only record of every stock movement; on-hand is the sum of its signed entries and the source of truth."
 msgstr "Журнал доступного только для добавления, отражающий каждое движение запасов; остаток на складе является суммой подписанных записей и источником истины."
 
+msgid "The attachment limit was reached. Review the saved files and upload the receipt needed for this purchase."
+msgstr "Достигнут лимит вложений. Проверьте сохраненные файлы и загрузите чек, необходимый для этой покупки."
+
 msgid "The authorization was refused in Onshape. Try connecting again."
 msgstr "Авторизация была отклонена в Onshape. Повторите попытку подключения."
 
@@ -17243,6 +17310,12 @@ msgstr "Деталь производится как собственное за
 msgid "The part is taken from existing stock when its parent is built — no new job or purchase order."
 msgstr "Деталь берется из существующего запаса при производстве ее родительского элемента — без создания нового производственного заказа или заказа поставщику."
 
+msgid "The payment total differs from the reviewed invoice total."
+msgstr "Итого по платежам отличается от итоговой суммы проверенного счета-фактуры."
+
+msgid "The payment total matches the reviewed invoice total."
+msgstr "Итого по платежам совпадает с итоговой суммой проверенного счета-фактуры."
+
 msgid "The people on the Carbon side who will run your implementation, and how to reach them."
 msgstr "Люди со стороны Carbon, которые будут проводить ваше внедрение, и как их найти."
 
@@ -17568,6 +17641,9 @@ msgstr "На этих операциях нет наладки, труда ил�
 msgid "There's nothing outstanding to apply these credits to."
 msgstr "Нечего применять эти кредиты."
 
+msgid "These are bank payment details. Invoice totals and the supplier are reviewed separately from the receipt."
+msgstr "Это данные банковского платежа. Итоговые суммы счета-фактуры и поставщик проверяются отдельно на основании чека."
+
 msgid "These custom fields will only be available for entities with the same tags"
 msgstr "Эти пользовательские поля будут доступны только для сущностей с одинаковыми тегами"
 
@@ -17603,6 +17679,9 @@ msgstr "этот навык"
 msgid "This approval will create {0} supplier(s) and {1} item(s)."
 msgstr "В результате этого утверждения будут созданы {0} поставщиков и {1} товаров."
 
+msgid "This attachment could not be downloaded from Mercury. Find the document again or upload the original file."
+msgstr "Не удалось скачать это вложение из Mercury. Повторно найдите документ или загрузите исходный файл."
+
 msgid "This backup could not be completed."
 msgstr "Эта резервная копия не может быть завершена."
 
@@ -17630,11 +17709,17 @@ msgstr "Это контактное лицо не имеет адреса эле
 msgid "This counterparty has nothing outstanding — the payment will be recorded on-account."
 msgstr "Эта контрагент не имеет задолженности — платеж будет записан на счет."
 
+msgid "This document is attached, but its preview is unavailable. Refresh to try opening it again."
+msgstr "Этот документ приложен, но его предварительный просмотр недоступен. Обновите страницу, чтобы попробовать открыть его снова."
+
 msgid "This download link is invalid or has been tampered with."
 msgstr "Эта ссылка для скачивания недействительна или была подделана."
 
 msgid "This file is no longer available, or you don't have permission to download it."
 msgstr "Этот файл больше недоступен, или у вас нет права доступа для его скачивания."
+
+msgid "This file type cannot be parsed. Upload a PDF, PNG, or JPEG version."
+msgstr "Этот тип файла нельзя проанализировать. Загрузите версию в формате PDF, PNG или JPEG."
 
 msgid "This Fiscal Year"
 msgstr "Этот финансовый год"
@@ -18857,6 +18942,9 @@ msgstr "Только отклонения"
 
 msgid "VAT Number"
 msgstr "ИНН"
+
+msgid "Vendor on document"
+msgstr "Продавец в документе"
 
 msgid "Vendor Write-Off Income"
 msgstr "Доход от списания задолженности перед поставщиком"

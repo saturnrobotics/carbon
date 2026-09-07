@@ -39,6 +39,7 @@ import {
   type InvoiceIntakeReviewLine,
   invoiceIntakeLineValidator
 } from "../../invoicing.models";
+import { invoiceItemProposalUnit } from "./invoice-document.utils";
 import { useInvoiceDocumentLabels } from "./useInvoiceDocumentLabels";
 
 export type InvoiceChoice = { value: string; label: string };
@@ -158,10 +159,12 @@ export function InvoiceToggle({
 
 export function InvoiceItemProposal({
   line,
+  units,
   onUse,
   onClose
 }: {
   line: InvoiceIntakeReviewLine;
+  units: InvoiceChoice[];
   onUse: (proposal: NonNullable<InvoiceIntakeReviewLine["newItem"]>) => void;
   onClose: () => void;
 }) {
@@ -176,7 +179,10 @@ export function InvoiceItemProposal({
     replenishmentSystem: "Buy",
     defaultMethodType:
       itemType === "Service" ? "Purchase to Order" : "Pull from Inventory",
-    unitOfMeasureCode: line.stockUnit ?? "",
+    unitOfMeasureCode: invoiceItemProposalUnit(
+      line,
+      units.map((unit) => unit.value)
+    ),
     lotSize: 0,
     shelfLifeCalculateFromBom: false,
     tags: [],
@@ -715,6 +721,7 @@ export function InvoiceDocumentLines({
         <DeferredMasterCreation.Provider value={true}>
           <InvoiceItemProposal
             line={proposalLine}
+            units={units}
             onClose={() => setProposing(null)}
             onUse={(proposal) => {
               const priorKey = proposalLine.newItem
@@ -732,7 +739,12 @@ export function InvoiceDocumentLines({
                         newItem: proposal,
                         lineType: proposal.type,
                         stockUnit:
-                          String(proposal.data.unitOfMeasureCode ?? "") || null
+                          String(proposal.data.unitOfMeasureCode ?? "") || null,
+                        conversionFactor:
+                          proposal.data.unitOfMeasureCode &&
+                          proposal.data.unitOfMeasureCode === line.purchaseUnit
+                            ? "1"
+                            : null
                       }
                     : line
                 )

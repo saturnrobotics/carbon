@@ -29,6 +29,7 @@ export type PaymentSource = {
   createdAt: string;
   note: string;
   attachments: SourceAttachment[];
+  hasGeneratedReceipt?: boolean | null;
 };
 export type GmailMailboxConfig = {
   email: string;
@@ -254,7 +255,11 @@ function payment(raw: unknown): PaymentSource {
       .filter(Boolean)
       .join("\n")
       .slice(0, 10_000),
-    attachments
+    attachments,
+    hasGeneratedReceipt:
+      typeof data.hasGeneratedReceipt === "boolean"
+        ? data.hasGeneratedReceipt
+        : null
   };
 }
 

@@ -2562,6 +2562,9 @@ msgstr "작업 완료 시"
 msgid "At least one condition must match"
 msgstr "하나 이상의 조건이 일치해야 합니다"
 
+msgid "At least one payment is not confirmed as sent. Explain its status before creating a draft. Approval does not mark it as paid."
+msgstr "보내기가 확인되지 않은 지불이 하나 이상 있습니다. 초안을 만들기 전에 해당 상태를 설명하세요. 승인해도 지불 완료로 표시되지 않습니다."
+
 msgid "At operation completion"
 msgstr "작업 완료 시"
 
@@ -2570,6 +2573,9 @@ msgstr "파일 첨부"
 
 msgid "Attachment"
 msgstr "첨부 파일"
+
+msgid "Attachment saved."
+msgstr "첨부 파일이 저장되었습니다."
 
 msgid "Attachments"
 msgstr "첨부 파일"
@@ -2670,8 +2676,8 @@ msgstr "자동 가져오기"
 msgid "Automatic Lead Time Updates"
 msgstr "자동 리드타임 업데이트"
 
-msgid "Automatic processing needs attention. Your original document is safe. Review the fields manually or save your work and retry parsing."
-msgstr "자동 처리에는 주의가 필요합니다. 원본 문서는 안전합니다. 필드를 수동으로 검토하거나 작업 내용을 저장하고 구문 분석을 다시 시도하세요."
+msgid "Automatic processing needs attention. Check the available documents and review fields below before retrying parsing."
+msgstr "자동 처리를 확인해야 합니다. 다시 분석하기 전에 사용 가능한 문서와 아래 검토 필드를 확인하세요."
 
 msgid "Automatic Updates"
 msgstr "자동 업데이트"
@@ -3425,6 +3431,9 @@ msgstr "이메일을 확인하세요"
 
 msgid "Checking Stripe for this customer…"
 msgstr "이 고객의 Stripe 확인 중…"
+
+msgid "Checking the parsed document against your supplier and item settings."
+msgstr "분석된 문서를 공급업체 및 품목 설정과 대조하고 있습니다."
 
 msgid "Checkpoint ·"
 msgstr "체크포인트 ·"
@@ -5673,6 +5682,8 @@ msgstr "다이어그램이 저장됨"
 
 msgid "Differs from the selection — allowed, but confirm they nest together"
 msgstr "선택과 다릅니다 — 허용되지만 함께 중첩되는지 확인하세요"
+msgid "Difference"
+msgstr "차액"
 
 msgid "Digital Quote"
 msgstr "디지털 견적"
@@ -7052,6 +7063,15 @@ msgstr "유통기한은 선택된 공법이 시작될 때 시작됩니다."
 msgid "Expiry trace"
 msgstr "유통기한 추적"
 
+msgid "Explain any partial payment, grouped payments, fees, or currency conversion before approval. This explanation does not change the invoice amounts or reconcile the bank payment."
+msgstr "승인 전에 부분 지불, 묶음 지불, 수수료 또는 통화 변환을 설명하세요. 이 설명은 송장 금액을 변경하거나 은행 지불을 대사하지 않습니다."
+
+msgid "Explain the payment difference or status before approval"
+msgstr "승인 전에 지불 차액이나 상태를 설명하세요"
+
+msgid "Explain the payment difference, status, or allocation"
+msgstr "지불 차액, 상태 또는 배분 설명"
+
 msgid "Explorer"
 msgstr "탐색기"
 
@@ -7998,6 +8018,9 @@ msgstr "총계정원장 대사"
 
 msgid "GL Tie-Out"
 msgstr "총계정원장 대사"
+
+msgid "Gmail candidates are retained for later review. They are not used to parse or approve this purchase."
+msgstr "Gmail 후보는 추후 검토를 위해 보관됩니다. 이 구매의 분석이나 승인에는 사용되지 않습니다."
 
 msgid "Go live right the first time — with our team alongside you"
 msgstr "저희 팀과 함께 첫 시도에 성공적으로 도입하세요"
@@ -10145,11 +10168,20 @@ msgstr "메모 ID"
 msgid "Mercury"
 msgstr "Mercury"
 
+msgid "Mercury also offers a generated payment receipt. Payment confirmation alone does not identify the purchased line items."
+msgstr "Mercury는 자동 생성된 지불 영수증도 제공합니다. 지불 확인만으로는 구매한 품목의 라인을 식별할 수 없습니다."
+
 msgid "Mercury authorization needs to be renewed. Check the read-only account connection."
 msgstr "Mercury 인증을 갱신하세요. 읽기 전용 계정 연결을 확인하세요."
 
 msgid "Mercury connection configured"
 msgstr "Mercury 연결 구성됨"
+
+msgid "Mercury has no uploaded receipt or invoice for this payment."
+msgstr "이 지불에 대해 Mercury에 업로드된 영수증이나 송장이 없습니다."
+
+msgid "Mercury payment evidence"
+msgstr "Mercury 지불 증빙"
 
 msgid "Mercury payments"
 msgstr "Mercury 결제"
@@ -10974,6 +11006,9 @@ msgstr "변환이 필요하지 않습니다"
 msgid "No cost history found"
 msgstr "원가 이력이 없습니다"
 
+msgid "No current receipt has been parsed. Saved values may come from an earlier document. Parse the selected receipt or check its details manually before approval."
+msgstr "현재 영수증은 분석되지 않았습니다. 저장된 값은 이전 문서에서 가져온 것일 수 있습니다. 승인 전에 선택한 영수증을 분석하거나 세부 정보를 직접 확인하세요."
+
 msgid "No Data"
 msgstr "데이터 없음"
 
@@ -11009,6 +11044,8 @@ msgstr "이 항목에 대한 편집 가능한 속성이 없습니다."
 
 msgid "No eligible operations"
 msgstr "적격 작업 없음"
+msgid "No eligible receipt or invoice is attached yet. Upload the original document or find its receipt in Mercury."
+msgstr "아직 적합한 영수증이나 송장이 첨부되지 않았습니다. 원본 문서를 업로드하거나 Mercury에서 영수증을 찾으세요."
 
 msgid "No employees assigned this week"
 msgstr "이번 주에 배치된 직원이 없습니다"
@@ -11285,9 +11322,6 @@ msgstr "재고나 작업 상태를 나타내는 신뢰할 수 있는 단일 수�
 
 msgid "No sorts applied to this view"
 msgstr "이 보기에는 정렬이 적용되지 않았습니다"
-
-msgid "No source document is attached yet. Upload a receipt or find supporting evidence from Mercury."
-msgstr "아직 첨부된 원본 문서가 없습니다. 영수증을 업로드하거나 Mercury에서 증빙 자료를 찾으세요."
 
 msgid "No stock"
 msgstr "재고 없음"
@@ -11757,6 +11791,9 @@ msgstr "미결 작업 지시"
 
 msgid "Open menu"
 msgstr "메뉴 열기"
+
+msgid "Open Mercury payments"
+msgstr "Mercury 지불 열기"
 
 msgid "Open navigation"
 msgstr "탐색 열기"
@@ -12286,8 +12323,14 @@ msgstr "매입채무(기본값)"
 msgid "Payables aging"
 msgstr "매입채무 연령분석"
 
+msgid "Payee unavailable"
+msgstr "수취인 정보를 사용할 수 없음"
+
 msgid "Payment"
 msgstr "지불"
+
+msgid "Payment and invoice currencies differ. Payments cannot be linked to an invoice in a different currency."
+msgstr "지불과 송장의 통화가 다릅니다. 다른 통화의 송장에 지불을 연결할 수 없습니다."
 
 msgid "Payment Applications"
 msgstr "지불 적용"
@@ -12298,14 +12341,14 @@ msgstr "지불 확인"
 msgid "Payment Date"
 msgstr "지불 날짜"
 
-msgid "Payment evidence"
-msgstr "지불 증거"
-
 msgid "Payment history is still being imported. The next hourly run will continue where it stopped."
 msgstr "결제 내역을 가져오는 중입니다. 다음 시간별 실행에서 중단된 위치부터 계속합니다."
 
 msgid "Payment ID"
 msgstr "지불 ID"
+
+msgid "Payment status"
+msgstr "지불 상태"
 
 msgid "payment term"
 msgstr "지불 조건"
@@ -12328,11 +12371,17 @@ msgstr "지불 조건"
 msgid "Payment terms like Net 30 or due on receipt"
 msgstr "Net 30 또는 입고 시 만기와 같은 지불 조건"
 
+msgid "Payment total"
+msgstr "지불 총계"
+
 msgid "Payments"
 msgstr "지불"
 
 msgid "Payments and credits applied to this invoice. Click a row to open the source document."
 msgstr "이 송장에 적용된 지불 및 대변. 행을 클릭하여 원본 문서를 엽니다."
+
+msgid "Payments cannot be linked to an invoice in a different currency"
+msgstr "다른 통화의 송장에 지불을 연결할 수 없습니다"
 
 msgid "Payments examined"
 msgstr "지불 검토됨"
@@ -13558,6 +13607,12 @@ msgstr "재계산 중…"
 msgid "Receipt"
 msgstr "입고"
 
+msgid "Receipt collection needs attention."
+msgstr "영수증 수집을 확인해야 합니다."
+
+msgid "Receipt collection status is not available yet."
+msgstr "영수증 수집 상태를 아직 확인할 수 없습니다."
+
 msgid "Receipt ID"
 msgstr "입고 ID"
 
@@ -13578,6 +13633,9 @@ msgstr "입고 요청일"
 
 msgid "Receipts"
 msgstr "입고"
+
+msgid "Receipts last checked"
+msgstr "영수증 마지막 확인"
 
 msgid "Receipts, shipments, sales invoices, purchase invoices, payments, and credit/debit memos that are still Draft or Pending must be posted or voided — both documents dated in this period and undated documents that would receive a date in it when posted. Until they post, their amounts aren't in the general ledger, so the period would be understated."
 msgstr "입고, 출하, 매출 송장, 매입 송장, 지불 및 신용증/차감증이 여전히 초안 또는 대기 중이면 전기되거나 무효 처리되어야 합니다. 이 기간에 날짜가 지정된 문서와 전기 시 이 기간의 날짜를 받을 문서 모두. 전기될 때까지 해당 금액이 총계정원장에 반영되지 않으므로 해당 기간이 과소 집계됩니다."
@@ -13702,6 +13760,9 @@ msgstr "참조"
 
 msgid "Refresh"
 msgstr "새로고침"
+
+msgid "Refresh document"
+msgstr "문서 새로 고침"
 
 msgid "Refresh exchange rate"
 msgstr "환율 새로고침"
@@ -15069,6 +15130,9 @@ msgstr "담당자 선택"
 
 msgid "Select an event…"
 msgstr "이벤트 선택…"
+
+msgid "Select an existing supplier or propose this vendor as a new supplier."
+msgstr "기존 공급업체를 선택하거나 이 판매자를 새 공급업체로 제안하세요."
 
 msgid "Select an issue type"
 msgstr "이슈 유형 선택"
@@ -16771,6 +16835,9 @@ msgstr "계산 방법 이후 지불이 만기되는 일수"
 msgid "The append-only record of every stock movement; on-hand is the sum of its signed entries and the source of truth."
 msgstr "모든 재고 이동을 추가 전용으로 기록한 원장으로, 보유 수량은 부호가 있는 항목들의 합이며 최종 근거 데이터입니다."
 
+msgid "The attachment limit was reached. Review the saved files and upload the receipt needed for this purchase."
+msgstr "첨부 파일 한도에 도달했습니다. 저장된 파일을 검토하고 이 구매에 필요한 영수증을 업로드하세요."
+
 msgid "The authorization was refused in Onshape. Try connecting again."
 msgstr "Onshape에서 인증이 거부되었습니다. 다시 연결해 보세요."
 
@@ -17243,6 +17310,12 @@ msgstr "상위 품목이 제작될 때 이 품목은 별도의 작업으로 제�
 msgid "The part is taken from existing stock when its parent is built — no new job or purchase order."
 msgstr "부품은 상위 부품이 구축될 때 기존 재고에서 가져오므로, 새로운 작업 지시 또는 발주서가 없습니다."
 
+msgid "The payment total differs from the reviewed invoice total."
+msgstr "지불 총계가 검토된 송장의 총계와 다릅니다."
+
+msgid "The payment total matches the reviewed invoice total."
+msgstr "지불 총계가 검토된 송장의 총계와 일치합니다."
+
 msgid "The people on the Carbon side who will run your implementation, and how to reach them."
 msgstr "실행을 진행할 Carbon 측의 담당자 및 연락 방법"
 
@@ -17568,6 +17641,9 @@ msgstr "이 공정에는 셋업, 노무 또는 기계 시간이 없어서 실행
 msgid "There's nothing outstanding to apply these credits to."
 msgstr "이 크레딧을 적용할 미결제 항목이 없습니다."
 
+msgid "These are bank payment details. Invoice totals and the supplier are reviewed separately from the receipt."
+msgstr "은행 지불 내역입니다. 송장 총계와 공급업체는 영수증을 기준으로 별도로 검토합니다."
+
 msgid "These custom fields will only be available for entities with the same tags"
 msgstr "이 사용자 정의 필드는 동일한 태그가 있는 엔터티에서만 사용 가능합니다."
 
@@ -17603,6 +17679,9 @@ msgstr "이 능력"
 msgid "This approval will create {0} supplier(s) and {1} item(s)."
 msgstr "이 승인으로 인해 공급업체 {0}개와 품목 {1}개가 생성됩니다."
 
+msgid "This attachment could not be downloaded from Mercury. Find the document again or upload the original file."
+msgstr "Mercury에서 이 첨부 파일을 다운로드하지 못했습니다. 문서를 다시 찾거나 원본 파일을 업로드하세요."
+
 msgid "This backup could not be completed."
 msgstr "이 백업을 완료할 수 없습니다."
 
@@ -17630,11 +17709,17 @@ msgstr "이 담당자는 이메일 주소가 없습니다."
 msgid "This counterparty has nothing outstanding — the payment will be recorded on-account."
 msgstr "이 거래처는 미결 항목이 없으므로 지불이 외상으로 기록됩니다."
 
+msgid "This document is attached, but its preview is unavailable. Refresh to try opening it again."
+msgstr "이 문서는 첨부되어 있지만 미리 보기를 사용할 수 없습니다. 새로 고침하여 다시 열어 보세요."
+
 msgid "This download link is invalid or has been tampered with."
 msgstr "이 다운로드 링크가 유효하지 않거나 변조되었습니다."
 
 msgid "This file is no longer available, or you don't have permission to download it."
 msgstr "이 파일은 더 이상 사용할 수 없거나 다운로드 권한이 없습니다."
+
+msgid "This file type cannot be parsed. Upload a PDF, PNG, or JPEG version."
+msgstr "이 파일 형식은 분석할 수 없습니다. PDF, PNG 또는 JPEG 버전을 업로드하세요."
 
 msgid "This Fiscal Year"
 msgstr "이번 회계연도"
@@ -18857,6 +18942,9 @@ msgstr "차이만"
 
 msgid "VAT Number"
 msgstr "사업자등록번호"
+
+msgid "Vendor on document"
+msgstr "문서에 표시된 판매자"
 
 msgid "Vendor Write-Off Income"
 msgstr "공급업체 대손 처리 수익"

@@ -41,6 +41,7 @@ export const invoiceIntakeHeaderValidator = z.object({
   total: intakeDecimal,
   exchangeRate: intakeDecimal,
   sourceSupplierName: intakeText,
+  paymentReviewReason: intakeText,
   noInvoiceNumberConfirmed: z.boolean().default(false),
   chargesConfirmed: z.boolean().default(false),
   rememberSupplier: z.boolean().default(true),

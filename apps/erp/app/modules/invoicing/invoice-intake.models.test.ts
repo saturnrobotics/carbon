@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   extractionToInvoiceReview,
   getInvoiceIntakeTransition,
+  getInvoicePaymentReconciliation,
   type InvoiceReviewContext,
   updateInvoiceReviewLine,
   validateInvoiceReview
@@ -220,4 +221,66 @@ describe("invoice review readiness", () => {
       "NeedsReview"
     );
   });
+});
+
+describe("Mercury payment reconciliation", () => {
+  it("compares receipt totals with all linked payments without changing source values", () => {
+    const value = review();
+    const payments = [
+      { amount: "4", currencyCode: "USD" },
+      { amount: "6", currencyCode: "USD" }
+    ];
+    expect(
+      getInvoicePaymentReconciliation(value.header, payments, 2)
+    ).toMatchObject({ status: "matched", paymentTotal: "10", difference: "0" });
+    expect(
+      getInvoicePaymentReconciliation(
+        value.header,
+        [{ amount: "12", currencyCode: "USD" }],
+        2
+      )
+    ).toMatchObject({
+      status: "difference",
+      paymentTotal: "12",
+      difference: "2"
+    });
+    expect(value.header.total).toBe("10");
+  });
+  it("does not compare different currencies or manufacture missing totals", () => {
+    expect(
+      getInvoicePaymentReconciliation(
+        review().header,
+        [{ amount: "10", currencyCode: "EUR" }],
+        2
+      ).status
+    ).toBe("currencyMismatch");
+    expect(
+      getInvoicePaymentReconciliation(
+        { ...review().header, total: null },
+        [{ amount: "10", currencyCode: "USD" }],
+        2
+      ).status
+    ).toBe("unavailable");
+    expect(getInvoicePaymentReconciliation(review().header, [], 2).status).toBe(
+      "unavailable"
+    );
+  });
+});
+
+it("does not describe a pending or reversed bank transaction as matched payment", () => {
+  for (const remoteStatus of ["pending", "failed", "reversed", "cancelled"])
+    expect(
+      getInvoicePaymentReconciliation(
+        review().header,
+        [{ amount: "10", currencyCode: "USD", remoteStatus }],
+        2
+      ).status
+    ).toBe("unsettled");
+  expect(
+    getInvoicePaymentReconciliation(
+      review().header,
+      [{ amount: "10", currencyCode: "USD", remoteStatus: "sent" }],
+      2
+    ).status
+  ).toBe("matched");
 });

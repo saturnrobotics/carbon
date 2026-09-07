@@ -2562,6 +2562,9 @@ msgstr "जॉब पूरी होने पर"
 msgid "At least one condition must match"
 msgstr "कम से कम एक शर्त मेल खानी चाहिए"
 
+msgid "At least one payment is not confirmed as sent. Explain its status before creating a draft. Approval does not mark it as paid."
+msgstr "कम से कम एक भुगतान भेजे जाने की पुष्टि नहीं हुई है। ड्राफ्ट बनाने से पहले उसकी स्थिति स्पष्ट करें। अनुमोदन से उसे भुगतान किया हुआ नहीं माना जाता।"
+
 msgid "At operation completion"
 msgstr "ऑपरेशन पूरी होने पर"
 
@@ -2570,6 +2573,9 @@ msgstr "फ़ाइल संलग्न करें"
 
 msgid "Attachment"
 msgstr "अनुलग्नक"
+
+msgid "Attachment saved."
+msgstr "अनुलग्नक सहेज दिया गया।"
 
 msgid "Attachments"
 msgstr "अनुलग्नक"
@@ -2670,8 +2676,8 @@ msgstr "स्वचालित आयात"
 msgid "Automatic Lead Time Updates"
 msgstr "स्वचालित लीड टाइम अपडेट"
 
-msgid "Automatic processing needs attention. Your original document is safe. Review the fields manually or save your work and retry parsing."
-msgstr "स्वचालित प्रसंस्करण पर ध्यान देने की आवश्यकता है। आपका मूल दस्तावेज़ सुरक्षित है. फ़ील्ड की मैन्युअल रूप से समीक्षा करें या अपना कार्य सहेजें और पार्सिंग का पुनः प्रयास करें।"
+msgid "Automatic processing needs attention. Check the available documents and review fields below before retrying parsing."
+msgstr "स्वचालित प्रोसेसिंग पर ध्यान देना आवश्यक है। दोबारा पार्स करने से पहले उपलब्ध दस्तावेज़ और नीचे दिए गए समीक्षा फ़ील्ड जाँचें।"
 
 msgid "Automatic Updates"
 msgstr "स्वचालित अपडेट"
@@ -3425,6 +3431,9 @@ msgstr "अपना ईमेल जांचें"
 
 msgid "Checking Stripe for this customer…"
 msgstr "इस ग्राहक के लिए Stripe की जांच की जा रही है…"
+
+msgid "Checking the parsed document against your supplier and item settings."
+msgstr "पार्स किए गए दस्तावेज़ को आपकी आपूर्तिकर्ता और आइटम सेटिंग्स के अनुसार जाँचा जा रहा है।"
 
 msgid "Checkpoint ·"
 msgstr "चेकपॉइंट ·"
@@ -5673,6 +5682,8 @@ msgstr "आरेख सहेजा गया"
 
 msgid "Differs from the selection — allowed, but confirm they nest together"
 msgstr "चयन से अलग — अनुमत, लेकिन पुष्टि करें कि वे एक साथ नेस्ट करते हैं"
+msgid "Difference"
+msgstr "अंतर"
 
 msgid "Digital Quote"
 msgstr "डिजिटल उद्धरण"
@@ -7052,6 +7063,15 @@ msgstr "समाप्ति तब शुरू होती है जब च
 msgid "Expiry trace"
 msgstr "समाप्ति ट्रेस"
 
+msgid "Explain any partial payment, grouped payments, fees, or currency conversion before approval. This explanation does not change the invoice amounts or reconcile the bank payment."
+msgstr "अनुमोदन से पहले आंशिक भुगतान, समूहबद्ध भुगतान, शुल्क या मुद्रा परिवर्तन का कारण बताएँ। यह स्पष्टीकरण चालान की राशियाँ नहीं बदलता और बैंक भुगतान का मिलान नहीं करता।"
+
+msgid "Explain the payment difference or status before approval"
+msgstr "अनुमोदन से पहले भुगतान का अंतर या स्थिति स्पष्ट करें"
+
+msgid "Explain the payment difference, status, or allocation"
+msgstr "भुगतान के अंतर, स्थिति या आवंटन का स्पष्टीकरण दें"
+
 msgid "Explorer"
 msgstr "एक्सप्लोरर"
 
@@ -7998,6 +8018,9 @@ msgstr "सामान्य खाता बही समन्वय"
 
 msgid "GL Tie-Out"
 msgstr "सामान्य खाता बही समन्वय"
+
+msgid "Gmail candidates are retained for later review. They are not used to parse or approve this purchase."
+msgstr "Gmail के संभावित दस्तावेज़ बाद की समीक्षा के लिए सुरक्षित रखे जाते हैं। उनका उपयोग इस खरीद को पार्स या अनुमोदित करने के लिए नहीं किया जाता।"
 
 msgid "Go live right the first time — with our team alongside you"
 msgstr "पहली बार ही सही तरीके से लाइव जाएं — हमारी टीम आपके साथ है"
@@ -10145,11 +10168,20 @@ msgstr "मेमो आईडी"
 msgid "Mercury"
 msgstr "Mercury"
 
+msgid "Mercury also offers a generated payment receipt. Payment confirmation alone does not identify the purchased line items."
+msgstr "Mercury स्वचालित रूप से बनी भुगतान रसीद भी देता है। केवल भुगतान की पुष्टि से खरीदे गए आइटम की पंक्तियों की पहचान नहीं होती।"
+
 msgid "Mercury authorization needs to be renewed. Check the read-only account connection."
 msgstr "Mercury प्राधिकरण नवीनीकृत करें। केवल-पठन खाते का कनेक्शन जाँचें।"
 
 msgid "Mercury connection configured"
 msgstr "Mercury कनेक्शन कॉन्फ़िगर किया गया"
+
+msgid "Mercury has no uploaded receipt or invoice for this payment."
+msgstr "इस भुगतान के लिए Mercury में कोई रसीद या चालान अपलोड नहीं किया गया है।"
+
+msgid "Mercury payment evidence"
+msgstr "Mercury भुगतान प्रमाण"
 
 msgid "Mercury payments"
 msgstr "Mercury भुगतान"
@@ -10974,6 +11006,9 @@ msgstr "कोई रूपांतरण आवश्यक नहीं ह�
 msgid "No cost history found"
 msgstr "कोई लागत इतिहास नहीं मिला"
 
+msgid "No current receipt has been parsed. Saved values may come from an earlier document. Parse the selected receipt or check its details manually before approval."
+msgstr "वर्तमान रसीद पार्स नहीं की गई है। सहेजे गए मान किसी पुराने दस्तावेज़ से हो सकते हैं। अनुमोदन से पहले चुनी गई रसीद पार्स करें या उसका विवरण मैन्युअल रूप से जाँचें।"
+
 msgid "No Data"
 msgstr "कोई डेटा नहीं"
 
@@ -11009,6 +11044,8 @@ msgstr "इस आइटम के लिए कोई संपादन यो
 
 msgid "No eligible operations"
 msgstr "कोई पात्र ऑपरेशन नहीं"
+msgid "No eligible receipt or invoice is attached yet. Upload the original document or find its receipt in Mercury."
+msgstr "अभी कोई योग्य रसीद या चालान संलग्न नहीं है। मूल दस्तावेज़ अपलोड करें या Mercury में उसकी रसीद खोजें।"
 
 msgid "No employees assigned this week"
 msgstr "इस सप्ताह कोई कर्मचारी निर्धारित नहीं"
@@ -11285,9 +11322,6 @@ msgstr "इन्वेंटरी या जॉब स्थिति के �
 
 msgid "No sorts applied to this view"
 msgstr "इस दृश्य पर कोई सॉर्ट लागू नहीं किया गया"
-
-msgid "No source document is attached yet. Upload a receipt or find supporting evidence from Mercury."
-msgstr "अभी तक कोई स्रोत दस्तावेज़ संलग्न नहीं है. रसीद अपलोड करें या मर्करी से सहायक साक्ष्य ढूंढें।"
 
 msgid "No stock"
 msgstr "स्टॉक नहीं"
@@ -11757,6 +11791,9 @@ msgstr "खुली जॉबें"
 
 msgid "Open menu"
 msgstr "मेनू खोलें"
+
+msgid "Open Mercury payments"
+msgstr "Mercury भुगतान खोलें"
 
 msgid "Open navigation"
 msgstr "नेविगेशन खोलें"
@@ -12286,8 +12323,14 @@ msgstr "देय राशि (डिफ़ॉल्ट)"
 msgid "Payables aging"
 msgstr "देय राशि की आयु"
 
+msgid "Payee unavailable"
+msgstr "भुगतान प्राप्तकर्ता उपलब्ध नहीं है"
+
 msgid "Payment"
 msgstr "भुगतान"
+
+msgid "Payment and invoice currencies differ. Payments cannot be linked to an invoice in a different currency."
+msgstr "भुगतान और चालान की मुद्राएँ अलग हैं। भुगतान को किसी अन्य मुद्रा वाले चालान से नहीं जोड़ा जा सकता।"
 
 msgid "Payment Applications"
 msgstr "भुगतान अनुप्रयोग"
@@ -12298,14 +12341,14 @@ msgstr "भुगतान की पुष्टि"
 msgid "Payment Date"
 msgstr "भुगतान तारीख"
 
-msgid "Payment evidence"
-msgstr "भुगतान साक्ष्य"
-
 msgid "Payment history is still being imported. The next hourly run will continue where it stopped."
 msgstr "भुगतान इतिहास अभी आयात हो रहा है। अगला प्रति घंटा रन वहीं से जारी रहेगा जहाँ रुका था।"
 
 msgid "Payment ID"
 msgstr "भुगतान ID"
+
+msgid "Payment status"
+msgstr "भुगतान की स्थिति"
 
 msgid "payment term"
 msgstr "भुगतान शर्तें"
@@ -12328,11 +12371,17 @@ msgstr "भुगतान शर्तें"
 msgid "Payment terms like Net 30 or due on receipt"
 msgstr "Net 30 जैसी भुगतान शर्तें या प्राप्ति पर देय"
 
+msgid "Payment total"
+msgstr "कुल भुगतान"
+
 msgid "Payments"
 msgstr "भुगतान"
 
 msgid "Payments and credits applied to this invoice. Click a row to open the source document."
 msgstr "इस चालान पर लागू किए गए भुगतान और क्रेडिट। स्रोत दस्तावेज़ खोलने के लिए एक पंक्ति पर क्लिक करें।"
+
+msgid "Payments cannot be linked to an invoice in a different currency"
+msgstr "भुगतान को किसी अन्य मुद्रा वाले चालान से नहीं जोड़ा जा सकता"
 
 msgid "Payments examined"
 msgstr "भुगतान की जांच की गई"
@@ -13558,6 +13607,12 @@ msgstr "पुनः गणना की जा रही है…"
 msgid "Receipt"
 msgstr "रसीद"
 
+msgid "Receipt collection needs attention."
+msgstr "रसीदें एकत्र करने की प्रक्रिया पर ध्यान देना आवश्यक है।"
+
+msgid "Receipt collection status is not available yet."
+msgstr "रसीद संग्रह की स्थिति अभी उपलब्ध नहीं है।"
+
 msgid "Receipt ID"
 msgstr "रसीद आईडी"
 
@@ -13578,6 +13633,9 @@ msgstr "प्राप्ति अनुरोधित तिथि"
 
 msgid "Receipts"
 msgstr "रसीदें"
+
+msgid "Receipts last checked"
+msgstr "रसीदों की अंतिम जाँच"
 
 msgid "Receipts, shipments, sales invoices, purchase invoices, payments, and credit/debit memos that are still Draft or Pending must be posted or voided — both documents dated in this period and undated documents that would receive a date in it when posted. Until they post, their amounts aren't in the general ledger, so the period would be understated."
 msgstr "प्राप्ति, शिपमेंट, विक्रय चालान, क्रय चालान, भुगतान, और जमा/नामे ज्ञापन जो अभी भी ड्राफ्ट या लंबित हैं, उन्हें पोस्ट किया जाना चाहिए या अमान्य किया जाना चाहिए — दोनों दस्तावेज़ इस अवधि में दिनांकित और बिना दिनांक के दस्तावेज़ जो पोस्ट होने पर इसमें एक तिथि प्राप्त करेंगे। जब तक वे पोस्ट नहीं होते, उनकी राशियाँ सामान्य खाता बही में नहीं हैं, इसलिए अवधि को कम दिखाया जाएगा।"
@@ -13702,6 +13760,9 @@ msgstr "संदर्भ"
 
 msgid "Refresh"
 msgstr "ताज़ा करें"
+
+msgid "Refresh document"
+msgstr "दस्तावेज़ रीफ़्रेश करें"
 
 msgid "Refresh exchange rate"
 msgstr "विनिमय दर को ताज़ा करें"
@@ -15069,6 +15130,9 @@ msgstr "एक असाइनी चुनें"
 
 msgid "Select an event…"
 msgstr "एक घटना चुनें…"
+
+msgid "Select an existing supplier or propose this vendor as a new supplier."
+msgstr "मौजूदा आपूर्तिकर्ता चुनें या इस विक्रेता को नए आपूर्तिकर्ता के रूप में प्रस्तावित करें।"
 
 msgid "Select an issue type"
 msgstr "एक समस्या प्रकार चुनें"
@@ -16771,6 +16835,9 @@ msgstr "गणना विधि के बाद दिनों की सं
 msgid "The append-only record of every stock movement; on-hand is the sum of its signed entries and the source of truth."
 msgstr "प्रत्येक स्टॉक आंदोलन का केवल-परिशिष्ट रिकॉर्ड; हाथ में राशि इसकी हस्ताक्षरित प्रविष्टियों का योग है और सत्य का स्रोत है।"
 
+msgid "The attachment limit was reached. Review the saved files and upload the receipt needed for this purchase."
+msgstr "अनुलग्नकों की सीमा पूरी हो गई है। सहेजी गई फ़ाइलें जाँचें और इस खरीद के लिए आवश्यक रसीद अपलोड करें।"
+
 msgid "The authorization was refused in Onshape. Try connecting again."
 msgstr "Onshape में प्राधिकरण अस्वीकार कर दिया गया। दोबारा कनेक्ट करने का प्रयास करें।"
 
@@ -17243,6 +17310,12 @@ msgstr "जब माता-पिता जो इसकी आवश्यक�
 msgid "The part is taken from existing stock when its parent is built — no new job or purchase order."
 msgstr "पार्ट को मौजूदा स्टॉक से लिया जाता है जब इसका मूल आइटम बनाया जाता है — कोई नया जॉब या क्रय आदेश नहीं।"
 
+msgid "The payment total differs from the reviewed invoice total."
+msgstr "कुल भुगतान समीक्षा किए गए चालान की कुल राशि से अलग है।"
+
+msgid "The payment total matches the reviewed invoice total."
+msgstr "कुल भुगतान समीक्षा किए गए चालान की कुल राशि से मेल खाता है।"
+
 msgid "The people on the Carbon side who will run your implementation, and how to reach them."
 msgstr "कार्बन की ओर से वे लोग जो आपके कार्यान्वयन को चलाएंगे, और उन तक कैसे पहुंचें।"
 
@@ -17568,6 +17641,9 @@ msgstr "इन ऑपरेशन पर कोई सेटअप, श्रम
 msgid "There's nothing outstanding to apply these credits to."
 msgstr "इन क्रेडिट्स को लागू करने के लिए कुछ भी बकाया नहीं है।"
 
+msgid "These are bank payment details. Invoice totals and the supplier are reviewed separately from the receipt."
+msgstr "ये बैंक भुगतान का विवरण हैं। चालान की कुल राशि और आपूर्तिकर्ता की रसीद के आधार पर अलग से समीक्षा की जाती है।"
+
 msgid "These custom fields will only be available for entities with the same tags"
 msgstr "ये कस्टम फ़ील्ड केवल समान टैग वाली संस्थाओं के लिए उपलब्ध होंगी"
 
@@ -17603,6 +17679,9 @@ msgstr "यह क्षमता"
 msgid "This approval will create {0} supplier(s) and {1} item(s)."
 msgstr "यह अनुमोदन {0} आपूर्तिकर्ता और {1} आइटम बनाएगा।"
 
+msgid "This attachment could not be downloaded from Mercury. Find the document again or upload the original file."
+msgstr "यह अनुलग्नक Mercury से डाउनलोड नहीं हो सका। दस्तावेज़ फिर से खोजें या मूल फ़ाइल अपलोड करें।"
+
 msgid "This backup could not be completed."
 msgstr "यह बैकअप पूर्ण नहीं किया जा सका।"
 
@@ -17630,11 +17709,17 @@ msgstr "इस संपर्क के पास कोई ईमेल पत
 msgid "This counterparty has nothing outstanding — the payment will be recorded on-account."
 msgstr "यह प्रतिपक्ष के पास कुछ भी बकाया नहीं है — भुगतान खाते पर दर्ज किया जाएगा।"
 
+msgid "This document is attached, but its preview is unavailable. Refresh to try opening it again."
+msgstr "यह दस्तावेज़ संलग्न है, लेकिन इसका पूर्वावलोकन उपलब्ध नहीं है। इसे फिर से खोलने के लिए रीफ़्रेश करें।"
+
 msgid "This download link is invalid or has been tampered with."
 msgstr "यह डाउनलोड लिंक अमान्य है या इसमें छेड़छाड़ की गई है।"
 
 msgid "This file is no longer available, or you don't have permission to download it."
 msgstr "यह फाइल अब उपलब्ध नहीं है, या आपके पास इसे डाउनलोड करने की अनुमति नहीं है।"
+
+msgid "This file type cannot be parsed. Upload a PDF, PNG, or JPEG version."
+msgstr "इस फ़ाइल प्रकार को पार्स नहीं किया जा सकता। PDF, PNG या JPEG संस्करण अपलोड करें।"
 
 msgid "This Fiscal Year"
 msgstr "यह वित्तीय वर्ष"
@@ -18858,6 +18943,9 @@ msgstr "केवल विचलन"
 
 msgid "VAT Number"
 msgstr "वैट नंबर"
+
+msgid "Vendor on document"
+msgstr "दस्तावेज़ पर दिया गया विक्रेता"
 
 msgid "Vendor Write-Off Income"
 msgstr "विक्रेता बट्टे खाते आय"
