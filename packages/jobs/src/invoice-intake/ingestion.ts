@@ -8,7 +8,11 @@ import {
 } from "@carbon/database/mercury";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { sql } from "kysely";
-import { INVOICE_LIMITS, type InvoiceActor } from "./contracts";
+import {
+  INVOICE_LIMITS,
+  type InvoiceActor,
+  invoiceSourceReviewSchema
+} from "./contracts";
 
 type InvoiceDatabase = Kysely<KyselyDatabase>;
 type InvoiceStorage = SupabaseClient<Database>["storage"];
@@ -24,6 +28,8 @@ export type InvoiceSourceInput = {
   existingIntakeId?: string;
   purchaseInvoiceId?: string;
   historical?: boolean;
+  /** Collector-only snapshot of saved attachments and their verified byte hashes. */
+  mercuryDocumentSet?: { attachments: string; sha256s: string[] };
 };
 export type RegisteredInvoiceSource = {
   intakeId: string;
@@ -219,6 +225,24 @@ export async function registerInvoiceSource(
       input.kind !== "upload"
         ? await ownedMercury(trx, actor, input, true)
         : undefined;
+    const savedAttachments = parseMercuryAttachments(
+      imported?.record.attachments
+    );
+    if (
+      input.mercuryDocumentSet &&
+      (JSON.stringify(savedAttachments) !==
+        input.mercuryDocumentSet.attachments ||
+        (file && !input.mercuryDocumentSet.sha256s.includes(file.sha256)))
+    )
+      throw new InvoiceSourceError("invoice_source_changed");
+    const singleMercuryDocument = input.mercuryDocumentSet
+      ? new Set(input.mercuryDocumentSet.sha256s).size === 1
+      : savedAttachments.length === 1;
+    const needsSourceSelection =
+      !!imported &&
+      !!input.mercuryDocumentSet &&
+      !!file &&
+      !singleMercuryDocument;
     const linkedInvoiceId =
       input.purchaseInvoiceId || imported?.record.purchaseInvoiceId || null;
     if (
@@ -256,7 +280,34 @@ export async function registerInvoiceSource(
             eb("kind", "=", input.kind),
             eb("sourceKey", "=", input.sourceKey)
           ]),
-          ...(file ? [eb("sha256", "=", file.sha256)] : []),
+          ...(file &&
+          (!imported || !input.mercuryDocumentSet || singleMercuryDocument)
+            ? [
+                eb.and([
+                  eb("sha256", "=", file.sha256),
+                  ...(imported && input.mercuryDocumentSet
+                    ? [
+                        sql<boolean>`NOT EXISTS (
+                        SELECT 1 FROM public."invoiceIntakeSource" other
+                        WHERE other."companyId"=${actor.companyId}
+                          AND other."intakeId"="invoiceIntakeSource"."intakeId"
+                          AND other.sha256 IS NOT NULL AND other.sha256<>${file.sha256})
+                      AND NOT EXISTS (
+                        SELECT 1 FROM public."invoiceIntakeSource" payment
+                        JOIN public."mercuryTransactionImport" m
+                          ON m."companyId"=payment."companyId" AND m.id=payment."mercuryImportId"
+                        CROSS JOIN LATERAL jsonb_array_elements(CASE WHEN jsonb_typeof(m.attachments)='array' THEN m.attachments ELSE '[]'::jsonb END) a
+                        WHERE payment."companyId"=${actor.companyId}
+                          AND payment."intakeId"="invoiceIntakeSource"."intakeId"
+                          AND NOT EXISTS (SELECT 1 FROM public."invoiceIntakeSource" saved
+                            WHERE saved."companyId"=payment."companyId" AND saved."intakeId"=payment."intakeId"
+                              AND saved."mercuryImportId"=m.id AND saved."storagePath"=a->>'path'
+                              AND saved.kind=a->>'source'))`
+                      ]
+                    : [])
+                ])
+              ]
+            : []),
           ...(input.mercuryImportId
             ? [eb("mercuryImportId", "=", input.mercuryImportId)]
             : [])
@@ -282,18 +333,146 @@ export async function registerInvoiceSource(
       throw new InvoiceSourceError("invoice_source_identity_conflict");
     const intakeIds = new Set(sources.map((source) => source.intakeId));
     if (linkedInvoiceId) {
-      const linkedIntakes = await trx
+      const paymentOwners = new Set(
+        sources
+          .filter(
+            (source) =>
+              input.mercuryImportId &&
+              source.mercuryImportId === input.mercuryImportId
+          )
+          .map((source) => source.intakeId)
+      );
+      const confirmedOwner =
+        paymentOwners.size === 1
+          ? await trx
+              .selectFrom("invoiceIntake")
+              .select("id")
+              .where("companyId", "=", actor.companyId)
+              .where("id", "=", [...paymentOwners][0]!)
+              .where("purchaseInvoiceId", "=", linkedInvoiceId)
+              .executeTakeFirst()
+          : undefined;
+      const linkedQuery = trx
         .selectFrom("invoiceIntake")
         .select("id")
         .where("companyId", "=", actor.companyId)
-        .where("purchaseInvoiceId", "=", linkedInvoiceId)
-        .limit(2)
-        .execute();
-      for (const linked of linkedIntakes) intakeIds.add(linked.id);
+        .where("purchaseInvoiceId", "=", linkedInvoiceId);
+      const linkedIntakes = await (confirmedOwner
+        ? linkedQuery.where("id", "in", [...intakeIds])
+        : linkedQuery.limit(2)
+      ).execute();
+      // Several separately reviewed intakes may already document this explicit
+      // native invoice link. A new payment gets its own provenance container.
+      const separatePayment =
+        input.kind === "mercury" &&
+        imported?.record.purchaseInvoiceId === linkedInvoiceId &&
+        !file &&
+        !input.existingIntakeId &&
+        sources.length === 0 &&
+        linkedIntakes.length > 1;
+      for (const linked of linkedIntakes) {
+        if (separatePayment) continue;
+        // Explicitly linking separately reviewed evidence to the same native
+        // invoice confirms its ownership without merging either review.
+        if (
+          confirmedOwner &&
+          linked.id !== confirmedOwner.id &&
+          same?.intakeId !== linked.id
+        )
+          intakeIds.delete(linked.id);
+        else intakeIds.add(linked.id);
+      }
     }
     if (input.existingIntakeId) intakeIds.add(input.existingIntakeId);
-    if (intakeIds.size > 1)
-      throw new InvoiceSourceError("invoice_source_intake_conflict");
+    let recoveredHistorical: boolean | undefined;
+    if (intakeIds.size > 1) {
+      const hashOwners = new Set(
+        sources
+          .filter((source) => file && source.sha256 === file.sha256)
+          .map((source) => source.intakeId)
+      );
+      if (
+        !input.mercuryImportId ||
+        input.existingIntakeId ||
+        !singleMercuryDocument ||
+        intakeIds.size !== 2 ||
+        hashOwners.size !== 1
+      )
+        throw new InvoiceSourceError("invoice_source_intake_conflict");
+      const canonicalId = [...hashOwners][0]!;
+      const placeholderId = [...intakeIds].find((id) => id !== canonicalId)!;
+      const canonical = await trx
+        .selectFrom("invoiceIntake")
+        .select(["status", "supplierId", "newSupplier"])
+        .where("companyId", "=", actor.companyId)
+        .where("id", "=", canonicalId)
+        .where(sql<boolean>`NOT EXISTS (
+          SELECT 1 FROM public."invoiceIntakeSource" s
+          WHERE s."companyId"=${actor.companyId} AND s."intakeId"=${canonicalId}
+            AND s.sha256 IS NOT NULL AND s.sha256<>${file!.sha256})`)
+        .forUpdate()
+        .executeTakeFirst();
+      if (!canonical)
+        throw new InvoiceSourceError("invoice_source_intake_conflict");
+      // A previous payment-first registration may have committed only its empty
+      // placeholder before encountering an already-known attachment. Move that
+      // provenance, never reviewed facts or another document, to the hash owner.
+      const placeholder = await trx
+        .selectFrom("invoiceIntake as i")
+        .select(["i.id", "i.supplierId", "i.historical"])
+        .where("i.companyId", "=", actor.companyId)
+        .where("i.id", "=", placeholderId)
+        .where("i.status", "=", "NeedsDocument")
+        .where("i.revision", "=", 0)
+        .where("i.generation", "=", 0)
+        .where("i.documentKind", "=", "unknown")
+        .where("i.attachmentStatus", "=", "None")
+        .where(sql<boolean>`i.header='{}'::jsonb
+          AND i."newSupplier" IS NULL AND i."purchaseInvoiceId" IS NULL
+          AND i."activeExtractionId" IS NULL AND i."locationId" IS NULL
+          AND i."paymentTermId" IS NULL AND i."invoiceSupplierId" IS NULL
+          AND i."invoiceSupplierContactId" IS NULL AND i."invoiceSupplierLocationId" IS NULL
+          AND i."approvalKey" IS NULL AND i."approvalSnapshot" IS NULL
+          AND i."approvedBy" IS NULL AND i."approvedAt" IS NULL
+          AND i."lastErrorCode" IS NULL AND i."updatedBy" IS NULL AND i."updatedAt" IS NULL
+          AND NOT EXISTS (SELECT 1 FROM public."invoiceIntakeLine" l
+            WHERE l."companyId"=i."companyId" AND l."intakeId"=i.id)
+          AND NOT EXISTS (SELECT 1 FROM public."documentExtraction" e
+            WHERE e."companyId"=i."companyId" AND e."intakeId"=i.id)
+          AND NOT EXISTS (SELECT 1 FROM public."invoiceRecognitionRule" r
+            WHERE r."companyId"=i."companyId" AND r."intakeId"=i.id)
+          AND NOT EXISTS (SELECT 1 FROM public."invoiceIntakeSource" s
+            WHERE s."companyId"=i."companyId" AND s."intakeId"=i.id
+              AND (s.kind<>'mercury' OR s."mercuryImportId" IS DISTINCT FROM ${input.mercuryImportId}
+                OR s."storagePath" IS NOT NULL OR s.sha256 IS NOT NULL))`)
+        .forUpdate()
+        .executeTakeFirst();
+      if (
+        !placeholder ||
+        canonical.status === "Ignored" ||
+        (placeholder.supplierId &&
+          (placeholder.supplierId !== imported?.record.supplierId ||
+            canonical.newSupplier ||
+            (canonical.supplierId &&
+              canonical.supplierId !== placeholder.supplierId)))
+      )
+        throw new InvoiceSourceError("invoice_source_intake_conflict");
+      await trx
+        .updateTable("invoiceIntakeSource")
+        .set({ intakeId: canonicalId })
+        .where("companyId", "=", actor.companyId)
+        .where("intakeId", "=", placeholderId)
+        .execute();
+      await trx
+        .deleteFrom("invoiceIntake")
+        .where("companyId", "=", actor.companyId)
+        .where("id", "=", placeholderId)
+        .execute();
+      recoveredHistorical = placeholder.historical;
+      intakeIds.delete(placeholderId);
+      for (const source of sources)
+        if (source.intakeId === placeholderId) source.intakeId = canonicalId;
+    }
     const existingId = [...intakeIds][0];
     let intake = existingId
       ? await trx
@@ -321,6 +500,14 @@ export async function registerInvoiceSource(
     ) {
       throw new InvoiceSourceError("invoice_source_invoice_conflict");
     }
+    const sourceReview = invoiceSourceReviewSchema.safeParse(intake?.header);
+    const selectedPrimary = sourceReview.success
+      ? sourceReview.data.primarySourceSha256
+      : null;
+    const requiresSourceSelection =
+      needsSourceSelection &&
+      (!selectedPrimary ||
+        !input.mercuryDocumentSet?.sha256s.includes(selectedPrimary));
     const ignored = imported?.record.reviewStatus === "Ignored";
     const evidenceOnly = invoice && invoice.status !== "Draft";
     const recordedSupplierId =
@@ -344,21 +531,32 @@ export async function registerInvoiceSource(
             ? "Ignored"
             : evidenceOnly
               ? "Linked"
-              : file
-                ? "Queued"
-                : "NeedsDocument",
+              : requiresSourceSelection
+                ? "NeedsReview"
+                : file
+                  ? "Queued"
+                  : "NeedsDocument",
           attachmentStatus:
             evidenceOnly && !ignored && file ? "Pending" : "None",
           supplierId:
             imported?.record.supplierId || invoice?.supplierId || null,
           purchaseInvoiceId: linkedInvoiceId,
+          lastErrorCode: requiresSourceSelection
+            ? "invoice_source_selection_required"
+            : null,
           ...(evidenceOnly && !ignored
             ? { approvedBy: actor.userId, approvedAt: sql<string>`now()` }
             : {})
         })
         .returningAll()
         .executeTakeFirstOrThrow();
-    } else if (!same || (!same.sha256 && file) || metadataChanged) {
+    } else if (
+      !same ||
+      (!same.sha256 && file) ||
+      metadataChanged ||
+      recoveredHistorical !== undefined ||
+      (requiresSourceSelection && intake.status === "Queued")
+    ) {
       const terminal = ["Approved", "Linked", "Ignored"].includes(
         intake.status
       );
@@ -367,6 +565,7 @@ export async function registerInvoiceSource(
         .set({
           updatedBy: actor.userId,
           updatedAt: sql<string>`now()`,
+          historical: intake.historical || !!recoveredHistorical,
           revision: sql<number>`revision+1`,
           ...((file || sources.some((source) => source.storagePath)) &&
           ((file && ["Approved", "Linked"].includes(intake.status)) ||
@@ -407,8 +606,20 @@ export async function registerInvoiceSource(
                       lastErrorCode: "invoice_source_changed"
                     }
                   : intake.status === "NeedsDocument" && file
-                    ? { status: "Queued" }
-                    : {})
+                    ? {
+                        status: requiresSourceSelection
+                          ? "NeedsReview"
+                          : "Queued",
+                        lastErrorCode: requiresSourceSelection
+                          ? "invoice_source_selection_required"
+                          : null
+                      }
+                    : requiresSourceSelection && intake.status === "Queued"
+                      ? {
+                          status: "NeedsReview",
+                          lastErrorCode: "invoice_source_selection_required"
+                        }
+                      : {})
         })
         .where("companyId", "=", actor.companyId)
         .where("id", "=", intake.id)

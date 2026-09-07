@@ -752,17 +752,20 @@ async function validateSourceCoverage(
   );
   const sources = await db
     .selectFrom("invoiceIntakeSource")
-    .select(["sha256", "storagePath"])
+    .select(["sha256", "storagePath", "mercuryImportId"])
     .where("companyId", "=", actor.companyId)
     .where("intakeId", "=", intake.id)
-    .where("storagePath", "is not", null)
     .execute();
   const hashes = new Set(
-    sources.flatMap((source) => (source.sha256 ? [source.sha256] : []))
+    sources.flatMap((source) =>
+      source.sha256 && source.storagePath ? [source.sha256] : []
+    )
   );
   const primary =
     review.header.primarySourceSha256 ??
     (hashes.size === 1 ? [...hashes][0]! : null);
+  if (primary && hashes.has(primary))
+    review.header.primarySourceSha256 = primary;
   const acknowledgements = review.header.sourceAcknowledgements;
   const acknowledged = new Set(acknowledgements.map((source) => source.sha256));
   const sourceIssue = (path: string, message: string) =>
@@ -791,6 +794,69 @@ async function validateSourceCoverage(
       "header.sourceAcknowledgements",
       "Review each other source document and explain its supporting or excluded role for this invoice"
     );
+  // A Gmail candidate may occur on several payments. Only the document that
+  // was actually approved establishes invoice identity; supporting files do not.
+  const sourceInvoices = primary
+    ? (
+        await sql<{
+          id: string;
+          invoiceId: string;
+          supplierReference: string | null;
+          status: Database["public"]["Tables"]["purchaseInvoice"]["Row"]["status"];
+          currencyCode: string;
+        }>`
+        SELECT DISTINCT p.id,p."invoiceId",p."supplierReference",p.status,p."currencyCode"
+        FROM "invoiceIntake" i
+        JOIN "purchaseInvoice" p ON p.id=i."purchaseInvoiceId" AND p."companyId"=i."companyId"
+        WHERE i."companyId"=${actor.companyId} AND i.id<>${intake.id}
+          AND i."approvedAt" IS NOT NULL AND p.status<>'Voided'
+          AND EXISTS (
+            SELECT 1 FROM "invoiceIntakeSource" s
+            WHERE s."companyId"=i."companyId" AND s."intakeId"=i.id AND s.sha256=${primary}
+              AND s."storagePath" IS NOT NULL
+          )
+          AND coalesce(
+            i."approvalSnapshot"#>>'{resolved,header,primarySourceSha256}',
+            i.header->>'primarySourceSha256',
+            (SELECT min(s.sha256) FROM "invoiceIntakeSource" s
+             WHERE s."companyId"=i."companyId" AND s."intakeId"=i.id
+               AND s."storagePath" IS NOT NULL AND s."createdAt"<=i."approvedAt"
+             HAVING count(DISTINCT s.sha256)=1)
+          )=${primary}`.execute(db)
+      ).rows
+    : [];
+  if (sourceInvoices.some((invoice) => invoice.id !== review.purchaseInvoiceId))
+    sourceIssue(
+      "purchaseInvoiceId",
+      "This primary document already belongs to an existing invoice; select that invoice instead of creating another"
+    );
+  const importIds = unique(sources.map((source) => source.mercuryImportId));
+  if (primary && importIds.length > 1) {
+    const unsupported = importIds.filter(
+      (id) =>
+        !sources.some(
+          (source) =>
+            source.mercuryImportId === id &&
+            source.sha256 === primary &&
+            !!source.storagePath
+        )
+    );
+    const alreadyLinked =
+      unsupported.length && review.purchaseInvoiceId
+        ? await db
+            .selectFrom("mercuryTransactionImport")
+            .select("id")
+            .where("companyId", "=", actor.companyId)
+            .where("id", "in", unsupported)
+            .where("purchaseInvoiceId", "=", review.purchaseInvoiceId)
+            .execute()
+        : [];
+    if (unsupported.some((id) => !alreadyLinked.some((row) => row.id === id)))
+      sourceIssue(
+        "header.primarySourceSha256",
+        "The selected primary document does not support every grouped payment; resolve their invoice associations before approval"
+      );
+  }
   const extractionSha256 = attempt
     ? (sources.find((source) => source.storagePath === attempt.storagePath)
         ?.sha256 ?? null)
@@ -845,7 +911,7 @@ async function validateSourceCoverage(
   }
   validation.ready = validation.issues.length === 0;
   validation.status = validation.ready ? "Ready" : "NeedsReview";
-  return { extraction, sourceCoverage: { extractionSha256 } };
+  return { extraction, sourceCoverage: { extractionSha256 }, sourceInvoices };
 }
 
 export async function getInvoiceIntakeReview(
@@ -856,13 +922,14 @@ export async function getInvoiceIntakeReview(
   const permissions = await getInvoiceIntakePermissions(db, actor);
   const rows = await readIntakeRows(db, actor, id);
   const bundle = await buildReviewContext(db, actor, rows.review, permissions);
-  const { extraction, sourceCoverage } = await validateSourceCoverage(
-    db,
-    actor,
-    rows.intake,
-    rows.review,
-    bundle.validation
-  );
+  const { extraction, sourceCoverage, sourceInvoices } =
+    await validateSourceCoverage(
+      db,
+      actor,
+      rows.intake,
+      rows.review,
+      bundle.validation
+    );
   const candidates = await resolveInvoiceCandidates(db, actor.companyId, {
     supplierId: rows.review.supplierId,
     supplierName: rows.review.header.sourceSupplierName,
@@ -913,6 +980,8 @@ export async function getInvoiceIntakeReview(
     !choices.some((row) => row.id === bundle.linkedInvoice!.id)
   )
     choices.push(bundle.linkedInvoice);
+  for (const invoice of sourceInvoices)
+    if (!choices.some((row) => row.id === invoice.id)) choices.push(invoice);
   const hint = invoiceMatchSuggestionsSchema.safeParse({
     supplierId: object(rows.intake.header).modelSupplierSuggestion ?? null,
     lines: rows.lines.flatMap((line) =>

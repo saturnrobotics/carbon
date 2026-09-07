@@ -370,7 +370,301 @@ async function attach(f: Fixture, id: string, importId?: string) {
     .execute();
 }
 
+async function candidateIntake(
+  f: Fixture,
+  primary: string,
+  other: string,
+  reference: string
+) {
+  const value = review(f);
+  value.header.invoiceNumber = reference;
+  value.header.primarySourceSha256 = primary;
+  value.header.sourceAcknowledgements = [
+    { sha256: other, reason: "Unrelated Gmail search candidate" }
+  ];
+  const row = await intake(f);
+  const paid = await payment(f);
+  await db
+    .deleteFrom("invoiceIntakeSource")
+    .where("companyId", "=", f.actor.companyId)
+    .where("intakeId", "=", row.id)
+    .execute();
+  await db
+    .insertInto("invoiceIntakeSource")
+    .values(
+      [primary, other].map((hash) => ({
+        companyId: f.actor.companyId,
+        intakeId: row.id,
+        createdBy: f.actor.userId,
+        kind: "gmail",
+        sourceKey: randomUUID(),
+        mercuryImportId: paid.id,
+        storageBucket: "private",
+        storagePath: `${f.actor.companyId}/invoice-intake/${row.id}/${hash}.pdf`,
+        sha256: hash,
+        mediaType: "application/pdf",
+        byteSize: 120
+      }))
+    )
+    .execute();
+  const saved = await saveInvoiceIntakeReview(db, f.actor, {
+    id: row.id,
+    expectedRevision: row.revision,
+    review: value
+  });
+  return { ...row, ...saved, paid, value };
+}
+
 describe("Atomic invoice intake approval", () => {
+  it("preserves legacy single-file ownership after later supporting evidence arrives", async () =>
+    fixture(async (f) => {
+      const first = await intake(f);
+      const approved = await approveInvoiceIntake(db, f.actor, {
+        intakeId: first.id,
+        expectedRevision: first.revision,
+        approvalKey: randomUUID()
+      });
+      // Older approvals relied on an implicit sole-file primary instead of
+      // persisting that choice in their snapshot.
+      await db
+        .updateTable("invoiceIntake")
+        .set({
+          header: sql`header-'primarySourceSha256'`,
+          approvalSnapshot: sql`"approvalSnapshot"#-'{resolved,header,primarySourceSha256}'`
+        })
+        .where("companyId", "=", f.actor.companyId)
+        .where("id", "=", first.id)
+        .execute();
+      await db
+        .insertInto("invoiceIntakeSource")
+        .values({
+          companyId: f.actor.companyId,
+          intakeId: first.id,
+          createdBy: f.actor.userId,
+          kind: "upload",
+          sourceKey: randomUUID(),
+          storageBucket: "private",
+          storagePath: `${f.actor.companyId}/invoice-intake/${first.id}/later.pdf`,
+          sha256: "b".repeat(64),
+          mediaType: "application/pdf",
+          byteSize: 120
+        })
+        .execute();
+      const second = await candidateIntake(
+        f,
+        "a".repeat(64),
+        "c".repeat(64),
+        "LEGACY-RETRY"
+      );
+      expect(second.status).toBe("NeedsReview");
+      await expect(
+        approveInvoiceIntake(db, f.actor, {
+          intakeId: second.id,
+          expectedRevision: second.revision,
+          approvalKey: randomUUID()
+        })
+      ).rejects.toThrow(/primary document already belongs/);
+      const saved = await saveInvoiceIntakeReview(db, f.actor, {
+        id: second.id,
+        expectedRevision: second.revision,
+        review: {
+          ...second.value,
+          purchaseInvoiceId: approved.invoiceId,
+          mergeMode: "evidence",
+          lines: []
+        }
+      });
+      expect(saved.status).toBe("Ready");
+      await approveInvoiceIntake(db, f.actor, {
+        intakeId: second.id,
+        expectedRevision: saved.revision,
+        approvalKey: randomUUID()
+      });
+      expect(
+        await db
+          .selectFrom("purchaseInvoice")
+          .select("id")
+          .where("companyId", "=", f.actor.companyId)
+          .execute()
+      ).toHaveLength(1);
+      expect(await counts(f)).toBe("0");
+    }));
+  it("does not treat a metadata-only hash as an attached document", async () =>
+    fixture(async (f) => {
+      const row = await intake(f);
+      await db
+        .updateTable("invoiceIntakeSource")
+        .set({ storageBucket: null, storagePath: null })
+        .where("companyId", "=", f.actor.companyId)
+        .where("intakeId", "=", row.id)
+        .execute();
+      const current = await getInvoiceIntakeReview(db, f.actor, row.id);
+      expect(current.validation.ready).toBe(false);
+      await expect(
+        approveInvoiceIntake(db, f.actor, {
+          intakeId: row.id,
+          expectedRevision: row.revision,
+          approvalKey: randomUUID()
+        })
+      ).rejects.toThrow(/Attach the invoice/);
+      expect(
+        await db
+          .selectFrom("purchaseInvoice")
+          .select("id")
+          .where("companyId", "=", f.actor.companyId)
+          .execute()
+      ).toHaveLength(0);
+    }));
+  it("serializes shared primary approval and permits an explicit link to the same invoice", async () =>
+    fixture(async (f) => {
+      const first = await candidateIntake(
+        f,
+        "a".repeat(64),
+        "b".repeat(64),
+        "CANDIDATE-1"
+      );
+      const second = await candidateIntake(
+        f,
+        "a".repeat(64),
+        "c".repeat(64),
+        "DIFFERENT-OCR-REFERENCE"
+      );
+      expect([first.status, second.status]).toEqual(["Ready", "Ready"]);
+      const results = await Promise.allSettled(
+        [first, second].map((row) =>
+          approveInvoiceIntake(db, f.actor, {
+            intakeId: row.id,
+            expectedRevision: row.revision,
+            approvalKey: randomUUID()
+          })
+        )
+      );
+      const success = results.find((result) => result.status === "fulfilled");
+      expect(
+        results.filter((result) => result.status === "fulfilled")
+      ).toHaveLength(1);
+      expect(
+        results.filter((result) => result.status === "rejected")
+      ).toHaveLength(1);
+      if (!success || success.status !== "fulfilled")
+        throw new Error("Expected one approval");
+      const remaining = results[0].status === "rejected" ? first : second;
+      const current = await getInvoiceIntakeReview(db, f.actor, remaining.id);
+      expect(current.validation.ready).toBe(false);
+      expect(
+        current.validation.issues.some((issue) =>
+          issue.message.includes("primary document already belongs")
+        )
+      ).toBe(true);
+      expect(
+        current.invoiceOptions.some(
+          (option) => option.value === success.value.invoiceId
+        )
+      ).toBe(true);
+      const linked = {
+        ...remaining.value,
+        purchaseInvoiceId: success.value.invoiceId,
+        mergeMode: "evidence",
+        lines: []
+      };
+      const saved = await saveInvoiceIntakeReview(db, f.actor, {
+        id: remaining.id,
+        expectedRevision: remaining.revision,
+        review: linked
+      });
+      expect(saved.status).toBe("Ready");
+      await approveInvoiceIntake(db, f.actor, {
+        intakeId: remaining.id,
+        expectedRevision: saved.revision,
+        approvalKey: randomUUID()
+      });
+      const invoices = await db
+        .selectFrom("purchaseInvoice")
+        .select("id")
+        .where("companyId", "=", f.actor.companyId)
+        .execute();
+      expect(invoices).toHaveLength(1);
+      const payments = await db
+        .selectFrom("mercuryTransactionImport")
+        .select(["purchaseInvoiceId", "reviewStatus"])
+        .where("companyId", "=", f.actor.companyId)
+        .execute();
+      expect(payments).toHaveLength(2);
+      expect(
+        payments.every(
+          (row) =>
+            row.purchaseInvoiceId === success.value.invoiceId &&
+            row.reviewStatus === "Imported"
+        )
+      ).toBe(true);
+      expect(await counts(f)).toBe("0");
+    }));
+  it("keeps separate invoices and payments when only their supporting candidates overlap", async () =>
+    fixture(async (f) => {
+      const first = await candidateIntake(
+        f,
+        "b".repeat(64),
+        "a".repeat(64),
+        "DISTINCT-1"
+      );
+      const second = await candidateIntake(
+        f,
+        "c".repeat(64),
+        "a".repeat(64),
+        "DISTINCT-2"
+      );
+      const results = await Promise.all(
+        [first, second].map((row) =>
+          approveInvoiceIntake(db, f.actor, {
+            intakeId: row.id,
+            expectedRevision: row.revision,
+            approvalKey: randomUUID()
+          })
+        )
+      );
+      expect(new Set(results.map((row) => row.invoiceId)).size).toBe(2);
+      const payments = await db
+        .selectFrom("mercuryTransactionImport")
+        .select(["id", "purchaseInvoiceId"])
+        .where("companyId", "=", f.actor.companyId)
+        .execute();
+      expect(
+        payments.find((row) => row.id === first.paid.id)?.purchaseInvoiceId
+      ).toBe(results[0].invoiceId);
+      expect(
+        payments.find((row) => row.id === second.paid.id)?.purchaseInvoiceId
+      ).toBe(results[1].invoiceId);
+      expect(await counts(f)).toBe("0");
+    }));
+  it("refuses a changed primary that supports only one of several grouped payments", async () =>
+    fixture(async (f) => {
+      const row = await candidateIntake(
+        f,
+        "b".repeat(64),
+        "a".repeat(64),
+        "GROUPED"
+      );
+      const second = await payment(f);
+      await attach(f, row.id, second.id);
+      const refreshed = await getInvoiceIntakeReview(db, f.actor, row.id);
+      expect(refreshed.validation.ready).toBe(false);
+      await expect(
+        approveInvoiceIntake(db, f.actor, {
+          intakeId: row.id,
+          expectedRevision: row.revision,
+          approvalKey: randomUUID()
+        })
+      ).rejects.toThrow(/every grouped payment/);
+      const payments = await db
+        .selectFrom("mercuryTransactionImport")
+        .select("purchaseInvoiceId")
+        .where("companyId", "=", f.actor.companyId)
+        .execute();
+      expect(payments.every((row) => row.purchaseInvoiceId === null)).toBe(
+        true
+      );
+      expect(await counts(f)).toBe("0");
+    }));
   it("requires explicit coverage of every distinct source before saving Ready or approving", async () =>
     fixture(async (f) => {
       const value = review(f);
@@ -1055,6 +1349,13 @@ describe("Atomic invoice intake approval", () => {
       foreign.header.currencyCode = "EUR";
       foreign.historical = true;
       const staged = await intake(f, foreign);
+      // This is another invoice, so its source bytes must also be distinct.
+      await db
+        .updateTable("invoiceIntakeSource")
+        .set({ sha256: "f".repeat(64) })
+        .where("companyId", "=", f.actor.companyId)
+        .where("intakeId", "=", staged.id)
+        .execute();
       expect(staged.status).toBe("NeedsReview");
       await expect(
         approveInvoiceIntake(db, f.actor, {

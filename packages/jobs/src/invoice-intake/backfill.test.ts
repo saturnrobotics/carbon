@@ -10,8 +10,10 @@ import {
 import {
   controlInvoiceIntakeBackfill,
   reconcileMercuryInvoiceSources,
+  registerMercuryInvoiceSources,
   runInvoiceIntakeBackfillPage
 } from "./backfill";
+import { registerInvoiceSource } from "./ingestion";
 
 const url = process.env.INVOICE_INTAKE_TEST_DATABASE_URL;
 type Context = Parameters<typeof runInvoiceIntakeBackfillPage>[0];
@@ -108,6 +110,10 @@ async function fixture(
   } finally {
     if (companyId) {
       await db
+        .deleteFrom("documentExtraction")
+        .where("companyId", "=", companyId)
+        .execute();
+      await db
         .deleteFrom("invoiceIntake")
         .where("companyId", "=", companyId)
         .execute();
@@ -148,6 +154,343 @@ const settings = (c: Context) =>
     .executeTakeFirstOrThrow();
 
 describe("resumable historical invoice bridge", () => {
+  it("keeps overlapping Gmail candidates attached to their own payment for explicit source review", async () =>
+    fixture(async (c, files) => {
+      const records: { id: string }[] = [];
+      for (const payment of ["first", "second"]) {
+        const attachments = ["shared-a", "shared-b", `${payment}-only`].map(
+          (content) => {
+            const path = `${c.companyId}/mercury/${payment}/${content}.pdf`;
+            files.set(path, new TextEncoder().encode(`%PDF-1.4 ${content}`));
+            return { path, source: "gmail", fileName: `${content}.pdf` };
+          }
+        );
+        records.push(...(await imports(c, 1, attachments)));
+      }
+      await controlInvoiceIntakeBackfill(db, c, "start");
+      expect(await runInvoiceIntakeBackfillPage(c)).toMatchObject({
+        state: "Completed",
+        processed: 2
+      });
+      expect((await settings(c)).backfillCounts).toMatchObject({
+        processed: 2,
+        documents: 6
+      });
+      const intakes = await db
+        .selectFrom("invoiceIntake")
+        .select(["id", "status"])
+        .where("companyId", "=", c.companyId)
+        .execute();
+      const sources = await db
+        .selectFrom("invoiceIntakeSource")
+        .select(["intakeId", "mercuryImportId", "sha256"])
+        .where("companyId", "=", c.companyId)
+        .execute();
+      expect(intakes).toHaveLength(2);
+      expect(sources).toHaveLength(8);
+      for (const intake of intakes) {
+        expect(intake.status).toBe("NeedsReview");
+        const owned = sources.filter((source) => source.intakeId === intake.id);
+        expect(owned).toHaveLength(4);
+        expect(
+          new Set(owned.map((source) => source.mercuryImportId)).size
+        ).toBe(1);
+        expect(
+          new Set(
+            owned.flatMap((source) => (source.sha256 ? [source.sha256] : []))
+          ).size
+        ).toBe(3);
+      }
+      expect(new Set(sources.map((source) => source.mercuryImportId))).toEqual(
+        new Set(records.map((record) => record.id))
+      );
+      const selected = sources.find((source) => source.sha256)!;
+      await db
+        .updateTable("invoiceIntake")
+        .set({
+          status: "Queued",
+          header: JSON.stringify({ primarySourceSha256: selected.sha256 })
+        })
+        .where("companyId", "=", c.companyId)
+        .where("id", "=", selected.intakeId)
+        .execute();
+      expect(
+        (await registerMercuryInvoiceSources(c, selected.mercuryImportId!))
+          .status
+      ).toBe("Queued");
+    }));
+  it("deduplicates one verified file even when each payment saved it through two channels", async () =>
+    fixture(async (c, files) => {
+      const bytes = new TextEncoder().encode("%PDF-1.4 Shared invoice bytes");
+      const results: Awaited<
+        ReturnType<typeof registerMercuryInvoiceSources>
+      >[] = [];
+      for (const payment of ["first", "second"]) {
+        const attachments = ["mercury", "gmail"].map((source) => {
+          const path = `${c.companyId}/mercury/${payment}/${source}.pdf`;
+          files.set(path, bytes);
+          return { path, source, fileName: "invoice.pdf" };
+        });
+        const [record] = await imports(c, 1, attachments);
+        results.push(await registerMercuryInvoiceSources(c, record!.id));
+      }
+      expect(results[0]!.intakeId).toBe(results[1]!.intakeId);
+      expect(
+        await db
+          .selectFrom("invoiceIntakeSource")
+          .select("id")
+          .where("companyId", "=", c.companyId)
+          .execute()
+      ).toHaveLength(6);
+      expect(
+        await db
+          .selectFrom("invoiceIntake")
+          .select("id")
+          .where("companyId", "=", c.companyId)
+          .execute()
+      ).toHaveLength(1);
+    }));
+  it("refuses foreign-company paths before the collector preflight reads storage", async () =>
+    fixture(async (c) => {
+      const download = vi.fn();
+      const storage = {
+        from: () => ({ download })
+      } as unknown as Context["storage"];
+      await imports(c, 1, [
+        {
+          path: "another-company/mercury/payment/invoice.pdf",
+          source: "gmail",
+          fileName: "invoice.pdf"
+        }
+      ]);
+      await controlInvoiceIntakeBackfill(db, c, "start");
+      expect(
+        (await runInvoiceIntakeBackfillPage({ ...c, storage })).state
+      ).toBe("Failed");
+      expect((await settings(c)).lastErrorCode).toBe(
+        "invoice_source_attachment_unavailable"
+      );
+      expect(download).not.toHaveBeenCalled();
+      expect((await settings(c)).backfillCursor).toBeNull();
+    }));
+  it("retries a changed attachment snapshot without consolidating from stale file hashes", async () =>
+    fixture(async (c, files) => {
+      const path = `${c.companyId}/mercury/payment/invoice.pdf`;
+      const addedPath = `${c.companyId}/mercury/payment/added.pdf`;
+      const first = { path, source: "gmail", fileName: "invoice.pdf" };
+      const added = { path: addedPath, source: "gmail", fileName: "added.pdf" };
+      const [record] = await imports(c, 1, [first]);
+      files.set(path, new TextEncoder().encode("%PDF-1.4 First invoice"));
+      files.set(addedPath, new TextEncoder().encode("%PDF-1.4 Added invoice"));
+      const original = c.storage.from("private");
+      let changed = false;
+      const storage = {
+        from: () => ({
+          download: async (savedPath: string) => {
+            if (!changed) {
+              changed = true;
+              await db
+                .updateTable("mercuryTransactionImport")
+                .set({ attachments: JSON.stringify([first, added]) })
+                .where("companyId", "=", c.companyId)
+                .where("id", "=", record!.id)
+                .execute();
+            }
+            return original.download(savedPath);
+          }
+        })
+      } as unknown as Context["storage"];
+      await controlInvoiceIntakeBackfill(db, c, "start");
+      expect(
+        (await runInvoiceIntakeBackfillPage({ ...c, storage })).state
+      ).toBe("Failed");
+      expect((await settings(c)).lastErrorCode).toBe("invoice_source_changed");
+      expect((await settings(c)).backfillCursor).toBeNull();
+      expect(
+        await db
+          .selectFrom("invoiceIntakeSource")
+          .select("sha256")
+          .where("companyId", "=", c.companyId)
+          .execute()
+      ).toEqual([{ sha256: null }]);
+      await controlInvoiceIntakeBackfill(db, c, "resume");
+      expect((await runInvoiceIntakeBackfillPage(c)).state).toBe("Completed");
+      expect(
+        (
+          await db
+            .selectFrom("invoiceIntake")
+            .select("status")
+            .where("companyId", "=", c.companyId)
+            .executeTakeFirstOrThrow()
+        ).status
+      ).toBe("NeedsReview");
+      expect(
+        await db
+          .selectFrom("invoiceIntakeSource")
+          .select("id")
+          .where("companyId", "=", c.companyId)
+          .execute()
+      ).toHaveLength(3);
+    }));
+  it.each([
+    false,
+    true
+  ])("joins identical documents from installment payments without losing review (existing placeholder: %s)", async (existingPlaceholder) =>
+    fixture(async (c, files) => {
+      const bytes = new TextEncoder().encode(
+        "%PDF-1.4 Synthetic installment invoice"
+      );
+      const firstPath = `${c.companyId}/mercury/first/invoice.pdf`;
+      const secondPath = `${c.companyId}/mercury/second/invoice.pdf`;
+      files.set(firstPath, bytes);
+      files.set(secondPath, bytes);
+      const [first] = await imports(c, 1, [
+        { path: firstPath, source: "mercury", fileName: "invoice.pdf" }
+      ]);
+      const [second] = await imports(c, 1, [
+        { path: secondPath, source: "gmail", fileName: "invoice.pdf" }
+      ]);
+      const canonical = await registerMercuryInvoiceSources(c, first!.id);
+      const header = { invoiceNumber: "REVIEWED-INSTALLMENT" };
+      const extraction = await db
+        .insertInto("documentExtraction")
+        .values({
+          companyId: c.companyId,
+          createdBy: c.userId,
+          intakeId: canonical.intakeId,
+          documentType: "purchaseInvoice",
+          sourceDocument: "invoice.pdf",
+          storagePath: firstPath,
+          generation: 0,
+          inputRevision: 0,
+          attemptNumber: 1,
+          operation: "extract",
+          status: "completed",
+          extractedData: JSON.stringify({ immutable: "synthetic evidence" }),
+          actualCostUsd: 0.005,
+          billingState: "actual"
+        })
+        .returningAll()
+        .executeTakeFirstOrThrow();
+      const reviewedLine = await db
+        .insertInto("invoiceIntakeLine")
+        .values({
+          companyId: c.companyId,
+          createdBy: c.userId,
+          intakeId: canonical.intakeId,
+          lineKey: "reviewed-line",
+          sortOrder: 0,
+          description: "Retained human description",
+          quantity: 2
+        })
+        .returningAll()
+        .executeTakeFirstOrThrow();
+      await db
+        .updateTable("invoiceIntake")
+        .set({ status: "NeedsReview", header: JSON.stringify(header) })
+        .where("companyId", "=", c.companyId)
+        .where("id", "=", canonical.intakeId)
+        .execute();
+      const placeholder = existingPlaceholder
+        ? await registerInvoiceSource(db, c.storage, c, {
+            kind: "mercury",
+            sourceKey: `payment:${second!.id}`,
+            mercuryImportId: second!.id,
+            historical: true
+          })
+        : undefined;
+      const previousSources = await db
+        .selectFrom("invoiceIntakeSource")
+        .selectAll()
+        .where("companyId", "=", c.companyId)
+        .execute();
+      const payments = await db
+        .selectFrom("mercuryTransactionImport")
+        .select(["id", "reviewStatus", "purchaseInvoiceId"])
+        .where("companyId", "=", c.companyId)
+        .orderBy("id")
+        .execute();
+      await controlInvoiceIntakeBackfill(db, c, "start");
+      const page = await runInvoiceIntakeBackfillPage(c);
+      expect((await settings(c)).lastErrorCode).toBeNull();
+      expect(page).toMatchObject({
+        state: "Completed",
+        processed: 2
+      });
+      expect((await settings(c)).backfillCounts).toMatchObject({
+        processed: 2,
+        documents: 2
+      });
+      const intakes = await db
+        .selectFrom("invoiceIntake")
+        .select(["id", "status", "header"])
+        .where("companyId", "=", c.companyId)
+        .execute();
+      expect(intakes).toEqual([
+        { id: canonical.intakeId, status: "NeedsReview", header }
+      ]);
+      const sources = await db
+        .selectFrom("invoiceIntakeSource")
+        .select(["id", "intakeId", "mercuryImportId"])
+        .where("companyId", "=", c.companyId)
+        .orderBy("id")
+        .execute();
+      expect(sources).toHaveLength(4);
+      expect(new Set(sources.map((source) => source.intakeId))).toEqual(
+        new Set([canonical.intakeId])
+      );
+      expect(new Set(sources.map((source) => source.mercuryImportId))).toEqual(
+        new Set([first!.id, second!.id])
+      );
+      const retainedSources = await db
+        .selectFrom("invoiceIntakeSource")
+        .selectAll()
+        .where("companyId", "=", c.companyId)
+        .execute();
+      for (const previous of previousSources)
+        expect(
+          retainedSources.find((source) => source.id === previous.id)
+        ).toEqual({
+          ...previous,
+          intakeId: canonical.intakeId
+        });
+      expect(
+        await db
+          .selectFrom("documentExtraction")
+          .selectAll()
+          .where("companyId", "=", c.companyId)
+          .execute()
+      ).toEqual([extraction]);
+      expect(
+        await db
+          .selectFrom("invoiceIntakeLine")
+          .selectAll()
+          .where("companyId", "=", c.companyId)
+          .execute()
+      ).toEqual([reviewedLine]);
+      if (placeholder)
+        expect(
+          intakes.some((intake) => intake.id === placeholder.intakeId)
+        ).toBe(false);
+      await controlInvoiceIntakeBackfill(db, c, "start");
+      expect((await runInvoiceIntakeBackfillPage(c)).state).toBe("Completed");
+      expect(
+        await db
+          .selectFrom("invoiceIntakeSource")
+          .select(["id", "intakeId", "mercuryImportId"])
+          .where("companyId", "=", c.companyId)
+          .orderBy("id")
+          .execute()
+      ).toEqual(sources);
+      expect(
+        await db
+          .selectFrom("mercuryTransactionImport")
+          .select(["id", "reviewStatus", "purchaseInvoiceId"])
+          .where("companyId", "=", c.companyId)
+          .orderBy("id")
+          .execute()
+      ).toEqual(payments);
+    }));
   it("freezes the history window, pages 100 and resumes without duplicating identities", async () =>
     fixture(async (c) => {
       await imports(c, 101);

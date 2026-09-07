@@ -4,6 +4,18 @@ Invoice intake keeps source files in the existing private Supabase bucket and re
 
 Managed inference is optional and defaults off. The ERP and manual document review remain available without Google inference configuration. Mercury history backfill is a separate explicit action; deployment never starts it.
 
+## Using the document inbox
+
+1. Open **Invoicing → Documents**. Upload a receipt/invoice, or open a document collected from the existing Mercury/Gmail integration.
+2. Review the original alongside the extracted supplier, dates, lines, quantities, units, prices, and totals. Missing values stay empty. If there are several different attachments, select the primary invoice and review the other files before proceeding.
+3. Select an existing supplier and an existing item for each line. For an unfamiliar identity, use the proposal buttons and choose its native class: Part, Material, Consumable, Tool, or Service. Saving a proposal creates no master records yet.
+4. Resolve the listed issues, save the review, and choose **Approve and create draft** when it is Ready. Approval creates the selected new masters and Draft invoice together. Confirmed mappings can be remembered for later purchases; new quantities, prices, dates, and totals are still extracted from each new document.
+5. Open the resulting invoice to continue Carbon's ordinary purchasing workflow. Historical receipts do not establish how much stock remains today: handle current inventory and any receiving, accounting, or payment actions separately.
+
+Use the inbox settings to pause inference or automatic Mercury intake independently. Historical ingestion has its own start/resume/pause controls and runs on the server after dispatch; the laptop need not stay open. A completed historical scan means the stored Mercury records have been registered, not that every document is parsed or approved. Rows without a saved receipt remain **Needs document**, while unknown identities and exceptions remain for review. The existing Mercury screen's **Refresh Mercury and Gmail documents** action can search enabled mailboxes for missing evidence.
+
+Several payments may have overlapping Gmail search results. Those candidate bundles stay separate: choose the actual invoice for each payment and explain the other files' roles. If that primary document was already approved, select its existing invoice and use evidence linking or explicit Draft enrichment. A shared supporting attachment does not combine payments or authorize another invoice.
+
 ## One-time operator setup
 
 1. Use the existing laptop deployment configuration. Create the following additional file locally:
@@ -20,9 +32,9 @@ Managed inference is optional and defaults off. The ERP and manual document revi
      "INVOICE_INTAKE_ENABLED": "true",
      "INVOICE_AI_PROJECT": "example-project",
      "INVOICE_AI_LOCATION": "us",
-     "INVOICE_AI_MODEL": "gemini-3.5-flash",
-     "INVOICE_AI_INPUT_PRICE_USD_PER_MILLION": "1.65",
-     "INVOICE_AI_OUTPUT_PRICE_USD_PER_MILLION": "9.90",
+     "INVOICE_AI_MODEL": "gemini-3.5-flash-lite",
+     "INVOICE_AI_INPUT_PRICE_USD_PER_MILLION": "0.33",
+     "INVOICE_AI_OUTPUT_PRICE_USD_PER_MILLION": "2.75",
      "INVOICE_AI_PRICE_VERIFIED_AT": "2026-09-06",
      "INVOICE_AI_MAX_INPUT_TOKENS": "32768",
      "INVOICE_AI_MAX_OUTPUT_TOKENS": "16384"
@@ -45,7 +57,7 @@ Managed inference is optional and defaults off. The ERP and manual document revi
 
    On first enablement this enables the Google AI Platform and IAM APIs, creates a dedicated service account and custom project role containing only `aiplatform.endpoints.predict`, and attaches that account to the existing VM with the `cloud-platform` OAuth scope. Attaching the account briefly stops and restarts the VM. Your laptop operator therefore needs permission to enable APIs, manage the custom role/service account and its project binding, act as the new account, and stop/update/start the VM. A newly created identity may take a short time to propagate through Google IAM; deployment retries that specific error for a bounded interval before stopping. Repeated deployments retain the same identity. Unexpected existing VM identities or broader project grants stop deployment for review.
 
-5. In ERP, open **Invoicing → Document Inbox** and its settings. Enable inference for the company and set the daily and monthly USD inference budgets. Upload a small **synthetic** receipt first. A successful ERP health check does not prove that the selected Google model or permissions work; verify that this document reaches review and shows its extraction result. Verify classification quality before starting historical backfill.
+5. In ERP, open **Invoicing → Documents** and its settings. Enable inference for the company and set the daily and monthly USD inference budgets. Upload a small **synthetic** receipt first. A successful ERP health check does not prove that the selected Google model or permissions work; verify that this document reaches review and shows its extraction result. Verify classification quality before starting historical backfill.
 
 Google authentication uses short-lived tokens from the VM metadata server. There is no API key, secret JSON file, model gateway, or additional production dependency. All programs with access to that VM's metadata identity can request the same limited inference permission; this is a VM boundary, not container-level identity isolation.
 
@@ -90,6 +102,15 @@ Daily system backups already include Postgres and private object storage. Invoic
 - [Service retention terms](https://docs.cloud.google.com/gemini-enterprise-agent-platform/resources/zero-data-retention)
 
 ## Synthetic evaluation before a historical run
+
+The 2026-09-07 release comparison used thirty synthetic documents per candidate:
+
+| Candidate | Financial accuracy | Correct held-out repeats | Incorrect Ready documents | Result |
+|---|---:|---:|---:|---|
+| Gemini 3.5 Flash-Lite | 100% | 5/5 | 0 | Passed |
+| Gemini 3.5 Flash | 98.22% | 4/5 | 0 | Failed: one invalid response and one misread SKU |
+
+Flash-Lite is the selected configuration above. Initial item-class suggestions were correct for 72.4% of its labeled lines and remain advisory: users confirm new classes, while repeat purchases use approved mappings. These measurements cover the synthetic corpus. The same source, identity, numeric, permission, and approval checks remain active for real documents.
 
 Run these commands on the laptop to generate the public synthetic corpus into an ignored directory. The renderer uses locally installed Python Pillow and Arial/DejaVu Sans; these are development tools, not application dependencies.
 

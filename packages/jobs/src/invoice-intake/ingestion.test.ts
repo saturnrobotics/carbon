@@ -16,6 +16,7 @@ import {
   getGroupId,
   groups
 } from "../../../database/supabase/functions/lib/seed.data";
+import { registerMercuryInvoiceSources } from "./backfill";
 import type { InvoiceActor } from "./contracts";
 import { INVOICE_LIMITS } from "./contracts";
 import {
@@ -159,6 +160,10 @@ describe.skipIf(!databaseUrl)(
     });
     afterEach(async () => {
       if (!actor) return;
+      await db
+        .deleteFrom("documentExtraction")
+        .where("companyId", "=", actor.companyId)
+        .execute();
       await db
         .deleteFrom("invoiceIntake")
         .where("companyId", "=", actor.companyId)
@@ -428,6 +433,327 @@ describe.skipIf(!databaseUrl)(
             .selectFrom("purchaseInvoice")
             .select("status")
             .where("id", "=", posted.id)
+            .executeTakeFirstOrThrow()
+        ).status
+      ).toBe("Open");
+    });
+    it.each([
+      "header",
+      "proposal",
+      "reviewed",
+      "ignored",
+      "canonical-ignored",
+      "revision",
+      "generation",
+      "line",
+      "extraction",
+      "invoice-link",
+      "supplier-link",
+      "document"
+    ])("refuses to consolidate a payment placeholder with %s evidence or decisions", async (change) => {
+      const canonical = await registerInvoiceSource(
+        db,
+        storage,
+        actor,
+        manual("canonical")
+      );
+      const path = `${actor.companyId}/mercury/installment/invoice.pdf`;
+      objects.set(path, bytes);
+      const imported = await mercury([
+        { path, source: "gmail", fileName: "invoice.pdf" }
+      ]);
+      const placeholder = await registerInvoiceSource(db, storage, actor, {
+        kind: "mercury",
+        sourceKey: "payment",
+        mercuryImportId: imported.id
+      });
+      const update = db
+        .updateTable("invoiceIntake")
+        .where("companyId", "=", actor.companyId)
+        .where("id", "=", placeholder.intakeId);
+      if (change === "header")
+        await update
+          .set({ header: JSON.stringify({ invoiceNumber: "HUMAN-REVIEW" }) })
+          .execute();
+      if (change === "proposal")
+        await update
+          .set({ newSupplier: JSON.stringify({ name: "Proposed supplier" }) })
+          .execute();
+      if (change === "reviewed")
+        await update.set({ status: "NeedsReview" }).execute();
+      if (change === "ignored")
+        await update.set({ status: "Ignored" }).execute();
+      if (change === "canonical-ignored")
+        await db
+          .updateTable("invoiceIntake")
+          .set({ status: "Ignored" })
+          .where("companyId", "=", actor.companyId)
+          .where("id", "=", canonical.intakeId)
+          .execute();
+      if (change === "revision") await update.set({ revision: 1 }).execute();
+      if (change === "generation")
+        await update.set({ generation: 1 }).execute();
+      if (change === "line")
+        await db
+          .insertInto("invoiceIntakeLine")
+          .values({
+            companyId: actor.companyId,
+            createdBy: actor.userId,
+            intakeId: placeholder.intakeId,
+            lineKey: "human-line",
+            sortOrder: 0,
+            description: "Human line"
+          })
+          .execute();
+      if (change === "extraction")
+        await db
+          .insertInto("documentExtraction")
+          .values({
+            companyId: actor.companyId,
+            createdBy: actor.userId,
+            intakeId: placeholder.intakeId,
+            documentType: "purchaseInvoice",
+            sourceDocument: "invoice.pdf",
+            storagePath: path,
+            generation: 0,
+            inputRevision: 0,
+            attemptNumber: 1,
+            operation: "extract",
+            status: "failed"
+          })
+          .execute();
+      if (change === "invoice-link") {
+        const draft = await invoice();
+        await update.set({ purchaseInvoiceId: draft.id }).execute();
+        await db
+          .updateTable("mercuryTransactionImport")
+          .set({ purchaseInvoiceId: draft.id })
+          .where("companyId", "=", actor.companyId)
+          .where("id", "=", imported.id)
+          .execute();
+      }
+      if (change === "supplier-link") {
+        const invoices = [await invoice(), await invoice()];
+        const suppliers = await db
+          .selectFrom("purchaseInvoice")
+          .innerJoin(
+            "supplierInteraction",
+            "supplierInteraction.id",
+            "purchaseInvoice.supplierInteractionId"
+          )
+          .select("supplierInteraction.supplierId")
+          .where("purchaseInvoice.companyId", "=", actor.companyId)
+          .where(
+            "purchaseInvoice.id",
+            "in",
+            invoices.map((entry) => entry.id)
+          )
+          .execute();
+        await update.set({ supplierId: suppliers[0]!.supplierId }).execute();
+        await db
+          .updateTable("mercuryTransactionImport")
+          .set({ supplierId: suppliers[0]!.supplierId })
+          .where("companyId", "=", actor.companyId)
+          .where("id", "=", imported.id)
+          .execute();
+        await db
+          .updateTable("invoiceIntake")
+          .set({ supplierId: suppliers[1]!.supplierId })
+          .where("companyId", "=", actor.companyId)
+          .where("id", "=", canonical.intakeId)
+          .execute();
+      }
+      if (change === "document") {
+        const otherPath = `${actor.companyId}/mercury/installment/other.pdf`;
+        objects.set(
+          otherPath,
+          new TextEncoder().encode("%PDF-1.4 Different invoice")
+        );
+        await db
+          .updateTable("mercuryTransactionImport")
+          .set({
+            attachments: JSON.stringify([
+              { path, source: "gmail", fileName: "invoice.pdf" },
+              { path: otherPath, source: "gmail", fileName: "other.pdf" }
+            ])
+          })
+          .where("companyId", "=", actor.companyId)
+          .where("id", "=", imported.id)
+          .execute();
+        await registerInvoiceSource(db, storage, actor, {
+          kind: "gmail",
+          sourceKey: "other-file",
+          mercuryImportId: imported.id,
+          storagePath: otherPath
+        });
+      }
+      const intakes = await db
+        .selectFrom("invoiceIntake")
+        .selectAll()
+        .where("companyId", "=", actor.companyId)
+        .orderBy("id")
+        .execute();
+      const sources = await db
+        .selectFrom("invoiceIntakeSource")
+        .selectAll()
+        .where("companyId", "=", actor.companyId)
+        .orderBy("id")
+        .execute();
+      await expect(
+        registerInvoiceSource(db, storage, actor, {
+          kind: "gmail",
+          sourceKey: "duplicate-file",
+          mercuryImportId: imported.id,
+          storagePath: path
+        })
+      ).rejects.toThrow("invoice_source_intake_conflict");
+      expect(
+        await db
+          .selectFrom("invoiceIntake")
+          .selectAll()
+          .where("companyId", "=", actor.companyId)
+          .orderBy("id")
+          .execute()
+      ).toEqual(intakes);
+      expect(
+        await db
+          .selectFrom("invoiceIntakeSource")
+          .selectAll()
+          .where("companyId", "=", actor.companyId)
+          .orderBy("id")
+          .execute()
+      ).toEqual(sources);
+    });
+    it.each([
+      false,
+      true
+    ])("replays separately reviewed payment evidence explicitly linked to the same invoice (sole shared file: %s)", async (soleSharedFile) => {
+      const native = await invoice("Open");
+      const records: { importId: string; intakeId: string }[] = [];
+      for (const payment of ["first", "second"]) {
+        const attachments = ["shared", `${payment}-only`].map((content) => {
+          const path = `${actor.companyId}/mercury/${payment}/${content}.pdf`;
+          objects.set(path, new TextEncoder().encode(`%PDF-1.4 ${content}`));
+          return { path, source: "gmail", fileName: `${content}.pdf` };
+        });
+        const imported = await mercury(attachments);
+        const result = await registerMercuryInvoiceSources(
+          { ...actor, db, storage },
+          imported.id
+        );
+        records.push({ importId: imported.id, intakeId: result.intakeId });
+      }
+      if (soleSharedFile) {
+        // Model pre-existing independently reviewed evidence whose native
+        // invoice association has been explicitly confirmed by the operator.
+        await db
+          .deleteFrom("invoiceIntakeSource")
+          .where("companyId", "=", actor.companyId)
+          .where("fileName", "!=", "shared.pdf")
+          .execute();
+        await sql`UPDATE public."mercuryTransactionImport" SET attachments=(
+          SELECT jsonb_agg(a) FROM jsonb_array_elements(attachments) a WHERE a->>'fileName'='shared.pdf'
+        ) WHERE "companyId"=${actor.companyId}`.execute(db);
+      }
+      await db
+        .updateTable("invoiceIntake")
+        .set({
+          status: "Linked",
+          purchaseInvoiceId: native.id,
+          approvedBy: actor.userId,
+          approvedAt: sql<string>`now()`
+        })
+        .where("companyId", "=", actor.companyId)
+        .execute();
+      await db
+        .updateTable("mercuryTransactionImport")
+        .set({ reviewStatus: "Imported", purchaseInvoiceId: native.id })
+        .where("companyId", "=", actor.companyId)
+        .execute();
+      const sources = await db
+        .selectFrom("invoiceIntakeSource")
+        .selectAll()
+        .where("companyId", "=", actor.companyId)
+        .orderBy("id")
+        .execute();
+      for (const record of records) {
+        expect(
+          await registerMercuryInvoiceSources(
+            { ...actor, db, storage },
+            record.importId
+          )
+        ).toMatchObject({ intakeId: record.intakeId, status: "Linked" });
+      }
+      expect(
+        await db
+          .selectFrom("invoiceIntakeSource")
+          .selectAll()
+          .where("companyId", "=", actor.companyId)
+          .orderBy("id")
+          .execute()
+      ).toEqual(sources);
+      expect(
+        await db
+          .selectFrom("invoiceIntake")
+          .select("id")
+          .where("companyId", "=", actor.companyId)
+          .execute()
+      ).toHaveLength(2);
+      const third = await mercury([], "Imported", native.id);
+      const registered = await registerMercuryInvoiceSources(
+        { ...actor, db, storage },
+        third.id
+      );
+      expect(registered.status).toBe("Linked");
+      expect(records.map((record) => record.intakeId)).not.toContain(
+        registered.intakeId
+      );
+      const thirdPath = `${actor.companyId}/mercury/third/shared.pdf`;
+      objects.set(thirdPath, new TextEncoder().encode("%PDF-1.4 shared"));
+      await db
+        .updateTable("mercuryTransactionImport")
+        .set({
+          attachments: JSON.stringify([
+            { path: thirdPath, source: "gmail", fileName: "shared.pdf" }
+          ])
+        })
+        .where("companyId", "=", actor.companyId)
+        .where("id", "=", third.id)
+        .execute();
+      expect(
+        await registerMercuryInvoiceSources({ ...actor, db, storage }, third.id)
+      ).toMatchObject({ intakeId: registered.intakeId, status: "Linked" });
+      expect(
+        await db
+          .selectFrom("invoiceIntake")
+          .select("purchaseInvoiceId")
+          .where("companyId", "=", actor.companyId)
+          .where("id", "=", registered.intakeId)
+          .executeTakeFirstOrThrow()
+      ).toEqual({ purchaseInvoiceId: native.id });
+      expect(
+        await db
+          .selectFrom("invoiceIntakeSource")
+          .selectAll()
+          .where("companyId", "=", actor.companyId)
+          .where("mercuryImportId", "!=", third.id)
+          .orderBy("id")
+          .execute()
+      ).toEqual(sources);
+      expect(
+        await db
+          .selectFrom("invoiceIntake")
+          .select("id")
+          .where("companyId", "=", actor.companyId)
+          .execute()
+      ).toHaveLength(3);
+      expect(
+        (
+          await db
+            .selectFrom("purchaseInvoice")
+            .select("status")
+            .where("companyId", "=", actor.companyId)
+            .where("id", "=", native.id)
             .executeTakeFirstOrThrow()
         ).status
       ).toBe("Open");

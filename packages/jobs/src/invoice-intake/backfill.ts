@@ -1,14 +1,18 @@
 import { createHash } from "node:crypto";
 import type { Database } from "@carbon/database";
 import type { Kysely, KyselyDatabase } from "@carbon/database/client";
-import { parseMercuryAttachments } from "@carbon/database/mercury";
+import {
+  isMercuryAttachmentPath,
+  parseMercuryAttachments
+} from "@carbon/database/mercury";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { sql } from "kysely";
-import type { InvoiceActor } from "./contracts";
+import { INVOICE_LIMITS, type InvoiceActor } from "./contracts";
 import {
   assertInvoiceSourceAccess,
   InvoiceSourceError,
-  registerInvoiceSource
+  registerInvoiceSource,
+  validateInvoiceSourceBytes
 } from "./ingestion";
 
 type DatabaseClient = Kysely<KyselyDatabase>;
@@ -136,6 +140,52 @@ export async function registerMercuryInvoiceSources(
   const attachments = parseMercuryAttachments(record.attachments);
   if (attachments.length > 100)
     throw new InvoiceSourceError("invoice_source_attachment_limit");
+  // Gmail matching can attach several candidates to different payments. Verify
+  // the complete saved set before using a shared file as invoice identity.
+  const sha256s = new Set<string>();
+  const cachedFiles = new Map<string, Blob>();
+  let cachedBytes = 0;
+  for (const attachment of attachments) {
+    if (!isMercuryAttachmentPath(context.companyId, attachment.path))
+      throw new InvoiceSourceError("invoice_source_attachment_unavailable");
+    const cached = cachedFiles.get(attachment.path);
+    const downloaded = cached
+      ? { data: cached, error: null }
+      : await context.storage.from("private").download(attachment.path);
+    if (downloaded.error || !downloaded.data)
+      throw new InvoiceSourceError("invoice_source_attachment_unavailable");
+    if (downloaded.data.size > INVOICE_LIMITS.pdfBytes)
+      throw new InvoiceSourceError("invoice_source_size_invalid");
+    const verified = validateInvoiceSourceBytes(
+      new Uint8Array(await downloaded.data.arrayBuffer())
+    );
+    sha256s.add(verified.sha256);
+    if (
+      !cached &&
+      cachedBytes + downloaded.data.size <= 2 * INVOICE_LIMITS.pdfBytes
+    ) {
+      cachedFiles.set(attachment.path, downloaded.data);
+      cachedBytes += downloaded.data.size;
+    }
+  }
+  const storage = {
+    from: (bucket: string) => {
+      const original = context.storage.from(bucket);
+      return {
+        upload: original.upload?.bind(original),
+        download: (path: string) => {
+          const data = bucket === "private" ? cachedFiles.get(path) : undefined;
+          return data
+            ? Promise.resolve({ data, error: null })
+            : original.download(path);
+        }
+      };
+    }
+  } as Context["storage"];
+  const mercuryDocumentSet = {
+    attachments: JSON.stringify(attachments),
+    sha256s: [...sha256s]
+  };
   for (const attachment of attachments) {
     // The source reader verifies the path, source kind and bytes against the saved
     // import again. No provider URLs, mailbox credential, or model input is trusted here.
@@ -145,12 +195,13 @@ export async function registerMercuryInvoiceSources(
       attachment.mailbox ?? "",
       attachment.messageId ?? ""
     ]);
-    result = await registerInvoiceSource(context.db, context.storage, actor, {
+    result = await registerInvoiceSource(context.db, storage, actor, {
       kind: attachment.source,
       sourceKey: `attachment:${createHash("sha256").update(identity).digest("hex")}`,
       mercuryImportId: record.id,
       storagePath: attachment.path,
-      historical
+      historical,
+      mercuryDocumentSet
     });
   }
   return { ...result, documents: attachments.length };
