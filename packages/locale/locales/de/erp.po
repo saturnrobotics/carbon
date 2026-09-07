@@ -653,6 +653,9 @@ msgstr "Ein Name ist erforderlich, um eine Ansicht zu speichern"
 msgid "A negotiated price pinned for a specific item — by customer, customer type, or all customers — that replaces the base price outright, optionally with quantity breaks."
 msgstr "Ein verhandelter, für einen bestimmten Artikel festgelegter Preis — pro Kunde, Kundentyp oder alle Kunden — der den Basispreis vollständig ersetzt, optional mit Mengenstaffeln."
 
+msgid "A new extraction is available. Your saved corrections and proposals were preserved. Compare the extracted facts below with your review, including added or changed source lines."
+msgstr "Eine neue Extraktion ist verfügbar. Ihre gespeicherten Korrekturen und Vorschläge wurden beibehalten. Vergleichen Sie die unten extrahierten Angaben mit Ihrer Überprüfung, einschließlich hinzugefügter oder geänderter Quellpositionen."
+
 msgid "A new purchase order will be created for each supplier. Alternatively, you can choose an existing draft purchase order for the supplier to add the outside operations to."
 msgstr "Für jeden Lieferanten wird eine neue Bestellung erstellt. Alternativ können Sie eine vorhandene Entwurfs-Bestellung für den Lieferanten auswählen, um die externen Arbeitsgänge hinzuzufügen."
 
@@ -1164,6 +1167,9 @@ msgstr "Aktionstyp"
 msgid "Action Types"
 msgstr "Aktionstypen"
 
+msgid "Actionable"
+msgstr "Zu bearbeiten"
+
 msgid "Actions"
 msgstr "Aktionen"
 
@@ -1300,11 +1306,17 @@ msgstr "Externen Mitarbeiter hinzufügen"
 msgid "Add cost center"
 msgstr "Kostenstelle hinzufügen"
 
+msgid "Add each extracted source line to the review or exclude it with a reason"
+msgstr "Fügen Sie jede extrahierte Quellposition zur Überprüfung hinzu oder schließen Sie sie mit einer Begründung aus"
+
 msgid "Add Employee"
 msgstr "Mitarbeiter hinzufügen"
 
 msgid "Add Entry"
 msgstr "Eintrag hinzufügen"
+
+msgid "Add extracted line"
+msgstr "Extrahierte Position hinzufügen"
 
 msgid "Add Feature"
 msgstr "Feature hinzufügen"
@@ -3850,6 +3862,9 @@ msgstr "Löschen bestätigen"
 
 msgid "Confirm disconnect"
 msgstr "Trennung bestätigen"
+
+msgid "Confirm explanation"
+msgstr "Erklärung bestätigen"
 
 msgid "Confirm how your company runs and lock the scope."
 msgstr "Bestätigen Sie, wie Ihr Unternehmen läuft, und sperren Sie den Umfang."
@@ -6663,6 +6678,9 @@ msgstr "Geben Sie eine Losnummer ein, bevor Sie das Verfallsdatum festlegen"
 msgid "Enter a quantity between 1 and {0}."
 msgstr "Geben Sie eine Menge zwischen 1 und {0} ein."
 
+msgid "Enter a review reason for every unreadable attachment"
+msgstr "Geben Sie für jeden unlesbaren Anhang eine Prüfbegründung ein"
+
 msgid "Enter and approve vendor bills against a PO (three-way match)"
 msgstr "Erfassen und genehmigen Sie Lieferantenrechnungen gegen eine Bestellung (Dreiwege-Abgleich)"
 
@@ -6894,11 +6912,17 @@ msgstr "Wechselkurse"
 msgid "Exchanging the authorization code for an access token failed. Try connecting again."
 msgstr "Der Austausch des Autorisierungscodes gegen ein Zugriffstoken ist fehlgeschlagen. Versuchen Sie die Verbindung erneut."
 
+msgid "Exclude source line"
+msgstr "Quellposition ausschließen"
+
 msgid "Excluded"
 msgstr "Ausgeschlossen"
 
 msgid "Excluded source lines"
 msgstr "Ausgeschlossene Quellzeilen"
+
+msgid "Exclusion reason"
+msgstr "Ausschlussgrund"
 
 msgid "Executive P&L"
 msgstr "Geschäftsführungs-Gewinn- und Verlustrechnung"
@@ -7071,6 +7095,9 @@ msgstr "Erläutern Sie vor der Genehmigung die Zahlungsdifferenz oder den Zahlun
 
 msgid "Explain the payment difference, status, or allocation"
 msgstr "Zahlungsdifferenz, Status oder Zuordnung erläutern"
+
+msgid "Explain why this unreadable attachment adds no separate invoice lines. Upload a readable version if it contains purchase details."
+msgstr "Erklären Sie, warum dieser unlesbare Anhang keine zusätzlichen Rechnungspositionen enthält. Laden Sie eine lesbare Version hoch, wenn er Einkaufsdetails enthält."
 
 msgid "Explorer"
 msgstr "Explorer"
@@ -8380,6 +8407,9 @@ msgstr "Ich habe einen angemessenen Grund zu der Annahme, dass diese Person gem�
 msgid "I resolved these extraction issues and checked all source lines"
 msgstr "Ich habe diese Extraktionsprobleme behoben und alle Quellzeilen überprüft"
 
+msgid "I reviewed the new extraction against my saved corrections"
+msgstr "Ich habe die neue Extraktion mit meinen gespeicherten Korrekturen abgeglichen"
+
 msgid "I'm Still Working"
 msgstr "Ich arbeite noch"
 
@@ -8559,6 +8589,9 @@ msgstr "Inaktive einschließen"
 
 msgid "Included"
 msgstr "Enthalten"
+
+msgid "Included in review"
+msgstr "In der Überprüfung enthalten"
 
 msgid "Includes tax and shipping costs"
 msgstr "Enthält Steuern und Versandkosten"
@@ -9484,6 +9517,9 @@ msgstr "Zeilenstatus"
 msgid "Line tax amount"
 msgstr "Zeilensteuerbetrag"
 
+msgid "Line total"
+msgstr "Positionsgesamtbetrag"
+
 msgid "Line type"
 msgstr "Linientyp"
 
@@ -9884,6 +9920,9 @@ msgstr "Fertigung"
 
 msgid "Map accounts"
 msgstr "Konten zuordnen"
+
+msgid "Map every existing draft financial line before merging. These lines are not yet mapped to a reviewed receipt line:"
+msgstr "Ordnen Sie vor dem Zusammenführen jede bestehende Finanzposition des Entwurfs zu. Diese Positionen sind noch keiner geprüften Belegposition zugeordnet:"
 
 msgid "Map Extracted Lines"
 msgstr "Extrahierte Zeilen zuordnen"
@@ -12341,6 +12380,9 @@ msgstr "Zahlungsbestätigung"
 msgid "Payment Date"
 msgstr "Zahlungsdatum"
 
+msgid "Payment details changed. Review your explanation against the current evidence and confirm it again."
+msgstr "Die Zahlungsdetails haben sich geändert. Prüfen Sie Ihre Erklärung anhand der aktuellen Belege und bestätigen Sie sie erneut."
+
 msgid "Payment history is still being imported. The next hourly run will continue where it stopped."
 msgstr "Die Zahlungshistorie wird noch importiert. Der nächste stündliche Lauf setzt dort fort, wo er aufgehört hat."
 
@@ -14378,6 +14420,9 @@ msgstr "Überprüfungsgrund für {name}"
 msgid "Review supplier"
 msgstr "Lieferant prüfen"
 
+msgid "Review the new extraction against your saved corrections before approval"
+msgstr "Prüfen Sie die neue Extraktion vor der Genehmigung anhand Ihrer gespeicherten Korrekturen"
+
 msgid "Review the original invoice to select the correct supplier and item classes, confirm pack sizes and totals, and map each existing line explicitly."
 msgstr "Überprüfen Sie die Originalrechnung, um den richtigen Lieferanten und die richtigen Artikelklassen auszuwählen, bestätigen Sie Packungsgrößen und Gesamtmengen und ordnen Sie jede vorhandene Zeile explizit zu."
 
@@ -14783,6 +14828,9 @@ msgstr "Bewertung speichern"
 
 msgid "Save sync settings"
 msgstr "Synchronisierungseinstellungen speichern"
+
+msgid "Save the edited invoice total or currency, then confirm the payment explanation against the updated amounts."
+msgstr "Speichern Sie den geänderten Gesamtbetrag oder die Währung der Rechnung und bestätigen Sie dann die Zahlungserklärung anhand der aktualisierten Beträge."
 
 #. placeholder {0}: copy.moduleLabel
 msgid "Save this review, add the required definition in {0}, and reopen the proposal to select it."
@@ -15919,6 +15967,9 @@ msgstr "Quellartikel"
 
 msgid "Source Job"
 msgstr "Quell-Fertigungsauftrag"
+
+msgid "Source line"
+msgstr "Quellposition"
 
 msgid "Source line total"
 msgstr "Summe der Quellzeile"
@@ -17644,6 +17695,9 @@ msgstr "Es gibt nichts Ausstehende, auf das diese Gutschriften angewendet werden
 msgid "These are bank payment details. Invoice totals and the supplier are reviewed separately from the receipt."
 msgstr "Dies sind Angaben zur Bankzahlung. Rechnungsbeträge und Lieferant werden anhand des Belegs gesondert geprüft."
 
+msgid "These are the latest parsed facts. Your review fields remain unchanged until you edit them or add a source line."
+msgstr "Dies sind die zuletzt extrahierten Angaben. Ihre Überprüfungsfelder bleiben unverändert, bis Sie sie bearbeiten oder eine Quellposition hinzufügen."
+
 msgid "These custom fields will only be available for entities with the same tags"
 msgstr "Diese benutzerdefinierten Felder sind nur für Entitäten mit denselben Tags verfügbar"
 
@@ -17883,6 +17937,9 @@ msgstr "Dieser Kundenauftrag hat zugeordnete Fertigungsaufträge. Wählen Sie, w
 
 msgid "This sales order has lines that require jobs to be created"
 msgstr "Dieser Kundenauftrag hat Positionen, für die Fertigungsaufträge erstellt werden müssen"
+
+msgid "This source line is not in your saved review."
+msgstr "Diese Quellposition ist nicht in Ihrer gespeicherten Überprüfung enthalten."
 
 msgid "This station runs ability-gated work — it only runs while a qualified operator is on shift; operators assigned on the manning board further shape available labor."
 msgstr "Diese Station führt Qualifikations-gesteuerte Arbeitsschritte durch – sie läuft nur, wenn ein qualifizierter Werker auf Schicht ist; an der Manning-Tafel zugeordnete Werker prägen die verfügbare Arbeitskraft weiter."
@@ -18723,8 +18780,8 @@ msgstr "Hochladen"
 msgid "Upload a PDF first"
 msgstr "Laden Sie zuerst eine PDF hoch"
 
-msgid "Upload a receipt or review documents collected from Mercury and Gmail. Confirm suppliers, items, and amounts before creating a draft invoice."
-msgstr "Hochladen eine Quittung hoch oder überprüfen Sie die von Mercury und Gmail gesammelten Dokumente. Bestätigen Sie Lieferanten, Artikel und Beträge, bevor Sie einen Rechnungsentwurf erstellen."
+msgid "Upload a receipt or review documents collected from Mercury. Confirm suppliers, items, and amounts before creating a draft invoice."
+msgstr "Laden Sie einen Beleg hoch oder überprüfen Sie aus Mercury gesammelte Dokumente. Bestätigen Sie Lieferanten, Artikel und Beträge, bevor Sie einen Rechnungsentwurf erstellen."
 
 msgid "Upload and review"
 msgstr "Hochladen und überprüfen"

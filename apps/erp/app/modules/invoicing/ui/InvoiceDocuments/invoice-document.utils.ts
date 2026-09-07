@@ -10,6 +10,7 @@ export type InvoicePreviewSource = {
   fileName: string | null;
   mediaType: string | null;
   url: string | null;
+  archived?: boolean;
 };
 
 export function selectInvoicePreviewSource<T extends InvoicePreviewSource>(
@@ -71,4 +72,84 @@ export function invoiceCountryCode(
       country.label.trim().toLowerCase() === normalized
   );
   return matches.length === 1 ? matches[0].value : value;
+}
+
+type InvoiceInboxHeader = Pick<
+  InvoiceIntakeReview["header"],
+  | "sourceSupplierName"
+  | "invoiceNumber"
+  | "issueDate"
+  | "total"
+  | "currencyCode"
+>;
+type InvoiceInboxPayment = {
+  payee: string | null;
+  reference: string | null;
+  transactionDate: string;
+  amount: string;
+  currencyCode: string;
+};
+export function invoiceInboxFacts(
+  header: InvoiceInboxHeader | null,
+  payments: readonly InvoiceInboxPayment[],
+  status?: string
+) {
+  // A retained extraction is not current receipt evidence when the receipt is missing.
+  if (status === "NeedsDocument") header = null;
+  const fact = (
+    value: string | null | undefined,
+    candidates: (string | null)[],
+    distinct = true
+  ) => {
+    if (value?.trim()) return { value, fromPayment: false };
+    const values = candidates.filter(
+      (candidate): candidate is string => !!candidate?.trim()
+    );
+    const fallback =
+      (distinct ? [...new Set(values)] : values).join(" · ") || null;
+    return { value: fallback, fromPayment: fallback !== null };
+  };
+  return {
+    supplier: fact(
+      header?.sourceSupplierName,
+      payments.map((payment) => payment.payee)
+    ),
+    reference: fact(
+      header?.invoiceNumber,
+      payments.map((payment) => payment.reference)
+    ),
+    date: fact(
+      header?.issueDate,
+      payments.map((payment) => payment.transactionDate)
+    ),
+    amount: fact(
+      header?.total
+        ? `${header.currencyCode ?? ""} ${header.total}`.trim()
+        : null,
+      payments.map((payment) => `${payment.currencyCode} ${payment.amount}`),
+      false
+    )
+  };
+}
+
+export type InvoiceReceiptAcknowledgement = {
+  mercuryImportId: string;
+  attachmentId: string;
+  fingerprint: string;
+  reason: string;
+};
+export function invoiceReceiptReason(
+  acknowledgements: readonly InvoiceReceiptAcknowledgement[],
+  mercuryImportId: string,
+  attachmentId: string,
+  fingerprint: string
+) {
+  return (
+    acknowledgements.find(
+      (entry) =>
+        entry.mercuryImportId === mercuryImportId &&
+        entry.attachmentId === attachmentId &&
+        entry.fingerprint === fingerprint
+    )?.reason ?? null
+  );
 }

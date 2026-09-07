@@ -49,6 +49,9 @@ export const mercuryAttachmentSchema = z.object({
   path: z.string(),
   fileName: z.string(),
   source: z.enum(["mercury", "gmail"]),
+  /** Historical originals remain stored after removal or replacement at Mercury. */
+  current: z.boolean().optional(),
+  receiptId: z.string().optional(),
   mailbox: z.string().optional(),
   messageId: z.string().optional()
 });

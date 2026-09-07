@@ -1,5 +1,25 @@
 # Lessons Learned
 
+## Reparse safety must include corrections saved before the job starts
+
+**Context:** A later receipt or explicit reparse starts a new extraction generation for an existing intake.
+
+**Problem:** Revision checks preserved edits made during inference, but successful hydration still replaced corrections that existed before admission. Happy-path extraction counts and concurrent-edit tests did not prove preservation.
+
+**Rule:** Keep immutable extraction output separate from saved review decisions. Test both late-document arrival and explicit reparse after saved header/line corrections, and require explicit acknowledgement of newly extracted evidence. Apply one eligibility policy to every duplicate-source guard. Validate all unresolved attachment decisions and the complete resulting Draft, not only incoming lines.
+
+**Applies to:** Invoice intake, document retries, payment reconciliation, and generated proposals.
+
+## Fork verification must run on the fork's actual integration branch
+
+**Context:** Relying on inherited CI and root workspace test commands after adding module tests.
+
+**Problem:** CI targeted upstream's branch name and ERP lacked a test command, so successful manual checks were not a repeatable release gate.
+
+**Rule:** Inspect the actual CI trigger and task graph. Run explicit pure and isolated-database suites on the integration branch; keep synthetic browser fixtures and generic operational tooling maintained. Finish tracked release notes before deployment and keep post-deployment evidence private to avoid a notes-only rollout.
+
+**Applies to:** Public forks, CI, deployment scripts, and release acceptance claims.
+
 ## Receipt intake completion must prove usable evidence
 
 **Context:** Connecting payment imports, attachment collection, extraction, review, and approval.

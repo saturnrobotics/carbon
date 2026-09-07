@@ -487,6 +487,92 @@ describe.skipIf(!databaseUrl)("Mercury sync against PostgreSQL", () => {
     });
   });
 
+  it("keeps replaced receipt versions archived when the current download later fails", async () => {
+    const attached = payment({
+      attachments: [
+        {
+          id: "receipt",
+          fileName: "receipt.pdf",
+          url: "https://example.s3.amazonaws.com/receipt.pdf"
+        }
+      ]
+    });
+    vi.mocked(mercury.listTransactions).mockResolvedValue({
+      payments: [attached],
+      nextPage: null
+    });
+    vi.mocked(mercury.getTransaction).mockResolvedValue(attached);
+    await runMercurySync(context);
+    vi.mocked(mercury.downloadAttachment).mockResolvedValue(
+      new TextEncoder().encode("%PDF-1.4 replacement receipt")
+    );
+    await runMercurySync(context);
+    const replaced = (await imports())[0]!.attachments as Array<{
+      path: string;
+      current: boolean;
+    }>;
+    expect(replaced).toHaveLength(2);
+    expect(replaced.filter((a) => a.current)).toHaveLength(1);
+    const currentPath = replaced.find((a) => a.current)!.path;
+    vi.mocked(mercury.downloadAttachment).mockRejectedValue(
+      new ProviderError("Attachment", "request_failed", 503)
+    );
+    await runMercurySync(context);
+    const failed = (await imports())[0]!.attachments as Array<{
+      path: string;
+      current: boolean;
+    }>;
+    expect(failed.filter((a) => a.current).map((a) => a.path)).toEqual([
+      currentPath
+    ]);
+    expect((await imports())[0]!.vendorSuggestion).toMatchObject({
+      mercuryReceiptAcquisition: { attachments: [{ status: "unavailable" }] }
+    });
+  });
+
+  it("archives removed Mercury receipts and reactivates their retained original on reattachment", async () => {
+    const attached = payment({
+      attachments: [
+        {
+          id: "receipt",
+          fileName: "receipt.pdf",
+          url: "https://example.s3.amazonaws.com/receipt.pdf"
+        }
+      ]
+    });
+    vi.mocked(mercury.listTransactions).mockResolvedValue({
+      payments: [attached],
+      nextPage: null
+    });
+    vi.mocked(mercury.getTransaction).mockResolvedValue(attached);
+    await runMercurySync(context);
+    const original = (await imports())[0]!.attachments as Array<{
+      path: string;
+      current?: boolean;
+    }>;
+    vi.mocked(mercury.listTransactions).mockResolvedValue({
+      payments: [payment()],
+      nextPage: null
+    });
+    vi.mocked(mercury.getTransaction).mockResolvedValue(payment());
+    await runMercurySync(context);
+    expect((await imports())[0]!.attachments).toMatchObject([
+      { path: original[0]!.path, current: false }
+    ]);
+    expect((await imports())[0]!.vendorSuggestion).toMatchObject({
+      mercuryReceiptAcquisition: { attachmentCount: 0 }
+    });
+    vi.mocked(mercury.listTransactions).mockResolvedValue({
+      payments: [attached],
+      nextPage: null
+    });
+    vi.mocked(mercury.getTransaction).mockResolvedValue(attached);
+    await runMercurySync(context);
+    expect((await imports())[0]!.attachments).toMatchObject([
+      { path: original[0]!.path, current: true, receiptId: "receipt" }
+    ]);
+  });
+
   it("retains Mercury provenance when Gmail returns the same receipt bytes", async () => {
     context.mailboxes = [mailboxConfig];
     context.gmailClients = [gmail];

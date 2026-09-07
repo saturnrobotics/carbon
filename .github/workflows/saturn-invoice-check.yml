@@ -1,0 +1,47 @@
+name: Saturn invoice checks
+
+on:
+  push:
+    branches: [saturn/main]
+  pull_request:
+    branches: [saturn/main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: saturn-invoice-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  invoice:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      CARBON_PORTLESS: "0"
+      CARBON_EDITION: community
+      INVOICE_INTAKE_ENABLED: "false"
+      INNGEST_SIGNING_KEY: test
+      INNGEST_EVENT_KEY: test
+      SESSION_SECRET: invoice-ci-session-secret
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Invoice unit and operator tests
+        run: |
+          python3 contrib/deploying/gcp-tailscale/check_invoice.py
+          python3 -m unittest discover -s contrib/deploying/gcp-tailscale -p 'test_*invoice*.py'
+      - name: Install pinned test browser
+        run: pnpm --dir apps/erp exec playwright-core install --with-deps chromium
+      - name: Isolated database and browser regressions
+        # GitHub-hosted checkout only: crbn owns new volumes, migrations and
+        # teardown. This command must not be copied into a working local stack.
+        run: pnpm exec crbn up --no-apps --no-portless --minimal --no-regen --volumes --run 'python3 contrib/deploying/gcp-tailscale/check_invoice.py --integration --browser --environment .env.local'
+      - name: Scoped application and job types
+        run: pnpm exec turbo run typecheck --filter=erp --filter=@carbon/jobs

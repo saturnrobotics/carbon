@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import {
   getPostgresConnectionPool,
   type KyselyDatabase
@@ -310,7 +310,9 @@ describe("synthetic invoice teaching", () => {
             sourceKey: source.id,
             storageBucket: "private",
             storagePath: `${f.actor.companyId}/invoice-intake/${row.id}/source.pdf`,
-            sha256: "a".repeat(64),
+            sha256: createHash("sha256")
+              .update(JSON.stringify(source.labels))
+              .digest("hex"),
             mediaType: "application/pdf",
             byteSize: 120,
             fileName: "fixture.pdf"

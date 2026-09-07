@@ -1,5 +1,6 @@
 import { requirePermissions } from "@carbon/auth/auth.server";
 import { isMercuryAttachmentPath } from "@carbon/database/mercury";
+import { getInvoiceApprovedSourceHashes } from "@carbon/jobs";
 import { isInvoiceSourcePath } from "@carbon/jobs/invoice-intake";
 import { msg } from "@lingui/core/macro";
 import { useEffect } from "react";
@@ -23,11 +24,18 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
     actor,
     params.intakeId
   );
+  const approvedHashes = ["Approved", "Linked"].includes(result.intake.status)
+    ? getInvoiceApprovedSourceHashes(result.intake.approvalSnapshot)
+    : null;
   const signedSources = await Promise.all(
     result.sources
       .filter(
         (source) =>
-          result.eligibleSourceIds.includes(source.id) &&
+          (approvedHashes === null
+            ? result.eligibleSourceIds.includes(source.id)
+            : ["mercury", "upload"].includes(source.kind) &&
+              source.sha256 &&
+              approvedHashes.includes(source.sha256)) &&
           source.storagePath &&
           source.sha256
       )
@@ -49,6 +57,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
           storagePath: source.storagePath,
           fileName: source.fileName,
           mediaType: source.mediaType,
+          archived: !result.eligibleSourceIds.includes(source.id),
           url
         };
       })

@@ -9,6 +9,7 @@ import {
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { sql } from "kysely";
 import {
+  hasInvoiceReviewFacts,
   INVOICE_LIMITS,
   type InvoiceActor,
   invoiceSourceReviewSchema
@@ -237,8 +238,10 @@ export async function registerInvoiceSource(
       throw new InvoiceSourceError("invoice_source_changed");
     const singleMercuryDocument = input.mercuryDocumentSet
       ? new Set(input.mercuryDocumentSet.sha256s).size === 1
-      : savedAttachments.filter((attachment) => attachment.source === "mercury")
-          .length === 1;
+      : savedAttachments.filter(
+          (attachment) =>
+            attachment.source === "mercury" && attachment.current !== false
+        ).length === 1;
     const needsSourceSelection =
       !!imported &&
       !!input.mercuryDocumentSet &&
@@ -287,13 +290,14 @@ export async function registerInvoiceSource(
                 eb.and([
                   eb("sha256", "=", file.sha256),
                   eb("kind", "!=", "gmail"),
+                  sql<boolean>`coalesce(provenance->>'current','true')<>'false'`,
                   ...(imported && input.mercuryDocumentSet
                     ? [
                         sql<boolean>`NOT EXISTS (
                         SELECT 1 FROM public."invoiceIntakeSource" other
                         WHERE other."companyId"=${actor.companyId}
                           AND other."intakeId"="invoiceIntakeSource"."intakeId"
-                          AND other.kind<>'gmail' AND other.sha256 IS NOT NULL AND other.sha256<>${file.sha256})
+                          AND other.kind<>'gmail' AND coalesce(other.provenance->>'current','true')<>'false' AND other.sha256 IS NOT NULL AND other.sha256<>${file.sha256})
                       AND NOT EXISTS (
                         SELECT 1 FROM public."invoiceIntakeSource" payment
                         JOIN public."mercuryTransactionImport" m
@@ -301,7 +305,7 @@ export async function registerInvoiceSource(
                         CROSS JOIN LATERAL jsonb_array_elements(CASE WHEN jsonb_typeof(m.attachments)='array' THEN m.attachments ELSE '[]'::jsonb END) a
                         WHERE payment."companyId"=${actor.companyId}
                           AND payment."intakeId"="invoiceIntakeSource"."intakeId"
-                          AND a->>'source'='mercury'
+                          AND a->>'source'='mercury' AND coalesce(a->>'current','true')<>'false'
                           AND NOT EXISTS (SELECT 1 FROM public."invoiceIntakeSource" saved
                             WHERE saved."companyId"=payment."companyId" AND saved."intakeId"=payment."intakeId"
                               AND saved."mercuryImportId"=m.id AND saved."storagePath"=a->>'path'
@@ -415,7 +419,7 @@ export async function registerInvoiceSource(
         .where(sql<boolean>`NOT EXISTS (
           SELECT 1 FROM public."invoiceIntakeSource" s
           WHERE s."companyId"=${actor.companyId} AND s."intakeId"=${canonicalId}
-            AND s.sha256 IS NOT NULL AND s.sha256<>${file!.sha256})`)
+            AND s.kind<>'gmail' AND coalesce(s.provenance->>'current','true')<>'false' AND s.sha256 IS NOT NULL AND s.sha256<>${file!.sha256})`)
         .forUpdate()
         .executeTakeFirst();
       if (!canonical)
@@ -506,6 +510,22 @@ export async function registerInvoiceSource(
     ) {
       throw new InvoiceSourceError("invoice_source_invoice_conflict");
     }
+    const hasReviewLines =
+      intake && file
+        ? !!(await trx
+            .selectFrom("invoiceIntakeLine")
+            .select("id")
+            .where("companyId", "=", actor.companyId)
+            .where("intakeId", "=", intake.id)
+            .limit(1)
+            .executeTakeFirst())
+        : false;
+    const preserveReview =
+      !!intake &&
+      (hasInvoiceReviewFacts(intake.header) ||
+        intake.documentKind !== "unknown" ||
+        !!intake.newSupplier ||
+        hasReviewLines);
     const sourceReview = invoiceSourceReviewSchema.safeParse(intake?.header);
     const selectedPrimary = sourceReview.success
       ? sourceReview.data.primarySourceSha256
@@ -611,28 +631,34 @@ export async function registerInvoiceSource(
                       status: "NeedsReview",
                       lastErrorCode: "invoice_source_changed"
                     }
-                  : file &&
-                      (intake.status === "NeedsDocument" ||
-                        (intake.status === "NeedsReview" &&
-                          !intake.activeExtractionId &&
-                          !sources.some(
-                            (source) =>
-                              source.kind !== "gmail" && source.storagePath
-                          )))
+                  : file && preserveReview && intake.status === "NeedsDocument"
                     ? {
-                        status: requiresSourceSelection
-                          ? "NeedsReview"
-                          : "Queued",
-                        lastErrorCode: requiresSourceSelection
-                          ? "invoice_source_selection_required"
-                          : null
+                        status: "NeedsReview",
+                        lastErrorCode: "invoice_source_changed"
                       }
-                    : requiresSourceSelection && intake.status === "Queued"
+                    : file &&
+                        !preserveReview &&
+                        (intake.status === "NeedsDocument" ||
+                          (intake.status === "NeedsReview" &&
+                            !intake.activeExtractionId &&
+                            !sources.some(
+                              (source) =>
+                                source.kind !== "gmail" && source.storagePath
+                            )))
                       ? {
-                          status: "NeedsReview",
-                          lastErrorCode: "invoice_source_selection_required"
+                          status: requiresSourceSelection
+                            ? "NeedsReview"
+                            : "Queued",
+                          lastErrorCode: requiresSourceSelection
+                            ? "invoice_source_selection_required"
+                            : null
                         }
-                      : {})
+                      : requiresSourceSelection && intake.status === "Queued"
+                        ? {
+                            status: "NeedsReview",
+                            lastErrorCode: "invoice_source_selection_required"
+                          }
+                        : {})
         })
         .where("companyId", "=", actor.companyId)
         .where("id", "=", intake.id)

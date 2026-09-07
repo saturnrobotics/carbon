@@ -15,6 +15,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { sql } from "kysely";
 import type { JobDatabase } from "../db";
 import { registerAutomaticMercuryInvoiceSources } from "../invoice-intake/backfill";
+import { validateInvoiceImage } from "../invoice-intake/image";
 import { assertInvoiceSourceAccess } from "../invoice-intake/ingestion";
 import {
   type InvoiceCandidate,
@@ -89,11 +90,27 @@ export async function storeAttachment(
   transactionId: string,
   fileName: string,
   bytes: Uint8Array,
-  source: Pick<MercuryAttachment, "source" | "mailbox" | "messageId">
+  source: Pick<
+    MercuryAttachment,
+    "source" | "mailbox" | "messageId" | "current" | "receiptId"
+  >
 ): Promise<MercuryAttachment> {
   const type = fileType(bytes);
   if (!type || bytes.length > 10 * 1024 * 1024)
     throw new ProviderError("Attachment", "unsupported_file");
+  if (type.contentType !== "application/pdf") {
+    try {
+      await validateInvoiceImage(bytes, type.contentType);
+    } catch (error) {
+      throw new ProviderError(
+        "Attachment",
+        error instanceof Error &&
+          error.message === "invoice_image_decoder_unavailable"
+          ? "decoder_unavailable"
+          : "unsupported_file"
+      );
+    }
+  }
   const transaction = createHash("sha256").update(transactionId).digest("hex");
   const digest = createHash("sha256").update(bytes).digest("hex");
   const path = `${context.companyId}/mercury/${transaction}/${digest}.${type.extension}`;
@@ -270,11 +287,33 @@ async function processPage(
       email: recipient?.email || transaction.email
     };
     let issue: string | null = null;
+    const previousAcquisition = parseMercuryVendorSuggestion(
+      old?.vendorSuggestion
+    ).mercuryReceiptAcquisition;
+    const presentIds = new Set(
+      payment.attachments.map((attachment) => attachment.id)
+    );
     const attachments = new Map(
-      parseMercuryAttachments(old?.attachments).map((attachment) => [
-        attachmentIdentity(attachment),
-        attachment
-      ])
+      parseMercuryAttachments(old?.attachments).map((attachment) => {
+        const receiptId =
+          attachment.receiptId ??
+          previousAcquisition?.attachments.find(
+            (entry) => entry.path === attachment.path
+          )?.id;
+        return [
+          attachmentIdentity(attachment),
+          attachment.source === "mercury"
+            ? {
+                ...attachment,
+                receiptId,
+                current:
+                  attachment.current !== false &&
+                  !!receiptId &&
+                  presentIds.has(receiptId)
+              }
+            : attachment
+        ];
+      })
     );
     const mercuryReceiptAcquisition: MercuryReceiptAcquisition = {
       attachmentCount: payment.attachments.length,
@@ -292,8 +331,16 @@ async function processPage(
           payment.id,
           attachment.fileName,
           bytes,
-          { source: "mercury" }
+          { source: "mercury", current: true, receiptId: attachment.id }
         );
+        for (const [key, priorAttachment] of attachments) {
+          if (
+            priorAttachment.source === "mercury" &&
+            priorAttachment.receiptId === attachment.id &&
+            priorAttachment.path !== saved.path
+          )
+            attachments.set(key, { ...priorAttachment, current: false });
+        }
         attachments.set(attachmentIdentity(saved), saved);
         mercuryReceiptAcquisition.attachments.push({
           id: attachment.id,
@@ -304,6 +351,15 @@ async function processPage(
       } catch (error) {
         if (error instanceof SyncPaused) throw error;
         issue = providerErrorCode(error);
+        if (issue === "attachment_unsupported_file") {
+          for (const [key, priorAttachment] of attachments) {
+            if (
+              priorAttachment.source === "mercury" &&
+              priorAttachment.receiptId === attachment.id
+            )
+              attachments.set(key, { ...priorAttachment, current: false });
+          }
+        }
         mercuryReceiptAcquisition.attachments.push({
           id: attachment.id,
           fileName: attachment.fileName,

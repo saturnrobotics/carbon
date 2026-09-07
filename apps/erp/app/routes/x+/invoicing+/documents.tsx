@@ -6,6 +6,7 @@ import { msg } from "@lingui/core/macro";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 import { data, useLoaderData, useOutlet } from "react-router";
 import { z } from "zod";
+import { normalizeInvoiceInboxStatus } from "~/modules/invoicing/invoice-intake.utils";
 import { invoiceIntakeSettingsValidator } from "~/modules/invoicing/invoicing.models";
 import {
   approveInvoiceIntake,
@@ -27,12 +28,13 @@ export const handle: Handle = {
 export async function loader({ request }: LoaderFunctionArgs) {
   const actor = await requirePermissions(request, { view: "invoicing" });
   const query = new URL(request.url).searchParams;
+  const status = normalizeInvoiceInboxStatus(query.get("status"));
   return {
     ...(await getInvoiceIntakeInbox(getDatabaseClient(), actor, {
-      status: query.get("status") ?? undefined,
+      status,
       offset: Number(query.get("offset") ?? 0)
     })),
-    status: query.get("status") ?? ""
+    status
   };
 }
 export async function action({ request }: ActionFunctionArgs) {

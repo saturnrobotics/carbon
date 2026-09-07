@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { isMercuryAttachmentPath } from "@carbon/database/mercury";
 import { round } from "@carbon/utils";
 import { sql } from "kysely";
-import { INVOICE_LIMITS } from "./contracts";
+import { getInvoiceApprovedSourceHashes, INVOICE_LIMITS } from "./contracts";
 import { isInvoiceSourcePath } from "./ingestion";
 import type { InvoiceWorkerContext } from "./worker";
 
@@ -49,7 +49,8 @@ export async function copyInvoiceAttachments(context: Context) {
           "purchaseInvoiceId",
           "approvedBy",
           "updatedBy",
-          "createdBy"
+          "createdBy",
+          "approvalSnapshot"
         ])
         .where("companyId", "=", context.companyId)
         .where("id", "=", context.intakeId)
@@ -77,6 +78,9 @@ export async function copyInvoiceAttachments(context: Context) {
         .where("id", "=", intake.purchaseInvoiceId)
         .executeTakeFirst();
       if (!invoice) throw new Error("invoice_attachment_invoice_unavailable");
+      const approvedHashes = getInvoiceApprovedSourceHashes(
+        intake.approvalSnapshot
+      );
       const sources: Source[] = await db
         .selectFrom("invoiceIntakeSource")
         .select([
@@ -92,10 +96,23 @@ export async function copyInvoiceAttachments(context: Context) {
         .where("intakeId", "=", context.intakeId)
         .where("storagePath", "is not", null)
         .where("kind", "in", ["mercury", "upload"])
+        .where(
+          approvedHashes === null
+            ? sql<boolean>`(kind='upload' OR coalesce(provenance->>'current','true')<>'false')`
+            : sql<boolean>`sha256=ANY(${approvedHashes}::text[])`
+        )
         .orderBy("createdAt")
         .orderBy("id")
         .limit(26)
         .execute();
+      if (
+        approvedHashes !== null &&
+        (!approvedHashes.length ||
+          approvedHashes.some(
+            (hash) => !sources.some((source) => source.sha256 === hash)
+          ))
+      )
+        throw new Error("invoice_attachment_approved_source_missing");
       if (sources.length > 25) throw new Error("invoice_attachment_limit");
       const documents: Array<{
         path: string;
@@ -217,6 +234,11 @@ export async function copyInvoiceAttachments(context: Context) {
           .where("intakeId", "=", context.intakeId)
           .where("storagePath", "is not", null)
           .where("kind", "in", ["mercury", "upload"])
+          .where(
+            approvedHashes === null
+              ? sql<boolean>`(kind='upload' OR coalesce(provenance->>'current','true')<>'false')`
+              : sql<boolean>`sha256=ANY(${approvedHashes}::text[])`
+          )
           .execute();
         const ids = new Set(sources.map((source) => source.id));
         const complete = currentSources.every((source) => ids.has(source.id));

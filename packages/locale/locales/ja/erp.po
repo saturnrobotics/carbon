@@ -653,6 +653,9 @@ msgstr "ビューを保存するには名前が必要です"
 msgid "A negotiated price pinned for a specific item — by customer, customer type, or all customers — that replaces the base price outright, optionally with quantity breaks."
 msgstr "特定の品目に対する交渉済み価格で、顧客ごと、顧客タイプごと、またはすべての顧客に対して設定でき、基本価格に置き換わります。必要に応じて数量スケールを設定できます。"
 
+msgid "A new extraction is available. Your saved corrections and proposals were preserved. Compare the extracted facts below with your review, including added or changed source lines."
+msgstr "新しい抽出結果が利用可能です。保存済みの修正と提案は保持されています。追加または変更された元の明細も含め、以下の抽出内容をレビュー内容と照合してください。"
+
 msgid "A new purchase order will be created for each supplier. Alternatively, you can choose an existing draft purchase order for the supplier to add the outside operations to."
 msgstr "仕入先ごとに新しい発注書が作成されます。または、既存の下書き発注書を選択して、外注工程を追加することもできます。"
 
@@ -1164,6 +1167,9 @@ msgstr "アクションタイプ"
 msgid "Action Types"
 msgstr "アクションタイプ"
 
+msgid "Actionable"
+msgstr "要対応"
+
 msgid "Actions"
 msgstr "アクション"
 
@@ -1300,11 +1306,17 @@ msgstr "外部作業者を追加"
 msgid "Add cost center"
 msgstr "原価センターを追加"
 
+msgid "Add each extracted source line to the review or exclude it with a reason"
+msgstr "抽出された各元明細をレビューに追加するか、理由を付けて除外してください"
+
 msgid "Add Employee"
 msgstr "従業員を追加"
 
 msgid "Add Entry"
 msgstr "エントリを追加"
+
+msgid "Add extracted line"
+msgstr "抽出明細を追加"
 
 msgid "Add Feature"
 msgstr "機能を追加"
@@ -3850,6 +3862,9 @@ msgstr "削除を確認"
 
 msgid "Confirm disconnect"
 msgstr "切断を確認"
+
+msgid "Confirm explanation"
+msgstr "説明を確認"
 
 msgid "Confirm how your company runs and lock the scope."
 msgstr "会社の運営方法を確認し、範囲をロックします。"
@@ -6663,6 +6678,9 @@ msgstr "有効期限を設定する前にバッチ番号を入力してくださ
 msgid "Enter a quantity between 1 and {0}."
 msgstr "1～{0}の数量を入力してください。"
 
+msgid "Enter a review reason for every unreadable attachment"
+msgstr "読み取れない添付ファイルごとにレビュー理由を入力してください"
+
 msgid "Enter and approve vendor bills against a PO (three-way match)"
 msgstr "発注書に対する仕入先請求書を入力して承認します（三点照合）"
 
@@ -6894,11 +6912,17 @@ msgstr "為替レート"
 msgid "Exchanging the authorization code for an access token failed. Try connecting again."
 msgstr "認可コードとアクセストークンの交換に失敗しました。もう一度接続してください。"
 
+msgid "Exclude source line"
+msgstr "元の明細を除外"
+
 msgid "Excluded"
 msgstr "除外"
 
 msgid "Excluded source lines"
 msgstr "除外されたソース行"
+
+msgid "Exclusion reason"
+msgstr "除外理由"
 
 msgid "Executive P&L"
 msgstr "経営幹部向けP&L"
@@ -7071,6 +7095,9 @@ msgstr "承認前に支払の差額またはステータスを説明してくだ
 
 msgid "Explain the payment difference, status, or allocation"
 msgstr "支払の差額、ステータス、または充当についての説明"
+
+msgid "Explain why this unreadable attachment adds no separate invoice lines. Upload a readable version if it contains purchase details."
+msgstr "この読み取れない添付ファイルに別の請求書明細が含まれていない理由を説明してください。購入の詳細が含まれる場合は、読み取れるバージョンをアップロードしてください。"
 
 msgid "Explorer"
 msgstr "エクスプローラー"
@@ -8380,6 +8407,9 @@ msgstr "この個人は22 CFR 120.62で定義されている米国人である�
 msgid "I resolved these extraction issues and checked all source lines"
 msgstr "これらの抽出の問題を解決し、すべてのソース行をチェックしました"
 
+msgid "I reviewed the new extraction against my saved corrections"
+msgstr "新しい抽出結果を保存済みの修正と照合しました"
+
 msgid "I'm Still Working"
 msgstr "まだ働いています"
 
@@ -8558,6 +8588,9 @@ msgstr "無効を含める"
 
 msgid "Included"
 msgstr "含まれています"
+
+msgid "Included in review"
+msgstr "レビューに含まれています"
 
 msgid "Includes tax and shipping costs"
 msgstr "税金と送料を含みます"
@@ -9483,6 +9516,9 @@ msgstr "ラインステータス"
 msgid "Line tax amount"
 msgstr "明細税額"
 
+msgid "Line total"
+msgstr "明細合計"
+
 msgid "Line type"
 msgstr "線種"
 
@@ -9883,6 +9919,9 @@ msgstr "製造"
 
 msgid "Map accounts"
 msgstr "勘定をマップ"
+
+msgid "Map every existing draft financial line before merging. These lines are not yet mapped to a reviewed receipt line:"
+msgstr "結合する前に、既存の下書きのすべての金額明細を対応付けてください。次の明細はレビュー済みの領収書明細にまだ対応付けられていません："
 
 msgid "Map Extracted Lines"
 msgstr "抽出行をマップ"
@@ -12340,6 +12379,9 @@ msgstr "支払い確認"
 msgid "Payment Date"
 msgstr "支払日"
 
+msgid "Payment details changed. Review your explanation against the current evidence and confirm it again."
+msgstr "支払の詳細が変更されました。現在の証憑に照らして説明をレビューし、再度確認してください。"
+
 msgid "Payment history is still being imported. The next hourly run will continue where it stopped."
 msgstr "支払い履歴をインポート中です。次の毎時実行で停止した場所から続行します。"
 
@@ -14377,6 +14419,9 @@ msgstr "{name} のレビュー理由"
 msgid "Review supplier"
 msgstr "仕入先を確認"
 
+msgid "Review the new extraction against your saved corrections before approval"
+msgstr "承認前に、新しい抽出結果を保存済みの修正と照合してください"
+
 msgid "Review the original invoice to select the correct supplier and item classes, confirm pack sizes and totals, and map each existing line explicitly."
 msgstr "元の請求書を確認して、正しい仕入先と品目クラスを選択し、梱包サイズと合計を確認して、既存の各行を明示的にマッピングします。"
 
@@ -14782,6 +14827,9 @@ msgstr "レビューを保存する"
 
 msgid "Save sync settings"
 msgstr "同期設定を保存"
+
+msgid "Save the edited invoice total or currency, then confirm the payment explanation against the updated amounts."
+msgstr "変更した請求書の合計または通貨を保存してから、更新後の金額に照らして支払の説明を確認してください。"
 
 #. placeholder {0}: copy.moduleLabel
 msgid "Save this review, add the required definition in {0}, and reopen the proposal to select it."
@@ -15918,6 +15966,9 @@ msgstr "ソースアイテム"
 
 msgid "Source Job"
 msgstr "ソース製造指図"
+
+msgid "Source line"
+msgstr "元の明細"
 
 msgid "Source line total"
 msgstr "ソース行の合計"
@@ -17643,6 +17694,9 @@ msgstr "これらのクレジットを適用する未処理項目がありませ
 msgid "These are bank payment details. Invoice totals and the supplier are reviewed separately from the receipt."
 msgstr "これは銀行支払の詳細です。請求書の合計と仕入先は、領収書に基づいて別途確認します。"
 
+msgid "These are the latest parsed facts. Your review fields remain unchanged until you edit them or add a source line."
+msgstr "これは最新の抽出内容です。レビューのフィールドは、編集するか元の明細を追加するまで変更されません。"
+
 msgid "These custom fields will only be available for entities with the same tags"
 msgstr "これらのカスタムフィールドは、同じタグを持つエンティティでのみ利用可能です"
 
@@ -17882,6 +17936,9 @@ msgstr "この受注には関連する製造指図があります。それらで
 
 msgid "This sales order has lines that require jobs to be created"
 msgstr "この受注には製造指図の作成が必要な明細があります"
+
+msgid "This source line is not in your saved review."
+msgstr "この元の明細は保存済みのレビューに含まれていません。"
 
 msgid "This station runs ability-gated work — it only runs while a qualified operator is on shift; operators assigned on the manning board further shape available labor."
 msgstr "このステーションはスキル制限のある作業を実行します — 適切なスキルを持つ作業者がシフト中のみ実行されます。人員配置ボードに割り当てられた作業者は、利用可能な労務をさらに決定します。"
@@ -18721,8 +18778,8 @@ msgstr "アップロード"
 msgid "Upload a PDF first"
 msgstr "まずPDFをアップロードしてください"
 
-msgid "Upload a receipt or review documents collected from Mercury and Gmail. Confirm suppliers, items, and amounts before creating a draft invoice."
-msgstr "領収書をアップロードするか、Mercury と Gmail から収集したドキュメントを確認します。請求書下書きを作成する前に、仕入先、品目、金額を確認してください。"
+msgid "Upload a receipt or review documents collected from Mercury. Confirm suppliers, items, and amounts before creating a draft invoice."
+msgstr "領収書をアップロードするか、Mercuryから収集したドキュメントをレビューしてください。請求書の下書きを作成する前に、仕入先、品目、金額を確認してください。"
 
 msgid "Upload and review"
 msgstr "アップロードしてレビューする"

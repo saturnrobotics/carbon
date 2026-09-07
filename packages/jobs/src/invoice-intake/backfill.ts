@@ -3,6 +3,7 @@ import type { Database } from "@carbon/database";
 import type { Kysely, KyselyDatabase } from "@carbon/database/client";
 import {
   isMercuryAttachmentPath,
+  lockCompanyInvoiceApproval,
   parseMercuryAttachments
 } from "@carbon/database/mercury";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -139,8 +140,68 @@ export async function registerMercuryInvoiceSources(
   });
   const savedAttachments = parseMercuryAttachments(record.attachments);
   const attachments = savedAttachments.filter(
-    (attachment) => attachment.source === "mercury"
+    (attachment) =>
+      attachment.source === "mercury" && attachment.current !== false
   );
+  // Archive membership, never original bytes or approved document copies. Serialize
+  // with approval and verify the same provider snapshot before changing eligibility.
+  await context.db.transaction().execute(async (trx) => {
+    await lockCompanyInvoiceApproval(trx, context.companyId);
+    const fresh = await trx
+      .selectFrom("mercuryTransactionImport")
+      .select("attachments")
+      .where("companyId", "=", context.companyId)
+      .where("id", "=", importId)
+      .forUpdate()
+      .executeTakeFirstOrThrow();
+    if (
+      JSON.stringify(parseMercuryAttachments(fresh.attachments)) !==
+      JSON.stringify(savedAttachments)
+    )
+      throw new InvoiceSourceError("invoice_source_changed");
+    const currentPaths = new Set(
+      attachments.map((attachment) => attachment.path)
+    );
+    const oldSources = await trx
+      .selectFrom("invoiceIntakeSource")
+      .select(["id", "intakeId", "storagePath", "provenance"])
+      .where("companyId", "=", context.companyId)
+      .where("mercuryImportId", "=", importId)
+      .where("kind", "=", "mercury")
+      .where("storagePath", "is not", null)
+      .execute();
+    const changes = oldSources.flatMap((source) => {
+      const metadata =
+        source.provenance &&
+        typeof source.provenance === "object" &&
+        !Array.isArray(source.provenance)
+          ? source.provenance
+          : {};
+      const current = currentPaths.has(source.storagePath!);
+      return (metadata.current !== false) === current
+        ? []
+        : [{ id: source.id, intakeId: source.intakeId, current }];
+    });
+    if (!changes.length) return;
+    const intakeIds = [...new Set(changes.map((change) => change.intakeId))];
+    await trx
+      .selectFrom("invoiceIntake")
+      .select("id")
+      .where("companyId", "=", context.companyId)
+      .where("id", "in", intakeIds)
+      .orderBy("id")
+      .forUpdate()
+      .execute();
+    await sql`UPDATE public."invoiceIntakeSource" s SET provenance=coalesce(s.provenance,'{}'::jsonb)||jsonb_build_object('current',x.current),"updatedBy"=${context.userId},"updatedAt"=now()
+      FROM jsonb_to_recordset(${JSON.stringify(changes)}::jsonb) AS x(id text,current boolean)
+      WHERE s."companyId"=${context.companyId} AND s.id=x.id`.execute(trx);
+    await sql`UPDATE public."invoiceIntake" i SET revision=revision+1,"updatedAt"=now(),"updatedBy"=${context.userId},
+      status=CASE WHEN EXISTS(SELECT 1 FROM public."invoiceIntakeSource" s WHERE s."companyId"=i."companyId" AND s."intakeId"=i.id AND s."storagePath" IS NOT NULL AND s.sha256 IS NOT NULL AND (s.kind='upload' OR (s.kind='mercury' AND coalesce(s.provenance->>'current','true')<>'false'))) THEN 'NeedsReview' ELSE 'NeedsDocument' END,
+      "activeExtractionId"=CASE WHEN status='Processing' THEN NULL ELSE "activeExtractionId" END,"lastErrorCode"='invoice_source_changed'
+      WHERE i."companyId"=${context.companyId} AND i.id IN (${sql.join(intakeIds)}) AND i.status NOT IN ('Approved','Linked','Ignored')`.execute(
+      trx
+    );
+  });
   if (attachments.length > 100)
     throw new InvoiceSourceError("invoice_source_attachment_limit");
   // Only directly attached Mercury receipts enter this collector. Existing Gmail
@@ -207,7 +268,18 @@ export async function registerMercuryInvoiceSources(
       mercuryDocumentSet
     });
   }
-  return { ...result, documents: attachments.length };
+  const final = await context.db
+    .selectFrom("invoiceIntake")
+    .select(["status", "generation"])
+    .where("companyId", "=", context.companyId)
+    .where("id", "=", result.intakeId)
+    .executeTakeFirstOrThrow();
+  return {
+    ...result,
+    ...final,
+    needsDispatch: final.status === "Queued",
+    documents: attachments.length
+  };
 }
 
 /** Local, resumable bridge. Paid inference is dispatched independently by reconciliation. */
@@ -371,8 +443,9 @@ export async function reconcileMercuryInvoiceSources(
     .where(sql<boolean>`(NOT EXISTS (SELECT 1 FROM public."invoiceIntakeSource" s
       WHERE s."companyId"=m."companyId" AND s."mercuryImportId"=m.id AND s.kind='mercury' AND s."storagePath" IS NULL)
       OR EXISTS (SELECT 1 FROM jsonb_array_elements(CASE WHEN jsonb_typeof(m.attachments)='array' THEN m.attachments ELSE '[]'::jsonb END) a
-        WHERE a->>'source'='mercury' AND NOT EXISTS(SELECT 1 FROM public."invoiceIntakeSource" s WHERE s."companyId"=m."companyId"
-          AND s."mercuryImportId"=m.id AND s."storagePath"=a->>'path' AND s.kind=a->>'source')))`)
+        WHERE a->>'source'='mercury' AND coalesce(a->>'current','true')<>'false' AND NOT EXISTS(SELECT 1 FROM public."invoiceIntakeSource" s WHERE s."companyId"=m."companyId"
+          AND s."mercuryImportId"=m.id AND s."storagePath"=a->>'path' AND s.kind=a->>'source' AND coalesce(s.provenance->>'current','true')<>'false'))
+      OR EXISTS(SELECT 1 FROM public."invoiceIntakeSource" s WHERE s."companyId"=m."companyId" AND s."mercuryImportId"=m.id AND s.kind='mercury' AND s."storagePath" IS NOT NULL AND coalesce(s.provenance->>'current','true')<>'false' AND NOT EXISTS(SELECT 1 FROM jsonb_array_elements(CASE WHEN jsonb_typeof(m.attachments)='array' THEN m.attachments ELSE '[]'::jsonb END) a WHERE a->>'source'='mercury' AND coalesce(a->>'current','true')<>'false' AND a->>'path'=s."storagePath")))`)
     .orderBy("m.createdAt")
     .orderBy("m.id")
     .limit(100)

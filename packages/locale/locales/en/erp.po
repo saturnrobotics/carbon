@@ -653,6 +653,9 @@ msgstr "A name is required to save a view"
 msgid "A negotiated price pinned for a specific item — by customer, customer type, or all customers — that replaces the base price outright, optionally with quantity breaks."
 msgstr "A negotiated price pinned for a specific item — by customer, customer type, or all customers — that replaces the base price outright, optionally with quantity breaks."
 
+msgid "A new extraction is available. Your saved corrections and proposals were preserved. Compare the extracted facts below with your review, including added or changed source lines."
+msgstr "A new extraction is available. Your saved corrections and proposals were preserved. Compare the extracted facts below with your review, including added or changed source lines."
+
 msgid "A new purchase order will be created for each supplier. Alternatively, you can choose an existing draft purchase order for the supplier to add the outside operations to."
 msgstr "A new purchase order will be created for each supplier. Alternatively, you can choose an existing draft purchase order for the supplier to add the outside operations to."
 
@@ -1164,6 +1167,9 @@ msgstr "Action Type"
 msgid "Action Types"
 msgstr "Action Types"
 
+msgid "Actionable"
+msgstr "Actionable"
+
 msgid "Actions"
 msgstr "Actions"
 
@@ -1300,11 +1306,17 @@ msgstr "Add Contractor"
 msgid "Add cost center"
 msgstr "Add cost center"
 
+msgid "Add each extracted source line to the review or exclude it with a reason"
+msgstr "Add each extracted source line to the review or exclude it with a reason"
+
 msgid "Add Employee"
 msgstr "Add Employee"
 
 msgid "Add Entry"
 msgstr "Add Entry"
+
+msgid "Add extracted line"
+msgstr "Add extracted line"
 
 msgid "Add Feature"
 msgstr "Add Feature"
@@ -3850,6 +3862,9 @@ msgstr "Confirm delete"
 
 msgid "Confirm disconnect"
 msgstr "Confirm disconnect"
+
+msgid "Confirm explanation"
+msgstr "Confirm explanation"
 
 msgid "Confirm how your company runs and lock the scope."
 msgstr "Confirm how your company runs and lock the scope."
@@ -6663,6 +6678,9 @@ msgstr "Enter a batch number before setting the expiration date"
 msgid "Enter a quantity between 1 and {0}."
 msgstr "Enter a quantity between 1 and {0}."
 
+msgid "Enter a review reason for every unreadable attachment"
+msgstr "Enter a review reason for every unreadable attachment"
+
 msgid "Enter and approve vendor bills against a PO (three-way match)"
 msgstr "Enter and approve vendor bills against a PO (three-way match)"
 
@@ -6894,11 +6912,17 @@ msgstr "Exchange Rates"
 msgid "Exchanging the authorization code for an access token failed. Try connecting again."
 msgstr "Exchanging the authorization code for an access token failed. Try connecting again."
 
+msgid "Exclude source line"
+msgstr "Exclude source line"
+
 msgid "Excluded"
 msgstr "Excluded"
 
 msgid "Excluded source lines"
 msgstr "Excluded source lines"
+
+msgid "Exclusion reason"
+msgstr "Exclusion reason"
 
 msgid "Executive P&L"
 msgstr "Executive P&L"
@@ -7071,6 +7095,9 @@ msgstr "Explain the payment difference or status before approval"
 
 msgid "Explain the payment difference, status, or allocation"
 msgstr "Explain the payment difference, status, or allocation"
+
+msgid "Explain why this unreadable attachment adds no separate invoice lines. Upload a readable version if it contains purchase details."
+msgstr "Explain why this unreadable attachment adds no separate invoice lines. Upload a readable version if it contains purchase details."
 
 msgid "Explorer"
 msgstr "Explorer"
@@ -8380,6 +8407,9 @@ msgstr "I have a reasonable basis to believe this individual is a U.S. person as
 msgid "I resolved these extraction issues and checked all source lines"
 msgstr "I resolved these extraction issues and checked all source lines"
 
+msgid "I reviewed the new extraction against my saved corrections"
+msgstr "I reviewed the new extraction against my saved corrections"
+
 msgid "I'm Still Working"
 msgstr "I'm Still Working"
 
@@ -8559,6 +8589,9 @@ msgstr "Include Inactive"
 
 msgid "Included"
 msgstr "Included"
+
+msgid "Included in review"
+msgstr "Included in review"
 
 msgid "Includes tax and shipping costs"
 msgstr "Includes tax and shipping costs"
@@ -9484,6 +9517,9 @@ msgstr "Line Status"
 msgid "Line tax amount"
 msgstr "Line tax amount"
 
+msgid "Line total"
+msgstr "Line total"
+
 msgid "Line type"
 msgstr "Line type"
 
@@ -9884,6 +9920,9 @@ msgstr "Manufacturing"
 
 msgid "Map accounts"
 msgstr "Map accounts"
+
+msgid "Map every existing draft financial line before merging. These lines are not yet mapped to a reviewed receipt line:"
+msgstr "Map every existing draft financial line before merging. These lines are not yet mapped to a reviewed receipt line:"
 
 msgid "Map Extracted Lines"
 msgstr "Map Extracted Lines"
@@ -12341,6 +12380,9 @@ msgstr "Payment confirmation"
 msgid "Payment Date"
 msgstr "Payment Date"
 
+msgid "Payment details changed. Review your explanation against the current evidence and confirm it again."
+msgstr "Payment details changed. Review your explanation against the current evidence and confirm it again."
+
 msgid "Payment history is still being imported. The next hourly run will continue where it stopped."
 msgstr "Payment history is still being imported. The next hourly run will continue where it stopped."
 
@@ -14378,6 +14420,9 @@ msgstr "Review reason for {name}"
 msgid "Review supplier"
 msgstr "Review supplier"
 
+msgid "Review the new extraction against your saved corrections before approval"
+msgstr "Review the new extraction against your saved corrections before approval"
+
 msgid "Review the original invoice to select the correct supplier and item classes, confirm pack sizes and totals, and map each existing line explicitly."
 msgstr "Review the original invoice to select the correct supplier and item classes, confirm pack sizes and totals, and map each existing line explicitly."
 
@@ -14783,6 +14828,9 @@ msgstr "Save review"
 
 msgid "Save sync settings"
 msgstr "Save sync settings"
+
+msgid "Save the edited invoice total or currency, then confirm the payment explanation against the updated amounts."
+msgstr "Save the edited invoice total or currency, then confirm the payment explanation against the updated amounts."
 
 #. placeholder {0}: copy.moduleLabel
 msgid "Save this review, add the required definition in {0}, and reopen the proposal to select it."
@@ -15919,6 +15967,9 @@ msgstr "Source Item"
 
 msgid "Source Job"
 msgstr "Source Job"
+
+msgid "Source line"
+msgstr "Source line"
 
 msgid "Source line total"
 msgstr "Source line total"
@@ -17644,6 +17695,9 @@ msgstr "There's nothing outstanding to apply these credits to."
 msgid "These are bank payment details. Invoice totals and the supplier are reviewed separately from the receipt."
 msgstr "These are bank payment details. Invoice totals and the supplier are reviewed separately from the receipt."
 
+msgid "These are the latest parsed facts. Your review fields remain unchanged until you edit them or add a source line."
+msgstr "These are the latest parsed facts. Your review fields remain unchanged until you edit them or add a source line."
+
 msgid "These custom fields will only be available for entities with the same tags"
 msgstr "These custom fields will only be available for entities with the same tags"
 
@@ -17883,6 +17937,9 @@ msgstr "This sales order has associated jobs. Choose what to do with them."
 
 msgid "This sales order has lines that require jobs to be created"
 msgstr "This sales order has lines that require jobs to be created"
+
+msgid "This source line is not in your saved review."
+msgstr "This source line is not in your saved review."
 
 msgid "This station runs ability-gated work — it only runs while a qualified operator is on shift; operators assigned on the manning board further shape available labor."
 msgstr "This station runs ability-gated work — it only runs while a qualified operator is on shift; operators assigned on the manning board further shape available labor."
@@ -18722,8 +18779,8 @@ msgstr "Upload"
 msgid "Upload a PDF first"
 msgstr "Upload a PDF first"
 
-msgid "Upload a receipt or review documents collected from Mercury and Gmail. Confirm suppliers, items, and amounts before creating a draft invoice."
-msgstr "Upload a receipt or review documents collected from Mercury and Gmail. Confirm suppliers, items, and amounts before creating a draft invoice."
+msgid "Upload a receipt or review documents collected from Mercury. Confirm suppliers, items, and amounts before creating a draft invoice."
+msgstr "Upload a receipt or review documents collected from Mercury. Confirm suppliers, items, and amounts before creating a draft invoice."
 
 msgid "Upload and review"
 msgstr "Upload and review"

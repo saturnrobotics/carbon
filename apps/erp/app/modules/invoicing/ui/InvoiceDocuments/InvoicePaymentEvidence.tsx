@@ -1,13 +1,27 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@carbon/react";
+import {
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle
+} from "@carbon/react";
 import { formatDate } from "@carbon/utils";
 import { Trans, useLingui } from "@lingui/react/macro";
 import { InvoiceTextField } from "./InvoiceDocumentLines";
+import {
+  type InvoiceReceiptAcknowledgement,
+  invoiceReceiptReason
+} from "./invoice-document.utils";
 
 export function InvoicePaymentEvidence({
   payments,
   reconciliation,
   requireExplanation,
   reason,
+  reasonCurrent,
+  reasonEvidencePending,
+  receiptAcknowledgements,
+  onReceiptAcknowledgementsChange,
   onReasonChange,
   disabled
 }: {
@@ -22,6 +36,12 @@ export function InvoicePaymentEvidence({
     memo: string | null;
     lastErrorCode: string | null;
     remoteStatus: string;
+    unresolvedAttachments: {
+      id: string;
+      fileName: string;
+      status: "unsupported" | "unavailable" | "limit";
+      fingerprint: string;
+    }[];
     receiptAcquisition: {
       attachmentCount: number;
       hasGeneratedReceipt: boolean | null;
@@ -46,6 +66,12 @@ export function InvoicePaymentEvidence({
   };
   requireExplanation: boolean;
   reason: string | null;
+  reasonCurrent: boolean;
+  reasonEvidencePending: boolean;
+  receiptAcknowledgements: InvoiceReceiptAcknowledgement[];
+  onReceiptAcknowledgementsChange: (
+    value: InvoiceReceiptAcknowledgement[]
+  ) => void;
   onReasonChange: (value: string | null) => void;
   disabled: boolean;
 }) {
@@ -166,6 +192,49 @@ export function InvoicePaymentEvidence({
                   <Trans>Receipt collection needs attention.</Trans>
                 </p>
               )}
+              {payment.unresolvedAttachments.map((attachment) => {
+                const name = attachment.fileName;
+                return (
+                  <div key={attachment.id} className="space-y-1">
+                    <InvoiceTextField
+                      label={t`Review reason for ${name}`}
+                      value={invoiceReceiptReason(
+                        receiptAcknowledgements,
+                        payment.id,
+                        attachment.id,
+                        attachment.fingerprint
+                      )}
+                      onChange={(reason) =>
+                        onReceiptAcknowledgementsChange([
+                          ...receiptAcknowledgements.filter(
+                            (entry) =>
+                              entry.mercuryImportId !== payment.id ||
+                              entry.attachmentId !== attachment.id
+                          ),
+                          ...(reason
+                            ? [
+                                {
+                                  mercuryImportId: payment.id,
+                                  attachmentId: attachment.id,
+                                  fingerprint: attachment.fingerprint,
+                                  reason
+                                }
+                              ]
+                            : [])
+                        ])
+                      }
+                      disabled={disabled}
+                    />
+                    <p className="text-sm text-muted-foreground">
+                      <Trans>
+                        Explain why this unreadable attachment adds no separate
+                        invoice lines. Upload a readable version if it contains
+                        purchase details.
+                      </Trans>
+                    </p>
+                  </div>
+                );
+              })}
             </div>
           ))}
         </div>
@@ -212,6 +281,30 @@ export function InvoicePaymentEvidence({
             onChange={onReasonChange}
             disabled={disabled}
           />
+        )}
+        {needsExplanation && reason && !reasonCurrent && (
+          <div className="space-y-2">
+            <p role="status">
+              {reasonEvidencePending ? (
+                <Trans>
+                  Save the edited invoice total or currency, then confirm the
+                  payment explanation against the updated amounts.
+                </Trans>
+              ) : (
+                <Trans>
+                  Payment details changed. Review your explanation against the
+                  current evidence and confirm it again.
+                </Trans>
+              )}
+            </p>
+            <Button
+              variant="secondary"
+              isDisabled={disabled || reasonEvidencePending}
+              onClick={() => onReasonChange(reason)}
+            >
+              <Trans>Confirm explanation</Trans>
+            </Button>
+          </div>
         )}
         {needsExplanation && requireExplanation && (
           <p className="text-sm text-muted-foreground">

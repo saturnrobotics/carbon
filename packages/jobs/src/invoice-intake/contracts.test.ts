@@ -1,11 +1,42 @@
 import { describe, expect, it } from "vitest";
 import {
   emptyInvoiceExtraction,
+  getInvoiceApprovedSourceHashes,
   invoiceDecimalSchema,
   invoiceExtractionEnvelopeSchema
 } from "./contracts";
 
 describe("invoice evidence contracts", () => {
+  it("retains exact approved hashes and uses only recorded legacy identities", () => {
+    const first = "a".repeat(64),
+      second = "b".repeat(64);
+    expect(
+      getInvoiceApprovedSourceHashes({ sourceSha256s: [second, first, first] })
+    ).toEqual([first, second]);
+    expect(
+      getInvoiceApprovedSourceHashes({
+        sourceSha256s: ["invalid"],
+        resolved: { header: { primarySourceSha256: first } }
+      })
+    ).toEqual([]);
+    expect(
+      getInvoiceApprovedSourceHashes({
+        resolved: {
+          header: {
+            primarySourceSha256: first,
+            sourceAcknowledgements: [{ sha256: second }]
+          }
+        }
+      })
+    ).toEqual([first, second]);
+    expect(
+      getInvoiceApprovedSourceHashes({
+        resolved: {
+          header: { primarySourceSha256: null, sourceAcknowledgements: [] }
+        }
+      })
+    ).toBeNull();
+  });
   it("preserves absent and low-confidence evidence", () => {
     const evidence = emptyInvoiceExtraction();
     evidence.header.total = {

@@ -3,7 +3,7 @@ import type {
   InvoiceIntakeStatus,
   InvoiceItemType
 } from "@carbon/jobs";
-import { invoiceItemTypes } from "@carbon/jobs";
+import { invoiceIntakeStatuses, invoiceItemTypes } from "@carbon/jobs";
 import {
   applyRate,
   isBalanced as equals,
@@ -24,6 +24,13 @@ export type InvoiceReviewIssue = {
   code: string;
   message: string;
 };
+
+export function normalizeInvoiceInboxStatus(status?: string | null) {
+  return status === "All" ||
+    invoiceIntakeStatuses.includes(status as InvoiceIntakeStatus)
+    ? status!
+    : "Actionable";
+}
 
 /** Bank amounts remain separate evidence, including partial and grouped payments. */
 export function getInvoicePaymentReconciliation(
@@ -96,6 +103,7 @@ export type InvoiceReviewContext = {
   supplierAllowed: boolean;
   linkedInvoiceStatus: string | null;
   linkedInvoiceHasLines: boolean;
+  existingFinancialLineIds?: readonly string[];
   duplicateInvoiceIds: readonly string[];
   validateNewSupplier?: (
     proposal: NonNullable<InvoiceIntakeReview["newSupplier"]>
@@ -329,6 +337,17 @@ export function validateInvoiceReview(
       "expectedInvoiceUpdatedAt",
       "revision",
       "Refresh and review the current draft before merging"
+    );
+  if (
+    data.mergeMode === "merge" &&
+    context.existingFinancialLineIds?.some(
+      (id) => !data.lines.some((line) => line.purchaseInvoiceLineId === id)
+    )
+  )
+    add(
+      "lines",
+      "merge",
+      "Map every existing financial line to the reviewed receipt before merging; unmatched amounts would change the final invoice total"
     );
   if (
     context.duplicateInvoiceIds.some((id) => id !== data.purchaseInvoiceId) &&

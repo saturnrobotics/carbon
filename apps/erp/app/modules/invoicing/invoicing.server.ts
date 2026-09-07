@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import type { Database, Json } from "@carbon/database";
 import type { Kysely, KyselyDatabase, KyselyTx } from "@carbon/database/client";
 import {
@@ -11,7 +12,6 @@ import {
   type InvoiceIntakeStatus,
   type InvoiceItemType,
   invoiceExtractionEnvelopeSchema,
-  invoiceIntakeStatuses,
   invoiceItemTypes,
   invoiceMatchSuggestionsSchema,
   invoiceSourceReviewSchema
@@ -48,7 +48,8 @@ import {
   getInvoiceReviewReadiness,
   type InvoiceReviewContext,
   type InvoiceReviewIssue,
-  invoiceProposalKey
+  invoiceProposalKey,
+  normalizeInvoiceInboxStatus
 } from "./invoice-intake.utils";
 import {
   type InvoiceIntakeReview,
@@ -67,6 +68,8 @@ export class InvoiceIntakeError extends Error {
   }
 }
 const asJson = (value: unknown): Json => JSON.parse(JSON.stringify(value));
+const evidenceFingerprint = (value: unknown) =>
+  createHash("sha256").update(JSON.stringify(value)).digest("hex");
 const object = (value: unknown): Record<string, unknown> =>
   value && typeof value === "object" && !Array.isArray(value)
     ? (value as Record<string, unknown>)
@@ -510,6 +513,15 @@ async function buildReviewContext(
     ),
     linkedInvoiceStatus: linkedInvoice?.status ?? null,
     linkedInvoiceHasLines: invoiceLines.length > 0,
+    existingFinancialLineIds: invoiceLines
+      .filter(
+        (line) =>
+          line.invoiceLineType !== "Comment" ||
+          Number(line.supplierExtendedPrice ?? 0) !== 0 ||
+          Number(line.supplierTaxAmount ?? 0) !== 0 ||
+          Number(line.supplierShippingCost ?? 0) !== 0
+      )
+      .map((line) => line.id),
     duplicateInvoiceIds: duplicates.map((invoice) => invoice.id),
     validateNewSupplier: (proposal) =>
       nativeErrors(() => {
@@ -767,7 +779,14 @@ async function validateSourceCoverage(
   );
   const sources = await db
     .selectFrom("invoiceIntakeSource")
-    .select(["id", "kind", "sha256", "storagePath", "mercuryImportId"])
+    .select([
+      "id",
+      "kind",
+      "sha256",
+      "storagePath",
+      "mercuryImportId",
+      "provenance"
+    ])
     .where("companyId", "=", actor.companyId)
     .where("intakeId", "=", intake.id)
     .execute();
@@ -793,6 +812,18 @@ async function validateSourceCoverage(
   const acknowledged = new Set(acknowledgements.map((source) => source.sha256));
   const sourceIssue = (path: string, message: string) =>
     validation.issues.push({ path, code: "source", message });
+  const pendingExtractionReviewId =
+    typeof object(intake.header)._pendingExtractionReview === "string"
+      ? (object(intake.header)._pendingExtractionReview as string)
+      : null;
+  if (
+    pendingExtractionReviewId &&
+    review.header.extractionReviewId !== pendingExtractionReviewId
+  )
+    sourceIssue(
+      "header.extractionReviewId",
+      "Review the new extraction against your saved corrections and explicitly acknowledge it before approval"
+    );
   if (!hashes.size)
     validation.issues.push({
       path: "sources",
@@ -956,24 +987,89 @@ async function validateSourceCoverage(
         .orderBy("id")
         .execute()
     : [];
-  const payments = importedPayments.map((payment) => ({
-    id: payment.id,
-    amount: String(payment.amount),
-    currencyCode: payment.currencyCode,
-    transactionDate: payment.transactionDate,
-    remoteStatus: payment.remoteStatus,
-    mercuryTransactionId: payment.mercuryTransactionId,
-    reference: payment.reference,
-    memo: payment.memo,
-    payee:
-      typeof object(payment.vendorSuggestion).name === "string"
-        ? (object(payment.vendorSuggestion).name as string)
-        : null,
-    lastErrorCode: payment.lastError,
-    receiptAcquisition:
+  const payments = importedPayments.map((payment) => {
+    const receiptAcquisition =
       parseMercuryVendorSuggestion(payment.vendorSuggestion)
-        .mercuryReceiptAcquisition ?? null
-  }));
+        .mercuryReceiptAcquisition ?? null;
+    const unresolvedAttachments = (
+      receiptAcquisition?.attachments ?? []
+    ).flatMap((attachment) =>
+      attachment.status === "saved"
+        ? []
+        : [
+            {
+              id: attachment.id,
+              fileName: attachment.fileName,
+              status: attachment.status,
+              fingerprint: evidenceFingerprint([
+                payment.id,
+                attachment.id,
+                attachment.fileName,
+                attachment.status,
+                attachment.errorCode ?? null
+              ])
+            }
+          ]
+    );
+    return {
+      id: payment.id,
+      amount: String(payment.amount),
+      currencyCode: payment.currencyCode,
+      transactionDate: payment.transactionDate,
+      remoteStatus: payment.remoteStatus,
+      mercuryTransactionId: payment.mercuryTransactionId,
+      reference: payment.reference,
+      memo: payment.memo,
+      payee:
+        typeof object(payment.vendorSuggestion).name === "string"
+          ? (object(payment.vendorSuggestion).name as string)
+          : null,
+      lastErrorCode: payment.lastError,
+      receiptAcquisition,
+      unresolvedAttachments
+    };
+  });
+  for (const payment of payments) {
+    for (const attachment of payment.unresolvedAttachments) {
+      const acknowledgements = review.header.receiptAcknowledgements.filter(
+        (entry) =>
+          entry.mercuryImportId === payment.id &&
+          entry.attachmentId === attachment.id
+      );
+      if (
+        acknowledgements.length !== 1 ||
+        acknowledgements[0].fingerprint !== attachment.fingerprint ||
+        !acknowledgements[0].reason.trim()
+      )
+        sourceIssue(
+          "header.receiptAcknowledgements",
+          "Recover each unreadable Mercury attachment or record why it has no additional invoice lines before approval"
+        );
+    }
+    if (
+      payment.receiptAcquisition &&
+      payment.receiptAcquisition.attachmentCount >
+        payment.receiptAcquisition.attachments.length
+    )
+      sourceIssue(
+        "header.receiptAcknowledgements",
+        "Mercury attachment collection is incomplete; collect or split the remaining attachments before approval"
+      );
+  }
+  const paymentEvidenceFingerprint = evidenceFingerprint([
+    review.header.currencyCode,
+    review.header.total === null ? null : String(Number(review.header.total)),
+    payments.map((payment) => [
+      payment.id,
+      payment.amount,
+      payment.currencyCode,
+      payment.remoteStatus,
+      payment.transactionDate,
+      payment.payee,
+      payment.reference,
+      payment.memo
+    ])
+  ]);
   const currency = review.header.currencyCode
     ? await db
         .selectFrom("currency as c")
@@ -991,7 +1087,8 @@ async function validateSourceCoverage(
   if (
     review.mergeMode !== "evidence" &&
     ["difference", "unsettled"].includes(paymentReconciliation.status) &&
-    !review.header.paymentReviewReason?.trim()
+    (!review.header.paymentReviewReason?.trim() ||
+      review.header.paymentReviewFingerprint !== paymentEvidenceFingerprint)
   )
     sourceIssue(
       "header.paymentReviewReason",
@@ -1012,6 +1109,8 @@ async function validateSourceCoverage(
     sourceInvoices,
     payments,
     paymentReconciliation,
+    paymentEvidenceFingerprint,
+    pendingExtractionReviewId,
     eligibleSourceIds: eligibleSources.map((source) => source.id),
     readinessPending:
       !!attempt &&
@@ -1038,6 +1137,8 @@ export async function getInvoiceIntakeReview(
     sourceInvoices,
     payments,
     paymentReconciliation,
+    paymentEvidenceFingerprint,
+    pendingExtractionReviewId,
     eligibleSourceIds,
     readinessPending
   } = await validateSourceCoverage(
@@ -1110,6 +1211,8 @@ export async function getInvoiceIntakeReview(
   return {
     payments,
     paymentReconciliation,
+    paymentEvidenceFingerprint,
+    pendingExtractionReviewId,
     eligibleSourceIds,
     readinessPending,
     modelSuggestions: hint.success ? hint.data : null,
@@ -1191,11 +1294,16 @@ export async function getInvoiceIntakeInbox(
     .selectFrom("invoiceIntake")
     .selectAll()
     .where("companyId", "=", actor.companyId);
-  if (
-    input.status &&
-    invoiceIntakeStatuses.includes(input.status as InvoiceIntakeStatus)
-  )
-    query = query.where("status", "=", input.status);
+  const status = normalizeInvoiceInboxStatus(input.status);
+  if (status === "Actionable")
+    query = query.where("status", "in", [
+      "NeedsReview",
+      "Ready",
+      "Queued",
+      "Processing",
+      "Failed"
+    ]);
+  else if (status !== "All") query = query.where("status", "=", status);
   const [intakes, settings, budget] = await Promise.all([
     query
       .orderBy("createdAt", "desc")
@@ -1224,7 +1332,7 @@ export async function getInvoiceIntakeInbox(
     )
   ]);
   const intakeIds = intakes.slice(0, 50).map((row) => row.id);
-  const [sourceBadges, itemCounts] = intakeIds.length
+  const [sourceBadges, itemCounts, bankPayments] = intakeIds.length
     ? await Promise.all([
         db
           .selectFrom("invoiceIntakeSource")
@@ -1242,12 +1350,47 @@ export async function getInvoiceIntakeInbox(
           .where("intakeId", "in", intakeIds)
           .where("newItem", "is not", null)
           .groupBy("intakeId")
+          .execute(),
+        db
+          .selectFrom("invoiceIntakeSource as s")
+          .innerJoin("mercuryTransactionImport as m", (join) =>
+            join
+              .onRef("m.id", "=", "s.mercuryImportId")
+              .onRef("m.companyId", "=", "s.companyId")
+          )
+          .select([
+            "s.intakeId",
+            "m.id",
+            "m.amount",
+            "m.currencyCode",
+            "m.transactionDate",
+            "m.reference",
+            "m.vendorSuggestion"
+          ])
+          .where("s.companyId", "=", actor.companyId)
+          .where("s.intakeId", "in", intakeIds)
+          .distinct()
+          .orderBy("m.transactionDate")
+          .orderBy("m.id")
           .execute()
       ])
-    : [[], []];
+    : [[], [], []];
   return {
     intakes: intakes.slice(0, 50).map((row) => ({
       ...row,
+      payments: bankPayments
+        .filter((payment) => payment.intakeId === row.id)
+        .map((payment) => ({
+          id: payment.id,
+          amount: String(payment.amount),
+          currencyCode: payment.currencyCode,
+          transactionDate: payment.transactionDate,
+          reference: payment.reference,
+          payee:
+            typeof object(payment.vendorSuggestion).name === "string"
+              ? (object(payment.vendorSuggestion).name as string)
+              : null
+        })),
       sourceKinds: [
         ...new Set(
           sourceBadges
@@ -1296,7 +1439,9 @@ async function persistReview(
           expectedInvoiceUpdatedAt: review.expectedInvoiceUpdatedAt
         }
       })}::jsonb || CASE WHEN header ? '_defaults'
-        THEN jsonb_build_object('_defaults',header->'_defaults') ELSE '{}'::jsonb END`,
+        THEN jsonb_build_object('_defaults',header->'_defaults') ELSE '{}'::jsonb END
+        || CASE WHEN header ? '_pendingExtractionReview' AND (header->>'_pendingExtractionReview') IS DISTINCT FROM ${review.header.extractionReviewId}
+          THEN jsonb_build_object('_pendingExtractionReview',header->'_pendingExtractionReview') ELSE '{}'::jsonb END`,
       status,
       revision: revision + 1,
       updatedBy: actor.userId,
@@ -2101,6 +2246,11 @@ export async function approveInvoiceIntake(
         status,
         approvalKey: input.approvalKey,
         approvalSnapshot: asJson({
+          sourceSha256s: unique(
+            getInvoiceDocumentSources(rows.sources).map(
+              (source) => source.sha256
+            )
+          ).sort(),
           payments: approvalEvidence.payments,
           paymentReconciliation: approvalEvidence.paymentReconciliation,
           review: originalReview,
@@ -2173,6 +2323,7 @@ export async function setInvoiceIntakeStatus(
         .selectFrom("invoiceIntakeSource")
         .select("sha256")
         .where("kind", "!=", "gmail")
+        .where(sql<boolean>`coalesce(provenance->>'current','true') <> 'false'`)
         .where("companyId", "=", actor.companyId)
         .where("intakeId", "=", input.id)
         .where("storagePath", "is not", null)

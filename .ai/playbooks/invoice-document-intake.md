@@ -55,6 +55,21 @@ For generated Material IDs, choose the existing Substance and Shape. The generat
 - Material reference options include a `Custom` badge in their accessible name. Match the reference name within that accessible name.
 - A Playwright date-input fill works after hydration. If a native browser driver exposes Day/Month/Year spin buttons, select each segment explicitly and type its digits.
 - Wait for local page hydration before filling. A development server reload can discard unsaved input; do not interpret an unchanged record count as a successful save without checking the request and visible state.
+- Background polling and local Realtime reconnection can prevent network idle. Wait for the expected rendered state and action response instead of treating a network-idle timeout as a failed review.
+
+## Preserved reviews and changed evidence
+
+Use fresh synthetic payment imports and receipt files in the isolated local company. Use the real registration and extraction worker with an injected deterministic provider; do not call a live provider or approve financial production records.
+
+1. Open Invoice documents with no status parameter. Verify **Actionable** includes review and processing records and excludes **Needs document**. Open **Needs document** explicitly and verify unparsed rows show bank payee, reference, date, and amounts labeled **Payment**. Verify **All** uses an explicit `status=All` query. Retained older extraction fields must not replace bank context in missing-document rows.
+2. Open a parsed synthetic receipt. Correct the invoice number and a line description. For a recorded unreadable attachment, fill **Review reason for {filename}**. If bank and invoice amounts differ, fill **Explain the payment difference, status, or allocation**. Save and reload; all corrections and reasons must persist.
+3. Use **Parse again**, then run the real worker with a changed parsed invoice reference and an additional source line. Verify saved corrections remain intact while the latest raw reference and additional line appear in **Extracted facts and confidence**.
+4. Save without checking **I reviewed the new extraction against my saved corrections**. Reload and verify it remains unchecked. Explicitly exclude the new source line using **Exclusion reason** and **Exclude source line**, then check the acknowledgement and save. The pending notice disappears after the acknowledgement persists. Expand **Excluded source lines** after reload to verify the reason; its details element is normally collapsed.
+5. Change the synthetic attachment's acquisition outcome while retaining its upstream identity. Change the bank amount separately. Reload and verify the attachment reason is blank, **Confirm explanation** appears, and approval is disabled. Enter a current attachment reason, explicitly confirm the payment explanation, save, and reload. Both current evidence decisions must persist.
+6. Edit **Source document total**. Verify the old payment explanation is no longer current and **Confirm explanation** is disabled until the invoice edit is saved. Save, then explicitly confirm the explanation and save again. Verify the confirmation persists against the updated amount.
+7. Link another intake to an existing synthetic Draft and select **Merge explicitly selected draft lines**. Verify the warning names each unmapped native financial line and disables approval. Database integration tests separately prove that mapping all existing financial lines yields the expected final Draft total and leaves ledger counts unchanged.
+8. Mark an original source of a previously approved synthetic intake as archived. Open its completed review. Verify **Archived** identifies the preview, **Open original document** returns the original PDF bytes, and approval remains disabled. The preview uses approved source identities, including legacy recorded identities, without making archived files eligible for a new approval.
+9. Compare company counts for suppliers, items, invoices, invoice lines, payments, and ledgers before and after these review-only checks. They must remain unchanged.
 
 ## Verified outcomes
 

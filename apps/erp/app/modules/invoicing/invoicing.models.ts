@@ -42,6 +42,19 @@ export const invoiceIntakeHeaderValidator = z.object({
   exchangeRate: intakeDecimal,
   sourceSupplierName: intakeText,
   paymentReviewReason: intakeText,
+  paymentReviewFingerprint: intakeId,
+  extractionReviewId: intakeId,
+  receiptAcknowledgements: z
+    .array(
+      z.object({
+        mercuryImportId: z.string().min(1).max(255),
+        attachmentId: z.string().min(1).max(255),
+        fingerprint: z.string().regex(/^[a-f0-9]{64}$/),
+        reason: z.string().trim().min(1).max(2000)
+      })
+    )
+    .max(1000)
+    .default([]),
   noInvoiceNumberConfirmed: z.boolean().default(false),
   chargesConfirmed: z.boolean().default(false),
   rememberSupplier: z.boolean().default(true),

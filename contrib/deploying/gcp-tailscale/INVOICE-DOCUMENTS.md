@@ -4,6 +4,8 @@ Invoice intake keeps source files in the existing private Supabase bucket and re
 
 Managed inference is optional and defaults off. The ERP and manual document review remain available without Google inference configuration. Mercury history backfill is a separate explicit action; deployment never starts it.
 
+Maintainers can run the [repeatable checks and revision-pinned operator](INVOICE-OPERATIONS.md) without private executable harnesses.
+
 ## Using the document inbox
 
 1. Open **Invoicing → Documents**. Upload a receipt/invoice, or open a document collected from the existing Mercury/Gmail integration.

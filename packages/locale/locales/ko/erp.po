@@ -653,6 +653,9 @@ msgstr "보기를 저장하려면 이름이 필요합니다"
 msgid "A negotiated price pinned for a specific item — by customer, customer type, or all customers — that replaces the base price outright, optionally with quantity breaks."
 msgstr "특정 품목에 대해 협상으로 고정된 가격으로 고객, 고객 유형 또는 모든 고객 기준으로 기본 가격을 완전히 대체하며 선택적으로 수량 구간을 포함합니다."
 
+msgid "A new extraction is available. Your saved corrections and proposals were preserved. Compare the extracted facts below with your review, including added or changed source lines."
+msgstr "새 추출 결과를 사용할 수 있습니다. 저장한 수정 사항과 제안은 유지되었습니다. 추가되거나 변경된 원본 라인을 포함하여 아래 추출 정보를 검토 내용과 비교하세요."
+
 msgid "A new purchase order will be created for each supplier. Alternatively, you can choose an existing draft purchase order for the supplier to add the outside operations to."
 msgstr "각 공급업체별로 새 발주서가 생성됩니다. 또는 공급업체의 기존 초안 발주서를 선택하여 외주 작업을 추가할 수 있습니다."
 
@@ -1164,6 +1167,9 @@ msgstr "조치 유형"
 msgid "Action Types"
 msgstr "조치 유형"
 
+msgid "Actionable"
+msgstr "처리 필요"
+
 msgid "Actions"
 msgstr "작업"
 
@@ -1300,11 +1306,17 @@ msgstr "외주 인력 추가"
 msgid "Add cost center"
 msgstr "원가 센터 추가"
 
+msgid "Add each extracted source line to the review or exclude it with a reason"
+msgstr "추출된 각 원본 라인을 검토에 추가하거나 사유를 입력하여 제외하세요"
+
 msgid "Add Employee"
 msgstr "직원 추가"
 
 msgid "Add Entry"
 msgstr "항목 추가"
+
+msgid "Add extracted line"
+msgstr "추출된 라인 추가"
 
 msgid "Add Feature"
 msgstr "기능 추가"
@@ -3850,6 +3862,9 @@ msgstr "삭제 확인"
 
 msgid "Confirm disconnect"
 msgstr "연결 해제 확인"
+
+msgid "Confirm explanation"
+msgstr "설명 확인"
 
 msgid "Confirm how your company runs and lock the scope."
 msgstr "회사 운영 방식을 확정하고 범위를 잠금."
@@ -6663,6 +6678,9 @@ msgstr "만료일을 설정하기 전에 배치 번호를 입력하세요."
 msgid "Enter a quantity between 1 and {0}."
 msgstr "1과 {0} 사이의 수량을 입력하세요."
 
+msgid "Enter a review reason for every unreadable attachment"
+msgstr "읽을 수 없는 첨부 파일마다 검토 사유를 입력하세요"
+
 msgid "Enter and approve vendor bills against a PO (three-way match)"
 msgstr "PO에 대한 공급업체 청구서를 입력하고 승인하세요 (3자 대사)."
 
@@ -6894,11 +6912,17 @@ msgstr "환율"
 msgid "Exchanging the authorization code for an access token failed. Try connecting again."
 msgstr "인증 코드를 액세스 토큰으로 교환하지 못했습니다. 다시 연결해 보세요."
 
+msgid "Exclude source line"
+msgstr "원본 라인 제외"
+
 msgid "Excluded"
 msgstr "제외됨"
 
 msgid "Excluded source lines"
 msgstr "제외된 소스 라인"
+
+msgid "Exclusion reason"
+msgstr "제외 사유"
 
 msgid "Executive P&L"
 msgstr "경영진 손익계산"
@@ -7071,6 +7095,9 @@ msgstr "승인 전에 지불 차액이나 상태를 설명하세요"
 
 msgid "Explain the payment difference, status, or allocation"
 msgstr "지불 차액, 상태 또는 배분 설명"
+
+msgid "Explain why this unreadable attachment adds no separate invoice lines. Upload a readable version if it contains purchase details."
+msgstr "읽을 수 없는 이 첨부 파일에 별도의 송장 라인이 없는 이유를 설명하세요. 구매 내역이 포함되어 있다면 읽을 수 있는 버전을 업로드하세요."
 
 msgid "Explorer"
 msgstr "탐색기"
@@ -8380,6 +8407,9 @@ msgstr "나는 이 개인이 22 CFR 120.62에서 정의한 미국인이라고 �
 msgid "I resolved these extraction issues and checked all source lines"
 msgstr "이러한 추출 문제를 해결하고 모든 소스 라인을 확인했습니다."
 
+msgid "I reviewed the new extraction against my saved corrections"
+msgstr "새 추출 결과를 저장한 수정 사항과 대조하여 검토했습니다"
+
 msgid "I'm Still Working"
 msgstr "아직 작업 중입니다"
 
@@ -8559,6 +8589,9 @@ msgstr "비활성 포함"
 
 msgid "Included"
 msgstr "포함됨"
+
+msgid "Included in review"
+msgstr "검토에 포함됨"
 
 msgid "Includes tax and shipping costs"
 msgstr "세금 및 운송비 포함"
@@ -9484,6 +9517,9 @@ msgstr "라인 상태"
 msgid "Line tax amount"
 msgstr "라인 세액"
 
+msgid "Line total"
+msgstr "라인 총계"
+
 msgid "Line type"
 msgstr "선 종류"
 
@@ -9884,6 +9920,9 @@ msgstr "제조"
 
 msgid "Map accounts"
 msgstr "계정 매핑"
+
+msgid "Map every existing draft financial line before merging. These lines are not yet mapped to a reviewed receipt line:"
+msgstr "병합하기 전에 기존 초안의 모든 금액 라인을 연결하세요. 다음 라인은 검토한 영수증 라인에 아직 연결되지 않았습니다:"
 
 msgid "Map Extracted Lines"
 msgstr "추출된 라인 매핑"
@@ -12341,6 +12380,9 @@ msgstr "지불 확인"
 msgid "Payment Date"
 msgstr "지불 날짜"
 
+msgid "Payment details changed. Review your explanation against the current evidence and confirm it again."
+msgstr "지불 세부 정보가 변경되었습니다. 현재 증빙을 바탕으로 설명을 검토하고 다시 확인하세요."
+
 msgid "Payment history is still being imported. The next hourly run will continue where it stopped."
 msgstr "결제 내역을 가져오는 중입니다. 다음 시간별 실행에서 중단된 위치부터 계속합니다."
 
@@ -14378,6 +14420,9 @@ msgstr "{name}의 검토 사유"
 msgid "Review supplier"
 msgstr "공급업체 검토"
 
+msgid "Review the new extraction against your saved corrections before approval"
+msgstr "승인 전에 새 추출 결과를 저장한 수정 사항과 대조하여 검토하세요"
+
 msgid "Review the original invoice to select the correct supplier and item classes, confirm pack sizes and totals, and map each existing line explicitly."
 msgstr "원래 송장을 검토하여 올바른 공급업체와 품목 클래스를 선택하고, 팩 크기와 총계를 확인하고, 각 기존 라인을 명시적으로 매핑합니다."
 
@@ -14783,6 +14828,9 @@ msgstr "리뷰 저장"
 
 msgid "Save sync settings"
 msgstr "동기화 설정 저장"
+
+msgid "Save the edited invoice total or currency, then confirm the payment explanation against the updated amounts."
+msgstr "수정한 송장 총계 또는 통화를 저장한 다음, 갱신된 금액을 기준으로 지불 설명을 확인하세요."
 
 #. placeholder {0}: copy.moduleLabel
 msgid "Save this review, add the required definition in {0}, and reopen the proposal to select it."
@@ -15919,6 +15967,9 @@ msgstr "소스 품목"
 
 msgid "Source Job"
 msgstr "원본 작업 지시"
+
+msgid "Source line"
+msgstr "원본 라인"
 
 msgid "Source line total"
 msgstr "소스 라인 합계"
@@ -17644,6 +17695,9 @@ msgstr "이 크레딧을 적용할 미결제 항목이 없습니다."
 msgid "These are bank payment details. Invoice totals and the supplier are reviewed separately from the receipt."
 msgstr "은행 지불 내역입니다. 송장 총계와 공급업체는 영수증을 기준으로 별도로 검토합니다."
 
+msgid "These are the latest parsed facts. Your review fields remain unchanged until you edit them or add a source line."
+msgstr "최신 추출 정보입니다. 검토 필드는 직접 편집하거나 원본 라인을 추가할 때까지 변경되지 않습니다."
+
 msgid "These custom fields will only be available for entities with the same tags"
 msgstr "이 사용자 정의 필드는 동일한 태그가 있는 엔터티에서만 사용 가능합니다."
 
@@ -17883,6 +17937,9 @@ msgstr "이 수주는 관련 작업 지시가 있습니다. 이들을 어떻게 
 
 msgid "This sales order has lines that require jobs to be created"
 msgstr "이 수주는 작업 지시가 생성되어야 하는 라인이 있습니다."
+
+msgid "This source line is not in your saved review."
+msgstr "이 원본 라인은 저장한 검토에 없습니다."
 
 msgid "This station runs ability-gated work — it only runs while a qualified operator is on shift; operators assigned on the manning board further shape available labor."
 msgstr "이 작업장은 역량 게이트 작업을 실행합니다 — 자격 있는 작업자가 교대조에 있을 때만 실행됩니다; 인력 배치표에 할당된 작업자는 가용 노무를 더욱 형성합니다."
@@ -18722,8 +18779,8 @@ msgstr "업로드"
 msgid "Upload a PDF first"
 msgstr "먼저 PDF를 업로드하세요"
 
-msgid "Upload a receipt or review documents collected from Mercury and Gmail. Confirm suppliers, items, and amounts before creating a draft invoice."
-msgstr "Mercury 및 Gmail에서 수집한 영수증 또는 리뷰 문서를 업로드하세요. 초안 송장을 생성하기 전에 공급업체, 품목 및 금액을 확인하세요."
+msgid "Upload a receipt or review documents collected from Mercury. Confirm suppliers, items, and amounts before creating a draft invoice."
+msgstr "영수증을 업로드하거나 Mercury에서 수집한 문서를 검토하세요. 송장 초안을 만들기 전에 공급업체, 품목 및 금액을 확인하세요."
 
 msgid "Upload and review"
 msgstr "업로드 및 검토"

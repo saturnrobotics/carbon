@@ -653,6 +653,9 @@ msgstr "Требуется имя для сохранения представл
 msgid "A negotiated price pinned for a specific item — by customer, customer type, or all customers — that replaces the base price outright, optionally with quantity breaks."
 msgstr "Согласованная цена, установленная для конкретной номенклатуры — по покупателю, типу покупателя или для всех покупателей — которая полностью заменяет базовую цену, опционально с шкалами количества."
 
+msgid "A new extraction is available. Your saved corrections and proposals were preserved. Compare the extracted facts below with your review, including added or changed source lines."
+msgstr "Доступен новый результат извлечения. Сохранённые исправления и предложения оставлены без изменений. Сравните извлечённые ниже данные с результатами рассмотрения, включая добавленные или изменённые строки источника."
+
 msgid "A new purchase order will be created for each supplier. Alternatively, you can choose an existing draft purchase order for the supplier to add the outside operations to."
 msgstr "Для каждого поставщика будет создан новый заказ на покупку. Кроме того, вы можете выбрать существующий черновик заказа на покупку поставщика, чтобы добавить к нему внешние операции."
 
@@ -1164,6 +1167,9 @@ msgstr "Тип действия"
 msgid "Action Types"
 msgstr "Типы действий"
 
+msgid "Actionable"
+msgstr "Требуют действий"
+
 msgid "Actions"
 msgstr "Действия"
 
@@ -1300,11 +1306,17 @@ msgstr "Добавить подрядчика"
 msgid "Add cost center"
 msgstr "Добавить центр затрат"
 
+msgid "Add each extracted source line to the review or exclude it with a reason"
+msgstr "Добавьте каждую извлечённую строку источника в рассмотрение или исключите её, указав причину"
+
 msgid "Add Employee"
 msgstr "Добавить сотрудника"
 
 msgid "Add Entry"
 msgstr "Добавить запись"
+
+msgid "Add extracted line"
+msgstr "Добавить извлечённую строку"
 
 msgid "Add Feature"
 msgstr "Добавить функцию"
@@ -3850,6 +3862,9 @@ msgstr "Подтвердить удаление"
 
 msgid "Confirm disconnect"
 msgstr "Подтвердить отключение"
+
+msgid "Confirm explanation"
+msgstr "Подтвердить пояснение"
 
 msgid "Confirm how your company runs and lock the scope."
 msgstr "Подтвердить, как работает ваша организация, и зафиксировать объем."
@@ -6663,6 +6678,9 @@ msgstr "Введите номер серии перед установкой д�
 msgid "Enter a quantity between 1 and {0}."
 msgstr "Введите количество от 1 до {0}."
 
+msgid "Enter a review reason for every unreadable attachment"
+msgstr "Укажите причину рассмотрения для каждого нечитаемого вложения"
+
 msgid "Enter and approve vendor bills against a PO (three-way match)"
 msgstr "Введите и утвердите счета от поставщиков по заказу на покупку (трехстороннее сопоставление)"
 
@@ -6894,11 +6912,17 @@ msgstr "Валютные курсы"
 msgid "Exchanging the authorization code for an access token failed. Try connecting again."
 msgstr "Не удалось обменять код авторизации на токен доступа. Повторите попытку подключения."
 
+msgid "Exclude source line"
+msgstr "Исключить строку источника"
+
 msgid "Excluded"
 msgstr "Исключено"
 
 msgid "Excluded source lines"
 msgstr "Исключенные исходные строки"
+
+msgid "Exclusion reason"
+msgstr "Причина исключения"
 
 msgid "Executive P&L"
 msgstr "П&У для руководства"
@@ -7071,6 +7095,9 @@ msgstr "Перед утверждением объясните разницу и
 
 msgid "Explain the payment difference, status, or allocation"
 msgstr "Объясните разницу, статус или распределение платежа"
+
+msgid "Explain why this unreadable attachment adds no separate invoice lines. Upload a readable version if it contains purchase details."
+msgstr "Поясните, почему это нечитаемое вложение не добавляет отдельных строк счёта-фактуры. Загрузите читаемую версию, если оно содержит сведения о покупке."
 
 msgid "Explorer"
 msgstr "Обозреватель"
@@ -8380,6 +8407,9 @@ msgstr "У меня есть разумные основания полагат�
 msgid "I resolved these extraction issues and checked all source lines"
 msgstr "Я решил эти проблемы с извлечением и проверил все исходные строки."
 
+msgid "I reviewed the new extraction against my saved corrections"
+msgstr "Новый результат извлечения проверен с учётом моих сохранённых исправлений"
+
 msgid "I'm Still Working"
 msgstr "Я всё ещё работаю"
 
@@ -8559,6 +8589,9 @@ msgstr "Включить неактивные"
 
 msgid "Included"
 msgstr "Включено"
+
+msgid "Included in review"
+msgstr "Включено в рассмотрение"
 
 msgid "Includes tax and shipping costs"
 msgstr "Включает налоги и стоимость доставки"
@@ -9484,6 +9517,9 @@ msgstr "Статус строки"
 msgid "Line tax amount"
 msgstr "Сумма строкового налога"
 
+msgid "Line total"
+msgstr "Итого по строке"
+
 msgid "Line type"
 msgstr "Тип линии"
 
@@ -9884,6 +9920,9 @@ msgstr "Производство"
 
 msgid "Map accounts"
 msgstr "Сопоставить счета"
+
+msgid "Map every existing draft financial line before merging. These lines are not yet mapped to a reviewed receipt line:"
+msgstr "Перед объединением сопоставьте все существующие финансовые строки черновика. Следующие строки ещё не сопоставлены со строкой проверенного чека:"
 
 msgid "Map Extracted Lines"
 msgstr "Сопоставить извлеченные строки"
@@ -12341,6 +12380,9 @@ msgstr "Подтверждение оплаты"
 msgid "Payment Date"
 msgstr "Дата платежа"
 
+msgid "Payment details changed. Review your explanation against the current evidence and confirm it again."
+msgstr "Данные платежа изменились. Проверьте пояснение с учётом текущих документов и подтвердите его повторно."
+
 msgid "Payment history is still being imported. The next hourly run will continue where it stopped."
 msgstr "История платежей ещё импортируется. Следующий ежечасный запуск продолжит с места остановки."
 
@@ -14378,6 +14420,9 @@ msgstr "Причина рассмотрения для {name}"
 msgid "Review supplier"
 msgstr "Проверить поставщика"
 
+msgid "Review the new extraction against your saved corrections before approval"
+msgstr "Перед утверждением проверьте новый результат извлечения с учётом сохранённых исправлений"
+
 msgid "Review the original invoice to select the correct supplier and item classes, confirm pack sizes and totals, and map each existing line explicitly."
 msgstr "Просмотрите исходный Счет-фактура, чтобы выбрать правильного поставщика и классы товаров, подтвердить размеры и общую сумму упаковки, а также явно сопоставить каждую существующую строку."
 
@@ -14783,6 +14828,9 @@ msgstr "Сохранить отзыв"
 
 msgid "Save sync settings"
 msgstr "Сохранить настройки синхронизации"
+
+msgid "Save the edited invoice total or currency, then confirm the payment explanation against the updated amounts."
+msgstr "Сохраните изменённый итог или валюту счёта-фактуры, затем подтвердите пояснение платежа с учётом обновлённых сумм."
 
 #. placeholder {0}: copy.moduleLabel
 msgid "Save this review, add the required definition in {0}, and reopen the proposal to select it."
@@ -15919,6 +15967,9 @@ msgstr "Исходный элемент"
 
 msgid "Source Job"
 msgstr "Исходный производственный заказ"
+
+msgid "Source line"
+msgstr "Строка источника"
 
 msgid "Source line total"
 msgstr "Всего исходной строки"
@@ -17644,6 +17695,9 @@ msgstr "Нечего применять эти кредиты."
 msgid "These are bank payment details. Invoice totals and the supplier are reviewed separately from the receipt."
 msgstr "Это данные банковского платежа. Итоговые суммы счета-фактуры и поставщик проверяются отдельно на основании чека."
 
+msgid "These are the latest parsed facts. Your review fields remain unchanged until you edit them or add a source line."
+msgstr "Это последние извлечённые данные. Поля рассмотрения не изменятся, пока вы не измените их или не добавите строку источника."
+
 msgid "These custom fields will only be available for entities with the same tags"
 msgstr "Эти пользовательские поля будут доступны только для сущностей с одинаковыми тегами"
 
@@ -17883,6 +17937,9 @@ msgstr "Этот заказ покупателя имеет связанные �
 
 msgid "This sales order has lines that require jobs to be created"
 msgstr "Этот заказ покупателя имеет строки, требующие создания производственных заказов"
+
+msgid "This source line is not in your saved review."
+msgstr "Эта строка источника отсутствует в сохранённом рассмотрении."
 
 msgid "This station runs ability-gated work — it only runs while a qualified operator is on shift; operators assigned on the manning board further shape available labor."
 msgstr "Эта станция выполняет работу, требующую определенных навыков — она работает только когда квалифицированный оператор находится на смене; операторы, назначенные на доску укомплектования, уточняют доступный труд."
@@ -18722,8 +18779,8 @@ msgstr "Загрузить"
 msgid "Upload a PDF first"
 msgstr "Сначала загрузите PDF"
 
-msgid "Upload a receipt or review documents collected from Mercury and Gmail. Confirm suppliers, items, and amounts before creating a draft invoice."
-msgstr "Загрузите квитанцию или просмотрите документы, полученные из Mercury и Gmail. Подтвердите поставщиков, позиции и суммы перед созданием черновика Счет-фактура."
+msgid "Upload a receipt or review documents collected from Mercury. Confirm suppliers, items, and amounts before creating a draft invoice."
+msgstr "Загрузите чек или рассмотрите документы, полученные из Mercury. Подтвердите поставщиков, номенклатуру и суммы перед созданием черновика счёта-фактуры."
 
 msgid "Upload and review"
 msgstr "Загрузите и просмотрите"

@@ -53,18 +53,85 @@ export function getInvoiceDocumentSources<
     kind: string;
     storagePath: string | null;
     sha256: string | null;
+    provenance?: unknown;
   }
 >(sources: readonly T[]): T[] {
   return sources.filter(
     (source) =>
       (source.kind === "mercury" || source.kind === "upload") &&
       !!source.storagePath &&
-      !!source.sha256
+      !!source.sha256 &&
+      !(
+        source.kind === "mercury" &&
+        source.provenance &&
+        typeof source.provenance === "object" &&
+        "current" in source.provenance &&
+        source.provenance.current === false
+      )
+  );
+}
+
+/** These persisted business facts must never be replaced by background extraction. */
+export function hasInvoiceReviewFacts(header: unknown): boolean {
+  if (!header || typeof header !== "object" || Array.isArray(header))
+    return false;
+  const values = header as Record<string, unknown>;
+  if (values.chargesConfirmed === true || values.resolvedSourceIssues === true)
+    return true;
+  return [
+    "sourceSupplierName",
+    "invoiceNumber",
+    "issueDate",
+    "dueDate",
+    "currencyCode",
+    "subtotal",
+    "tax",
+    "shipping",
+    "discount",
+    "total",
+    "paymentReviewReason"
+  ].some(
+    (key) =>
+      values[key] !== null && values[key] !== undefined && values[key] !== ""
   );
 }
 
 /** Content identities remain stable when source IDs/paths are remapped on restore. */
 const sourceHash = z.string().regex(/^[0-9a-f]{64}$/);
+/** Exact approval identity wins over later provider attachment membership. Null is legacy unknown. */
+export function getInvoiceApprovedSourceHashes(
+  snapshot: unknown
+): string[] | null {
+  if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot))
+    return null;
+  const record = snapshot as Record<string, unknown>;
+  if (Object.hasOwn(record, "sourceSha256s")) {
+    const parsed = z.array(sourceHash).max(100).safeParse(record.sourceSha256s);
+    return parsed.success ? [...new Set(parsed.data)].sort() : [];
+  }
+  const review = record.resolved ?? record.review;
+  if (
+    !review ||
+    typeof review !== "object" ||
+    !("header" in review) ||
+    !review.header ||
+    typeof review.header !== "object"
+  )
+    return null;
+  const header = review.header as Record<string, unknown>;
+  const hashes = [
+    header.primarySourceSha256,
+    ...(Array.isArray(header.sourceAcknowledgements)
+      ? header.sourceAcknowledgements.map((entry) =>
+          entry && typeof entry === "object" ? entry.sha256 : null
+        )
+      : [])
+  ].filter((value) => value !== null && value !== undefined);
+  if (!hashes.length) return null;
+  const parsed = z.array(sourceHash).max(100).safeParse(hashes);
+  return parsed.success ? [...new Set(parsed.data)].sort() : [];
+}
+
 export const invoiceSourceReviewSchema = z.object({
   primarySourceSha256: sourceHash.nullable().default(null),
   sourceAcknowledgements: z

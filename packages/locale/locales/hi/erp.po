@@ -653,6 +653,9 @@ msgstr "एक दृश्य को सहेजने के लिए एक
 msgid "A negotiated price pinned for a specific item — by customer, customer type, or all customers — that replaces the base price outright, optionally with quantity breaks."
 msgstr "एक समझौता किया गया मूल्य एक विशिष्ट आइटम के लिए तय किया गया — ग्राहक, ग्राहक प्रकार, या सभी ग्राहकों द्वारा — जो मूल मूल्य को पूरी तरह से प्रतिस्थापित करता है, वैकल्पिक रूप से मात्रा स्तर के साथ।"
 
+msgid "A new extraction is available. Your saved corrections and proposals were preserved. Compare the extracted facts below with your review, including added or changed source lines."
+msgstr "नया निष्कर्षण उपलब्ध है। आपके सहेजे गए सुधार और प्रस्ताव सुरक्षित रखे गए हैं। नीचे निकाली गई जानकारी की अपनी समीक्षा से तुलना करें, जिसमें जोड़ी गई या बदली गई स्रोत पंक्तियाँ भी शामिल हैं।"
+
 msgid "A new purchase order will be created for each supplier. Alternatively, you can choose an existing draft purchase order for the supplier to add the outside operations to."
 msgstr "प्रत्येक आपूर्तिकर्ता के लिए एक नया क्रय आदेश बनाया जाएगा। वैकल्पिक रूप से, आप आपूर्तिकर्ता के लिए एक मौजूदा ड्राफ्ट क्रय आदेश चुन सकते हैं जिसमें बाहरी ऑपरेशन जोड़ने हैं।"
 
@@ -1164,6 +1167,9 @@ msgstr "कार्रवाई प्रकार"
 msgid "Action Types"
 msgstr "कार्रवाई प्रकार"
 
+msgid "Actionable"
+msgstr "कार्रवाई आवश्यक"
+
 msgid "Actions"
 msgstr "कार्य"
 
@@ -1300,11 +1306,17 @@ msgstr "ठेकेदार जोड़ें"
 msgid "Add cost center"
 msgstr "लागत केंद्र जोड़ें"
 
+msgid "Add each extracted source line to the review or exclude it with a reason"
+msgstr "निकाली गई प्रत्येक स्रोत पंक्ति को समीक्षा में जोड़ें या कारण देकर बाहर रखें"
+
 msgid "Add Employee"
 msgstr "कर्मचारी जोड़ें"
 
 msgid "Add Entry"
 msgstr "प्रविष्टि जोड़ें"
+
+msgid "Add extracted line"
+msgstr "निकाली गई पंक्ति जोड़ें"
 
 msgid "Add Feature"
 msgstr "फीचर जोड़ें"
@@ -3850,6 +3862,9 @@ msgstr "हटाने की पुष्टि करें"
 
 msgid "Confirm disconnect"
 msgstr "डिस्कनेक्ट की पुष्टि करें"
+
+msgid "Confirm explanation"
+msgstr "स्पष्टीकरण की पुष्टि करें"
 
 msgid "Confirm how your company runs and lock the scope."
 msgstr "अपनी कंपनी कैसे चलती है यह पुष्टि करें और स्कोप को लॉक करें।"
@@ -6663,6 +6678,9 @@ msgstr "समाप्ति तिथि सेट करने से पह�
 msgid "Enter a quantity between 1 and {0}."
 msgstr "1 और {0} के बीच मात्रा दर्ज करें।"
 
+msgid "Enter a review reason for every unreadable attachment"
+msgstr "हर अपठनीय अनुलग्नक के लिए समीक्षा का कारण दर्ज करें"
+
 msgid "Enter and approve vendor bills against a PO (three-way match)"
 msgstr "PO के विरुद्ध विक्रेता बिलों को दर्ज करें और अनुमोदित करें (थ्री-वे मिलान)"
 
@@ -6894,11 +6912,17 @@ msgstr "विनिमय दरें"
 msgid "Exchanging the authorization code for an access token failed. Try connecting again."
 msgstr "प्राधिकरण कोड को एक्सेस टोकन से बदलना विफल रहा। दोबारा कनेक्ट करने का प्रयास करें।"
 
+msgid "Exclude source line"
+msgstr "स्रोत पंक्ति बाहर रखें"
+
 msgid "Excluded"
 msgstr "बहिष्कृत"
 
 msgid "Excluded source lines"
 msgstr "बहिष्कृत स्रोत पंक्तियाँ"
+
+msgid "Exclusion reason"
+msgstr "बाहर रखने का कारण"
 
 msgid "Executive P&L"
 msgstr "कार्यकारी P&L"
@@ -7071,6 +7095,9 @@ msgstr "अनुमोदन से पहले भुगतान का अ�
 
 msgid "Explain the payment difference, status, or allocation"
 msgstr "भुगतान के अंतर, स्थिति या आवंटन का स्पष्टीकरण दें"
+
+msgid "Explain why this unreadable attachment adds no separate invoice lines. Upload a readable version if it contains purchase details."
+msgstr "बताएँ कि इस अपठनीय अनुलग्नक में अलग चालान पंक्तियाँ क्यों नहीं हैं। यदि इसमें खरीद का विवरण है, तो पढ़ने योग्य संस्करण अपलोड करें।"
 
 msgid "Explorer"
 msgstr "एक्सप्लोरर"
@@ -8380,6 +8407,9 @@ msgstr "मेरे पास यह मानने का उचित आध
 msgid "I resolved these extraction issues and checked all source lines"
 msgstr "मैंने इन निष्कर्षण समस्याओं का समाधान किया और सभी स्रोत पंक्तियों की जाँच की"
 
+msgid "I reviewed the new extraction against my saved corrections"
+msgstr "मैंने नए निष्कर्षण की अपने सहेजे गए सुधारों से तुलना कर ली है"
+
 msgid "I'm Still Working"
 msgstr "मैं अभी भी काम कर रहा हूँ"
 
@@ -8559,6 +8589,9 @@ msgstr "निष्क्रिय शामिल करें"
 
 msgid "Included"
 msgstr "शामिल"
+
+msgid "Included in review"
+msgstr "समीक्षा में शामिल"
 
 msgid "Includes tax and shipping costs"
 msgstr "कर और शिपिंग लागत शामिल है"
@@ -9484,6 +9517,9 @@ msgstr "लाइन स्थिति"
 msgid "Line tax amount"
 msgstr "लाइन टैक्स राशि"
 
+msgid "Line total"
+msgstr "पंक्ति का कुल"
+
 msgid "Line type"
 msgstr "पंक्ति प्रकार"
 
@@ -9884,6 +9920,9 @@ msgstr "विनिर्माण"
 
 msgid "Map accounts"
 msgstr "खातों को मैप करें"
+
+msgid "Map every existing draft financial line before merging. These lines are not yet mapped to a reviewed receipt line:"
+msgstr "विलय से पहले मौजूदा ड्राफ्ट की हर वित्तीय पंक्ति का मिलान करें। इन पंक्तियों का अभी तक समीक्षा की गई रसीद की किसी पंक्ति से मिलान नहीं हुआ है:"
 
 msgid "Map Extracted Lines"
 msgstr "निकाली गई लाइनों को मैप करें"
@@ -12341,6 +12380,9 @@ msgstr "भुगतान की पुष्टि"
 msgid "Payment Date"
 msgstr "भुगतान तारीख"
 
+msgid "Payment details changed. Review your explanation against the current evidence and confirm it again."
+msgstr "भुगतान का विवरण बदल गया है। वर्तमान प्रमाण के अनुसार अपने स्पष्टीकरण की समीक्षा करें और फिर से पुष्टि करें।"
+
 msgid "Payment history is still being imported. The next hourly run will continue where it stopped."
 msgstr "भुगतान इतिहास अभी आयात हो रहा है। अगला प्रति घंटा रन वहीं से जारी रहेगा जहाँ रुका था।"
 
@@ -14378,6 +14420,9 @@ msgstr "{name} के लिए समीक्षा का कारण"
 msgid "Review supplier"
 msgstr "आपूर्तिकर्ता की समीक्षा करें"
 
+msgid "Review the new extraction against your saved corrections before approval"
+msgstr "अनुमोदन से पहले नए निष्कर्षण की अपने सहेजे गए सुधारों से तुलना करें"
+
 msgid "Review the original invoice to select the correct supplier and item classes, confirm pack sizes and totals, and map each existing line explicitly."
 msgstr "सही आपूर्तिकर्ता और आइटम वर्गों का चयन करने, पैक आकार और कुल की पुष्टि करने और प्रत्येक मौजूदा लाइन को स्पष्ट रूप से मैप करने के लिए मूल चालान की समीक्षा करें।"
 
@@ -14783,6 +14828,9 @@ msgstr "समीक्षा सहेजें"
 
 msgid "Save sync settings"
 msgstr "सिंक सेटिंग सहेजें"
+
+msgid "Save the edited invoice total or currency, then confirm the payment explanation against the updated amounts."
+msgstr "चालान का बदला हुआ कुल या मुद्रा सहेजें, फिर अद्यतन राशियों के अनुसार भुगतान के स्पष्टीकरण की पुष्टि करें।"
 
 #. placeholder {0}: copy.moduleLabel
 msgid "Save this review, add the required definition in {0}, and reopen the proposal to select it."
@@ -15919,6 +15967,9 @@ msgstr "स्रोत आइटम"
 
 msgid "Source Job"
 msgstr "स्रोत जॉब"
+
+msgid "Source line"
+msgstr "स्रोत पंक्ति"
 
 msgid "Source line total"
 msgstr "स्रोत पंक्ति कुल"
@@ -17644,6 +17695,9 @@ msgstr "इन क्रेडिट्स को लागू करने क�
 msgid "These are bank payment details. Invoice totals and the supplier are reviewed separately from the receipt."
 msgstr "ये बैंक भुगतान का विवरण हैं। चालान की कुल राशि और आपूर्तिकर्ता की रसीद के आधार पर अलग से समीक्षा की जाती है।"
 
+msgid "These are the latest parsed facts. Your review fields remain unchanged until you edit them or add a source line."
+msgstr "यह नवीनतम निकाली गई जानकारी है। आपकी समीक्षा के फ़ील्ड तब तक नहीं बदलेंगे जब तक आप उन्हें संपादित नहीं करते या कोई स्रोत पंक्ति नहीं जोड़ते।"
+
 msgid "These custom fields will only be available for entities with the same tags"
 msgstr "ये कस्टम फ़ील्ड केवल समान टैग वाली संस्थाओं के लिए उपलब्ध होंगी"
 
@@ -17883,6 +17937,9 @@ msgstr "इस विक्रय आदेश के पास जुड़ी 
 
 msgid "This sales order has lines that require jobs to be created"
 msgstr "इस विक्रय आदेश के पास पंक्तियां हैं जिनके लिए जॉब बनाने की आवश्यकता है"
+
+msgid "This source line is not in your saved review."
+msgstr "यह स्रोत पंक्ति आपकी सहेजी गई समीक्षा में नहीं है।"
 
 msgid "This station runs ability-gated work — it only runs while a qualified operator is on shift; operators assigned on the manning board further shape available labor."
 msgstr "यह स्टेशन कौशल-गेटेड कार्य चलाता है — यह केवल तब चलता है जब एक योग्य ऑपरेटर शिफ्ट पर हो; मानिंग बोर्ड पर असाइन किए गए ऑपरेटर उपलब्ध श्रम को आगे आकार देते हैं।"
@@ -18723,8 +18780,8 @@ msgstr "अपलोड करें"
 msgid "Upload a PDF first"
 msgstr "पहले एक PDF अपलोड करें"
 
-msgid "Upload a receipt or review documents collected from Mercury and Gmail. Confirm suppliers, items, and amounts before creating a draft invoice."
-msgstr "मरकरी और जीमेल से एकत्र की गई रसीद या समीक्षा दस्तावेज़ अपलोड करें। ड्राफ्ट चालान बनाने से पहले आपूर्तिकर्ताओं, वस्तुओं और मात्रा की पुष्टि करें।"
+msgid "Upload a receipt or review documents collected from Mercury. Confirm suppliers, items, and amounts before creating a draft invoice."
+msgstr "रसीद अपलोड करें या Mercury से एकत्र किए गए दस्तावेज़ों की समीक्षा करें। ड्राफ्ट चालान बनाने से पहले आपूर्तिकर्ताओं, आइटम और राशियों की पुष्टि करें।"
 
 msgid "Upload and review"
 msgstr "अपलोड करें और समीक्षा करें"

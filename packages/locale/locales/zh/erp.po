@@ -653,6 +653,9 @@ msgstr "需要名称才能保存查看"
 msgid "A negotiated price pinned for a specific item — by customer, customer type, or all customers — that replaces the base price outright, optionally with quantity breaks."
 msgstr "为特定物料约定的固定价格——按客户、客户类型或所有客户——完全替代基准价格，可选择数量阶梯。"
 
+msgid "A new extraction is available. Your saved corrections and proposals were preserved. Compare the extracted facts below with your review, including added or changed source lines."
+msgstr "新的提取结果已可用。已保存的修正和建议均已保留。请将下方提取的数据与您的评审内容进行比较，包括新增或更改的原始行。"
+
 msgid "A new purchase order will be created for each supplier. Alternatively, you can choose an existing draft purchase order for the supplier to add the outside operations to."
 msgstr "将为每个供应商创建一个新的采购订单。或者，您可以选择供应商的现有草稿采购订单以向其添加外协工序。"
 
@@ -1164,6 +1167,9 @@ msgstr "操作类型"
 msgid "Action Types"
 msgstr "操作类型"
 
+msgid "Actionable"
+msgstr "待处理"
+
 msgid "Actions"
 msgstr "操作"
 
@@ -1300,11 +1306,17 @@ msgstr "添加外协人员"
 msgid "Add cost center"
 msgstr "添加成本中心"
 
+msgid "Add each extracted source line to the review or exclude it with a reason"
+msgstr "将每个提取的原始行添加到评审中，或填写原因后排除"
+
 msgid "Add Employee"
 msgstr "添加员工"
 
 msgid "Add Entry"
 msgstr "添加条目"
+
+msgid "Add extracted line"
+msgstr "添加提取行"
 
 msgid "Add Feature"
 msgstr "添加功能"
@@ -3850,6 +3862,9 @@ msgstr "确认删除"
 
 msgid "Confirm disconnect"
 msgstr "确认断开连接"
+
+msgid "Confirm explanation"
+msgstr "确认说明"
 
 msgid "Confirm how your company runs and lock the scope."
 msgstr "确认您的公司如何运营并锁定范围。"
@@ -6663,6 +6678,9 @@ msgstr "在设置到期日期前输入生产批次号"
 msgid "Enter a quantity between 1 and {0}."
 msgstr "请输入 1 至 {0} 之间的数量。"
 
+msgid "Enter a review reason for every unreadable attachment"
+msgstr "请为每个无法读取的附件填写评审原因"
+
 msgid "Enter and approve vendor bills against a PO (three-way match)"
 msgstr "输入和审批供应商账单与采购单进行三单匹配"
 
@@ -6894,11 +6912,17 @@ msgstr "汇率"
 msgid "Exchanging the authorization code for an access token failed. Try connecting again."
 msgstr "用授权代码交换访问令牌失败。请重新连接。"
 
+msgid "Exclude source line"
+msgstr "排除原始行"
+
 msgid "Excluded"
 msgstr "已排除"
 
 msgid "Excluded source lines"
 msgstr "排除的源代码行"
+
+msgid "Exclusion reason"
+msgstr "排除原因"
 
 msgid "Executive P&L"
 msgstr "执行损益表"
@@ -7071,6 +7095,9 @@ msgstr "审批前请说明付款差额或状态"
 
 msgid "Explain the payment difference, status, or allocation"
 msgstr "说明付款差额、状态或分配方式"
+
+msgid "Explain why this unreadable attachment adds no separate invoice lines. Upload a readable version if it contains purchase details."
+msgstr "请说明此无法读取的附件为何不包含其他单独的发票行。如果其中包含采购明细，请上传可读取的版本。"
 
 msgid "Explorer"
 msgstr "浏览器"
@@ -8380,6 +8407,9 @@ msgstr "我有合理的理由相信该个人是根据 22 CFR 120.62 定义的美
 msgid "I resolved these extraction issues and checked all source lines"
 msgstr "我解决了这些提取问题并检查了所有源代码行"
 
+msgid "I reviewed the new extraction against my saved corrections"
+msgstr "我已将新的提取结果与已保存的修正进行核对"
+
 msgid "I'm Still Working"
 msgstr "我仍在工作"
 
@@ -8559,6 +8589,9 @@ msgstr "包括已停用"
 
 msgid "Included"
 msgstr "已包含"
+
+msgid "Included in review"
+msgstr "已纳入评审"
 
 msgid "Includes tax and shipping costs"
 msgstr "包括税费和运费"
@@ -9484,6 +9517,9 @@ msgstr "行状态"
 msgid "Line tax amount"
 msgstr "行税金额"
 
+msgid "Line total"
+msgstr "行总计"
+
 msgid "Line type"
 msgstr "线型"
 
@@ -9884,6 +9920,9 @@ msgstr "制造"
 
 msgid "Map accounts"
 msgstr "映射科目"
+
+msgid "Map every existing draft financial line before merging. These lines are not yet mapped to a reviewed receipt line:"
+msgstr "合并前，请映射现有草稿中的每个财务行。以下行尚未映射到已评审的收据行："
 
 msgid "Map Extracted Lines"
 msgstr "映射提取的行"
@@ -12341,6 +12380,9 @@ msgstr "付款确认"
 msgid "Payment Date"
 msgstr "付款日期"
 
+msgid "Payment details changed. Review your explanation against the current evidence and confirm it again."
+msgstr "付款详情已更改。请依据当前凭证评审您的说明并再次确认。"
+
 msgid "Payment history is still being imported. The next hourly run will continue where it stopped."
 msgstr "付款历史仍在导入。下一次每小时运行将从中断处继续。"
 
@@ -14378,6 +14420,9 @@ msgstr "{name} 的评审原因"
 msgid "Review supplier"
 msgstr "审核供应商"
 
+msgid "Review the new extraction against your saved corrections before approval"
+msgstr "审批前，请将新的提取结果与已保存的修正进行核对"
+
 msgid "Review the original invoice to select the correct supplier and item classes, confirm pack sizes and totals, and map each existing line explicitly."
 msgstr "查看原始发票以选择正确的供应商和项目类别，确认包装尺寸和总计，并明确映射每个现有行。"
 
@@ -14783,6 +14828,9 @@ msgstr "保存评论"
 
 msgid "Save sync settings"
 msgstr "保存同步设置"
+
+msgid "Save the edited invoice total or currency, then confirm the payment explanation against the updated amounts."
+msgstr "保存修改后的发票总计或货币，然后根据更新后的金额确认付款说明。"
 
 #. placeholder {0}: copy.moduleLabel
 msgid "Save this review, add the required definition in {0}, and reopen the proposal to select it."
@@ -15919,6 +15967,9 @@ msgstr "源项目"
 
 msgid "Source Job"
 msgstr "源工单"
+
+msgid "Source line"
+msgstr "原始行"
 
 msgid "Source line total"
 msgstr "源行总数"
@@ -17644,6 +17695,9 @@ msgstr "没有可应用这些贷方的未结款项。"
 msgid "These are bank payment details. Invoice totals and the supplier are reviewed separately from the receipt."
 msgstr "这些是银行付款详情。发票总计和供应商信息将根据收据单独审核。"
 
+msgid "These are the latest parsed facts. Your review fields remain unchanged until you edit them or add a source line."
+msgstr "这些是最新提取的数据。评审字段将保持不变，直到您编辑字段或添加原始行。"
+
 msgid "These custom fields will only be available for entities with the same tags"
 msgstr "这些自定义字段仅对具有相同标签的实体可用"
 
@@ -17883,6 +17937,9 @@ msgstr "这个销售订单有关联的工单。选择如何处理它们。"
 
 msgid "This sales order has lines that require jobs to be created"
 msgstr "这个销售订单有需要创建工单的行。"
+
+msgid "This source line is not in your saved review."
+msgstr "此原始行不在您已保存的评审中。"
 
 msgid "This station runs ability-gated work — it only runs while a qualified operator is on shift; operators assigned on the manning board further shape available labor."
 msgstr "此工作中心运行需要特定技能的工作 — 仅当具有资格的操作员值班时才运行；人员配置委员会上指定的操作员进一步形成可用的人工。"
@@ -18723,8 +18780,8 @@ msgstr "上传"
 msgid "Upload a PDF first"
 msgstr "先上传 PDF"
 
-msgid "Upload a receipt or review documents collected from Mercury and Gmail. Confirm suppliers, items, and amounts before creating a draft invoice."
-msgstr "上传收据或查看从 Mercury 和 Gmail 收集的文档。在创建草稿发票之前确认供应商、项目和金额。"
+msgid "Upload a receipt or review documents collected from Mercury. Confirm suppliers, items, and amounts before creating a draft invoice."
+msgstr "上传收据或评审从 Mercury 收集的文档。创建发票草稿前，请确认供应商、物料和金额。"
 
 msgid "Upload and review"
 msgstr "上传并审核"

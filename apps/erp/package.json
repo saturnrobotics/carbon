@@ -164,6 +164,7 @@
     "cross-env": "catalog:",
     "nodemon": "catalog:",
     "npm-run-all": "catalog:",
+    "playwright-core": "1.62.0",
     "supabase": "catalog:",
     "tailwind-scrollbar": "catalog:",
     "tailwind-scrollbar-hide": "catalog:",
@@ -182,6 +183,9 @@
     "dev:app": "react-router dev",
     "lint": "biome lint --write ",
     "start": "NODE_ENV=production react-router-serve ./build/server/index.js",
+    "test": "vitest run --exclude '**/*.integration.test.ts' --exclude '**/*.live.test.ts' --exclude '**/invoice-evaluation-training.test.ts'",
+    "test:invoice": "vitest run app/modules/invoicing/invoice-intake.models.test.ts app/modules/invoicing/invoicing.models.test.ts app/modules/invoicing/invoice-operator.test.ts app/modules/invoicing/invoice-operator.lifecycle.test.ts app/modules/invoicing/ui/InvoiceDocuments/invoice-document.utils.test.ts",
+    "test:invoice:integration": "python3 ../../../contrib/deploying/gcp-tailscale/check_invoice.py --integration --erp-only",
     "typecheck": "tsgo --noEmit",
     "typegen": "react-router typegen"
   },

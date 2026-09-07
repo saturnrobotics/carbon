@@ -58,6 +58,23 @@ function review(): InvoiceIntakeReview {
   });
 }
 describe("invoice review readiness", () => {
+  it("requires every existing financial line to be mapped before merging a receipt", () => {
+    const value = review();
+    value.purchaseInvoiceId = "existing-draft";
+    value.mergeMode = "merge";
+    value.expectedInvoiceUpdatedAt = "2026-09-07 12:00:00+00";
+    const mergeContext = {
+      ...context,
+      linkedInvoiceStatus: "Draft",
+      linkedInvoiceHasLines: true,
+      existingFinancialLineIds: ["existing-line"]
+    };
+    const missing = validateInvoiceReview(value, mergeContext);
+    expect(missing.ready).toBe(false);
+    expect(missing.issues.some((issue) => issue.code === "merge")).toBe(true);
+    value.lines[0].purchaseInvoiceLineId = "existing-line";
+    expect(validateInvoiceReview(value, mergeContext).ready).toBe(true);
+  });
   it("couples reviewed tax edits at the configured currency precision", () => {
     const line = {
       ...review().lines[0],

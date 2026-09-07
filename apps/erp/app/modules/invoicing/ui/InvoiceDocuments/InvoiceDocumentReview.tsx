@@ -8,7 +8,6 @@ import {
   Heading,
   HStack
 } from "@carbon/react";
-import { INPUT_FORMAT } from "@carbon/utils";
 import { Trans, useLingui } from "@lingui/react/macro";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useFetcher, useRevalidator } from "react-router";
@@ -27,6 +26,7 @@ import { useItems, useSuppliers } from "~/stores";
 import { setCustomFields } from "~/utils/form";
 import { path } from "~/utils/path";
 import {
+  extractionToInvoiceReview,
   getInvoicePaymentReconciliation,
   getInvoiceReviewReadiness
 } from "../../invoice-intake.utils";
@@ -44,6 +44,7 @@ import {
   InvoiceDocumentSourceReview,
   type InvoiceReviewSource
 } from "./InvoiceDocumentSourceReview";
+import { InvoiceExtractionFacts } from "./InvoiceExtractionFacts";
 import { InvoicePaymentEvidence } from "./InvoicePaymentEvidence";
 import {
   InvoiceRecognitionRules,
@@ -52,6 +53,7 @@ import {
 import {
   type InvoicePreviewSource,
   invoiceCountryCode,
+  invoiceReceiptReason,
   invoiceSupplierProposalDefaults,
   selectInvoicePreviewSource
 } from "./invoice-document.utils";
@@ -71,17 +73,6 @@ const nativeItemValidators = {
 export function InvoiceDocumentReview({ data }: { data: ReviewData }) {
   const { t } = useLingui();
   const statusLabel = useInvoiceDocumentLabels();
-  const factLabels: Record<string, string> = {
-    invoiceNumber: t`Invoice number`,
-    issueDate: t`Invoice date`,
-    dueDate: t`Due date`,
-    currencyCode: t`Currency`,
-    subtotal: t`Subtotal`,
-    discount: t`Discount`,
-    shipping: t`Shipping`,
-    tax: t`Tax`,
-    total: t`Total`
-  };
   const addressLabels = {
     addressLine2: t`Address line 2`,
     city: t`City`,
@@ -146,15 +137,19 @@ export function InvoiceDocumentReview({ data }: { data: ReviewData }) {
   };
   const header = (patch: Partial<InvoiceIntakeReview["header"]>) =>
     change({ ...review, header: { ...review.header, ...patch } });
+  const completed = ["Approved", "Linked"].includes(data.intake.status);
   const readOnly =
-    ["Approved", "Linked", "Ignored"].includes(data.intake.status) ||
+    completed ||
+    data.intake.status === "Ignored" ||
     !data.permissions.canUpdate;
   const conflict = dirty && baseRevision !== data.intake.revision;
   const distinctSources = useMemo(() => {
     const sources = new Map<string, InvoiceReviewSource>();
     for (const source of data.sources) {
       if (
-        data.eligibleSourceIds.includes(source.id) &&
+        (completed
+          ? data.signedSources.some((approved) => approved.id === source.id)
+          : data.eligibleSourceIds.includes(source.id)) &&
         source.sha256 &&
         source.storagePath &&
         !sources.has(source.sha256)
@@ -162,7 +157,7 @@ export function InvoiceDocumentReview({ data }: { data: ReviewData }) {
         sources.set(source.sha256, { ...source, sha256: source.sha256 });
     }
     return [...sources.values()];
-  }, [data.sources, data.eligibleSourceIds]);
+  }, [data.sources, data.eligibleSourceIds, data.signedSources, completed]);
   const primarySha256 =
     review.header.primarySourceSha256 ??
     (distinctSources.length === 1 ? distinctSources[0].sha256 : null);
@@ -177,10 +172,16 @@ export function InvoiceDocumentReview({ data }: { data: ReviewData }) {
       ),
     [review.header, data.payments, data.currencies]
   );
+  const paymentReviewBasisChanged =
+    review.header.total !== data.review.header.total ||
+    review.header.currencyCode !== data.review.header.currencyCode;
+  const paymentReasonCurrent =
+    !paymentReviewBasisChanged &&
+    review.header.paymentReviewFingerprint === data.paymentEvidenceFingerprint;
   const paymentIssues =
     review.mergeMode !== "evidence" &&
     ["difference", "unsettled"].includes(paymentReconciliation.status) &&
-    !review.header.paymentReviewReason?.trim()
+    (!review.header.paymentReviewReason?.trim() || !paymentReasonCurrent)
       ? [
           {
             path: "header.paymentReviewReason",
@@ -233,11 +234,62 @@ export function InvoiceDocumentReview({ data }: { data: ReviewData }) {
         code: "source",
         message: t`Parse the selected invoice or explain your manual review of its facts`
       });
+    if (
+      data.pendingExtractionReviewId &&
+      review.header.extractionReviewId !== data.pendingExtractionReviewId
+    )
+      issues.push({
+        path: "header.extractionReviewId",
+        code: "source",
+        message: t`Review the new extraction against your saved corrections before approval`
+      });
+    if (
+      data.payments.some((payment) =>
+        payment.unresolvedAttachments.some(
+          (attachment) =>
+            !invoiceReceiptReason(
+              review.header.receiptAcknowledgements,
+              payment.id,
+              attachment.id,
+              attachment.fingerprint
+            )?.trim()
+        )
+      )
+    )
+      issues.push({
+        path: "header.receiptAcknowledgements",
+        code: "source",
+        message: t`Enter a review reason for every unreadable attachment`
+      });
+    if (
+      review.mergeMode !== "evidence" &&
+      data.extraction?.lines.some(
+        (line) =>
+          !review.lines.some((current) => current.lineKey === line.lineKey) &&
+          !review.header.excludedLines.some(
+            (excluded) =>
+              excluded.lineKey === line.lineKey && excluded.reason.trim()
+          )
+      )
+    )
+      issues.push({
+        path: "header.excludedLines",
+        code: "source",
+        message: t`Add each extracted source line to the review or exclude it with a reason`
+      });
     return issues;
   }, [
     distinctSources,
     primarySha256,
     review.header.sourceAcknowledgements,
+    review.header.receiptAcknowledgements,
+    review.header.extractionReviewId,
+    review.header.excludedLines,
+    review.lines,
+    review.mergeMode,
+    data.payments,
+    data.pendingExtractionReviewId,
+    data.extraction,
     data.sourceCoverage.extractionSha256,
     t
   ]);
@@ -287,13 +339,29 @@ export function InvoiceDocumentReview({ data }: { data: ReviewData }) {
         issues: [...localValidation.issues, ...sourceIssues, ...paymentIssues]
       }
     : data.validation;
+  const unmappedInvoiceLines =
+    review.mergeMode === "merge"
+      ? data.invoiceLines.filter(
+          (line) =>
+            data.reviewContext.existingFinancialLineIds?.includes(line.value) &&
+            !review.lines.some(
+              (current) => current.purchaseInvoiceLineId === line.value
+            )
+        )
+      : [];
   const activeSource = selectInvoicePreviewSource(
     data.signedSources,
     sourceId,
     primarySha256
   );
   const sourceSupplierName =
-    review.header.sourceSupplierName ?? data.extraction?.supplier.name.value;
+    data.extraction?.supplier.name.value ?? review.header.sourceSupplierName;
+  const extractionIssues = [
+    ...new Set([
+      ...review.header.sourceIssues,
+      ...(data.extraction?.issues ?? [])
+    ])
+  ];
   const [previewSource, setPreviewSource] = useState(activeSource);
   useEffect(() => {
     // Retain a signed preview through status polling; repeatedly navigating a
@@ -362,8 +430,17 @@ export function InvoiceDocumentReview({ data }: { data: ReviewData }) {
         reconciliation={paymentReconciliation}
         requireExplanation={review.mergeMode !== "evidence"}
         reason={review.header.paymentReviewReason}
+        reasonCurrent={paymentReasonCurrent}
+        reasonEvidencePending={paymentReviewBasisChanged}
+        receiptAcknowledgements={review.header.receiptAcknowledgements}
+        onReceiptAcknowledgementsChange={(receiptAcknowledgements) =>
+          header({ receiptAcknowledgements })
+        }
         onReasonChange={(paymentReviewReason) =>
-          header({ paymentReviewReason })
+          header({
+            paymentReviewReason,
+            paymentReviewFingerprint: data.paymentEvidenceFingerprint
+          })
         }
         disabled={readOnly || busy}
       />
@@ -396,14 +473,15 @@ export function InvoiceDocumentReview({ data }: { data: ReviewData }) {
           {fetcher.data.error}
         </p>
       )}
-      {data.intake.lastErrorCode && (
-        <p role="status" className="text-sm text-muted-foreground">
-          <Trans>
-            Automatic processing needs attention. Check the available documents
-            and review fields below before retrying parsing.
-          </Trans>
-        </p>
-      )}
+      {data.intake.lastErrorCode &&
+        data.intake.lastErrorCode !== "invoice_extraction_review_preserved" && (
+          <p role="status" className="text-sm text-muted-foreground">
+            <Trans>
+              Automatic processing needs attention. Check the available
+              documents and review fields below before retrying parsing.
+            </Trans>
+          </p>
+        )}
       {data.readinessPending && (
         <p role="status" className="text-sm text-muted-foreground">
           <Trans>
@@ -411,6 +489,34 @@ export function InvoiceDocumentReview({ data }: { data: ReviewData }) {
             settings.
           </Trans>
         </p>
+      )}
+      {data.pendingExtractionReviewId && !readOnly && (
+        <Card>
+          <CardContent className="pt-4 space-y-3">
+            <p role="status">
+              <Trans>
+                A new extraction is available. Your saved corrections and
+                proposals were preserved. Compare the extracted facts below with
+                your review, including added or changed source lines.
+              </Trans>
+            </p>
+            <InvoiceToggle
+              label={t`I reviewed the new extraction against my saved corrections`}
+              checked={
+                review.header.extractionReviewId ===
+                data.pendingExtractionReviewId
+              }
+              onChange={(checked) =>
+                header({
+                  extractionReviewId: checked
+                    ? data.pendingExtractionReviewId
+                    : null
+                })
+              }
+              disabled={busy || !data.extraction}
+            />
+          </CardContent>
+        </Card>
       )}
       {!readOnly &&
         !data.extraction &&
@@ -480,10 +586,17 @@ export function InvoiceDocumentReview({ data }: { data: ReviewData }) {
               value={activeSource?.id ?? null}
               options={data.signedSources.map((source) => ({
                 value: source.id,
-                label: source.fileName ?? t`Receipt or invoice`
+                label: source.archived
+                  ? `${t`Archived`} · ${source.fileName ?? t`Receipt or invoice`}`
+                  : (source.fileName ?? t`Receipt or invoice`)
               }))}
               onChange={(id) => setSourceId(id ?? "")}
             />
+          )}
+          {activeSource?.archived && (
+            <Badge>
+              <Trans>Archived</Trans>
+            </Badge>
           )}
           {activeSource?.url ? (
             <>
@@ -599,26 +712,53 @@ export function InvoiceDocumentReview({ data }: { data: ReviewData }) {
             </form>
           )}
           {data.extraction && (
-            <details className="rounded border p-3">
-              <summary>
-                <Trans>Extracted facts and confidence</Trans>
-              </summary>
-              <div className="space-y-2 pt-3 text-sm">
-                {Object.entries(data.extraction.header).map(([key, fact]) => (
-                  <p key={key}>
-                    <strong>{factLabels[key] ?? key}</strong>:{" "}
-                    {fact.value ?? t`Missing`} ·{" "}
-                    {fact.confidence === null
-                      ? t`Confidence unavailable`
-                      : new Intl.NumberFormat(
-                          undefined,
-                          INPUT_FORMAT.percent
-                        ).format(fact.confidence)}{" "}
-                    {fact.page && `· ${t`Page`} ${fact.page}`}
-                  </p>
-                ))}
-              </div>
-            </details>
+            <InvoiceExtractionFacts
+              extraction={data.extraction}
+              review={review}
+              pendingReview={!!data.pendingExtractionReviewId}
+              disabled={readOnly || busy || review.mergeMode === "evidence"}
+              onAdd={(lineKey) => {
+                const line = extractionToInvoiceReview(
+                  data.extraction!
+                ).lines.find((line) => line.lineKey === lineKey);
+                if (
+                  !line ||
+                  review.lines.some((current) => current.lineKey === lineKey)
+                )
+                  return;
+                change({
+                  ...review,
+                  lines: [
+                    ...review.lines,
+                    {
+                      ...line,
+                      sortOrder:
+                        review.lines.reduce(
+                          (maximum, current) =>
+                            Math.max(maximum, current.sortOrder),
+                          -1
+                        ) + 1
+                    }
+                  ],
+                  header: {
+                    ...review.header,
+                    excludedLines: review.header.excludedLines.filter(
+                      (line) => line.lineKey !== lineKey
+                    )
+                  }
+                });
+              }}
+              onExclude={(lineKey, reason) =>
+                header({
+                  excludedLines: [
+                    ...review.header.excludedLines.filter(
+                      (line) => line.lineKey !== lineKey
+                    ),
+                    { lineKey, reason }
+                  ]
+                })
+              }
+            />
           )}
         </div>
         <div className="space-y-4 min-w-0">
@@ -1012,10 +1152,10 @@ export function InvoiceDocumentReview({ data }: { data: ReviewData }) {
                 onChange={(chargesConfirmed) => header({ chargesConfirmed })}
                 disabled={readOnly}
               />
-              {review.header.sourceIssues.length > 0 && (
+              {extractionIssues.length > 0 && (
                 <>
                   <ul className="list-disc pl-5">
-                    {review.header.sourceIssues.map((issue, index) => (
+                    {extractionIssues.map((issue, index) => (
                       <li key={`${index}-${issue}`}>{issue}</li>
                     ))}
                   </ul>
@@ -1099,6 +1239,25 @@ export function InvoiceDocumentReview({ data }: { data: ReviewData }) {
                   }
                   disabled={readOnly}
                 />
+                {unmappedInvoiceLines.length > 0 && (
+                  <div
+                    role="status"
+                    className="rounded border p-3 space-y-2 text-sm"
+                  >
+                    <p>
+                      <Trans>
+                        Map every existing draft financial line before merging.
+                        These lines are not yet mapped to a reviewed receipt
+                        line:
+                      </Trans>
+                    </p>
+                    <ul className="list-disc pl-5">
+                      {unmappedInvoiceLines.map((line) => (
+                        <li key={line.value}>{line.label}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}

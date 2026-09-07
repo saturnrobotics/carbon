@@ -653,6 +653,9 @@ msgstr "Bir görünüm kaydetmek için bir isim gereklidir"
 msgid "A negotiated price pinned for a specific item — by customer, customer type, or all customers — that replaces the base price outright, optionally with quantity breaks."
 msgstr "Belirli bir müşteri, müşteri türü veya tüm müşteriler için sabitlenmiş ve temel fiyatın yerini tamamıyla alan, isteğe bağlı olarak miktar kademesileri ile birlikte gelen müzakere edilmiş fiyat."
 
+msgid "A new extraction is available. Your saved corrections and proposals were preserved. Compare the extracted facts below with your review, including added or changed source lines."
+msgstr "Yeni bir veri çıkarımı kullanılabilir. Kaydedilmiş düzeltmeleriniz ve önerileriniz korundu. Eklenen veya değiştirilen kaynak satırları da dahil olmak üzere aşağıdaki çıkarılmış bilgileri incelemenizle karşılaştırın."
+
 msgid "A new purchase order will be created for each supplier. Alternatively, you can choose an existing draft purchase order for the supplier to add the outside operations to."
 msgstr "Her tedarikçi için yeni bir satın alma siparişi oluşturulacaktır. Alternatif olarak, tedarikçinin dış operasyonları eklemesi için mevcut taslak bir satın alma siparişi seçebilirsiniz."
 
@@ -1164,6 +1167,9 @@ msgstr "Aksiyon Türü"
 msgid "Action Types"
 msgstr "Aksiyon Türleri"
 
+msgid "Actionable"
+msgstr "İşlem bekleyen"
+
 msgid "Actions"
 msgstr "Eylemler"
 
@@ -1300,11 +1306,17 @@ msgstr "Taşeron Ekle"
 msgid "Add cost center"
 msgstr "Maliyet Merkezi Ekle"
 
+msgid "Add each extracted source line to the review or exclude it with a reason"
+msgstr "Çıkarılan her kaynak satırı incelemeye ekleyin veya bir gerekçeyle hariç tutun"
+
 msgid "Add Employee"
 msgstr "Çalışan Ekle"
 
 msgid "Add Entry"
 msgstr "Giri Ekle"
+
+msgid "Add extracted line"
+msgstr "Çıkarılan satırı ekle"
 
 msgid "Add Feature"
 msgstr "Özellik Ekle"
@@ -3850,6 +3862,9 @@ msgstr "Silmeyi onayla"
 
 msgid "Confirm disconnect"
 msgstr "Bağlantı kesmeyi onayla"
+
+msgid "Confirm explanation"
+msgstr "Açıklamayı doğrula"
 
 msgid "Confirm how your company runs and lock the scope."
 msgstr "Şirketinizin nasıl çalıştığını doğrulayın ve kapsamı kilitleyin."
@@ -6663,6 +6678,9 @@ msgstr "Son kullanma tarihini ayarlamadan önce bir parti numarası girin"
 msgid "Enter a quantity between 1 and {0}."
 msgstr "1 ile {0} arasında bir miktar girin."
 
+msgid "Enter a review reason for every unreadable attachment"
+msgstr "Okunamayan her ek için bir inceleme gerekçesi girin"
+
 msgid "Enter and approve vendor bills against a PO (three-way match)"
 msgstr "Bir satın alma siparişine (PO) karşı satıcı faturalarını girin ve onaylayın (üçlü eşleştirme)"
 
@@ -6894,11 +6912,17 @@ msgstr "Döviz Kurları"
 msgid "Exchanging the authorization code for an access token failed. Try connecting again."
 msgstr "Yetkilendirme kodunun erişim belirteciyle değiştirilmesi başarısız oldu. Yeniden bağlanmayı deneyin."
 
+msgid "Exclude source line"
+msgstr "Kaynak satırı hariç tut"
+
 msgid "Excluded"
 msgstr "Hariç Tutulan"
 
 msgid "Excluded source lines"
 msgstr "Hariç tutulan kaynak satırları"
+
+msgid "Exclusion reason"
+msgstr "Hariç tutma gerekçesi"
 
 msgid "Executive P&L"
 msgstr "Yönetici P&L"
@@ -7071,6 +7095,9 @@ msgstr "Onaydan önce ödeme farkını veya durumunu açıklayın"
 
 msgid "Explain the payment difference, status, or allocation"
 msgstr "Ödeme farkını, durumunu veya dağılımını açıklayın"
+
+msgid "Explain why this unreadable attachment adds no separate invoice lines. Upload a readable version if it contains purchase details."
+msgstr "Okunamayan bu ekin neden ayrı fatura satırları içermediğini açıklayın. Satın alma ayrıntıları içeriyorsa okunabilir bir sürümünü yükleyin."
 
 msgid "Explorer"
 msgstr "Gezgin"
@@ -8380,6 +8407,9 @@ msgstr "Bu kişinin 22 CFR 120.62'de tanımlanan şekilde ABD vatandaşı olduğ
 msgid "I resolved these extraction issues and checked all source lines"
 msgstr "Bu çıkarma sorunlarını çözdüm ve tüm kaynak satırlarını kontrol ettim"
 
+msgid "I reviewed the new extraction against my saved corrections"
+msgstr "Yeni veri çıkarımını kaydedilmiş düzeltmelerimle karşılaştırdım"
+
 msgid "I'm Still Working"
 msgstr "Hala Çalışıyorum"
 
@@ -8559,6 +8589,9 @@ msgstr "Pasifleri Dahil Et"
 
 msgid "Included"
 msgstr "Dahil"
+
+msgid "Included in review"
+msgstr "İncelemeye dahil"
 
 msgid "Includes tax and shipping costs"
 msgstr "Vergi ve nakliye bedelini içerir"
@@ -9484,6 +9517,9 @@ msgstr "Satır Durumu"
 msgid "Line tax amount"
 msgstr "Satır vergisi tutarı"
 
+msgid "Line total"
+msgstr "Satır toplamı"
+
 msgid "Line type"
 msgstr "Hat türü"
 
@@ -9884,6 +9920,9 @@ msgstr "Üretim"
 
 msgid "Map accounts"
 msgstr "Hesapları Eşle"
+
+msgid "Map every existing draft financial line before merging. These lines are not yet mapped to a reviewed receipt line:"
+msgstr "Birleştirmeden önce mevcut taslağın her mali satırını eşleyin. Bu satırlar henüz incelenmiş makbuzun bir satırıyla eşlenmedi:"
 
 msgid "Map Extracted Lines"
 msgstr "Çıkarılan Satırları Eşle"
@@ -12341,6 +12380,9 @@ msgstr "Ödeme onayı"
 msgid "Payment Date"
 msgstr "Ödeme Tarihi"
 
+msgid "Payment details changed. Review your explanation against the current evidence and confirm it again."
+msgstr "Ödeme ayrıntıları değişti. Açıklamanızı güncel belgelere göre inceleyin ve yeniden doğrulayın."
+
 msgid "Payment history is still being imported. The next hourly run will continue where it stopped."
 msgstr "Ödeme geçmişi içe aktarılıyor. Sonraki saatlik çalıştırma kaldığı yerden devam edecek."
 
@@ -14378,6 +14420,9 @@ msgstr "{name} için inceleme gerekçesi"
 msgid "Review supplier"
 msgstr "Tedarikçiyi incele"
 
+msgid "Review the new extraction against your saved corrections before approval"
+msgstr "Onaydan önce yeni veri çıkarımını kaydedilmiş düzeltmelerinizle karşılaştırın"
+
 msgid "Review the original invoice to select the correct supplier and item classes, confirm pack sizes and totals, and map each existing line explicitly."
 msgstr "Doğru tedarikçi ve ürün sınıflarını seçmek, paket boyutlarını ve toplamları onaylamak ve mevcut her satırı açıkça haritalandırmak için orijinal faturayı inceleyin."
 
@@ -14783,6 +14828,9 @@ msgstr "İncelemeyi kaydet"
 
 msgid "Save sync settings"
 msgstr "Senkronizasyon ayarlarını kaydet"
+
+msgid "Save the edited invoice total or currency, then confirm the payment explanation against the updated amounts."
+msgstr "Düzenlenen fatura toplamını veya para birimini kaydedin, ardından ödeme açıklamasını güncellenen tutarlara göre doğrulayın."
 
 #. placeholder {0}: copy.moduleLabel
 msgid "Save this review, add the required definition in {0}, and reopen the proposal to select it."
@@ -15919,6 +15967,9 @@ msgstr "Kaynak Ürün"
 
 msgid "Source Job"
 msgstr "Kaynak İş Emri"
+
+msgid "Source line"
+msgstr "Kaynak satır"
 
 msgid "Source line total"
 msgstr "Kaynak satırı toplamı"
@@ -17644,6 +17695,9 @@ msgstr "Bu kredileri uygulanacak hiçbir ödenmemiş tutar yok."
 msgid "These are bank payment details. Invoice totals and the supplier are reviewed separately from the receipt."
 msgstr "Bunlar banka ödemesinin ayrıntılarıdır. Fatura toplamları ve tedarikçi, makbuz temel alınarak ayrıca incelenir."
 
+msgid "These are the latest parsed facts. Your review fields remain unchanged until you edit them or add a source line."
+msgstr "Bunlar en son çıkarılan bilgilerdir. İnceleme alanlarınız, siz onları düzenleyene veya bir kaynak satır ekleyene kadar değişmez."
+
 msgid "These custom fields will only be available for entities with the same tags"
 msgstr "Bu özel alanlar yalnızca aynı etiketlere sahip varlıklar için kullanılabilir"
 
@@ -17883,6 +17937,9 @@ msgstr "Bu satış siparişinin ilişkili iş emirleri var. Bunlarla ne yapacağ
 
 msgid "This sales order has lines that require jobs to be created"
 msgstr "Bu satış siparişinde iş emri oluşturulması gereken satırlar var"
+
+msgid "This source line is not in your saved review."
+msgstr "Bu kaynak satır kaydedilmiş incelemenizde bulunmuyor."
 
 msgid "This station runs ability-gated work — it only runs while a qualified operator is on shift; operators assigned on the manning board further shape available labor."
 msgstr "Bu istasyon yetkinlik kapısı geçmeli işleri çalıştırır — yalnızca nitelikli operatör vardiyada olduğu sürece çalışır; kadro tarafından atanan operatörler kullanılabilir işçiliği şekillendirir."
@@ -18723,8 +18780,8 @@ msgstr "Yükle"
 msgid "Upload a PDF first"
 msgstr "Önce bir PDF yükleyin"
 
-msgid "Upload a receipt or review documents collected from Mercury and Gmail. Confirm suppliers, items, and amounts before creating a draft invoice."
-msgstr "Mercury ve Gmail'den toplanan bir makbuz veya inceleme belgelerini yükleyin. Taslak fatura oluşturmadan önce tedarikçileri, kalemleri ve tutarları onaylayın."
+msgid "Upload a receipt or review documents collected from Mercury. Confirm suppliers, items, and amounts before creating a draft invoice."
+msgstr "Bir makbuz yükleyin veya Mercury'den toplanan belgeleri inceleyin. Taslak fatura oluşturmadan önce tedarikçileri, stok kartlarını ve tutarları doğrulayın."
 
 msgid "Upload and review"
 msgstr "Yükleme ve inceleme"

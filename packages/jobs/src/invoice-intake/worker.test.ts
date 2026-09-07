@@ -26,7 +26,12 @@ const enabledConfig = loadInvoiceProviderConfig({
   INVOICE_AI_INPUT_PRICE_USD_PER_MILLION: "1.65",
   INVOICE_AI_OUTPUT_PRICE_USD_PER_MILLION: "9.9"
 });
-const bytes = Uint8Array.from([137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 0]);
+const bytes = new Uint8Array(
+  Buffer.from(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAABHNCSVQICAgIfAhkiAAAAAFzUkdCAK7OHOkAAAALSURBVAiZY2AAAgAABQABYlUyiAAAAABJRU5ErkJggg==",
+    "base64"
+  )
+);
 let db: Kysely<KyselyDatabase>;
 beforeAll(() => {
   if (
@@ -214,6 +219,31 @@ const review = (c: InvoiceWorkerContext) =>
 
 // Real PostgreSQL admission/leases/transactions; HTTP is deliberately synthetic.
 describe("durable invoice worker", () => {
+  it("rejects signature-only images before token estimation or paid admission", async () =>
+    fixture(async (c) => {
+      const invalid = Uint8Array.from([
+        137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 0
+      ]);
+      await db
+        .updateTable("invoiceIntakeSource")
+        .set({
+          sha256: createHash("sha256").update(invalid).digest("hex"),
+          byteSize: invalid.length
+        })
+        .where("companyId", "=", c.companyId)
+        .execute();
+      c.storage = {
+        from: () => ({
+          download: async () => ({ data: new Blob([invalid]), error: null })
+        })
+      } as unknown as InvoiceWorkerContext["storage"];
+      const p = provider();
+      await runInvoiceIntake({ ...c, provider: p.provider });
+      expect(p.paid).not.toHaveBeenCalled();
+      expect(await attempts(c)).toHaveLength(0);
+      expect((await review(c)).lastErrorCode).toBe("invoice_image_invalid");
+    }));
+
   it("hydrates private evidence with actual usage and cannot replay a completed review", async () =>
     fixture(async (c) => {
       const p = provider();
@@ -229,6 +259,39 @@ describe("durable invoice worker", () => {
       });
       expect((await runInvoiceIntake(c)).state).toBe("stale");
       expect(p.paid).toHaveBeenCalledTimes(1);
+    }));
+  it("retains saved review/default metadata when hydrating the first selected document", async () =>
+    fixture(async (c) => {
+      const metadata = {
+        _review: {
+          mergeMode: "append",
+          expectedInvoiceUpdatedAt: "example-token"
+        },
+        _defaults: { locationId: "example-location" },
+        primarySourceSha256: createHash("sha256").update(bytes).digest("hex")
+      };
+      await db
+        .updateTable("invoiceIntake")
+        .set({ header: metadata })
+        .where("companyId", "=", c.companyId)
+        .where("id", "=", c.intakeId)
+        .execute();
+      c.provider = provider(async () => {
+        const output = emptyInvoiceExtraction();
+        output.header.invoiceNumber.value = "EXAMPLE-123";
+        const payload = await response().json();
+        payload.candidates[0].content.parts[0].text = JSON.stringify(output);
+        return Response.json(payload);
+      }).provider;
+      expect((await runInvoiceIntake(c)).state).toBe("complete");
+      const result = await review(c);
+      expect(result.header).toMatchObject({
+        ...metadata,
+        invoiceNumber: "EXAMPLE-123"
+      });
+      expect(
+        (result.header as Record<string, unknown>)._pendingExtractionReview
+      ).toBeUndefined();
     }));
   it("rejects paused, cross-company and revoked operators before paid requests", async () =>
     fixture(async (c, userId) => {
@@ -281,7 +344,12 @@ describe("durable invoice worker", () => {
     }));
   it("requires a primary for distinct files and reparses the selected later source", async () =>
     fixture(async (c, userId) => {
-      const secondBytes = new Uint8Array([...bytes, 1]);
+      const secondBytes = new Uint8Array(
+        Buffer.from(
+          "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAABHNCSVQICAgIfAhkiAAAAAFzUkdCAK7OHOkAAAALSURBVAiZY2BABwAAEgABb/pjtwAAAABJRU5ErkJggg==",
+          "base64"
+        )
+      );
       const sha256 = createHash("sha256").update(secondBytes).digest("hex");
       const secondPath = `${c.companyId}/invoice-intake/later-invoice.png`;
       await db
@@ -370,7 +438,12 @@ describe("durable invoice worker", () => {
         {
           kind: "upload",
           sourceKey: randomUUID(),
-          bytes: new Uint8Array([...bytes, 1]),
+          bytes: new Uint8Array(
+            Buffer.from(
+              "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAABHNCSVQICAgIfAhkiAAAAAFzUkdCAK7OHOkAAAALSURBVAiZY2BABwAAEgABb/pjtwAAAABJRU5ErkJggg==",
+              "base64"
+            )
+          ),
           existingIntakeId: c.intakeId
         }
       );
@@ -713,7 +786,12 @@ describe("durable invoice worker", () => {
         .where("companyId", "=", c.companyId)
         .where("intakeId", "=", c.intakeId)
         .execute();
-      const replacement = new Uint8Array([...bytes, 1]);
+      const replacement = new Uint8Array(
+        Buffer.from(
+          "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAABHNCSVQICAgIfAhkiAAAAAFzUkdCAK7OHOkAAAALSURBVAiZY2BABwAAEgABb/pjtwAAAABJRU5ErkJggg==",
+          "base64"
+        )
+      );
       await db
         .insertInto("invoiceIntakeSource")
         .values({
@@ -832,9 +910,10 @@ describe("durable invoice worker", () => {
       expect(p.paid).not.toHaveBeenCalled();
     }));
   it.each([
-    false,
-    true
-  ])("copies approved attachments idempotently without changing invoice lines or status (deferred Gmail: %s)", async (withGmail) =>
+    "ordinary",
+    "gmail",
+    "archived"
+  ])("copies only approved attachment identities idempotently (%s)", async (scenario) =>
     fixture(async (c, userId) => {
       const supplier = await db
         .insertInto("supplier")
@@ -870,12 +949,39 @@ describe("durable invoice worker", () => {
           purchaseInvoiceId: invoice.id,
           approvedBy: userId,
           approvedAt: sql`now()`,
-          attachmentStatus: "Pending"
+          attachmentStatus: "Pending",
+          approvalSnapshot: {
+            sourceSha256s: [createHash("sha256").update(bytes).digest("hex")]
+          }
         })
         .where("companyId", "=", c.companyId)
         .where("id", "=", c.intakeId)
         .execute();
-      if (withGmail)
+      if (scenario === "archived") {
+        await db
+          .updateTable("invoiceIntakeSource")
+          .set({ kind: "mercury", provenance: { current: false } })
+          .where("companyId", "=", c.companyId)
+          .where("intakeId", "=", c.intakeId)
+          .execute();
+        await db
+          .insertInto("invoiceIntakeSource")
+          .values({
+            companyId: c.companyId,
+            intakeId: c.intakeId,
+            kind: "mercury",
+            sourceKey: randomUUID(),
+            createdBy: userId,
+            storageBucket: "private",
+            storagePath: `${c.companyId}/mercury/payment/unapproved.png`,
+            sha256: "b".repeat(64),
+            mediaType: "image/png",
+            byteSize: bytes.length,
+            provenance: { current: true }
+          })
+          .execute();
+      }
+      if (scenario === "gmail")
         await db
           .insertInto("invoiceIntakeSource")
           .values({

@@ -24,6 +24,7 @@ import { invoiceIntakeHeaderValidator } from "../../invoicing.models";
 import type { getInvoiceIntakeInbox } from "../../invoicing.server";
 import { InvoiceAttachmentStatus } from "./InvoiceAttachmentStatus";
 import { InvoiceDecimalField, InvoiceToggle } from "./InvoiceDocumentLines";
+import { invoiceInboxFacts } from "./invoice-document.utils";
 import { useInvoiceDocumentLabels } from "./useInvoiceDocumentLabels";
 
 type InboxData = Awaited<ReturnType<typeof getInvoiceIntakeInbox>> & {
@@ -78,8 +79,8 @@ export function InvoiceDocumentInbox({ data }: { data: InboxData }) {
       </Heading>
       <p className="text-sm text-muted-foreground">
         <Trans>
-          Upload a receipt or review documents collected from Mercury and Gmail.
-          Confirm suppliers, items, and amounts before creating a draft invoice.
+          Upload a receipt or review documents collected from Mercury. Confirm
+          suppliers, items, and amounts before creating a draft invoice.
         </Trans>
       </p>
       <Card>
@@ -136,8 +137,16 @@ export function InvoiceDocumentInbox({ data }: { data: InboxData }) {
         </CardContent>
       </Card>
       <HStack className="flex-wrap">
-        <Button variant={!data.status ? "secondary" : "ghost"} asChild>
+        <Button
+          variant={data.status === "Actionable" ? "secondary" : "ghost"}
+          asChild
+        >
           <Link to={path.to.invoiceDocuments}>
+            <Trans>Actionable</Trans>
+          </Link>
+        </Button>
+        <Button variant={data.status === "All" ? "secondary" : "ghost"} asChild>
+          <Link to={`${path.to.invoiceDocuments}?status=All`}>
             <Trans>All</Trans>
           </Link>
         </Button>
@@ -223,6 +232,11 @@ export function InvoiceDocumentInbox({ data }: { data: InboxData }) {
               intake.header
             );
             const header = parsed.success ? parsed.data : null;
+            const facts = invoiceInboxFacts(
+              header,
+              intake.payments,
+              intake.status
+            );
             return (
               <Tr key={intake.id}>
                 <Td>
@@ -240,7 +254,12 @@ export function InvoiceDocumentInbox({ data }: { data: InboxData }) {
                   />
                 </Td>
                 <Td>
-                  {header?.sourceSupplierName ?? t`Supplier unresolved`}
+                  {facts.supplier.fromPayment && (
+                    <span className="text-xs text-muted-foreground">
+                      <Trans>Payment</Trans>:{" "}
+                    </span>
+                  )}
+                  {facts.supplier.value ?? t`Supplier unresolved`}
                   <HStack>
                     {intake.sourceKinds.map((kind) => (
                       <Badge key={kind}>
@@ -256,12 +275,29 @@ export function InvoiceDocumentInbox({ data }: { data: InboxData }) {
                     <p className="text-xs">{t`${intake.newSupplierCount} new supplier(s), ${intake.newItemCount} new item(s)`}</p>
                   )}
                   <p className="text-xs text-muted-foreground">
-                    {header?.invoiceNumber ?? t`No reference`}
+                    {facts.reference.fromPayment && (
+                      <>
+                        <Trans>Payment</Trans>:{" "}
+                      </>
+                    )}
+                    {facts.reference.value ?? t`No reference`}
                   </p>
                 </Td>
-                <Td>{header?.issueDate ?? "—"}</Td>
                 <Td>
-                  {header?.total ?? "—"} {header?.currencyCode}
+                  {facts.date.fromPayment && (
+                    <span className="block text-xs text-muted-foreground">
+                      <Trans>Payment</Trans>
+                    </span>
+                  )}
+                  {facts.date.value ?? "—"}
+                </Td>
+                <Td>
+                  {facts.amount.fromPayment && (
+                    <span className="block text-xs text-muted-foreground">
+                      <Trans>Payment</Trans>
+                    </span>
+                  )}
+                  {facts.amount.value ?? "—"}
                 </Td>
                 <Td>
                   <Badge>{statusLabel(intake.status)}</Badge>

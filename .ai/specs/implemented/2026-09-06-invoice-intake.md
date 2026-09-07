@@ -169,7 +169,7 @@ Originals stay in private Supabase storage. Request/response logging, grounding,
 - [x] AC1: Native PDF, scanned PDF, JPEG, and PNG all reach the same editable review; missing fields remain missing.
 - [x] AC2: A new supplier and new Part/Material/Consumable/Tool/Service can be proposed and created with the correct native records through one explicit approval.
 - [x] AC3: A second invoice for a confirmed supplier SKU preselects its item and pack conversion while extracting new price/quantity/date independently.
-- [x] AC4: Manual correction replaces a wrong suggestion; reparse, retry, price change, and concurrent worker results cannot overwrite it or duplicate an item.
+- [x] AC4: Manual correction replaces a wrong suggestion. The initial release did not preserve corrections saved before a later parse began; the review-preservation correction adds late-file and reparse regressions, keeps new extraction evidence separate, and requires explicit acknowledgement before approval. See `.ai/runs/2026-09-07-invoice-review-preservation.md` for the actual verification scope; this does not establish every possible price-change workflow.
 - [x] AC5: Repeated upload, Mercury/Gmail duplicate attachments, installment payments, duplicate approval, and concurrent approval do not duplicate invoices or inventory.
 - [x] AC6: Totals, unit conversion, typed required fields, unsupported document kinds, duplicate conflicts, and absent FX prevent Ready/approval until resolved.
 - [x] AC7: Approval creates/enriches only Draft invoices; linked non-Draft invoices are evidence-only. No inventory ledger, journal, receipt, payment, or settlement is created by approval.

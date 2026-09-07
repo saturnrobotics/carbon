@@ -4,6 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { sql } from "kysely";
 import type { JobDatabase } from "../db";
 import {
+  hasInvoiceReviewFacts,
   INVOICE_LIMITS,
   INVOICE_PROMPT_VERSION,
   INVOICE_SCHEMA_VERSION,
@@ -13,6 +14,7 @@ import {
   invoiceMatchSuggestionsSchema,
   invoiceSourceReviewSchema
 } from "./contracts";
+import { validateInvoiceImage } from "./image";
 import {
   type GoogleInvoiceProvider,
   type InvoiceDocumentInput,
@@ -117,7 +119,7 @@ async function loadDocument(
   const sources =
     await sql<Source>`SELECT "storageBucket","storagePath",sha256,"mediaType","byteSize"
     FROM public."invoiceIntakeSource" WHERE "companyId"=${context.companyId} AND "intakeId"=${context.intakeId}
-      AND "storagePath" IS NOT NULL AND kind IN ('mercury','upload') ORDER BY "createdAt",id`.execute(
+      AND "storagePath" IS NOT NULL AND kind IN ('mercury','upload') AND (kind='upload' OR coalesce(provenance->>'current','true')<>'false') ORDER BY "createdAt",id`.execute(
       context.db
     );
   const selection = invoiceSourceReviewSchema.safeParse(intake.header);
@@ -201,6 +203,17 @@ async function loadDocument(
     bytes.length > INVOICE_LIMITS.imageBytes
   )
     throw new InvoiceProviderError("invoice_source_size_invalid");
+  if (mimeType !== "application/pdf") {
+    try {
+      await validateInvoiceImage(bytes, mimeType);
+    } catch (error) {
+      throw new InvoiceProviderError(
+        error instanceof Error && error.message.startsWith("invoice_image_")
+          ? error.message
+          : "invoice_image_invalid"
+      );
+    }
+  }
   return { source, input: { bytes, mimeType } };
 }
 
@@ -471,6 +484,42 @@ async function hydrate(
         return { state: "complete", attemptId: claim.id };
       }
       const extracted = invoiceExtractionEnvelopeSchema.parse(result);
+      const existingReview = (
+        await sql<{
+          hasLines: boolean;
+          newSupplier: boolean;
+          documentKind: boolean;
+          hasPreviousExtraction: boolean;
+        }>`SELECT
+        EXISTS(SELECT 1 FROM public."invoiceIntakeLine" l WHERE l."companyId"=i."companyId" AND l."intakeId"=i.id) AS "hasLines",
+        i."newSupplier" IS NOT NULL AS "newSupplier", i."documentKind"<>'unknown' AS "documentKind",
+        EXISTS(SELECT 1 FROM public."documentExtraction" e WHERE e."companyId"=i."companyId" AND e."intakeId"=i.id AND e.operation='extract' AND e.status='completed' AND e.id<>${claim.id}) AS "hasPreviousExtraction"
+        FROM public."invoiceIntake" i WHERE i."companyId"=${context.companyId} AND i.id=${context.intakeId}`.execute(
+          db
+        )
+      ).rows[0]!;
+      const savedHeader =
+        intake.header && typeof intake.header === "object"
+          ? (intake.header as Record<string, unknown>)
+          : {};
+      if (
+        hasInvoiceReviewFacts(savedHeader) ||
+        existingReview.hasLines ||
+        existingReview.newSupplier ||
+        existingReview.documentKind ||
+        (savedHeader._review && existingReview.hasPreviousExtraction)
+      ) {
+        // Keep provider output immutable and separately reviewable. A newer model
+        // result is not permission to replace previously entered or accepted facts.
+        await sql`UPDATE public."invoiceIntake" SET status='NeedsReview',
+          header=header || jsonb_build_object('_pendingExtractionReview',${claim.id}::text),
+          revision=revision+1,"lastErrorCode"='invoice_extraction_review_preserved',"updatedAt"=now()
+          WHERE "companyId"=${context.companyId} AND id=${context.intakeId}`.execute(
+          db
+        );
+        return { state: "complete", attemptId: claim.id };
+      }
+
       const recognition = await resolveInvoiceCandidates(
         db,
         context.companyId,
@@ -538,6 +587,8 @@ async function hydrate(
         );
       }
       const header = {
+        ...(savedHeader._review ? { _review: savedHeader._review } : {}),
+        ...(savedHeader._defaults ? { _defaults: savedHeader._defaults } : {}),
         ...headerFromExtraction(extracted),
         ...invoiceSourceReviewSchema.parse(intake.header),
         supplierRecognition: {
