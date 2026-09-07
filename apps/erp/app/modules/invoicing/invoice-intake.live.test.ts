@@ -8,6 +8,7 @@ import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { getJobDatabaseClient } from "../../../../../packages/jobs/src/db";
 import {
+  assertInvoiceRepeatCheckpoint,
   evaluateInvoices,
   type InvoiceEvaluationSample
 } from "../../../../../packages/jobs/src/invoice-intake/evaluation";
@@ -132,6 +133,10 @@ describe.skipIf(process.env.INVOICE_EVAL_LIVE !== "true")(
         message: string;
         stack: string | null;
       }> = [];
+      const evaluate = () =>
+        evaluateInvoices(fixtures, samples, {
+          failedModelIds: candidateFailures.map((failure) => failure.modelId)
+        });
       try {
         if (!config.runId) {
           config.runId = randomUUID();
@@ -233,6 +238,28 @@ describe.skipIf(process.env.INVOICE_EVAL_LIVE !== "true")(
                   sample.fixtureId === fixture.id && sample.modelId === model.id
               );
               if (checkpoint) {
+                if (fixture.heldOutRepeat) {
+                  const fresh = await getInvoiceIntakeReview(
+                    db,
+                    actor,
+                    intake.intakeId
+                  );
+                  assertInvoiceRepeatCheckpoint(checkpoint, {
+                    status: fresh.intake.status,
+                    ready: fresh.validation.ready,
+                    attemptId: fresh.intake.activeExtractionId,
+                    expected: expectedInvoiceRepeat(catalog, fixture),
+                    actual: {
+                      supplierId: fresh.review.supplierId,
+                      lines: fresh.review.lines.map((line) => ({
+                        itemId: line.itemId,
+                        purchaseUnit: line.purchaseUnit,
+                        stockUnit: line.stockUnit,
+                        conversionFactor: line.conversionFactor
+                      }))
+                    }
+                  });
+                }
                 // Resume training after a saved machine observation, never rescore an already corrected review.
                 await teachInvoiceEvaluationFixture(
                   db,
@@ -344,7 +371,7 @@ describe.skipIf(process.env.INVOICE_EVAL_LIVE !== "true")(
                 catalog
               );
               await privateJson(path.join(directory, "report.json"), {
-                ...evaluateInvoices(fixtures, samples),
+                ...evaluate(),
                 candidateFailures
               });
               process.stdout.write(
@@ -383,7 +410,7 @@ describe.skipIf(process.env.INVOICE_EVAL_LIVE !== "true")(
               .execute();
           }
         }
-        const report = evaluateInvoices(fixtures, samples);
+        const report = evaluate();
         await privateJson(path.join(directory, "report.json"), {
           ...report,
           candidateFailures

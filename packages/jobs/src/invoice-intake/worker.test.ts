@@ -257,6 +257,119 @@ describe("durable invoice worker", () => {
       expect((await runInvoiceIntake(c)).state).toBe("disabled");
       expect(p.paid).not.toHaveBeenCalled();
     }));
+  it("requires a primary for distinct files and reparses the selected later source", async () =>
+    fixture(async (c, userId) => {
+      const secondBytes = new Uint8Array([...bytes, 1]);
+      const sha256 = createHash("sha256").update(secondBytes).digest("hex");
+      const secondPath = `${c.companyId}/invoice-intake/later-invoice.png`;
+      await db
+        .insertInto("invoiceIntakeSource")
+        .values({
+          companyId: c.companyId,
+          intakeId: c.intakeId,
+          kind: "upload",
+          sourceKey: randomUUID(),
+          createdBy: userId,
+          storageBucket: "private",
+          storagePath: secondPath,
+          sha256,
+          mediaType: "image/png",
+          byteSize: secondBytes.length
+        })
+        .execute();
+      const p = provider();
+      c.provider = p.provider;
+      expect((await runInvoiceIntake(c)).state).toBe("review");
+      expect(p.paid).not.toHaveBeenCalled();
+      expect((await review(c)).lastErrorCode).toBe(
+        "invoice_source_selection_required"
+      );
+      const acknowledgement = {
+        sha256: createHash("sha256").update(bytes).digest("hex"),
+        reason: "Supporting bank receipt; invoice facts come from selected file"
+      };
+      await db
+        .updateTable("invoiceIntake")
+        .set({
+          status: "Queued",
+          generation: 1,
+          revision: 1,
+          header: {
+            primarySourceSha256: sha256,
+            sourceAcknowledgements: [acknowledgement]
+          }
+        })
+        .where("companyId", "=", c.companyId)
+        .where("id", "=", c.intakeId)
+        .execute();
+      const download = vi.fn(async (path: string) => ({
+        data: new Blob([path === secondPath ? secondBytes : bytes]),
+        error: null
+      }));
+      c.storage = {
+        from: () => ({ download })
+      } as unknown as InvoiceWorkerContext["storage"];
+      expect((await runInvoiceIntake({ ...c, generation: 1 })).state).toBe(
+        "complete"
+      );
+      expect(download).toHaveBeenCalledExactlyOnceWith(secondPath);
+      expect((await attempts(c))[0]?.storagePath).toBe(secondPath);
+      expect((await review(c)).header).toMatchObject({
+        primarySourceSha256: sha256,
+        sourceAcknowledgements: [acknowledgement]
+      });
+      expect(p.paid).toHaveBeenCalledTimes(1);
+    }));
+  it("invalidates Ready only when source registration introduces different bytes", async () =>
+    fixture(async (c, userId) => {
+      await runInvoiceIntake(c);
+      const header = (await review(c)).header;
+      await db
+        .updateTable("invoiceIntake")
+        .set({ status: "Ready" })
+        .where("companyId", "=", c.companyId)
+        .where("id", "=", c.intakeId)
+        .execute();
+      const duplicate = await registerInvoiceSource(
+        db,
+        c.storage,
+        { companyId: c.companyId, userId },
+        {
+          kind: "upload",
+          sourceKey: randomUUID(),
+          bytes
+        }
+      );
+      expect(duplicate.status).toBe("Ready");
+      const added = await registerInvoiceSource(
+        db,
+        c.storage,
+        { companyId: c.companyId, userId },
+        {
+          kind: "upload",
+          sourceKey: randomUUID(),
+          bytes: new Uint8Array([...bytes, 1]),
+          existingIntakeId: c.intakeId
+        }
+      );
+      expect(added.status).toBe("NeedsReview");
+      expect((await review(c)).header).toEqual(header);
+      expect((await runInvoiceIntake(c)).state).toBe("stale");
+    }));
+  it("never downloads or pays for a selected hash outside this intake", async () =>
+    fixture(async (c) => {
+      const p = provider();
+      c.provider = p.provider;
+      await db
+        .updateTable("invoiceIntake")
+        .set({ header: { primarySourceSha256: "a".repeat(64) } })
+        .where("companyId", "=", c.companyId)
+        .where("id", "=", c.intakeId)
+        .execute();
+      expect((await runInvoiceIntake(c)).state).toBe("review");
+      expect(p.paid).not.toHaveBeenCalled();
+      expect(c.storage.from).not.toHaveBeenCalled();
+    }));
   it("serializes duplicate delivery and preserves two global slots", async () =>
     fixture(async (c, userId) => {
       let release!: () => void;
@@ -610,7 +723,11 @@ describe("durable invoice worker", () => {
       WHERE "companyId"=${c.companyId}`.execute(db);
       await db
         .updateTable("invoiceIntakeSettings")
-        .set({ dailyBudgetUsd: 0.18, monthlyBudgetUsd: 50 })
+        .set({
+          dailyBudgetUsd:
+            Number((await attempts(c))[0]!.reservedCostUsd) + 0.001,
+          monthlyBudgetUsd: 50
+        })
         .where("companyId", "=", c.companyId)
         .execute();
       expect((await runInvoiceIntake(c)).state).toBe("retry");

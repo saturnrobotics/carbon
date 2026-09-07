@@ -3389,7 +3389,7 @@ msgid "Changes"
 msgstr "更改"
 
 msgid "Changing this selection keeps your current review fields. Save the review, then use Parse again to read the selected document."
-msgstr ""
+msgstr "更改此选择会保留当前评审字段。保存评审后，使用“再次解析”读取所选文件。"
 
 msgid "Changing this will overwrite the existing method"
 msgstr "更改此项将覆盖现有方法"
@@ -3451,10 +3451,10 @@ msgid "Choose another file"
 msgstr "选择另一个文件"
 
 msgid "Choose the invoice document to parse"
-msgstr ""
+msgstr "选择要解析的发票文件"
 
 msgid "Choose the invoice or receipt that defines this purchase. Review every other attachment and explain why it adds no separate invoice lines. Documents for another purchase need a separate review."
-msgstr ""
+msgstr "选择说明本次采购内容的发票或收据。检查其他每个附件，并说明其为何未添加独立的发票行。其他采购的文档需要单独评审。"
 
 msgid "Choose what appears on the printed job traveler."
 msgstr "选择打印工单流转卡上显示的内容。"
@@ -7670,7 +7670,7 @@ msgid "for anything. They'll pull in the right person."
 msgstr "用于任何事项。他们会调配合适的人员。"
 
 msgid "For each other file, explain whether it is a duplicate, payment confirmation, supporting evidence, or unrelated to this invoice. Review decisions apply once per distinct file, even when the same file arrived from several sources."
-msgstr ""
+msgstr "对于其他每个文件，请说明它是重复文件、付款确认、补充证据，还是与此发票无关。每个不同文件只需作出一次评审决定，即使同一文件来自多个来源。"
 
 msgid "For one-time deployment setup, use this company ID for PAYMENT_SYNC_COMPANY_ID:"
 msgstr "一次性部署设置请将此公司 ID 用于 PAYMENT_SYNC_COMPANY_ID："
@@ -8838,7 +8838,7 @@ msgid "Invoice document"
 msgstr "发票文件"
 
 msgid "Invoice document to parse"
-msgstr ""
+msgstr "要解析的发票文件"
 
 msgid "Invoice documents"
 msgstr "发票文档"
@@ -8862,7 +8862,7 @@ msgid "Invoice settlement"
 msgstr "发票结算"
 
 msgid "Invoice source"
-msgstr ""
+msgstr "发票来源"
 
 msgid "Invoice supplier"
 msgstr "发票供应商"
@@ -9842,7 +9842,7 @@ msgid "Manual correction"
 msgstr "手动校正"
 
 msgid "Manual review of selected invoice"
-msgstr ""
+msgstr "手动评审所选发票"
 
 msgid "Manually scheduled"
 msgstr "手动计划"
@@ -11726,7 +11726,7 @@ msgid "Open document review"
 msgstr "公开文件审查"
 
 msgid "Open document review and original attachment"
-msgstr ""
+msgstr "打开文件评审和原始附件"
 
 msgid "Open in Carbon"
 msgstr "在 Carbon 中打开"
@@ -11934,7 +11934,7 @@ msgid "Optional pages & sections"
 msgstr "可选页面和部分"
 
 msgid "Optional unless the extracted facts came from another file. Confirm that you manually entered or reviewed these invoice facts against the selected document."
-msgstr ""
+msgstr "除非提取的信息来自其他文件，否则此项为可选。请确认您已对照所选文件，手动输入或检查这些发票信息。"
 
 msgid "Options"
 msgstr "选项"
@@ -12176,7 +12176,7 @@ msgid "Parse again"
 msgstr "再次解析"
 
 msgid "Parse the selected invoice or explain your manual review of its facts"
-msgstr ""
+msgstr "解析所选发票，或说明您对其信息进行的手动评审"
 
 msgid "Parsing and historical ingestion"
 msgstr "解析和历史摄取"
@@ -12730,7 +12730,7 @@ msgid "Preview"
 msgstr "预览"
 
 msgid "Preview document"
-msgstr ""
+msgstr "预览文件"
 
 msgid "Preview failed: {error}"
 msgstr "预览失败：{error}"
@@ -13568,7 +13568,7 @@ msgid "Receipt Lines"
 msgstr "收据行"
 
 msgid "Receipt or invoice"
-msgstr ""
+msgstr "收据或发票"
 
 msgid "Receipt Promised Date"
 msgstr "收货承诺日期"
@@ -14297,7 +14297,7 @@ msgid "Review each item's changes, then confirm — releasing can't be undone."
 msgstr "评审每个物料的更改，然后确认——发布无法撤销。"
 
 msgid "Review every other attachment and enter a reason"
-msgstr ""
+msgstr "检查其他每个附件并输入原因"
 
 msgid "Review extracted purchases"
 msgstr "查看提取的购买内容"
@@ -14312,7 +14312,7 @@ msgid "Review or retry parsing"
 msgstr "检查或重试解析"
 
 msgid "Review reason for {name}"
-msgstr ""
+msgstr "{name} 的评审原因"
 
 msgid "Review supplier"
 msgstr "审核供应商"
@@ -15848,7 +15848,7 @@ msgid "Source document total"
 msgstr "源单据总计"
 
 msgid "Source documents"
-msgstr ""
+msgstr "源单据"
 
 msgid "Source Item"
 msgstr "源项目"
@@ -16969,7 +16969,7 @@ msgstr "此间接支出行过账至的费用科目；因为间接行没有物料
 msgid "The file you uploaded and the mappings you've made will be lost."
 msgstr "您上传的文件和已完成的映射将会丢失。"
 msgid "The extracted facts came from another document. Parse the selected invoice, or check every line and total manually and describe your review below."
-msgstr ""
+msgstr "提取的信息来自另一个文件。请解析所选发票，或手动核对每一行及总计，并在下方说明您的评审情况。"
 
 msgid "the first 3 to 4 weeks"
 msgstr "前3到4周"
@@ -17653,7 +17653,7 @@ msgid "This invitation to join {0} has expired. You can request a new invite to 
 msgstr "加入 {0} 的邀请已过期。您可以请求将新邀请发送到您的电子邮件。"
 
 msgid "This invoice documents a historical purchase. Check current stock before receiving inventory; purchase history does not establish today's stock balance."
-msgstr ""
+msgstr "此发票记录的是历史采购。办理收货入库前，请检查当前库存；采购历史记录并不能确定今天的库存余额。"
 
 msgid "This invoice has no usable due date — choose one for Stripe."
 msgstr "此发票没有可用的截止日期 — 为 Stripe 选择一个。"

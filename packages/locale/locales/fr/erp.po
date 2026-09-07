@@ -3389,7 +3389,7 @@ msgid "Changes"
 msgstr "Modifications"
 
 msgid "Changing this selection keeps your current review fields. Save the review, then use Parse again to read the selected document."
-msgstr ""
+msgstr "La modification de cette sélection conserve les champs de votre revue actuelle. Enregistrez la revue, puis utilisez « Analyser à nouveau » pour lire le document sélectionné."
 
 msgid "Changing this will overwrite the existing method"
 msgstr "Modifier ceci remplacera la méthode existante"
@@ -3451,10 +3451,10 @@ msgid "Choose another file"
 msgstr "Choisir un autre fichier"
 
 msgid "Choose the invoice document to parse"
-msgstr ""
+msgstr "Choisissez le document de facture à analyser"
 
 msgid "Choose the invoice or receipt that defines this purchase. Review every other attachment and explain why it adds no separate invoice lines. Documents for another purchase need a separate review."
-msgstr ""
+msgstr "Choisissez la facture ou le reçu qui décrit cet achat. Examinez chaque autre pièce jointe et expliquez pourquoi elle n'ajoute aucune ligne de facture distincte. Les documents concernant un autre achat nécessitent une revue séparée."
 
 msgid "Choose what appears on the printed job traveler."
 msgstr "Choisir ce qui apparaît sur la fiche suiveuse d'ordre de fabrication imprimée."
@@ -7670,7 +7670,7 @@ msgid "for anything. They'll pull in the right person."
 msgstr "pour n'importe quoi. Ils vont faire intervenir la bonne personne."
 
 msgid "For each other file, explain whether it is a duplicate, payment confirmation, supporting evidence, or unrelated to this invoice. Review decisions apply once per distinct file, even when the same file arrived from several sources."
-msgstr ""
+msgstr "Pour chaque autre fichier, précisez s'il s'agit d'un doublon, d'une confirmation de paiement, d'un justificatif ou d'un fichier sans rapport avec cette facture. Les décisions de revue s'appliquent une seule fois à chaque fichier distinct, même si le même fichier provient de plusieurs sources."
 
 msgid "For one-time deployment setup, use this company ID for PAYMENT_SYNC_COMPANY_ID:"
 msgstr "Pour la configuration initiale du déploiement, utilisez cet identifiant d'entreprise pour PAYMENT_SYNC_COMPANY_ID :"
@@ -8838,7 +8838,7 @@ msgid "Invoice document"
 msgstr "Document de facturation"
 
 msgid "Invoice document to parse"
-msgstr ""
+msgstr "Document de facture à analyser"
 
 msgid "Invoice documents"
 msgstr "Documents de facturation"
@@ -8862,7 +8862,7 @@ msgid "Invoice settlement"
 msgstr "Règlement de facture"
 
 msgid "Invoice source"
-msgstr ""
+msgstr "Source de la facture"
 
 msgid "Invoice supplier"
 msgstr "Fournisseur facturé"
@@ -9842,7 +9842,7 @@ msgid "Manual correction"
 msgstr "Correction manuelle"
 
 msgid "Manual review of selected invoice"
-msgstr ""
+msgstr "Revue manuelle de la facture sélectionnée"
 
 msgid "Manually scheduled"
 msgstr "Programmé manuellement"
@@ -11726,7 +11726,7 @@ msgid "Open document review"
 msgstr "Examen ouvert des documents"
 
 msgid "Open document review and original attachment"
-msgstr ""
+msgstr "Ouvrir la revue du document et la pièce jointe d'origine"
 
 msgid "Open in Carbon"
 msgstr "Ouvrir dans Carbon"
@@ -11934,7 +11934,7 @@ msgid "Optional pages & sections"
 msgstr "Pages et sections optionnelles"
 
 msgid "Optional unless the extracted facts came from another file. Confirm that you manually entered or reviewed these invoice facts against the selected document."
-msgstr ""
+msgstr "Facultatif, sauf si les données extraites proviennent d'un autre fichier. Confirmez que vous avez saisi ou vérifié manuellement ces données de facture à partir du document sélectionné."
 
 msgid "Options"
 msgstr "Options"
@@ -12176,7 +12176,7 @@ msgid "Parse again"
 msgstr "Analyser à nouveau"
 
 msgid "Parse the selected invoice or explain your manual review of its facts"
-msgstr ""
+msgstr "Analysez la facture sélectionnée ou expliquez votre revue manuelle de ses données"
 
 msgid "Parsing and historical ingestion"
 msgstr "Analyse et ingestion historique"
@@ -12730,7 +12730,7 @@ msgid "Preview"
 msgstr "Aperçu"
 
 msgid "Preview document"
-msgstr ""
+msgstr "Aperçu du document"
 
 msgid "Preview failed: {error}"
 msgstr "Aperçu échoué : {error}"
@@ -13568,7 +13568,7 @@ msgid "Receipt Lines"
 msgstr "Lignes de réception"
 
 msgid "Receipt or invoice"
-msgstr ""
+msgstr "Reçu ou facture"
 
 msgid "Receipt Promised Date"
 msgstr "Date de livraison promise"
@@ -14297,7 +14297,7 @@ msgid "Review each item's changes, then confirm — releasing can't be undone."
 msgstr "Examinez les modifications de chaque article, puis confirmez — la libération ne peut pas être annulée."
 
 msgid "Review every other attachment and enter a reason"
-msgstr ""
+msgstr "Examinez chaque autre pièce jointe et saisissez une raison"
 
 msgid "Review extracted purchases"
 msgstr "Examiner les achats extraits"
@@ -14312,7 +14312,7 @@ msgid "Review or retry parsing"
 msgstr "Vérifier ou réessayer l'analyse"
 
 msgid "Review reason for {name}"
-msgstr ""
+msgstr "Motif de revue pour {name}"
 
 msgid "Review supplier"
 msgstr "Vérifier le fournisseur"
@@ -15848,7 +15848,7 @@ msgid "Source document total"
 msgstr "Total du document d'origine"
 
 msgid "Source documents"
-msgstr ""
+msgstr "Documents d'origine"
 
 msgid "Source Item"
 msgstr "Élément source"
@@ -16969,7 +16969,7 @@ msgstr "Le compte de charge auquel cette ligne de dépenses indirectes se compta
 msgid "The file you uploaded and the mappings you've made will be lost."
 msgstr "Le fichier que vous avez importé et les correspondances que vous avez définies seront perdus."
 msgid "The extracted facts came from another document. Parse the selected invoice, or check every line and total manually and describe your review below."
-msgstr ""
+msgstr "Les données extraites proviennent d'un autre document. Analysez la facture sélectionnée ou vérifiez manuellement chaque ligne et le total, puis décrivez votre revue ci-dessous."
 
 msgid "the first 3 to 4 weeks"
 msgstr "les 3 à 4 premières semaines"
@@ -17653,7 +17653,7 @@ msgid "This invitation to join {0} has expired. You can request a new invite to 
 msgstr "Cette invitation pour rejoindre {0} a expiré. Vous pouvez demander une nouvelle invitation à envoyer à votre e-mail."
 
 msgid "This invoice documents a historical purchase. Check current stock before receiving inventory; purchase history does not establish today's stock balance."
-msgstr ""
+msgstr "Cette facture documente un achat passé. Vérifiez le stock actuel avant de réceptionner des marchandises ; l'historique des achats ne permet pas d'établir le stock disponible aujourd'hui."
 
 msgid "This invoice has no usable due date — choose one for Stripe."
 msgstr "Cette facture n'a pas de date d'échéance utilisable — choisissez-en une pour Stripe."

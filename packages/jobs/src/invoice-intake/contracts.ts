@@ -47,6 +47,21 @@ export const invoiceDocumentKinds = [
   "unknown"
 ] as const;
 
+/** Content identities remain stable when source IDs/paths are remapped on restore. */
+const sourceHash = z.string().regex(/^[0-9a-f]{64}$/);
+export const invoiceSourceReviewSchema = z.object({
+  primarySourceSha256: sourceHash.nullable().default(null),
+  sourceAcknowledgements: z
+    .array(
+      z.object({
+        sha256: sourceHash,
+        reason: z.string().trim().min(1).max(1000)
+      })
+    )
+    .max(100)
+    .default([])
+});
+
 /** Keep decimal evidence lossless until Carbon's numeric persistence boundary. */
 export const invoiceDecimalSchema = z
   .string()

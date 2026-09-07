@@ -29,6 +29,14 @@ Use another synthetic receipt and an unapproved review. Change the line type and
 
 For generated Material IDs, choose the existing Substance and Shape. The generated ID/name and the selected tracking type, replenishment system, method, and inventory unit must all remain in the saved proposal. Complete the receipt fields and approve to verify a Material and a Draft purchase invoice are created.
 
+## Multiple source files
+
+1. Add a different supporting document to an unapproved intake. Verify the source review requires a primary document and a reason for every other distinct file.
+2. Select the second file as primary. Save its supporting/exclusion reasons and, when replacing previously parsed facts manually, the explicit manual-review confirmation. Save an invoice reference at the same time.
+3. Reload. Verify the primary selection, preview, reasons, and invoice reference persist. Parsing requires the primary choice to have been saved first.
+4. Change the primary file. Verify role-dependent reasons clear so a previous exclusion cannot silently become a manual-transcription confirmation.
+5. Register a new distinct file against a Ready intake. Verify it returns to Needs review; registering identical bytes from a second channel must preserve Ready.
+
 ## Learned repeat and attachment completion
 
 1. Use the real invoice worker with a deterministic synthetic provider response and the canonical ERP validation callback. The first parsed document from an unconfirmed supplier name should remain Needs review.
@@ -61,3 +69,4 @@ For generated Material IDs, choose the existing Substance and Shape. The generat
 - Actual attachment-copy worker completes and the native invoice's pending attachment message clears.
 - Copied receipt appears inside the native Files card; signed download returns HTTP 200 with the expected PNG signature, and no delete menu is offered. An ordinary manual upload still appears with its enabled native Delete menu.
 - The normal purchase-invoice creation form saves a new Draft invoice without a receipt. The disposable schema-only restore needed the standard `extensions` schema USAGE grant for authenticated default-ID generation before this baseline workflow could run.
+- Multiple-source browser checks confirm explicit primary selection, persisted preview and reasons, preserved invoice fields, Save-before-Parse behavior, and cleared reasons when document roles change. PostgreSQL checks cover final approval, late-file invalidation, and previous-source provenance after failed parsing.

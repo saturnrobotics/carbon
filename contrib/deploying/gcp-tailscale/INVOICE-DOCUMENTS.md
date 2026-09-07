@@ -65,6 +65,8 @@ Two paid calls can be active across workers. Extraction and explicit model match
 
 Default input limits are 10 MiB/20 pages for PDFs and 7,000,000 bytes for PNG/JPEG images; extraction accepts at most 500 lines. Oversized or unsupported documents require manual review or a smaller complete source document. An unsupported/unavailable model or unknown price configuration produces an error; the system does not silently switch models.
 
+When an intake has several different files, select and save the primary invoice or receipt before parsing it. Review every other file and record why it supports this invoice or should be excluded. Identical attachments received through different channels count as one document. If you change the primary file after parsing, parse that file or explicitly confirm that you transcribed and checked its facts manually. A newly attached, different file returns a Ready intake to review.
+
 ## Pause, change models, and recover
 
 - **Pause now:** turn off inference in the company's inbox settings. This stops new provider calls without removing documents or disabling manual review. An already submitted provider request can still complete and incur its charge.
@@ -139,7 +141,7 @@ The executable live runner creates one isolated synthetic company per candidate 
 
 The release gate requires all thirty source observations, known charges, valid schemas, correct document kinds, flagged missing lines, at least 95% financial accuracy, no unexpected Ready documents and correct supplier/item/unit/conversion selections and a persisted Ready status for all five held-out receipts. Supplier names, invoice references and printed item identities are also checked when assessing an unexpected Ready result. Optional correction-effort counters are reported as unknown when unmeasured; they are not fabricated from confidence. Model confidence is never a correctness metric.
 
-The private checkpoint contains the original machine output before teaching. Resuming never replaces it with the corrected review or pays for a completed extraction again. Synthetic Draft invoices and evidence remain in their test companies for inspection; deleting those companies is a separate explicit operator action.
+The private checkpoint contains the original machine output before teaching. Resuming never replaces it with the corrected review or pays for a completed extraction again. Held-out checkpoints must still pass canonical validation as persisted Ready documents with the same attempt, supplier, item, units, and conversion. A failed resumed candidate cannot reuse an earlier passing report. Synthetic Draft invoices and evidence remain in their test companies for inspection; deleting those companies is a separate explicit operator action.
 
 For offline re-scoring of an existing private `samples.json`:
 

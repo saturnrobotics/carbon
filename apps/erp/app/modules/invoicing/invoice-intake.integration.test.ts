@@ -371,6 +371,193 @@ async function attach(f: Fixture, id: string, importId?: string) {
 }
 
 describe("Atomic invoice intake approval", () => {
+  it("requires explicit coverage of every distinct source before saving Ready or approving", async () =>
+    fixture(async (f) => {
+      const value = review(f);
+      const row = await intake(f, value);
+      await db
+        .insertInto("invoiceIntakeSource")
+        .values({
+          companyId: f.actor.companyId,
+          intakeId: row.id,
+          createdBy: f.actor.userId,
+          kind: "upload",
+          sourceKey: randomUUID(),
+          storageBucket: "private",
+          storagePath: `${f.actor.companyId}/invoice-intake/${row.id}/second.pdf`,
+          sha256: "b".repeat(64),
+          mediaType: "application/pdf",
+          byteSize: 120
+        })
+        .execute();
+      await expect(
+        approveInvoiceIntake(db, f.actor, {
+          intakeId: row.id,
+          expectedRevision: row.revision,
+          approvalKey: randomUUID()
+        })
+      ).rejects.toThrow(/source|document/i);
+      const selected = {
+        ...value,
+        header: {
+          ...value.header,
+          primarySourceSha256: "a".repeat(64),
+          sourceAcknowledgements: []
+        }
+      };
+      const saved = await saveInvoiceIntakeReview(db, f.actor, {
+        id: row.id,
+        expectedRevision: row.revision,
+        review: selected
+      });
+      expect(saved.status).toBe("NeedsReview");
+      await expect(
+        approveInvoiceIntake(db, f.actor, {
+          intakeId: row.id,
+          expectedRevision: saved.revision,
+          approvalKey: randomUUID(),
+          decisions: selected
+        })
+      ).rejects.toThrow(/source|document/i);
+      const confirmed = {
+        ...selected,
+        header: {
+          ...selected.header,
+          sourceAcknowledgements: [
+            {
+              sha256: "b".repeat(64),
+              reason: "Supporting payment evidence; no additional invoice lines"
+            }
+          ]
+        }
+      };
+      const ready = await saveInvoiceIntakeReview(db, f.actor, {
+        id: row.id,
+        expectedRevision: saved.revision,
+        review: confirmed
+      });
+      expect(ready.status).toBe("Ready");
+      const result = await approveInvoiceIntake(db, f.actor, {
+        intakeId: row.id,
+        expectedRevision: ready.revision,
+        approvalKey: randomUUID()
+      });
+      expect(result.status).toBe("Approved");
+    }));
+  it("requires manual confirmation when selecting a different source from the completed extraction", async () =>
+    fixture(async (f) => {
+      const value = review(f);
+      const row = await intake(f, value);
+      await db
+        .insertInto("invoiceIntakeSource")
+        .values({
+          companyId: f.actor.companyId,
+          intakeId: row.id,
+          createdBy: f.actor.userId,
+          kind: "upload",
+          sourceKey: randomUUID(),
+          storageBucket: "private",
+          storagePath: `${f.actor.companyId}/invoice-intake/${row.id}/second.pdf`,
+          sha256: "b".repeat(64),
+          mediaType: "application/pdf",
+          byteSize: 120
+        })
+        .execute();
+      await db
+        .insertInto("documentExtraction")
+        .values({
+          companyId: f.actor.companyId,
+          createdBy: f.actor.userId,
+          intakeId: row.id,
+          generation: 0,
+          inputRevision: 0,
+          attemptNumber: 1,
+          operation: "extract",
+          documentType: "purchaseInvoice",
+          sourceDocument: "Invoice Intake",
+          storagePath: `${f.actor.companyId}/invoice-intake/${row.id}/source.pdf`,
+          status: "completed",
+          extractedData: emptyInvoiceExtraction()
+        })
+        .execute();
+      const selected = {
+        ...value,
+        header: {
+          ...value.header,
+          primarySourceSha256: "b".repeat(64),
+          sourceAcknowledgements: [
+            {
+              sha256: "a".repeat(64),
+              reason: "Old bank confirmation excluded from invoice lines"
+            }
+          ]
+        }
+      };
+      const saved = await saveInvoiceIntakeReview(db, f.actor, {
+        id: row.id,
+        expectedRevision: row.revision,
+        review: selected
+      });
+      expect(saved.status).toBe("NeedsReview");
+      const current = await getInvoiceIntakeReview(db, f.actor, row.id);
+      expect(current.sourceCoverage.extractionSha256).toBe("a".repeat(64));
+      expect(current.extraction).toBeNull();
+      await expect(
+        approveInvoiceIntake(db, f.actor, {
+          intakeId: row.id,
+          expectedRevision: saved.revision,
+          approvalKey: randomUUID()
+        })
+      ).rejects.toThrow(/manually reviewed/);
+      const confirmed = {
+        ...selected,
+        header: {
+          ...selected.header,
+          sourceAcknowledgements: [
+            ...selected.header.sourceAcknowledgements,
+            {
+              sha256: "b".repeat(64),
+              reason:
+                "Manually transcribed and checked all invoice facts from selected invoice"
+            }
+          ]
+        }
+      };
+      const ready = await saveInvoiceIntakeReview(db, f.actor, {
+        id: row.id,
+        expectedRevision: saved.revision,
+        review: confirmed
+      });
+      expect(ready.status).toBe("Ready");
+      const queued = await setInvoiceIntakeStatus(db, f.actor, {
+        id: row.id,
+        expectedRevision: ready.revision,
+        action: "retry"
+      });
+      expect(queued.status).toBe("Queued");
+      expect(queued.generation).toBe(1);
+      const retained = await getInvoiceIntakeReview(db, f.actor, row.id);
+      expect(retained.review.header.primarySourceSha256).toBe("b".repeat(64));
+      expect(retained.review.lines).toEqual(current.review.lines);
+      // A failed reparse must not erase the old source provenance and let its
+      // retained facts pass as facts from the newly selected file.
+      await db
+        .updateTable("invoiceIntake")
+        .set({ status: "NeedsReview" })
+        .where("companyId", "=", f.actor.companyId)
+        .where("id", "=", row.id)
+        .execute();
+      const afterFailure = await saveInvoiceIntakeReview(db, f.actor, {
+        id: row.id,
+        expectedRevision: queued.revision,
+        review: selected
+      });
+      expect(afterFailure.status).toBe("NeedsReview");
+      expect(
+        (await getInvoiceIntakeReview(db, f.actor, row.id)).sourceCoverage
+          .extractionSha256
+      ).toBe("a".repeat(64));
+    }));
   it("saves an incomplete invoice reference as NeedsReview without creating masters", async () => {
     await fixture(async (f) => {
       const value = review(f);
@@ -774,7 +961,7 @@ describe("Atomic invoice intake approval", () => {
           operation: "extract",
           documentType: "purchaseInvoice",
           sourceDocument: "fixture.pdf",
-          storagePath: f.actor.companyId + "/invoice-intake/fixture.pdf",
+          storagePath: `${f.actor.companyId}/invoice-intake/${row.id}/source.pdf`,
           status: "completed",
           extractedData: extracted
         })
@@ -997,7 +1184,7 @@ describe("Atomic invoice intake approval", () => {
             operation: "extract",
             documentType: "purchaseInvoice",
             sourceDocument: "fixture.pdf",
-            storagePath: f.actor.companyId + "/invoice-intake/fixture.pdf",
+            storagePath: `${f.actor.companyId}/invoice-intake/${row.id}/source.pdf`,
             status: "completed",
             extractedData: emptyInvoiceExtraction()
           })
@@ -1039,6 +1226,29 @@ describe("Atomic invoice intake approval", () => {
         conversionFactor: "1",
         locationId: f.locationId
       });
+      const multiple = await prepare(review(f));
+      await db
+        .insertInto("invoiceIntakeSource")
+        .values({
+          companyId: f.actor.companyId,
+          intakeId: multiple.intakeId,
+          createdBy: f.actor.userId,
+          kind: "upload",
+          sourceKey: randomUUID(),
+          storageBucket: "private",
+          storagePath: `${f.actor.companyId}/invoice-intake/${multiple.intakeId}/second.pdf`,
+          sha256: "b".repeat(64),
+          mediaType: "application/pdf",
+          byteSize: 120
+        })
+        .execute();
+      expect(await validateHydratedInvoiceIntake(multiple)).toMatchObject({
+        validated: true
+      });
+      expect(
+        (await getInvoiceIntakeReview(db, f.actor, multiple.intakeId)).intake
+          .status
+      ).toBe("NeedsReview");
       const unknown = review(f);
       unknown.lines[0].itemId = null;
       unknown.lines[0].stockUnit = null;

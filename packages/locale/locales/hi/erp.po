@@ -3389,7 +3389,7 @@ msgid "Changes"
 msgstr "परिवर्तन"
 
 msgid "Changing this selection keeps your current review fields. Save the review, then use Parse again to read the selected document."
-msgstr ""
+msgstr "यह चयन बदलने पर आपकी मौजूदा समीक्षा के फ़ील्ड बने रहेंगे। समीक्षा सहेजें, फिर चुने हुए दस्तावेज़ को पढ़ने के लिए «फिर से पार्स करें» का उपयोग करें।"
 
 msgid "Changing this will overwrite the existing method"
 msgstr "इसे बदलने से मौजूदा विधि अधिलेखित हो जाएगी"
@@ -3451,10 +3451,10 @@ msgid "Choose another file"
 msgstr "दूसरी फ़ाइल चुनें"
 
 msgid "Choose the invoice document to parse"
-msgstr ""
+msgstr "पार्स करने के लिए चालान का दस्तावेज़ चुनें"
 
 msgid "Choose the invoice or receipt that defines this purchase. Review every other attachment and explain why it adds no separate invoice lines. Documents for another purchase need a separate review."
-msgstr ""
+msgstr "इस खरीद को दर्शाने वाला चालान या रसीद चुनें। हर अन्य अनुलग्नक की जाँच करें और बताएँ कि वह अलग चालान पंक्तियाँ क्यों नहीं जोड़ता। दूसरी खरीद के दस्तावेज़ों की अलग समीक्षा आवश्यक है।"
 
 msgid "Choose what appears on the printed job traveler."
 msgstr "मुद्रित जॉब ट्रैवलर पर क्या दिखाई दे, इसे चुनें।"
@@ -7670,7 +7670,7 @@ msgid "for anything. They'll pull in the right person."
 msgstr "किसी भी चीज़ के लिए। वे सही व्यक्ति को शामिल करेंगे।"
 
 msgid "For each other file, explain whether it is a duplicate, payment confirmation, supporting evidence, or unrelated to this invoice. Review decisions apply once per distinct file, even when the same file arrived from several sources."
-msgstr ""
+msgstr "हर अन्य फ़ाइल के लिए बताएँ कि वह डुप्लिकेट, भुगतान की पुष्टि, सहायक साक्ष्य है या इस चालान से असंबंधित है। समीक्षा के निर्णय हर अलग फ़ाइल पर एक बार लागू होते हैं, भले ही वही फ़ाइल कई स्रोतों से आई हो।"
 
 msgid "For one-time deployment setup, use this company ID for PAYMENT_SYNC_COMPANY_ID:"
 msgstr "एक बार की परिनियोजन सेटअप के लिए PAYMENT_SYNC_COMPANY_ID हेतु इस कंपनी ID का उपयोग करें:"
@@ -8838,7 +8838,7 @@ msgid "Invoice document"
 msgstr "चालान दस्तावेज़"
 
 msgid "Invoice document to parse"
-msgstr ""
+msgstr "पार्स करने के लिए चालान का दस्तावेज़"
 
 msgid "Invoice documents"
 msgstr "चालान दस्तावेज़"
@@ -8862,7 +8862,7 @@ msgid "Invoice settlement"
 msgstr "चालान निपटान"
 
 msgid "Invoice source"
-msgstr ""
+msgstr "चालान का स्रोत"
 
 msgid "Invoice supplier"
 msgstr "चालान आपूर्तिकर्ता"
@@ -9842,7 +9842,7 @@ msgid "Manual correction"
 msgstr "मैन्युअल सुधार"
 
 msgid "Manual review of selected invoice"
-msgstr ""
+msgstr "चुने हुए चालान की मैन्युअल समीक्षा"
 
 msgid "Manually scheduled"
 msgstr "मैन्युअल रूप से शेड्यूल किया गया"
@@ -11726,7 +11726,7 @@ msgid "Open document review"
 msgstr "दस्तावेज़ समीक्षा खोलें"
 
 msgid "Open document review and original attachment"
-msgstr ""
+msgstr "दस्तावेज़ की समीक्षा और मूल अनुलग्नक खोलें"
 
 msgid "Open in Carbon"
 msgstr "Carbon में खोलें"
@@ -11934,7 +11934,7 @@ msgid "Optional pages & sections"
 msgstr "वैकल्पिक पृष्ठ और अनुभाग"
 
 msgid "Optional unless the extracted facts came from another file. Confirm that you manually entered or reviewed these invoice facts against the selected document."
-msgstr ""
+msgstr "यदि निकाली गई जानकारी दूसरी फ़ाइल से नहीं आई है, तो यह वैकल्पिक है। पुष्टि करें कि आपने चुने हुए दस्तावेज़ से मिलान करके चालान की यह जानकारी मैन्युअल रूप से दर्ज की या जाँची है।"
 
 msgid "Options"
 msgstr "विकल्प"
@@ -12176,7 +12176,7 @@ msgid "Parse again"
 msgstr "फिर से पार्स करें"
 
 msgid "Parse the selected invoice or explain your manual review of its facts"
-msgstr ""
+msgstr "चुने हुए चालान को पार्स करें या उसकी जानकारी की मैन्युअल समीक्षा का विवरण दें"
 
 msgid "Parsing and historical ingestion"
 msgstr "पार्सिंग और ऐतिहासिक अंतर्ग्रहण"
@@ -12730,7 +12730,7 @@ msgid "Preview"
 msgstr "पूर्वावलोकन"
 
 msgid "Preview document"
-msgstr ""
+msgstr "दस्तावेज़ का पूर्वावलोकन करें"
 
 msgid "Preview failed: {error}"
 msgstr "पूर्वावलोकन विफल: {error}"
@@ -13568,7 +13568,7 @@ msgid "Receipt Lines"
 msgstr "रसीद लाइनें"
 
 msgid "Receipt or invoice"
-msgstr ""
+msgstr "रसीद या चालान"
 
 msgid "Receipt Promised Date"
 msgstr "प्राप्ति वादा की गई तिथि"
@@ -14297,7 +14297,7 @@ msgid "Review each item's changes, then confirm — releasing can't be undone."
 msgstr "प्रत्येक आइटम के परिवर्तनों की समीक्षा करें, फिर पुष्टि करें — जारी करना वापस नहीं किया जा सकता।"
 
 msgid "Review every other attachment and enter a reason"
-msgstr ""
+msgstr "हर अन्य अनुलग्नक की जाँच करें और कारण दर्ज करें"
 
 msgid "Review extracted purchases"
 msgstr "निकाली गई खरीदारी की समीक्षा करें"
@@ -14312,7 +14312,7 @@ msgid "Review or retry parsing"
 msgstr "पार्सिंग की समीक्षा करें या पुनः प्रयास करें"
 
 msgid "Review reason for {name}"
-msgstr ""
+msgstr "{name} के लिए समीक्षा का कारण"
 
 msgid "Review supplier"
 msgstr "आपूर्तिकर्ता की समीक्षा करें"
@@ -15848,7 +15848,7 @@ msgid "Source document total"
 msgstr "स्रोत दस्तावेज़ कुल"
 
 msgid "Source documents"
-msgstr ""
+msgstr "स्रोत दस्तावेज़"
 
 msgid "Source Item"
 msgstr "स्रोत आइटम"
@@ -16969,7 +16969,7 @@ msgstr "व्यय खाता जिस पर यह अप्रत्य�
 msgid "The file you uploaded and the mappings you've made will be lost."
 msgstr "आपके द्वारा अपलोड की गई फ़ाइल और की गई मैपिंग खो जाएँगी।"
 msgid "The extracted facts came from another document. Parse the selected invoice, or check every line and total manually and describe your review below."
-msgstr ""
+msgstr "निकाली गई जानकारी किसी दूसरे दस्तावेज़ से आई है। चुने हुए चालान को पार्स करें या हर पंक्ति और कुल राशि की मैन्युअल जाँच करके नीचे अपनी समीक्षा का विवरण दें।"
 
 msgid "the first 3 to 4 weeks"
 msgstr "पहले 3 से 4 सप्ताह"
@@ -17653,7 +17653,7 @@ msgid "This invitation to join {0} has expired. You can request a new invite to 
 msgstr "यह आमंत्रण {0} में शामिल होने के लिए समाप्त हो गया है। आप अपने ईमेल पर भेजने के लिए नया आमंत्रण का अनुरोध कर सकते हैं।"
 
 msgid "This invoice documents a historical purchase. Check current stock before receiving inventory; purchase history does not establish today's stock balance."
-msgstr ""
+msgstr "यह चालान पिछली खरीद का रिकॉर्ड है। माल की प्राप्ति दर्ज करने से पहले मौजूदा स्टॉक जाँचें; खरीद का इतिहास आज का स्टॉक शेष निर्धारित नहीं करता।"
 
 msgid "This invoice has no usable due date — choose one for Stripe."
 msgstr "इस चालान के पास कोई उपयोगी देय तारीख नहीं है — Stripe के लिए एक चुनें।"

@@ -10,7 +10,8 @@ import {
   type InvoiceExtractionEnvelope,
   type InvoiceMatchSuggestions,
   invoiceExtractionEnvelopeSchema,
-  invoiceMatchSuggestionsSchema
+  invoiceMatchSuggestionsSchema,
+  invoiceSourceReviewSchema
 } from "./contracts";
 import {
   type GoogleInvoiceProvider,
@@ -54,6 +55,7 @@ type Intake = {
   updatedBy: string | null;
   activeExtractionId: string | null;
   supplierId: string | null;
+  header: unknown;
 };
 type Source = {
   storageBucket: string;
@@ -84,7 +86,7 @@ export async function invoiceOperatorAllowed(
 
 async function getIntake(context: InvoiceWorkerContext) {
   const result =
-    await sql<Intake>`SELECT id,"companyId",generation,revision,status,"createdBy","updatedBy","activeExtractionId","supplierId"
+    await sql<Intake>`SELECT id,"companyId",generation,revision,status,"createdBy","updatedBy","activeExtractionId","supplierId",header
     FROM public."invoiceIntake" WHERE "companyId"=${context.companyId} AND id=${context.intakeId}`.execute(
       context.db
     );
@@ -109,15 +111,25 @@ async function enabled(context: InvoiceWorkerContext, intake: Intake) {
 }
 
 async function loadDocument(
-  context: InvoiceWorkerContext
+  context: InvoiceWorkerContext,
+  intake: Intake
 ): Promise<{ source: Source; input: InvoiceDocumentInput }> {
   const sources =
     await sql<Source>`SELECT "storageBucket","storagePath",sha256,"mediaType","byteSize"
     FROM public."invoiceIntakeSource" WHERE "companyId"=${context.companyId} AND "intakeId"=${context.intakeId}
-      AND "storagePath" IS NOT NULL ORDER BY "createdAt",id LIMIT 1`.execute(
+      AND "storagePath" IS NOT NULL ORDER BY "createdAt",id`.execute(
       context.db
     );
-  const source = sources.rows[0];
+  const selection = invoiceSourceReviewSchema.safeParse(intake.header);
+  if (!selection.success)
+    throw new InvoiceProviderError("invoice_source_selection_invalid");
+  const hashes = new Set(sources.rows.map((source) => source.sha256));
+  const primary =
+    selection.data.primarySourceSha256 ??
+    (hashes.size === 1 ? sources.rows[0]?.sha256 : null);
+  if (!primary && hashes.size > 1)
+    throw new InvoiceProviderError("invoice_source_selection_required");
+  const source = sources.rows.find((source) => source.sha256 === primary);
   if (
     !source ||
     source.storageBucket !== "private" ||
@@ -228,7 +240,7 @@ async function admit(
       db
     );
     const current = (
-      await sql<Intake>`SELECT id,"companyId",generation,revision,status,"createdBy","updatedBy","activeExtractionId","supplierId"
+      await sql<Intake>`SELECT id,"companyId",generation,revision,status,"createdBy","updatedBy","activeExtractionId","supplierId",header
       FROM public."invoiceIntake" WHERE "companyId"=${context.companyId} AND id=${context.intakeId} FOR UPDATE`.execute(
         db
       )
@@ -407,7 +419,7 @@ async function hydrate(
     .transaction()
     .execute(async (db): Promise<InvoiceWorkResult> => {
       const intake = (
-        await sql<Intake>`SELECT id,"companyId",generation,revision,status,"createdBy","updatedBy","activeExtractionId","supplierId"
+        await sql<Intake>`SELECT id,"companyId",generation,revision,status,"createdBy","updatedBy","activeExtractionId","supplierId",header
       FROM public."invoiceIntake" WHERE "companyId"=${context.companyId} AND id=${context.intakeId} FOR UPDATE`.execute(
           db
         )
@@ -525,6 +537,7 @@ async function hydrate(
       }
       const header = {
         ...headerFromExtraction(extracted),
+        ...invoiceSourceReviewSchema.parse(intake.header),
         supplierRecognition: {
           conflict: recognition.supplierConflict,
           candidates: recognition.supplierCandidates,
@@ -685,7 +698,7 @@ export async function runInvoiceIntake(
   let prepared: PreparedInvoiceRequest<InvoiceExtractionEnvelope>;
   let admitted: Claim | InvoiceWorkResult;
   try {
-    const { source, input } = await loadDocument(context);
+    const { source, input } = await loadDocument(context, intake);
     prepared = context.provider.prepareExtraction(input);
     const estimate = await context.provider.estimate(prepared);
     admitted = await admit(

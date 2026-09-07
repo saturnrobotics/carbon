@@ -3389,7 +3389,7 @@ msgid "Changes"
 msgstr "Değişiklikler"
 
 msgid "Changing this selection keeps your current review fields. Save the review, then use Parse again to read the selected document."
-msgstr ""
+msgstr "Bu seçimi değiştirmek mevcut inceleme alanlarınızı korur. İncelemeyi kaydedin, ardından seçilen belgeyi okumak için «Tekrar ayrıştır» seçeneğini kullanın."
 
 msgid "Changing this will overwrite the existing method"
 msgstr "Bunu değiştirmek mevcut yöntemi geçersiz kılacaktır"
@@ -3451,10 +3451,10 @@ msgid "Choose another file"
 msgstr "Başka bir dosya seç"
 
 msgid "Choose the invoice document to parse"
-msgstr ""
+msgstr "Ayrıştırılacak fatura belgesini seçin"
 
 msgid "Choose the invoice or receipt that defines this purchase. Review every other attachment and explain why it adds no separate invoice lines. Documents for another purchase need a separate review."
-msgstr ""
+msgstr "Bu satın almayı belgeleyen faturayı veya fişi seçin. Diğer tüm ekleri inceleyin ve neden ayrı fatura satırları eklemediklerini açıklayın. Başka bir satın almaya ait belgeler ayrı bir inceleme gerektirir."
 
 msgid "Choose what appears on the printed job traveler."
 msgstr "Yazdırılan İş takip kartında neyin görüneceğini seçin."
@@ -7670,7 +7670,7 @@ msgid "for anything. They'll pull in the right person."
 msgstr "herhangi bir şey için. Doğru kişiyi çekerler."
 
 msgid "For each other file, explain whether it is a duplicate, payment confirmation, supporting evidence, or unrelated to this invoice. Review decisions apply once per distinct file, even when the same file arrived from several sources."
-msgstr ""
+msgstr "Diğer her dosyanın mükerrer dosya, ödeme onayı, destekleyici kanıt veya bu faturayla ilgisiz bir dosya olup olmadığını açıklayın. Aynı dosya birden fazla kaynaktan gelmiş olsa bile inceleme kararları her farklı dosya için bir kez uygulanır."
 
 msgid "For one-time deployment setup, use this company ID for PAYMENT_SYNC_COMPANY_ID:"
 msgstr "Tek seferlik dağıtım kurulumu için bu şirket kimliğini PAYMENT_SYNC_COMPANY_ID değerinde kullanın:"
@@ -8838,7 +8838,7 @@ msgid "Invoice document"
 msgstr "Fatura belgesi"
 
 msgid "Invoice document to parse"
-msgstr ""
+msgstr "Ayrıştırılacak fatura belgesi"
 
 msgid "Invoice documents"
 msgstr "Fatura belgeleri"
@@ -8862,7 +8862,7 @@ msgid "Invoice settlement"
 msgstr "Fatura Ödeme"
 
 msgid "Invoice source"
-msgstr ""
+msgstr "Fatura kaynağı"
 
 msgid "Invoice supplier"
 msgstr "Fatura tedarikçi"
@@ -9842,7 +9842,7 @@ msgid "Manual correction"
 msgstr "Manuel düzeltme"
 
 msgid "Manual review of selected invoice"
-msgstr ""
+msgstr "Seçilen faturanın elle incelenmesi"
 
 msgid "Manually scheduled"
 msgstr "El ile zamanlandırılmış"
@@ -11726,7 +11726,7 @@ msgid "Open document review"
 msgstr "Belge incelemesini aç"
 
 msgid "Open document review and original attachment"
-msgstr ""
+msgstr "Belge incelemesini ve özgün eki aç"
 
 msgid "Open in Carbon"
 msgstr "Carbon'da Aç"
@@ -11934,7 +11934,7 @@ msgid "Optional pages & sections"
 msgstr "İsteğe bağlı sayfalar ve bölümler"
 
 msgid "Optional unless the extracted facts came from another file. Confirm that you manually entered or reviewed these invoice facts against the selected document."
-msgstr ""
+msgstr "Çıkarılan bilgiler başka bir dosyadan gelmediği sürece isteğe bağlıdır. Bu fatura bilgilerini seçilen belgeyle karşılaştırarak elle girdiğinizi veya incelediğinizi onaylayın."
 
 msgid "Options"
 msgstr "Seçenekler"
@@ -12176,7 +12176,7 @@ msgid "Parse again"
 msgstr "Tekrar ayrıştır"
 
 msgid "Parse the selected invoice or explain your manual review of its facts"
-msgstr ""
+msgstr "Seçilen faturayı ayrıştırın veya bilgilerini elle nasıl incelediğinizi açıklayın"
 
 msgid "Parsing and historical ingestion"
 msgstr "Ayrıştırma ve geçmişe alım"
@@ -12730,7 +12730,7 @@ msgid "Preview"
 msgstr "Önizle"
 
 msgid "Preview document"
-msgstr ""
+msgstr "Belgeyi önizle"
 
 msgid "Preview failed: {error}"
 msgstr "Önizleme başarısız oldu: {error}"
@@ -13568,7 +13568,7 @@ msgid "Receipt Lines"
 msgstr "Mal Kabul Edilen Satırlar"
 
 msgid "Receipt or invoice"
-msgstr ""
+msgstr "Fiş veya fatura"
 
 msgid "Receipt Promised Date"
 msgstr "Mal kabul taahhüt tarihi"
@@ -14297,7 +14297,7 @@ msgid "Review each item's changes, then confirm — releasing can't be undone."
 msgstr "Her stok kartın değişikliklerini incele, sonra onayla — serbest bırakma geri alınamaz."
 
 msgid "Review every other attachment and enter a reason"
-msgstr ""
+msgstr "Diğer tüm ekleri inceleyin ve bir gerekçe girin"
 
 msgid "Review extracted purchases"
 msgstr "Çıkarılan satın alma işlemlerini inceleyin"
@@ -14312,7 +14312,7 @@ msgid "Review or retry parsing"
 msgstr "Ayrıştırma işlemini gözden geçirin veya yeniden deneyin"
 
 msgid "Review reason for {name}"
-msgstr ""
+msgstr "{name} için inceleme gerekçesi"
 
 msgid "Review supplier"
 msgstr "Tedarikçiyi incele"
@@ -15848,7 +15848,7 @@ msgid "Source document total"
 msgstr "Kaynak belge toplamı"
 
 msgid "Source documents"
-msgstr ""
+msgstr "Kaynak belgeler"
 
 msgid "Source Item"
 msgstr "Kaynak Ürün"
@@ -16969,7 +16969,7 @@ msgstr "Bu dolaylı harcama satırının nakledildiği gider hesabı; dolaylı s
 msgid "The file you uploaded and the mappings you've made will be lost."
 msgstr "Yüklediğiniz dosya ve yaptığınız eşleştirmeler kaybolacak."
 msgid "The extracted facts came from another document. Parse the selected invoice, or check every line and total manually and describe your review below."
-msgstr ""
+msgstr "Çıkarılan bilgiler başka bir belgeden geldi. Seçilen faturayı ayrıştırın ya da her satırı ve toplamı elle kontrol edip incelemenizi aşağıda açıklayın."
 
 msgid "the first 3 to 4 weeks"
 msgstr "ilk 3 ila 4 hafta"
@@ -17653,7 +17653,7 @@ msgid "This invitation to join {0} has expired. You can request a new invite to 
 msgstr "{0} grubuna katılma davetinizin süresi doldu. Yeni bir davet talebinde bulunabilirsiniz ve bu e-postanıza gönderilir."
 
 msgid "This invoice documents a historical purchase. Check current stock before receiving inventory; purchase history does not establish today's stock balance."
-msgstr ""
+msgstr "Bu fatura geçmişte yapılan bir satın almayı belgeler. Mal kabulü yapmadan önce mevcut stoku kontrol edin; satın alma geçmişi bugünkü stok bakiyesini belirlemez."
 
 msgid "This invoice has no usable due date — choose one for Stripe."
 msgstr "Bu faturanın kullanılabilir bir vade tarihi yok — Stripe için birini seçin."

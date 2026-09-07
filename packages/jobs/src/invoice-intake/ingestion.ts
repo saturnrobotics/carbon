@@ -399,9 +399,16 @@ export async function registerInvoiceSource(
                     activeExtractionId: null,
                     lastErrorCode: "invoice_source_changed"
                   }
-                : intake.status === "NeedsDocument" && file
-                  ? { status: "Queued" }
-                  : {})
+                : intake.status === "Ready" &&
+                    file &&
+                    !sources.some((source) => source.sha256 === file.sha256)
+                  ? {
+                      status: "NeedsReview",
+                      lastErrorCode: "invoice_source_changed"
+                    }
+                  : intake.status === "NeedsDocument" && file
+                    ? { status: "Queued" }
+                    : {})
         })
         .where("companyId", "=", actor.companyId)
         .where("id", "=", intake.id)

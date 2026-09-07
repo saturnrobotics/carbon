@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { invoiceExtractionEnvelopeSchema } from "./contracts";
 import {
+  assertInvoiceRepeatCheckpoint,
   evaluateInvoices,
   type InvoiceEvaluationSample,
   scoreInvoiceSample
@@ -66,6 +67,91 @@ describe("invoice extraction release evaluation", () => {
       evaluateInvoices(fixtures, [...samples().slice(1), samples()[1]!])
         .models[0]?.passed
     ).toBe(false);
+  });
+  it("cannot reuse an earlier complete pass after that candidate fails on resume", () => {
+    const observations = samples();
+    const original = structuredClone(observations);
+    expect(evaluateInvoices(fixtures, observations).models[0]?.passed).toBe(
+      true
+    );
+    const report = evaluateInvoices(fixtures, observations, {
+      failedModelIds: ["synthetic-test-model"]
+    });
+    expect(report.models[0]).toMatchObject({
+      passed: false,
+      corpusComplete: true,
+      accuracy: 1,
+      repeatCorrect: 5
+    });
+    expect(observations).toEqual(original);
+    expect(
+      evaluateInvoices(
+        fixtures,
+        [
+          ...observations,
+          ...observations.map((sample) => ({
+            ...sample,
+            modelId: "other-model"
+          }))
+        ],
+        { failedModelIds: ["synthetic-test-model"] }
+      ).models.map((model) => model.passed)
+    ).toEqual([false, true]);
+  });
+  it("accepts only unchanged, still Ready held-out checkpoints without improving observations", () => {
+    const checkpoint = samples()[20]!;
+    const selection = {
+      supplierId: "fixture-supplier",
+      lines: [
+        {
+          itemId: "fixture-item",
+          purchaseUnit: "PACK",
+          stockUnit: "EA",
+          conversionFactor: "100"
+        }
+      ]
+    };
+    checkpoint.repeatSelection = {
+      expected: structuredClone(selection),
+      actual: structuredClone(selection)
+    };
+    const original = structuredClone(checkpoint);
+    const current = {
+      status: "Ready",
+      ready: true,
+      attemptId: checkpoint.attemptId,
+      expected: checkpoint.repeatSelection!.expected,
+      actual: checkpoint.repeatSelection!.actual
+    };
+    expect(() =>
+      assertInvoiceRepeatCheckpoint(checkpoint, current)
+    ).not.toThrow();
+    for (const changed of [
+      { ...current, status: "NeedsReview" },
+      { ...current, ready: false },
+      { ...current, attemptId: "replacement-attempt" },
+      { ...current, actual: { ...selection, supplierId: "another-supplier" } },
+      ...[
+        { itemId: "another-item" },
+        { purchaseUnit: "EA" },
+        { stockUnit: "PACK" },
+        { conversionFactor: "1" }
+      ].map((line) => ({
+        ...current,
+        actual: { ...selection, lines: [{ ...selection.lines[0], ...line }] }
+      })),
+      { ...current, expected: { ...selection, supplierId: "another-supplier" } }
+    ])
+      expect(() => assertInvoiceRepeatCheckpoint(checkpoint, changed)).toThrow(
+        "invoice_evaluation_checkpoint_changed"
+      );
+    expect(() =>
+      assertInvoiceRepeatCheckpoint(
+        { ...checkpoint, status: "NeedsReview" },
+        current
+      )
+    ).toThrow("invoice_evaluation_checkpoint_changed");
+    expect(checkpoint).toEqual(original);
   });
   it("counts missing lines and rejects wrong-ready exception documents", () => {
     const sample = samples()[6]!,

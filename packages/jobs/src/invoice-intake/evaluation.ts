@@ -12,6 +12,31 @@ export type InvoiceEvaluationSample = {
   reviewedFields?: number;
   repeatSelection?: { expected: unknown; actual: unknown };
 };
+
+/** A resumed run validates fresh state without rewriting its machine observation. */
+export function assertInvoiceRepeatCheckpoint(
+  checkpoint: InvoiceEvaluationSample,
+  current: {
+    status: string;
+    ready: boolean;
+    attemptId: string | null;
+    expected: unknown;
+    actual: unknown;
+  }
+) {
+  const selection = checkpoint.repeatSelection;
+  if (
+    checkpoint.status !== "Ready" ||
+    current.status !== "Ready" ||
+    !current.ready ||
+    checkpoint.attemptId !== current.attemptId ||
+    !selection ||
+    JSON.stringify(selection.expected) !== JSON.stringify(current.expected) ||
+    JSON.stringify(selection.actual) !== JSON.stringify(current.actual) ||
+    JSON.stringify(current.actual) !== JSON.stringify(current.expected)
+  )
+    throw new Error("invoice_evaluation_checkpoint_changed");
+}
 const decimalEqual = (a: string, b: string) => {
   const normalize = (value: string) => {
     const sign = value.startsWith("-") ? "-" : "";
@@ -174,10 +199,12 @@ export function scoreInvoiceSample(
 }
 export function evaluateInvoices(
   fixtures: InvoiceFixture[],
-  samples: InvoiceEvaluationSample[]
+  samples: InvoiceEvaluationSample[],
+  options: { failedModelIds?: readonly string[] } = {}
 ) {
   const byId = new Map(fixtures.map((f) => [f.id, f]));
   const models = [...new Set(samples.map((s) => s.modelId))];
+  const failedModels = new Set(options.failedModelIds);
   return {
     version: "invoice-evaluation.v1",
     models: models.map((modelId) => {
@@ -210,6 +237,7 @@ export function evaluateInvoices(
           s.latencyMs >= 0
       );
       const passed =
+        !failedModels.has(modelId) &&
         unique &&
         measured &&
         accuracy >= 0.95 &&

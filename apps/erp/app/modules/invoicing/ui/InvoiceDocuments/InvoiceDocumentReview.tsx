@@ -37,6 +37,10 @@ import {
   InvoiceToggle
 } from "./InvoiceDocumentLines";
 import {
+  InvoiceDocumentSourceReview,
+  type InvoiceReviewSource
+} from "./InvoiceDocumentSourceReview";
+import {
   InvoiceRecognitionRules,
   invoiceRuleLabel
 } from "./InvoiceRecognitionRules";
@@ -86,7 +90,14 @@ export function InvoiceDocumentReview({ data }: { data: ReviewData }) {
   const [baseRevision, setBaseRevision] = useState(data.intake.revision);
   const [dirty, setDirty] = useState(false);
   const [supplierProposalOpen, setSupplierProposalOpen] = useState(false);
-  const [sourceId, setSourceId] = useState(data.signedSources[0]?.id ?? "");
+  const [sourceId, setSourceId] = useState(
+    () =>
+      data.sources.find(
+        (source) => source.sha256 === data.review.header.primarySourceSha256
+      )?.id ??
+      data.signedSources[0]?.id ??
+      ""
+  );
   const [storedSuppliers] = useSuppliers();
   const suppliers = useMemo(
     () => [
@@ -140,6 +151,63 @@ export function InvoiceDocumentReview({ data }: { data: ReviewData }) {
     ["Approved", "Linked", "Ignored"].includes(data.intake.status) ||
     !data.permissions.canUpdate;
   const conflict = dirty && baseRevision !== data.intake.revision;
+  const distinctSources = useMemo(() => {
+    const sources = new Map<string, InvoiceReviewSource>();
+    for (const source of data.sources) {
+      if (source.sha256 && source.storagePath && !sources.has(source.sha256))
+        sources.set(source.sha256, { ...source, sha256: source.sha256 });
+    }
+    return [...sources.values()];
+  }, [data.sources]);
+  const primarySha256 =
+    review.header.primarySourceSha256 ??
+    (distinctSources.length === 1 ? distinctSources[0].sha256 : null);
+  const sourceIssues = useMemo(() => {
+    const issues: { path: string; code: string; message: string }[] = [];
+    if (
+      distinctSources.length &&
+      !distinctSources.some((source) => source.sha256 === primarySha256)
+    )
+      issues.push({
+        path: "header.primarySourceSha256",
+        code: "source",
+        message: t`Choose the invoice document to parse`
+      });
+    const acknowledged = new Set(
+      review.header.sourceAcknowledgements
+        .filter((entry) => entry.reason.trim())
+        .map((entry) => entry.sha256)
+    );
+    if (
+      distinctSources.some(
+        (source) =>
+          source.sha256 !== primarySha256 && !acknowledged.has(source.sha256)
+      )
+    )
+      issues.push({
+        path: "header.sourceAcknowledgements",
+        code: "source",
+        message: t`Review every other attachment and enter a reason`
+      });
+    if (
+      primarySha256 &&
+      !acknowledged.has(primarySha256) &&
+      data.sourceCoverage.extractionSha256 &&
+      data.sourceCoverage.extractionSha256 !== primarySha256
+    )
+      issues.push({
+        path: "header.sourceAcknowledgements",
+        code: "source",
+        message: t`Parse the selected invoice or explain your manual review of its facts`
+      });
+    return issues;
+  }, [
+    distinctSources,
+    primarySha256,
+    review.header.sourceAcknowledgements,
+    data.sourceCoverage.extractionSha256,
+    t
+  ]);
   const localValidation = useMemo(
     () =>
       getInvoiceReviewReadiness(review, {
@@ -174,9 +242,15 @@ export function InvoiceDocumentReview({ data }: { data: ReviewData }) {
       }),
     [review, data.reviewContext, data.currencies, items, suppliers]
   );
-  // Server validation includes source coverage and custom-field references that
-  // are intentionally unavailable in the browser. Recheck them after each save.
-  const validation = dirty ? localValidation : data.validation;
+  // Server validation additionally checks extraction line coverage and custom
+  // references. Recheck those against the saved selection after each save.
+  const validation = dirty
+    ? {
+        ...localValidation,
+        ready: localValidation.ready && sourceIssues.length === 0,
+        issues: [...localValidation.issues, ...sourceIssues]
+      }
+    : data.validation;
   const activeSource =
     data.signedSources.find((source) => source.id === sourceId) ??
     data.signedSources[0];
@@ -306,8 +380,33 @@ export function InvoiceDocumentReview({ data }: { data: ReviewData }) {
       )}
       <div className="grid gap-6 xl:grid-cols-2 items-start">
         <div className="space-y-3 xl:sticky xl:top-4">
+          <InvoiceDocumentSourceReview
+            sources={distinctSources}
+            primarySha256={primarySha256}
+            extractionSha256={data.sourceCoverage.extractionSha256}
+            header={review.header}
+            disabled={readOnly || busy}
+            onPrimaryChange={(sha256) => {
+              if (sha256 === primarySha256) return;
+              header({
+                primarySourceSha256: sha256,
+                sourceAcknowledgements:
+                  review.header.sourceAcknowledgements.filter(
+                    (entry) =>
+                      entry.sha256 !== sha256 && entry.sha256 !== primarySha256
+                  )
+              });
+              const source = distinctSources.find(
+                (entry) => entry.sha256 === sha256
+              );
+              if (source) setSourceId(source.id);
+            }}
+            onAcknowledgementsChange={(sourceAcknowledgements) =>
+              header({ sourceAcknowledgements })
+            }
+          />
           <InvoiceChoiceField
-            label={t`Source document`}
+            label={t`Preview document`}
             value={activeSource?.id ?? null}
             options={data.signedSources.map((source) => ({
               value: source.id,
@@ -927,7 +1026,7 @@ export function InvoiceDocumentReview({ data }: { data: ReviewData }) {
                 <Button
                   variant="ghost"
                   onClick={() => submit("retry")}
-                  isDisabled={readOnly || dirty || busy}
+                  isDisabled={readOnly || dirty || busy || !primarySha256}
                 >
                   <Trans>Parse again</Trans>
                 </Button>

@@ -9,7 +9,8 @@ import {
   invoiceExtractionEnvelopeSchema,
   invoiceIntakeStatuses,
   invoiceItemTypes,
-  invoiceMatchSuggestionsSchema
+  invoiceMatchSuggestionsSchema,
+  invoiceSourceReviewSchema
 } from "@carbon/jobs";
 import {
   persistInvoiceRecognition,
@@ -716,10 +717,10 @@ async function getInvoiceExtraction(
 ) {
   const attempt = await db
     .selectFrom("documentExtraction")
-    .select("extractedData")
+    .select(["extractedData", "storagePath", "generation"])
     .where("companyId", "=", actor.companyId)
     .where("intakeId", "=", intakeId)
-    .where("generation", "=", generation)
+    .where("generation", "<=", generation)
     .where("operation", "=", "extract")
     .where("status", "=", "completed")
     .orderBy("generation", "desc")
@@ -728,7 +729,13 @@ async function getInvoiceExtraction(
   const parsed = invoiceExtractionEnvelopeSchema.safeParse(
     attempt?.extractedData
   );
-  return parsed.success ? parsed.data : null;
+  return parsed.success && attempt
+    ? {
+        data: parsed.data,
+        storagePath: attempt.storagePath,
+        generation: attempt.generation
+      }
+    : null;
 }
 async function validateSourceCoverage(
   db: Kysely<KyselyDatabase>,
@@ -737,25 +744,75 @@ async function validateSourceCoverage(
   review: InvoiceIntakeReview,
   validation: ReturnType<typeof getInvoiceReviewReadiness>
 ) {
-  const extraction = await getInvoiceExtraction(
+  const attempt = await getInvoiceExtraction(
     db,
     actor,
     intake.id,
     intake.generation
   );
-  const source = await db
+  const sources = await db
     .selectFrom("invoiceIntakeSource")
-    .select("id")
+    .select(["sha256", "storagePath"])
     .where("companyId", "=", actor.companyId)
     .where("intakeId", "=", intake.id)
     .where("storagePath", "is not", null)
-    .executeTakeFirst();
-  if (!source)
+    .execute();
+  const hashes = new Set(
+    sources.flatMap((source) => (source.sha256 ? [source.sha256] : []))
+  );
+  const primary =
+    review.header.primarySourceSha256 ??
+    (hashes.size === 1 ? [...hashes][0]! : null);
+  const acknowledgements = review.header.sourceAcknowledgements;
+  const acknowledged = new Set(acknowledgements.map((source) => source.sha256));
+  const sourceIssue = (path: string, message: string) =>
+    validation.issues.push({ path, code: "source", message });
+  if (!hashes.size)
     validation.issues.push({
       path: "sources",
       code: "source",
       message: "Attach the invoice or receipt before approval"
     });
+  else if (!primary || !hashes.has(primary))
+    sourceIssue(
+      "header.primarySourceSha256",
+      "Select an attached invoice or receipt as the primary source document"
+    );
+  if (
+    acknowledged.size !== acknowledgements.length ||
+    [...acknowledged].some((hash) => !hashes.has(hash))
+  )
+    sourceIssue(
+      "header.sourceAcknowledgements",
+      "Source acknowledgements must identify distinct documents attached to this intake"
+    );
+  if ([...hashes].some((hash) => hash !== primary && !acknowledged.has(hash)))
+    sourceIssue(
+      "header.sourceAcknowledgements",
+      "Review each other source document and explain its supporting or excluded role for this invoice"
+    );
+  const extractionSha256 = attempt
+    ? (sources.find((source) => source.storagePath === attempt.storagePath)
+        ?.sha256 ?? null)
+    : null;
+  if (
+    attempt &&
+    primary &&
+    extractionSha256 !== primary &&
+    !acknowledged.has(primary)
+  )
+    sourceIssue(
+      "header.sourceAcknowledgements",
+      "Parse the selected source document or confirm that the invoice facts were manually reviewed from that file"
+    );
+  // Retain earlier provenance after a failed reparse, but never treat an older
+  // generation's extracted lines as the current generation's successful output.
+  const extraction =
+    attempt &&
+    attempt.generation === intake.generation &&
+    extractionSha256 === primary
+      ? attempt.data
+      : null;
   if (extraction && review.mergeMode !== "evidence") {
     const reviewed = new Set(review.lines.map((line) => line.lineKey));
     const expected = new Set(extraction.lines.map((line) => line.lineKey));
@@ -788,7 +845,7 @@ async function validateSourceCoverage(
   }
   validation.ready = validation.issues.length === 0;
   validation.status = validation.ready ? "Ready" : "NeedsReview";
-  return extraction;
+  return { extraction, sourceCoverage: { extractionSha256 } };
 }
 
 export async function getInvoiceIntakeReview(
@@ -799,7 +856,7 @@ export async function getInvoiceIntakeReview(
   const permissions = await getInvoiceIntakePermissions(db, actor);
   const rows = await readIntakeRows(db, actor, id);
   const bundle = await buildReviewContext(db, actor, rows.review, permissions);
-  const extraction = await validateSourceCoverage(
+  const { extraction, sourceCoverage } = await validateSourceCoverage(
     db,
     actor,
     rows.intake,
@@ -888,6 +945,7 @@ export async function getInvoiceIntakeReview(
         }
       : null,
     extraction,
+    sourceCoverage,
     permissions,
     reviewContext: {
       ...serialContext,
@@ -1903,14 +1961,25 @@ export async function setInvoiceIntakeStatus(
       input.action
     );
     if (input.action === "retry" || input.action === "restore") {
-      const source = await trx
+      const sources = await trx
         .selectFrom("invoiceIntakeSource")
-        .select("id")
+        .select("sha256")
         .where("companyId", "=", actor.companyId)
         .where("intakeId", "=", input.id)
         .where("storagePath", "is not", null)
-        .executeTakeFirst();
-      if (!source) status = "NeedsDocument";
+        .execute();
+      if (!sources.length) status = "NeedsDocument";
+      else if (input.action === "retry") {
+        const selection = invoiceSourceReviewSchema.parse(intake.header);
+        const hashes = new Set(sources.map((source) => source.sha256));
+        const primary =
+          selection.primarySourceSha256 ??
+          (hashes.size === 1 ? [...hashes][0] : null);
+        if (!primary || !hashes.has(primary))
+          throw new InvoiceIntakeError(
+            "Save a primary source document selection before parsing again"
+          );
+      }
     }
     if (input.action === "restore" && importIds.length)
       await trx

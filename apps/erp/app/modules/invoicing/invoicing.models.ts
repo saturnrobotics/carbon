@@ -3,7 +3,8 @@ import {
   invoiceDecimalSchema,
   invoiceDocumentKinds,
   invoiceItemTypes,
-  invoiceLineTypes
+  invoiceLineTypes,
+  invoiceSourceReviewSchema
 } from "@carbon/jobs";
 import { z } from "zod";
 import { zfd } from "zod-form-data";
@@ -28,6 +29,7 @@ export const invoiceNewSupplierValidator = z.object({
   customFields: z.record(z.string(), z.unknown()).optional()
 });
 export const invoiceIntakeHeaderValidator = z.object({
+  ...invoiceSourceReviewSchema.shape,
   invoiceNumber: intakeText,
   issueDate: intakeText,
   dueDate: intakeText,

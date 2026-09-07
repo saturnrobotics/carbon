@@ -3389,7 +3389,7 @@ msgid "Changes"
 msgstr "Изменения"
 
 msgid "Changing this selection keeps your current review fields. Save the review, then use Parse again to read the selected document."
-msgstr ""
+msgstr "При изменении этого выбора текущие поля рассмотрения сохраняются. Сохраните рассмотрение, затем нажмите «Разобрать еще раз», чтобы прочитать выбранный документ."
 
 msgid "Changing this will overwrite the existing method"
 msgstr "Это изменение перезапишет существующий метод"
@@ -3451,10 +3451,10 @@ msgid "Choose another file"
 msgstr "Выбрать другой файл"
 
 msgid "Choose the invoice document to parse"
-msgstr ""
+msgstr "Выберите документ счета-фактуры для разбора"
 
 msgid "Choose the invoice or receipt that defines this purchase. Review every other attachment and explain why it adds no separate invoice lines. Documents for another purchase need a separate review."
-msgstr ""
+msgstr "Выберите счет-фактуру или чек, подтверждающий эту покупку. Проверьте каждое другое вложение и объясните, почему оно не добавляет отдельных строк счета-фактуры. Документы по другой покупке требуют отдельного рассмотрения."
 
 msgid "Choose what appears on the printed job traveler."
 msgstr "Выбрать, что отображается на распечатанном маршрутном листе работы."
@@ -7670,7 +7670,7 @@ msgid "for anything. They'll pull in the right person."
 msgstr "для чего угодно. Они привлекут нужного человека."
 
 msgid "For each other file, explain whether it is a duplicate, payment confirmation, supporting evidence, or unrelated to this invoice. Review decisions apply once per distinct file, even when the same file arrived from several sources."
-msgstr ""
+msgstr "Для каждого другого файла укажите, является ли он дубликатом, подтверждением платежа, дополнительным подтверждающим материалом или не относится к этому счету-фактуре. Решения по рассмотрению применяются один раз к каждому отдельному файлу, даже если один и тот же файл поступил из нескольких источников."
 
 msgid "For one-time deployment setup, use this company ID for PAYMENT_SYNC_COMPANY_ID:"
 msgstr "Для разовой настройки используйте этот ID компании для PAYMENT_SYNC_COMPANY_ID:"
@@ -8838,7 +8838,7 @@ msgid "Invoice document"
 msgstr "Документ Счет-фактура"
 
 msgid "Invoice document to parse"
-msgstr ""
+msgstr "Документ счета-фактуры для разбора"
 
 msgid "Invoice documents"
 msgstr "Документы — Счет-фактура"
@@ -8862,7 +8862,7 @@ msgid "Invoice settlement"
 msgstr "Расчет по счету-фактуре"
 
 msgid "Invoice source"
-msgstr ""
+msgstr "Источник счета-фактуры"
 
 msgid "Invoice supplier"
 msgstr "Поставщик счета-фактуры"
@@ -9842,7 +9842,7 @@ msgid "Manual correction"
 msgstr "Ручная коррекция"
 
 msgid "Manual review of selected invoice"
-msgstr ""
+msgstr "Ручное рассмотрение выбранного счета-фактуры"
 
 msgid "Manually scheduled"
 msgstr "Вручную запланировано"
@@ -11726,7 +11726,7 @@ msgid "Open document review"
 msgstr "Открыть проверку документа"
 
 msgid "Open document review and original attachment"
-msgstr ""
+msgstr "Открыть рассмотрение документа и исходное вложение"
 
 msgid "Open in Carbon"
 msgstr "Открыть в Carbon"
@@ -11934,7 +11934,7 @@ msgid "Optional pages & sections"
 msgstr "Дополнительные страницы и разделы"
 
 msgid "Optional unless the extracted facts came from another file. Confirm that you manually entered or reviewed these invoice facts against the selected document."
-msgstr ""
+msgstr "Необязательно, если извлеченные данные не получены из другого файла. Подтвердите, что вы вручную ввели или проверили эти данные счета-фактуры по выбранному документу."
 
 msgid "Options"
 msgstr "Параметры"
@@ -12176,7 +12176,7 @@ msgid "Parse again"
 msgstr "Разобрать еще раз"
 
 msgid "Parse the selected invoice or explain your manual review of its facts"
-msgstr ""
+msgstr "Разберите выбранный счет-фактуру или опишите ручное рассмотрение его данных"
 
 msgid "Parsing and historical ingestion"
 msgstr "Анализ и исторический прием"
@@ -12730,7 +12730,7 @@ msgid "Preview"
 msgstr "Предпросмотр"
 
 msgid "Preview document"
-msgstr ""
+msgstr "Предварительный просмотр документа"
 
 msgid "Preview failed: {error}"
 msgstr "Ошибка предпросмотра: {error}"
@@ -13568,7 +13568,7 @@ msgid "Receipt Lines"
 msgstr "Строки квитанции"
 
 msgid "Receipt or invoice"
-msgstr ""
+msgstr "Чек или счет-фактура"
 
 msgid "Receipt Promised Date"
 msgstr "Подтвержденная дата поступления"
@@ -14297,7 +14297,7 @@ msgid "Review each item's changes, then confirm — releasing can't be undone."
 msgstr "Рассмотреть изменения каждой номенклатуры, затем подтвердить — выпуск нельзя отменить."
 
 msgid "Review every other attachment and enter a reason"
-msgstr ""
+msgstr "Проверьте каждое другое вложение и укажите причину"
 
 msgid "Review extracted purchases"
 msgstr "Просмотр извлеченных покупок"
@@ -14312,7 +14312,7 @@ msgid "Review or retry parsing"
 msgstr "Просмотрите или повторите синтаксический анализ"
 
 msgid "Review reason for {name}"
-msgstr ""
+msgstr "Причина рассмотрения для {name}"
 
 msgid "Review supplier"
 msgstr "Проверить поставщика"
@@ -15848,7 +15848,7 @@ msgid "Source document total"
 msgstr "Документ-основание, всего"
 
 msgid "Source documents"
-msgstr ""
+msgstr "Документы-основания"
 
 msgid "Source Item"
 msgstr "Исходный элемент"
@@ -16969,7 +16969,7 @@ msgstr "Счет расходов, на который относится эта
 msgid "The file you uploaded and the mappings you've made will be lost."
 msgstr "Загруженный файл и созданные сопоставления будут потеряны."
 msgid "The extracted facts came from another document. Parse the selected invoice, or check every line and total manually and describe your review below."
-msgstr ""
+msgstr "Извлеченные данные получены из другого документа. Разберите выбранный счет-фактуру либо вручную проверьте каждую строку и сумму «Итого», а затем опишите рассмотрение ниже."
 
 msgid "the first 3 to 4 weeks"
 msgstr "первые 3–4 недели"
@@ -17653,7 +17653,7 @@ msgid "This invitation to join {0} has expired. You can request a new invite to 
 msgstr "Это приглашение присоединиться к {0} истекло. Вы можете запросить отправку нового приглашения на вашу электронную почту."
 
 msgid "This invoice documents a historical purchase. Check current stock before receiving inventory; purchase history does not establish today's stock balance."
-msgstr ""
+msgstr "Этот счет-фактура документирует покупку в прошлом. Проверьте текущий запас перед оформлением поступления товаров; история покупок не определяет сегодняшний остаток запасов."
 
 msgid "This invoice has no usable due date — choose one for Stripe."
 msgstr "Этот счет не имеет пригодной даты платежа — выберите одну для Stripe."
