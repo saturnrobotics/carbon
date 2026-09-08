@@ -4350,7 +4350,7 @@ msgstr "无法读取文件：{0}"
 #. placeholder {0}: d.failed.length
 #. placeholder {1}: d.failed .map((f) => f.readableId) .join(", ")
 msgid "Could not release {0}: {1}"
-msgstr ""
+msgstr "无法下达 {0} 个生产批次：{1}"
 
 msgid "Could not save"
 msgstr "无法保存"
@@ -13874,7 +13874,7 @@ msgstr "下达"
 
 #. placeholder {0}: releasable.length
 msgid "Release {0} batches"
-msgstr ""
+msgstr "下达 {0} 个生产批次"
 
 msgid "Release Batch"
 msgstr "下达生产批次"
@@ -13896,7 +13896,7 @@ msgstr "已下达"
 
 #. placeholder {0}: d.released
 msgid "Released {0} batches"
-msgstr ""
+msgstr "已下达 {0} 个生产批次"
 
 msgid "Released date"
 msgstr "下达日期"

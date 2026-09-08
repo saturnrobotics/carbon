@@ -4350,7 +4350,7 @@ msgstr "Belge okunamadı: {0}"
 #. placeholder {0}: d.failed.length
 #. placeholder {1}: d.failed .map((f) => f.readableId) .join(", ")
 msgid "Could not release {0}: {1}"
-msgstr ""
+msgstr "{0} parti serbest bırakılamadı: {1}"
 
 msgid "Could not save"
 msgstr "Kaydedilemedi"
@@ -13874,7 +13874,7 @@ msgstr "Serbest Bırakma"
 
 #. placeholder {0}: releasable.length
 msgid "Release {0} batches"
-msgstr ""
+msgstr "{0} partiyi serbest bırak"
 
 msgid "Release Batch"
 msgstr "Partiyi Serbest Bırak"
@@ -13896,7 +13896,7 @@ msgstr "Yayınlandı"
 
 #. placeholder {0}: d.released
 msgid "Released {0} batches"
-msgstr ""
+msgstr "{0} parti serbest bırakıldı"
 
 msgid "Released date"
 msgstr "Yayın tarihi"

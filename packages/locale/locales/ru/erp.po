@@ -4350,7 +4350,7 @@ msgstr "Не удалось прочитать документ: {0}"
 #. placeholder {0}: d.failed.length
 #. placeholder {1}: d.failed .map((f) => f.readableId) .join(", ")
 msgid "Could not release {0}: {1}"
-msgstr ""
+msgstr "Не удалось запустить серии в работу ({0}): {1}"
 
 msgid "Could not save"
 msgstr "Не удалось сохранить"
@@ -13874,7 +13874,7 @@ msgstr "Запустить в работу"
 
 #. placeholder {0}: releasable.length
 msgid "Release {0} batches"
-msgstr ""
+msgstr "Запустить серии в работу: {0}"
 
 msgid "Release Batch"
 msgstr "Запустить серию в работу"
@@ -13896,7 +13896,7 @@ msgstr "Выпущено"
 
 #. placeholder {0}: d.released
 msgid "Released {0} batches"
-msgstr ""
+msgstr "Запущено серий: {0}"
 
 msgid "Released date"
 msgstr "Дата выпуска"

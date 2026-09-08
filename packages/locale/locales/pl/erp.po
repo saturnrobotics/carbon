@@ -4350,7 +4350,7 @@ msgstr "Nie można odczytać dokumentu: {0}"
 #. placeholder {0}: d.failed.length
 #. placeholder {1}: d.failed .map((f) => f.readableId) .join(", ")
 msgid "Could not release {0}: {1}"
-msgstr ""
+msgstr "Nie udało się zwolnić partii produkcyjnych ({0}): {1}"
 
 msgid "Could not save"
 msgstr "Nie można było zapisać"
@@ -13874,7 +13874,7 @@ msgstr "Zwolnienie"
 
 #. placeholder {0}: releasable.length
 msgid "Release {0} batches"
-msgstr ""
+msgstr "Zwolnij partie produkcyjne: {0}"
 
 msgid "Release Batch"
 msgstr "Zwolnij partię produkcyjną"
@@ -13896,7 +13896,7 @@ msgstr "Wydane"
 
 #. placeholder {0}: d.released
 msgid "Released {0} batches"
-msgstr ""
+msgstr "Zwolniono partie produkcyjne: {0}"
 
 msgid "Released date"
 msgstr "Data wydania"

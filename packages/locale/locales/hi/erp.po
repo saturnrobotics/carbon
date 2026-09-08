@@ -4350,7 +4350,7 @@ msgstr "दस्तावेज़ नहीं पढ़ा जा सका: 
 #. placeholder {0}: d.failed.length
 #. placeholder {1}: d.failed .map((f) => f.readableId) .join(", ")
 msgid "Could not release {0}: {1}"
-msgstr ""
+msgstr "{0} बैच जारी नहीं किए जा सके: {1}"
 
 msgid "Could not save"
 msgstr "सहेज नहीं सके"
@@ -13874,7 +13874,7 @@ msgstr "जारी करें"
 
 #. placeholder {0}: releasable.length
 msgid "Release {0} batches"
-msgstr ""
+msgstr "{0} बैच जारी करें"
 
 msgid "Release Batch"
 msgstr "बैच जारी करें"
@@ -13896,7 +13896,7 @@ msgstr "जारी किया गया"
 
 #. placeholder {0}: d.released
 msgid "Released {0} batches"
-msgstr ""
+msgstr "{0} बैच जारी किए गए"
 
 msgid "Released date"
 msgstr "जारी की गई तारीख"

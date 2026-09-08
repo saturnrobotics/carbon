@@ -4350,7 +4350,7 @@ msgstr "문서를 읽을 수 없습니다: {0}"
 #. placeholder {0}: d.failed.length
 #. placeholder {1}: d.failed .map((f) => f.readableId) .join(", ")
 msgid "Could not release {0}: {1}"
-msgstr ""
+msgstr "배치 {0}개를 릴리스하지 못했습니다: {1}"
 
 msgid "Could not save"
 msgstr "저장할 수 없습니다"
@@ -13874,7 +13874,7 @@ msgstr "릴리스"
 
 #. placeholder {0}: releasable.length
 msgid "Release {0} batches"
-msgstr ""
+msgstr "배치 {0}개 릴리스"
 
 msgid "Release Batch"
 msgstr "배치 릴리스"
@@ -13896,7 +13896,7 @@ msgstr "릴리즈됨"
 
 #. placeholder {0}: d.released
 msgid "Released {0} batches"
-msgstr ""
+msgstr "배치 {0}개 릴리스됨"
 
 msgid "Released date"
 msgstr "출시일"

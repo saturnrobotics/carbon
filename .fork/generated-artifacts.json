@@ -141,8 +141,8 @@
       "kind": "authored-and-extracted",
       "tracked": ["packages/locale/locales/**/*.po"],
       "inputs": ["apps/**", "packages/**", "lingui.config.js"],
-      "verification": ["corepack", "pnpm", "run", "lingui:compile"],
-      "note": "Preserve authored translations; normalize extraction and review union results."
+      "verification": ["corepack", "pnpm", "exec", "linguito", "check"],
+      "note": "Preserve authored translations and require completeness; locale-compiled separately verifies compilation. Normalize extraction and review union results."
     },
     {
       "id": "route-types",

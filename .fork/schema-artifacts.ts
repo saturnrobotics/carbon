@@ -133,6 +133,103 @@ export function canonicalBackup(source: string): string {
   return JSON.stringify(stable(manifest));
 }
 
+export function canonicalSwagger(source: string): string {
+  const diagnostics = ts.transpileModule(source, {
+    reportDiagnostics: true
+  }).diagnostics;
+  if (
+    diagnostics?.some(
+      (diagnostic) => diagnostic.category === ts.DiagnosticCategory.Error
+    )
+  )
+    throw new Error("Invalid Swagger TypeScript syntax");
+  const parsed = ts.createSourceFile(
+    "swagger.ts",
+    source,
+    ts.ScriptTarget.Latest,
+    true
+  );
+  const statement = parsed.statements[0];
+  if (
+    parsed.statements.length !== 1 ||
+    !statement ||
+    !ts.isExportAssignment(statement) ||
+    statement.modifiers?.length ||
+    statement.isExportEquals ||
+    !ts.isObjectLiteralExpression(statement.expression)
+  )
+    throw new Error(
+      "Swagger requires exactly one default export of a literal object"
+    );
+
+  function number(value: string): number {
+    const result = Number(value);
+    if (!Number.isFinite(result))
+      throw new Error("Swagger numbers must be finite");
+    return result;
+  }
+
+  function decode(node: ts.Expression): unknown {
+    if (ts.isStringLiteral(node)) return node.text;
+    if (ts.isNumericLiteral(node)) return number(node.text);
+    if (node.kind === ts.SyntaxKind.TrueKeyword) return true;
+    if (node.kind === ts.SyntaxKind.FalseKeyword) return false;
+    if (node.kind === ts.SyntaxKind.NullKeyword) return null;
+    if (
+      ts.isPrefixUnaryExpression(node) &&
+      node.operator === ts.SyntaxKind.MinusToken &&
+      ts.isNumericLiteral(node.operand)
+    )
+      return -number(node.operand.text);
+    if (ts.isArrayLiteralExpression(node)) return node.elements.map(decode);
+    if (ts.isObjectLiteralExpression(node)) {
+      const seen = new Set<string>();
+      const entries: [string, unknown][] = [];
+      for (const property of node.properties) {
+        if (
+          !ts.isPropertyAssignment(property) ||
+          !(
+            ts.isIdentifier(property.name) ||
+            ts.isStringLiteral(property.name) ||
+            ts.isNumericLiteral(property.name)
+          )
+        )
+          throw new Error(
+            "Swagger properties must have literal names and values"
+          );
+        const syntax = property
+          .getChildren(parsed)
+          .filter((child) => child.kind !== ts.SyntaxKind.JSDocComment);
+        if (
+          syntax.length !== 3 ||
+          syntax[0] !== property.name ||
+          syntax[1]?.kind !== ts.SyntaxKind.ColonToken ||
+          syntax[2] !== property.initializer
+        )
+          throw new Error(
+            "Swagger properties cannot have TypeScript modifiers or optional markers"
+          );
+        const key = ts.isNumericLiteral(property.name)
+          ? String(number(property.name.text))
+          : property.name.text;
+        if (seen.has(key))
+          throw new Error("Swagger contains duplicate property names");
+        seen.add(key);
+        entries.push([key, decode(property.initializer)]);
+      }
+      // Code-unit order is total, including Unicode spellings that localeCompare
+      // considers equal. fromEntries keeps __proto__ as an ordinary own key.
+      entries.sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+      return Object.fromEntries(entries);
+    }
+    throw new Error(
+      "Swagger values must be literals; executable expressions are forbidden"
+    );
+  }
+
+  return JSON.stringify(decode(statement.expression));
+}
+
 async function generateBackup(
   connectionFile: string,
   output: string
@@ -207,7 +304,9 @@ async function main(): Promise<void> {
     const canonical =
       kindOrConnection === "backup"
         ? canonicalBackup(source)
-        : canonicalTypes(source);
+        : kindOrConnection === "swagger"
+          ? canonicalSwagger(source)
+          : canonicalTypes(source);
     process.stdout.write(
       `${createHash("sha256").update(canonical).digest("hex")}\n`
     );

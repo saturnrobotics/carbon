@@ -4350,7 +4350,7 @@ msgstr "文書が読み込めません: {0}"
 #. placeholder {0}: d.failed.length
 #. placeholder {1}: d.failed .map((f) => f.readableId) .join(", ")
 msgid "Could not release {0}: {1}"
-msgstr ""
+msgstr "{0}件のバッチをリリースできませんでした: {1}"
 
 msgid "Could not save"
 msgstr "保存できませんでした"
@@ -8468,6 +8468,8 @@ msgid "If you wish to change the part numbers, please click Cancel and manually 
 msgstr "部品番号を変更したい場合は、[キャンセル]をクリックして、変換する前に各行アイテムの部品を手動で割り当ててください。"
 
 msgid "Ignore"
+msgstr "無視"
+
 msgid "Ignore document"
 msgstr "文書を無視する"
 
@@ -13873,7 +13875,7 @@ msgstr "リリース"
 
 #. placeholder {0}: releasable.length
 msgid "Release {0} batches"
-msgstr ""
+msgstr "{0}件のバッチをリリース"
 
 msgid "Release Batch"
 msgstr "バッチをリリース"
@@ -13895,7 +13897,7 @@ msgstr "リリース済み"
 
 #. placeholder {0}: d.released
 msgid "Released {0} batches"
-msgstr ""
+msgstr "{0}件のバッチをリリース済"
 
 msgid "Released date"
 msgstr "リリース日"

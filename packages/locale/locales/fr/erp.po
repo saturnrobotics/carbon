@@ -4350,7 +4350,7 @@ msgstr "Impossible de lire le document : {0}"
 #. placeholder {0}: d.failed.length
 #. placeholder {1}: d.failed .map((f) => f.readableId) .join(", ")
 msgid "Could not release {0}: {1}"
-msgstr ""
+msgstr "Impossible de lancer {0} : {1}"
 
 msgid "Could not save"
 msgstr "N'a pas pu enregistrer"
@@ -13874,7 +13874,7 @@ msgstr "Lancer"
 
 #. placeholder {0}: releasable.length
 msgid "Release {0} batches"
-msgstr ""
+msgstr "Lancer {0} lots de production"
 
 msgid "Release Batch"
 msgstr "Lancer le lot de production"
@@ -13896,7 +13896,7 @@ msgstr "Libéré"
 
 #. placeholder {0}: d.released
 msgid "Released {0} batches"
-msgstr ""
+msgstr "{0} lots de production lancés"
 
 msgid "Released date"
 msgstr "Date de libération"

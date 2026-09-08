@@ -12,6 +12,9 @@ definition and composite key through the same database service. Preserve other
 metadata, reject changed assumptions, and retain strict artifact comparison.
 Exercise both equivalent variants and negative cases, then repeat fresh/upgrade
 generation. A generator or catalog-query change must select schema verification.
+Compare Swagger's literal data rather than the TypeScript printer's quote and
+layout choices. Parse without executing code, reject duplicate keys, and preserve
+array order and every description value.
 
 Applies to → `scripts/lib/swagger-schema.ts`, its catalog proof and regression
 tests, the generated-artifact registry, and future generator compatibility fixes.

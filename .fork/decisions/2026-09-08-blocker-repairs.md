@@ -12,6 +12,11 @@ descriptor, memoized labels, and translated JSX across English, Spanish, and bac
 while retaining component state. It is a required application CI command separate
 from the browser-independent unit suite.
 
+Translation completeness is a separate required source check (`linguito check`).
+Compilation alone had accepted older missing batch-release messages and a
+malformed Japanese entry. All 37 older gaps are filled, preserving placeholders
+and other authored translations; the completeness check and compilation pass.
+
 Swagger generation verifies the complete known `partners` view definition and its
 ordered `(id, abilityId)` source key using Studio's catalog-query endpoint. Only
 the known duplicate-alias primary-key annotation is normalized. The generated
@@ -19,6 +24,12 @@ diff changes two descriptions; foreign-key notes and all other contract metadata
 remain intact. Changed proof assumptions or malformed responses fail before the
 atomic output replacement. A future view change requires review of this narrowly
 scoped compatibility correction. No historical migration or platform pin changed.
+
+Swagger comparison decodes literal data from the TypeScript export using its AST.
+Quote choice, object-key order, and array layout are formatting; description
+contents and array order remain significant. Executable expressions and duplicate
+keys are rejected. The same literal comparison is used for fresh, upgrade, and
+committed output, without evaluating generated JavaScript.
 
 The registry and CI include the helper, SQL proof, and regression tests. The
 disposable runner uses its own metadata service for the proof and rejects other
