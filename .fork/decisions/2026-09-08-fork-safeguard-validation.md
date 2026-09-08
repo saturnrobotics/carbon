@@ -19,9 +19,11 @@ These six repaired suites pass. Production changes in this work are limited to s
 
 The reviewed migration-built types and backup manifest were applied. The manifest now includes the three missing tables and new columns on five existing tables. Swagger was regenerated to include eleven missing table definitions, eighteen extraction fields, and the associated endpoints/parameters. Formatting preserves the repository's existing style. This regeneration repairs stale definitions; it does not resolve the cross-instance annotation instability described below.
 
-Local checks passed: 102 safeguard Python tests without skips, 27 generator/dispatcher/canonicalization Node tests with `NODE_PATH` unset, 159 operator tests using disposable PostgreSQL and OpenSSL 3, and scoped ERP/jobs/database typechecks. The operator tests initially exposed the host's incompatible LibreSSL executable; they passed with OpenSSL 3, matching the Linux CI prerequisite. All allocated verification containers, volumes, and networks were removed.
+Local checks passed: 103 safeguard Python tests without skips, 27 generator/dispatcher/canonicalization Node tests with `NODE_PATH` unset, 159 operator tests using disposable PostgreSQL and OpenSSL 3, and scoped ERP/jobs/database typechecks. The operator tests initially exposed the host's incompatible LibreSSL executable; they passed with OpenSSL 3, matching the Linux CI prerequisite. All allocated verification containers, volumes, and networks were removed.
 
 The full non-schema generator pipeline passed two runs against the reviewed index (`source`, `knowledge`, `build`, and `routes`). The MCP generator's unused wall-clock timestamp was removed to make local metadata repeatable. Real generation also proved the verifier must handle recursive globs matching direct children and compare JSON semantics within mixed Markdown/JSON output groups; both now have negative fixtures. A final frozen install with lifecycle scripts succeeded using pnpm 10.33.4 and installed the fork policy skill.
+
+Strict source lint checked all 19 selected TypeScript/JSON files plus the changed Python files. A real Git fixture confirms that previously tracked runtime files preserved locally after removal are excluded from the candidate's lint set. Disposable verification of committed `54eecb7c09` again matched SQL definitions, both type copies, and backup manifests, and failed only Swagger convergence. The subsequent lint-selection repair does not alter schema/generator inputs.
 
 ## Remaining release evidence
 

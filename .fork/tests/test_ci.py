@@ -261,6 +261,21 @@ class RevisionTests(unittest.TestCase):
         event = {"ref": "refs/heads/saturn/main", "before": self.base}
         self.assertEqual(ci.baseline(self.root, "push", event, self.head), self.base)
 
+    def test_lint_excludes_untracked_artifacts_preserved_locally_after_removal(self):
+        (self.root / ".fork").mkdir()
+        (self.root / ".fork/generated-artifacts.json").write_text('{"artifacts": []}')
+        (self.root / "runtime.json").write_text("{}")
+        self.git("add", ".fork/generated-artifacts.json", "runtime.json")
+        base = self.commit("tracked runtime")
+        self.git("rm", "--cached", "runtime.json")
+        (self.root / ".gitignore").write_text("runtime.json\n")
+        self.git("add", ".gitignore")
+        self.commit("untracked runtime")
+        with patch.object(
+            ci, "biome", side_effect=AssertionError("deleted path must not be linted")
+        ):
+            ci.lint(self.root, base)
+
     def test_pull_request_must_be_same_repo_and_test_actual_head(self):
         event = {
             "pull_request": {

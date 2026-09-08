@@ -180,10 +180,17 @@ def check_results(needs, revision):
             raise ValueError(f"{job}: required CI result is missing or unsuccessful")
 
 
-def changed(root, base, head="HEAD"):
-    return git(root, "diff", "--name-only", "--no-renames", "-z", base, head).split(
-        "\0"
-    )
+def changed(root, base, head="HEAD", *, include_deleted=True):
+    return git(
+        root,
+        "diff",
+        "--name-only",
+        "--no-renames",
+        "-z",
+        *([] if include_deleted else ["--diff-filter=d"]),
+        base,
+        head,
+    ).split("\0")
 
 
 def prepare(root, args):
@@ -285,7 +292,11 @@ def require_biome_result(result, paths):
 
 def lint(root, base):
     """Check every supported changed source file, and reject ignored-file claims."""
-    files = [path for path in changed(root, base) if (root / path).is_file()]
+    files = [
+        path
+        for path in changed(root, base, include_deleted=False)
+        if (root / path).is_file()
+    ]
     registry = json.loads((root / ".fork/generated-artifacts.json").read_text())
     generated = [
         pattern
