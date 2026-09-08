@@ -103,6 +103,27 @@ def render(config, repo, output, state=Path("/var/lib/carbon")):
     revision = config.get("DEPLOY_REVISION", repo.name)
     if not re.fullmatch(r"[a-f0-9]{40,64}", revision):
         raise ValueError("DEPLOY_REVISION must be the immutable source revision")
+    releases = config.get("RELEASE_PLAN", {}).get("services", {})
+    if releases and not isinstance(releases, dict):
+        raise ValueError("RELEASE_PLAN.services must be an object")
+    app_releases = {}
+    for app in ("erp", "mes"):
+        selected = releases.get(app, {})
+        if selected and not isinstance(selected, dict):
+            raise ValueError(f"RELEASE_PLAN.services.{app} must be an object")
+        app_revision = selected.get("source_commit", revision)
+        source_url = selected.get("source_code_url", config["SOURCE_CODE_URL"])
+        mount_path = selected.get("config_mount_path", "")
+        image_digest = selected.get("image_digest", "")
+        if not re.fullmatch(r"[a-f0-9]{40,64}", app_revision):
+            raise ValueError(f"RELEASE_PLAN.services.{app}.source_commit must be immutable")
+        if not isinstance(source_url, str) or not source_url.startswith("https://github.com/"):
+            raise ValueError(f"RELEASE_PLAN.services.{app}.source_code_url must be a public source URL")
+        if mount_path and not re.fullmatch(r"/var/lib/carbon/config/[a-f0-9]+\.json", mount_path):
+            raise ValueError(f"RELEASE_PLAN.services.{app}.config_mount_path is invalid")
+        if image_digest and not re.fullmatch(r"sha256:[a-f0-9]+", image_digest):
+            raise ValueError(f"RELEASE_PLAN.services.{app}.image_digest is invalid")
+        app_releases[app] = {"revision": app_revision, "source_url": source_url, "mount_path": mount_path, "image_digest": image_digest, "config_digest": selected.get("config_digest", "")}
     # The session cookie contains credentials. Share it only across the closest
     # common ERP/MES domain, independently of the Google Workspace email domain.
     common_labels = []
@@ -119,8 +140,8 @@ def render(config, repo, output, state=Path("/var/lib/carbon")):
         "ERP_URL": "https://" + config["ERP_HOST"],
         "MES_URL": "https://" + config["MES_HOST"],
         "SUPABASE_URL": "https://" + config["SUPABASE_HOST"],
-        "CARBON_IMAGE_ERP": "carbon/erp:" + revision,
-        "CARBON_IMAGE_MES": "carbon/mes:" + revision,
+        "CARBON_IMAGE_ERP": "carbon/erp:" + app_releases["erp"]["revision"],
+        "CARBON_IMAGE_MES": "carbon/mes:" + app_releases["mes"]["revision"],
     }
 
     def expand(value):
@@ -159,11 +180,16 @@ def render(config, repo, output, state=Path("/var/lib/carbon")):
             "INNGEST_SERVE_HOST": "http://erp:3000",
             "DISABLE_RESEND": "" if config.get("RESEND_API_KEY") else "true", "RESEND_API_KEY": "__RESEND_API_KEY__",
             "RESEND_DOMAIN": config.get("RESEND_DOMAIN", config["AUTH_ALLOWED_GOOGLE_DOMAIN"]),
-            "SOURCE_CODE_URL": config["SOURCE_CODE_URL"],
+            "SOURCE_CODE_URL": app_releases[app]["source_url"],
             "BROWSERLESS_WS_URL": "ws://chrome:3000",
         })
         if "resend_api_key" not in services[app]["secrets"]:
             services[app]["secrets"].append("resend_api_key")
+        services[app].setdefault("labels", {}).update({
+            "com.carbon.release.config-mount": app_releases[app]["mount_path"],
+            "com.carbon.release.image-digest": app_releases[app]["image_digest"],
+            "com.carbon.release.config-digest": app_releases[app]["config_digest"],
+        })
     payment_sync.configure(config, services["erp"], directory, write_private)
     invoice_inference.configure(config, services["erp"])
     # A 200 response alone is insufficient: ERP reports dependency failures in JSON.

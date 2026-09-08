@@ -1,0 +1,25 @@
+{
+  "name": "knowledge-actions",
+  "version": "0.0.0",
+  "type": "module",
+  "private": true,
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsup --out-dir dist",
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/index.js",
+    "test": "vitest run --passWithNoTests=false",
+    "typecheck": "tsgo --noEmit"
+  },
+  "dependencies": {
+    "@carbon/knowledge": "workspace:*"
+  },
+  "devDependencies": {
+    "@carbon/config": "workspace:*",
+    "@types/node": "catalog:",
+    "tsup": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

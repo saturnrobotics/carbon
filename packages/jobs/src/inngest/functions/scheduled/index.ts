@@ -9,6 +9,10 @@ export { nightlyReplanFunction } from "./nightly-replan";
 export { notificationDigestFunction } from "./notification-digest";
 export { notificationPurgeFunction } from "./notification-purge";
 export {
+  procurementScheduleExecuteFunction,
+  procurementScheduleSweepFunction
+} from "./procurement-schedule";
+export {
   markScheduleStaleFunction,
   scheduleReplanWaveFunction
 } from "./schedule-inputs-changed";

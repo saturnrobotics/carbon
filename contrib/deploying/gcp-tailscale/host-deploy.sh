@@ -7,7 +7,7 @@ umask 077
 readonly STATE=/var/lib/carbon
 readonly CONFIG=${1:?Usage: host-deploy.sh CONFIG_JSON REPO_PATH COMMAND}
 readonly REPO=${2:?Usage: host-deploy.sh CONFIG_JSON REPO_PATH COMMAND}
-readonly ACTION=${3:?Expected prepare, quiesce, apply, start, or check}
+readonly ACTION=${3:?Expected prepare, quiesce, routine-migrate, routine-apply, maintenance-apply, start, or check}
 readonly HERE="$REPO/contrib/deploying/gcp-tailscale"
 readonly CURRENT="$STATE/runtime/compose.json"
 
@@ -29,6 +29,141 @@ readonly REVISION
 readonly PREPARED="$STATE/prepared/$REVISION"
 
 compose() { docker compose --project-name carbon --file "$CURRENT" "$@"; }
+
+build_image() {
+  local pins pin
+  local -a base_args=()
+  pins=$(python3 - "$CONFIG" <<'PY'
+import json, re, sys
+config = json.load(open(sys.argv[1]))
+if "RELEASE_BASE_IMAGES" in config:
+    pins = config["RELEASE_BASE_IMAGES"]
+    expected = {"NODE_IMAGE": "node:22", "NODE_SLIM_IMAGE": "node:22-slim"}
+    if not isinstance(pins, dict) or set(pins) != set(expected):
+        raise SystemExit("RELEASE_BASE_IMAGES requires both pinned Node images")
+    for key, image in expected.items():
+        value = pins[key]
+        if not isinstance(value, str) or not re.fullmatch(re.escape(image) + r"@sha256:[a-f0-9]{64}", value):
+            raise SystemExit("Invalid immutable base image reference for " + key)
+        print(key + "=" + value)
+PY
+  ) || return 1
+  while IFS= read -r pin; do
+    [ -z "$pin" ] || base_args+=(--build-arg "$pin")
+  done <<< "$pins"
+  docker build ${base_args[@]+"${base_args[@]}"} "$@" "$REPO"
+}
+
+plan_services() {
+  local section=$1
+  python3 - "$CONFIG" "$section" <<'PY'
+import json, sys
+plan = json.load(open(sys.argv[1])).get("RELEASE_PLAN", {})
+for name in sorted(plan.get(sys.argv[2], {})):
+    if name not in {"erp", "mes"}:
+        raise SystemExit("Only app services may use the routine release path")
+    print(name)
+PY
+}
+
+verify_release_cas_and_drift() {
+  python3 - "$CONFIG" "$STATE/runtime/release-manifest.json" "$CURRENT" <<'PY'
+import json, sys
+config, manifest_path, compose_path = map(__import__('pathlib').Path, sys.argv[1:])
+plan = json.loads(config.read_text()).get("RELEASE_PLAN", {})
+expected = plan.get("expected_generation", 0)
+current = json.loads(manifest_path.read_text()) if manifest_path.exists() else {"generation": 0}
+if current.get("generation") != expected:
+    raise SystemExit("Release manifest generation changed; re-plan before promotion")
+if not compose_path.exists():
+    raise SystemExit(0)
+compose = json.loads(compose_path.read_text())
+for name, service in plan.get("services", {}).items():
+    observed = service.get("observed_config_digest")
+    active = compose.get("services", {}).get(name, {}).get("labels", {}).get("com.carbon.release.config-digest", "")
+    if observed and active != observed:
+        raise SystemExit("Manual configuration drift for " + name + "; review it before promotion")
+PY
+  while IFS=$'\t' read -r service expected; do
+    [ -n "$expected" ] || continue
+    container=$(docker ps --filter label=com.docker.compose.project=carbon --filter "label=com.docker.compose.service=$service" --quiet)
+    [ -n "$container" ] || fail "Expected running service $service is absent; review before promotion."
+    active=$(docker inspect --format '{{ index .Config.Labels "com.carbon.release.config-digest" }}' "$container")
+    [ "$active" = "$expected" ] || fail "Manual configuration drift for $service; review it before promotion."
+  done < <(python3 - "$CONFIG" <<'PY'
+import json, sys
+for name, service in json.load(open(sys.argv[1])).get("RELEASE_PLAN", {}).get("services", {}).items():
+    if service.get("observed_config_digest"):
+        print(name + "\t" + service["observed_config_digest"])
+PY
+)
+}
+
+promote_selected_compose() {
+  python3 - "$CONFIG" "$CURRENT" "$PREPARED/compose.json" <<'PY'
+import json, os, sys, tempfile
+from pathlib import Path
+config, current_path, prepared_path = map(Path, sys.argv[1:])
+plan = json.loads(config.read_text()).get("RELEASE_PLAN", {})
+selected = set(plan.get("deploy", {}))
+prepared = json.loads(prepared_path.read_text())
+if current_path.exists():
+    current = json.loads(current_path.read_text())
+else:
+    current = prepared
+    selected = set(prepared.get("services", {}))
+for name in selected:
+    if name not in {"erp", "mes"}:
+        raise SystemExit("Only app services may use the routine release path")
+    current["services"][name] = prepared["services"][name]
+fd, temporary = tempfile.mkstemp(dir=current_path.parent, prefix="compose.")
+with os.fdopen(fd, "w") as stream:
+    json.dump(current, stream, indent=2)
+    stream.write("\n")
+os.chmod(temporary, 0o600)
+os.replace(temporary, current_path)
+PY
+}
+
+restore_selected_compose() {
+  local previous="$STATE/runtime/routine-previous-compose.json"
+  [ -f "$previous" ] || fail "No previous routine Compose definition is available for app rollback."
+  python3 - "$CONFIG" "$CURRENT" "$previous" <<'PY'
+import json, os, sys, tempfile
+from pathlib import Path
+config, current_path, previous_path = map(Path, sys.argv[1:])
+selected = set(json.loads(config.read_text()).get("RELEASE_PLAN", {}).get("deploy", {}))
+current, previous = json.loads(current_path.read_text()), json.loads(previous_path.read_text())
+for name in selected:
+    if name not in {"erp", "mes"} or name not in previous.get("services", {}):
+        raise SystemExit("Only a previously deployed app may be rolled back automatically")
+    current["services"][name] = previous["services"][name]
+fd, temporary = tempfile.mkstemp(dir=current_path.parent, prefix="compose.rollback.")
+with os.fdopen(fd, "w") as stream:
+    json.dump(current, stream, indent=2)
+    stream.write("\n")
+os.chmod(temporary, 0o600)
+os.replace(temporary, current_path)
+PY
+}
+
+save_release_manifest() {
+  python3 - "$CONFIG" "$STATE/runtime/release-manifest.json" <<'PY'
+import json, os, sys, tempfile
+from pathlib import Path
+config, destination = map(Path, sys.argv[1:])
+plan = json.loads(config.read_text())["RELEASE_PLAN"]
+manifest = {"generation": plan["generation"], "services": plan["services"]}
+if plan.get("maintenance_fingerprint"):
+    manifest["maintenance_fingerprint"] = plan["maintenance_fingerprint"]
+fd, temporary = tempfile.mkstemp(dir=destination.parent, prefix="release-manifest.")
+with os.fdopen(fd, "w") as stream:
+    json.dump(manifest, stream, sort_keys=True)
+    stream.write("\n")
+os.chmod(temporary, 0o600)
+os.replace(temporary, destination)
+PY
+}
 
 wait_service() {
   local service=$1 elapsed=0 timeout=${2:-240} container status
@@ -100,13 +235,14 @@ case "$ACTION" in
     mkdir -p "$PREPARED"
     python3 "$HERE/render.py" "$CONFIG" "$REPO" "$PREPARED"
     docker compose --project-name carbon --file "$PREPARED/compose.json" config --quiet
-    for target in ops erp mes; do
-      if [ "$target" = ops ]; then
-        docker build --target ops --tag "carbon/ops:$REVISION" "$REPO"
-      else
-        docker build --build-arg "APP=$target" --tag "carbon/$target:$REVISION" "$REPO"
-      fi
-    done
+    if [ "$(config_value RELEASE_MAINTENANCE)" = True ]; then
+      targets="erp mes"
+      build_image --target ops --tag "carbon/ops:$REVISION"
+    else
+      targets=$(plan_services build)
+      if [ -n "$(plan_services migrate)" ]; then build_image --target ops --tag "carbon/ops:$REVISION"; fi
+    fi
+    for target in $targets; do build_image --build-arg "APP=$target" --tag "carbon/$target:$REVISION"; done
     printf '%s\n' "Prepared immutable source release; running containers are unchanged."
     ;;
   quiesce)
@@ -118,9 +254,38 @@ case "$ACTION" in
     sync
     printf '%s\n' "Carbon stopped; snapshot the data disk before apply."
     ;;
-  apply)
+  routine-migrate)
     verify_tailnet
-    [ -f "$PREPARED/compose.json" ] || fail "Run prepare before apply."
+    [ -f "$CURRENT" ] || fail "Routine migrations require an existing deployment."
+    verify_release_cas_and_drift
+    compose --profile ops run --rm --no-deps ops sh -c \
+      'pnpm exec supabase migration up --include-all --db-url "postgresql://supabase_admin:${PGPASSWORD}@postgres:5432/postgres"'
+    ;;
+  routine-apply)
+    verify_tailnet
+    [ -f "$PREPARED/compose.json" ] || fail "Run prepare before routine-apply."
+    verify_release_cas_and_drift
+    mkdir -p "$STATE/runtime"
+    cp "$CURRENT" "$STATE/runtime/routine-previous-compose.json"
+    promote_selected_compose
+    if ! while IFS= read -r service; do
+      [ -n "$service" ] || continue
+      compose up -d --no-deps "$service"
+      wait_service "$service"
+    done < <(plan_services deploy); then
+      restore_selected_compose
+      while IFS= read -r service; do
+        [ -n "$service" ] || continue
+        compose up -d --no-deps "$service"
+        wait_service "$service"
+      done < <(plan_services deploy)
+      fail "Changed app health check failed; restored only the compatible changed app."
+    fi
+    save_release_manifest
+    ;;
+  maintenance-apply)
+    verify_tailnet
+    [ -f "$PREPARED/compose.json" ] || fail "Run prepare before maintenance-apply."
     [ -z "$(docker ps --filter label=com.docker.compose.project=carbon --quiet)" ] \
       || fail "Run quiesce and snapshot the data disk before applying a release."
     mkdir -p "$STATE/runtime"
@@ -153,6 +318,7 @@ case "$ACTION" in
     compose up -d
     check_stack
     printf '%s\n' "$REVISION" > "$STATE/runtime/revision"
+    save_release_manifest
     ;;
   start)
     [ -f "$CURRENT" ] || fail "No existing deployment to start."
@@ -164,5 +330,5 @@ case "$ACTION" in
     [ -f "$CURRENT" ] || fail "No deployment to check."
     check_stack
     ;;
-  *) fail "Expected prepare, quiesce, apply, start, or check." ;;
+  *) fail "Expected prepare, quiesce, routine-migrate, routine-apply, maintenance-apply, start, or check." ;;
 esac

@@ -1,8 +1,12 @@
 # syntax=docker/dockerfile:1
 # Shared build for React Router SSR apps. Build: docker build --build-arg APP=erp -t carbon/erp .
+# Service images are pruned to their transitive workspace closure before the
+# service dependency install; an unrelated application cannot enter its image.
 ARG APP
+ARG NODE_IMAGE=node:22
+ARG NODE_SLIM_IMAGE=node:22-slim
 
-FROM node:22 AS deps
+FROM ${NODE_IMAGE} AS source
 WORKDIR /repo
 RUN corepack enable
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc turbo.json lingui.config.js ./
@@ -13,7 +17,26 @@ COPY patches ./patches
 # scripts/generate-mcp.ts) and by the //#generate:mcp turbo task that build:${APP}
 # depends on; without it `pnpm install` fails with ERR_MODULE_NOT_FOUND.
 COPY scripts ./scripts
-RUN pnpm install --frozen-lockfile
+
+FROM source AS pruned
+ARG APP
+# Pruning must run before installing the monorepo. A pinned one-shot Turbo CLI
+# reads only the checked-in workspace graph and keeps the app build closure small.
+RUN pnpm dlx turbo@2.9.6 prune --scope="$APP" --docker
+
+FROM ${NODE_IMAGE} AS deps
+WORKDIR /repo
+RUN corepack enable
+# Turbo's Docker output contains the selected app, its real workspace closure,
+# and declared generator inputs only. Keep root-wide COPYs in `source` solely
+# for dependency analysis; the build and runner stages consume this closure.
+COPY --from=pruned /repo/out/json/ ./
+COPY --from=pruned /repo/out/full/ ./
+COPY --from=source /repo/scripts ./scripts
+COPY --from=source /repo/lingui.config.js ./lingui.config.js
+# Root postinstall generates ERP-only metadata. Run the actual app build graph
+# below instead, so installing MES never requires absent ERP source.
+RUN pnpm install --frozen-lockfile --ignore-scripts && pnpm rebuild esbuild supabase
 
 FROM deps AS build
 ARG APP
@@ -30,11 +53,14 @@ RUN pnpm run build:${APP}
 # never exposed and is scanned report-only (it intentionally carries build-tool
 # CVEs). migrate.yml and charts/apps seed-job point at carbon/ops:<same-tag>.
 # Kept BEFORE `runner` so `runner` remains the default (no --target) build stage.
-FROM deps AS ops
+FROM source AS ops-deps
+RUN pnpm install --frozen-lockfile
+
+FROM ops-deps AS ops
 WORKDIR /repo/packages/database
 CMD ["bash"]
 
-FROM node:22-slim AS runner
+FROM ${NODE_SLIM_IMAGE} AS runner
 ARG APP
 WORKDIR /repo
 ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0

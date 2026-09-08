@@ -59,7 +59,6 @@ run the required checks. Commit all intended source changes, then:
 
 ```bash
 git switch saturn/main
-make deploy-check
 make deploy
 ```
 
@@ -69,6 +68,12 @@ It publishes the exact deployment commit to `origin/saturn/main` using an ordina
 push and checks that its source can be downloaded publicly. You do not need to
 push in a separate step. Review committed changes for private data before running
 the command: deployment publishes those commits.
+
+`make deploy` generates private release inputs and automatically chooses the
+routine or coordinated snapshot/migration rollout, including initial release
+tracking setup. No hand-written manifest or separate baseline command is needed.
+`make deploy-check` and `make deploy-plan` are optional diagnostics. See
+[the deployment guide](README.md#automatic-release-preparation) for rollout details.
 
 The command archives the committed source on your laptop and uploads it to GCP
 for the build and deployment. Private `.local/` configuration is transferred

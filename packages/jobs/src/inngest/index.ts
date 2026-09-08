@@ -8,6 +8,11 @@ export {
   type InvoiceIntakeValidationContext,
   setInvoiceIntakeValidation
 } from "../invoice-intake/validation.ts";
+export type {
+  ProcurementScheduleDispatch,
+  ProcurementScheduleDispatchContext
+} from "../procurement-schedule/dispatcher.ts";
+export { setProcurementScheduleDispatch } from "../procurement-schedule/dispatcher.ts";
 // Server-only on purpose: the app bundle imports `@carbon/jobs`, not this subpath.
 export type {
   DispatchContext,
@@ -77,6 +82,8 @@ import {
   nightlyReplanFunction,
   notificationDigestFunction,
   notificationPurgeFunction,
+  procurementScheduleExecuteFunction,
+  procurementScheduleSweepFunction,
   scheduleReplanWaveFunction,
   updateExchangeRatesFunction,
   weeklyFunction,
@@ -164,6 +171,8 @@ export const functions = [
   updateExchangeRatesFunction,
   notificationDigestFunction,
   notificationPurgeFunction,
+  procurementScheduleExecuteFunction,
+  procurementScheduleSweepFunction,
   workflowRunRetentionFunction,
   // Integrations
   mercurySyncFunction,

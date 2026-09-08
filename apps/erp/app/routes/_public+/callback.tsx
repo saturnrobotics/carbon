@@ -12,6 +12,7 @@ import { getCompanyId, setCompanyId } from "@carbon/auth/company.server";
 import { userHasVerifiedTotpFactor } from "@carbon/auth/mfa.server";
 import {
   destroyAuthSession,
+  expireLegacyAuthCookie,
   flash,
   getAuthSession,
   setAuthSession,
@@ -333,6 +334,7 @@ export async function action({ request }: ActionFunctionArgs) {
     return redirect(safeRedirect(redirectTo, path.to.authenticatedRoot), {
       headers: [
         ["Set-Cookie", ssoSessionCookie],
+        ["Set-Cookie", await expireLegacyAuthCookie(request)],
         ["Set-Cookie", setCompanyId(ssoCompanyId)]
       ]
     });
@@ -370,7 +372,10 @@ export async function action({ request }: ActionFunctionArgs) {
         redirectTo
       });
       return redirect(path.to.mfa, {
-        headers: [["Set-Cookie", pendingCookie]]
+        headers: [
+          ["Set-Cookie", pendingCookie],
+          ["Set-Cookie", await expireLegacyAuthCookie(request)]
+        ]
       });
     }
 
@@ -378,6 +383,7 @@ export async function action({ request }: ActionFunctionArgs) {
       authSession
     });
     const headers: [string, string][] = [["Set-Cookie", sessionCookie]];
+    headers.push(["Set-Cookie", await expireLegacyAuthCookie(request)]);
 
     // Only finalize the active company for single-company (and portal-only)
     // users. Multi-company users must actively choose: we leave the companyId

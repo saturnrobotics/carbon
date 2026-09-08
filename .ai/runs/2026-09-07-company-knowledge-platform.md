@@ -179,3 +179,18 @@ Drive, synthesis/vector search, voice, Kanban commands, purchasing automation,
 and generic CRM/engineering integrations remain outside manual-v1. Broader
 implementation work is preserved separately without claiming release readiness.
 No live GCP deployment, production migration, push, or external message occurred.
+
+
+## Release approach correction: local Docker validation
+
+The user explicitly approved local Docker testing in place of a required cloud
+staging environment. The plan and operations guide now use local container
+integration followed by restricted production checks for cloud-only boundaries.
+Previous staging references above describe the earlier proposal, not an active
+requirement. No cloud staging project is needed or provisioned.
+
+Pending local work: actual parser image build/execution, object-storage emulator
+integration, complete containerized browser workflow, failure/recovery checks and
+recorded verification. Existing local results do not establish these new gates.
+Kanban is not a dependency. Production target and initial access still need to be
+settled before deployment; neither blocks the local work.

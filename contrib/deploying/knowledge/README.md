@@ -147,13 +147,23 @@ python3 contrib/deploying/knowledge/release.py \
   --project example-project --region us-central1
 ```
 
-Local tests prove synthetic authorization, migration, upload/review/publish,
-keyword retrieval, immutable download, deletion and recovery behavior. They do
-not prove Google IAP, MFA/access levels, Cloud Run IAM, private network routes,
-real object storage, parser binaries inside a built OCI image or rollback in the
-target project. Before pilot traffic, stage the immutable images in a disposable
-nonproduction project and record private evidence for an allowed browser, denied
-browser, alternate origin denial, service-audience denial, parser execution,
-upload-to-search freshness, exact-version download, grant revocation, deletion,
-health-gated promotion and rollback. Follow `recovery.md` for retention and the
-isolated restore proof.
+## Release validation: local first
+
+A separate cloud staging environment is not required. Finish the local Docker
+integration gate before deploying: use disposable PostgreSQL and Redis, emulated
+object storage, local job execution, and the actual parser image to exercise the
+browser upload/review/publish/search/download workflow. Test revocation, deletion,
+retries and recovery with synthetic fixtures. The existing browser proof still
+substitutes storage and parser execution; this expanded gate is pending.
+
+Local identity fixtures and emulators do not prove Google IAP, MFA/access levels,
+Cloud Run IAM, private network routes, real GCS generation/permission behavior or
+Cloud Run rollout. Verify those on the actual production deployment with initial
+access restricted to the designated tester and synthetic documents only. Record
+allowed/denied browser access, alternate-origin and service-audience denial,
+parser execution, upload-to-search freshness, exact-version download, revocation,
+deletion, health-gated promotion and rollback before broader use. Follow
+`recovery.md` for retention and an isolated restore proof. Keep evidence private.
+
+See the approved plan's “Revised release approach: local Docker validation” for
+execution order. No cloud environment has been provisioned for this release.

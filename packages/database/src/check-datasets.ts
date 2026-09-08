@@ -17,7 +17,7 @@ import { readdirSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
-import { parseArgs } from "node:util";
+import { format, parseArgs } from "node:util";
 import type { PoolClient } from "pg";
 import { getPostgresConnectionPool } from "./client.ts";
 import { loadEnv } from "./datasets/cli.ts";
@@ -27,7 +27,7 @@ import { resolveCheckUserId, verifyDataset } from "./datasets/verify.ts";
 loadEnv();
 
 function printUsage(keys: string[]) {
-  console.log(`
+  process.stdout.write(`
 Usage: pnpm db:check:datasets [-- --dataset <key>]
 
 Applies each demo dataset to a throwaway company and rolls it back, so schema
@@ -42,7 +42,7 @@ Arguments:
 /** Environmental problems must not fail the check — a hook that fails for
  *  reasons you can't fix is a hook you learn to bypass. */
 function skip(reason: string): never {
-  console.log(`⚠ Dataset drift check skipped — ${reason}`);
+  process.stdout.write(`⚠ Dataset drift check skipped — ${reason}\n`);
   process.exit(0);
 }
 
@@ -93,10 +93,18 @@ async function main() {
   const selected = values.dataset?.length ? values.dataset : keys;
   for (const key of selected) {
     if (!getDataset(key)) {
-      console.error(`No such dataset: ${key}. Available: ${keys.join(", ")}`);
+      process.stderr.write(
+        `No such dataset: ${key}. Available: ${keys.join(", ")}\n`
+      );
       process.exitCode = 1;
       return;
     }
+  }
+
+  // Match the existing unavailable-database policy before pool construction:
+  // the shared factory requires a URL and cannot connect without one.
+  if (!process.env.SUPABASE_DB_URL?.trim()) {
+    skip("SUPABASE_DB_URL is not set (no local database configured)");
   }
 
   const pool = getPostgresConnectionPool(1);
@@ -104,7 +112,9 @@ async function main() {
   try {
     client = await pool.connect();
   } catch (err) {
-    await pool.end().catch(() => {});
+    await pool.end().catch(() => {
+      // Preserve the original connection failure if pool cleanup also fails.
+    });
     skip(
       `no database connection (is your local stack up?)\n  ${
         err instanceof Error ? err.message : String(err)
@@ -116,7 +126,9 @@ async function main() {
     const userId = await resolveCheckUserId(client);
     if (!userId) skip("this database has no users yet (migrations applied?)");
 
-    console.log(`Checking ${selected.length} dataset(s) against the schema...`);
+    process.stdout.write(
+      `Checking ${selected.length} dataset(s) against the schema...\n`
+    );
     let failed = false;
     for (const key of selected) {
       const result = await verifyDataset(client, {
@@ -126,28 +138,27 @@ async function main() {
       });
       const seconds = (result.durationMs / 1000).toFixed(1);
       if (result.ok) {
-        console.log(`  ✓ ${key} (${seconds}s)`);
+        process.stdout.write(`  ✓ ${key} (${seconds}s)\n`);
       } else {
         failed = true;
-        console.error(`  ✗ ${key} (${seconds}s) — ${result.error}`);
+        process.stderr.write(`  ✗ ${key} (${seconds}s) — ${result.error}\n`);
       }
     }
 
     if (failed) {
       const pending = await countPendingMigrations(client);
-      console.error(
+      process.stderr.write(
         pending > 0
-          ? `\nYour database is ${pending} migration(s) behind, so this may not be dataset drift at all — run pnpm db:migrate and check again before changing anything.`
-          : `\nThe demo datasets no longer match the schema. Fix them in packages/database/src/datasets/ — onboarding's demo templates and pnpm db:seed:dev both run this code.`
+          ? `\nYour database is ${pending} migration(s) behind, so this may not be dataset drift at all — run pnpm db:migrate and check again before changing anything.\n`
+          : `\nThe demo datasets no longer match the schema. Fix them in packages/database/src/datasets/ — onboarding's demo templates and pnpm db:seed:dev both run this code.\n`
       );
-      console.error(
-        `Re-run on its own with: pnpm db:check:datasets\nCommit anyway with:     CARBON_SKIP_DATASET_CHECK=1 git commit ...`
+      process.stderr.write(
+        `Re-run on its own with: pnpm db:check:datasets\nCommit anyway with:     CARBON_SKIP_DATASET_CHECK=1 git commit ...\n`
       );
       process.exitCode = 1;
     }
   } catch (error) {
-    console.error("\nError checking datasets:");
-    console.error(error);
+    process.stderr.write(`\nError checking datasets:\n${format(error)}\n`);
     process.exitCode = 1;
   } finally {
     client.release();
@@ -156,6 +167,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error(err instanceof Error ? err.message : err);
+  process.stderr.write(`${format(err instanceof Error ? err.message : err)}\n`);
   process.exitCode = 1;
 });

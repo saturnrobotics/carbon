@@ -7,6 +7,8 @@ import {
   CarbonEdition,
   CONTROLLED_ENVIRONMENT,
   DOMAIN,
+  ERP_URL,
+  MES_URL,
   REFRESH_ACCESS_TOKEN_THRESHOLD,
   SESSION_ABSOLUTE_MAX_MS,
   SESSION_IDLE_LOCK_MS,
@@ -49,19 +51,68 @@ async function assertAuthSession(
 
 export const isTestEdition = CarbonEdition === Edition.Test;
 
-const cookieDomain = isTestEdition ? undefined : getCookieDomain(DOMAIN);
+export function getAuthSessionCookieOptions(
+  request: Request,
+  options: {
+    erpUrl?: string;
+    mesUrl?: string;
+    isDevelopment?: boolean;
+  } = {}
+) {
+  const url = new URL(request.url);
+  const erpUrl = options.erpUrl ?? ERP_URL;
+  const mesUrl = options.mesUrl ?? MES_URL;
+  const configuredHost = (value: string | undefined) => {
+    try {
+      return value ? new URL(value).host : undefined;
+    } catch {
+      return undefined;
+    }
+  };
+  const name =
+    url.host === configuredHost(mesUrl)
+      ? "carbon-mes"
+      : url.host === configuredHost(erpUrl)
+        ? "carbon-erp"
+        : "carbon";
+  const isLocal = url.hostname === "localhost" || url.hostname === "127.0.0.1";
+  const isDevelopment =
+    options.isDevelopment ?? process.env.NODE_ENV === "development";
 
-const sessionStorage = createCookieSessionStorage({
-  cookie: {
-    name: "carbon",
+  return {
+    name,
     httpOnly: true,
     path: "/",
-    sameSite: isTestEdition ? "none" : "lax",
+    sameSite: "lax" as const,
     secrets: [SESSION_SECRET!],
-    secure: !!cookieDomain,
-    domain: cookieDomain
-  }
-});
+    secure: !(isDevelopment && isLocal && url.protocol === "http:")
+  };
+}
+
+function sessionStorageForRequest(request: Request) {
+  return createCookieSessionStorage({
+    cookie: getAuthSessionCookieOptions(request)
+  });
+}
+
+export async function expireLegacyAuthCookie(request: Request) {
+  const domain = getCookieDomain(DOMAIN);
+  const legacyStorage = createCookieSessionStorage({
+    cookie: {
+      name: "carbon",
+      httpOnly: true,
+      path: "/",
+      sameSite: "lax",
+      secrets: [SESSION_SECRET!],
+      secure: true,
+      ...(domain ? { domain } : {})
+    }
+  });
+  const legacySession = await legacyStorage.getSession(
+    request.headers.get("Cookie")
+  );
+  return legacyStorage.destroySession(legacySession);
+}
 
 export async function setAuthSession(
   request: Request,
@@ -80,7 +131,9 @@ export async function setAuthSession(
     session.unset(MFA_SESSION_KEY);
   }
 
-  return sessionStorage.commitSession(session, { maxAge: SESSION_MAX_AGE });
+  return sessionStorageForRequest(request).commitSession(session, {
+    maxAge: SESSION_MAX_AGE
+  });
 }
 
 // The half-authenticated state between a successful first factor and the TOTP
@@ -112,7 +165,9 @@ export async function setPendingMfaSession(
     createdAt: Date.now()
   } satisfies PendingMfaSession);
 
-  return sessionStorage.commitSession(session, { maxAge: SESSION_MAX_AGE });
+  return sessionStorageForRequest(request).commitSession(session, {
+    maxAge: SESSION_MAX_AGE
+  });
 }
 
 export async function getPendingMfaSession(
@@ -206,10 +261,12 @@ export async function completeMfaChallenge(
 
 export async function clearAuthCookies(request: Request) {
   const session = await getSession(request);
-  const sessionCookie = await sessionStorage.destroySession(session);
+  const sessionCookie =
+    await sessionStorageForRequest(request).destroySession(session);
   const companyIdCookie = setCompanyId(null);
   return [
     ["Set-Cookie", sessionCookie] as [string, string],
+    ["Set-Cookie", await expireLegacyAuthCookie(request)] as [string, string],
     ["Set-Cookie", companyIdCookie] as [string, string]
   ];
 }
@@ -235,7 +292,10 @@ export async function flash(request: Request, result: Result) {
   }
 
   return {
-    headers: { "Set-Cookie": await sessionStorage.commitSession(session) }
+    headers: {
+      "Set-Cookie":
+        await sessionStorageForRequest(request).commitSession(session)
+    }
   };
 }
 
@@ -271,14 +331,16 @@ export async function getSessionFlash(request: Request) {
 
   if (!result.message) return null;
 
-  const headers = { "Set-Cookie": await sessionStorage.commitSession(session) };
+  const headers = {
+    "Set-Cookie": await sessionStorageForRequest(request).commitSession(session)
+  };
 
   return { result, headers };
 }
 
 async function getSession(request: Request) {
   const cookie = request.headers.get("Cookie");
-  return sessionStorage.getSession(cookie);
+  return sessionStorageForRequest(request).getSession(cookie);
 }
 
 function isExpiringSoon(expiresAt: number) {
@@ -432,7 +494,9 @@ export async function touchAuthSession(
   const authSession = await getAuthSession(request);
   if (!authSession) return null;
   session.set(SESSION_KEY, { ...authSession, lastActiveAt: Date.now() });
-  return sessionStorage.commitSession(session, { maxAge: SESSION_MAX_AGE });
+  return sessionStorageForRequest(request).commitSession(session, {
+    maxAge: SESSION_MAX_AGE
+  });
 }
 
 export async function updateSessionConsole(
@@ -449,7 +513,9 @@ export async function updateSessionConsole(
     });
   }
 
-  return sessionStorage.commitSession(session, { maxAge: SESSION_MAX_AGE });
+  return sessionStorageForRequest(request).commitSession(session, {
+    maxAge: SESSION_MAX_AGE
+  });
 }
 
 export async function updateCompanySession(
@@ -472,5 +538,7 @@ export async function updateCompanySession(
     });
   }
 
-  return sessionStorage.commitSession(session, { maxAge: SESSION_MAX_AGE });
+  return sessionStorageForRequest(request).commitSession(session, {
+    maxAge: SESSION_MAX_AGE
+  });
 }

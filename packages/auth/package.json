@@ -20,6 +20,7 @@
     "./mfa.server": "./src/services/mfa.server.ts",
     "./session.server": "./src/services/session.server.ts",
     "./users.server": "./src/services/users.server.ts",
+    "./workforce.server": "./src/services/workforce.server.ts",
     "./passkey.server": "./src/services/passkey.server.ts",
     "./verification.server": "./src/services/verification.server.ts",
     "./middleware/flash.server": "./src/middleware/flash.server.ts",
@@ -51,6 +52,7 @@
   "sideEffects": false,
   "version": "0.0.0",
   "dependencies": {
+    "@carbon/knowledge": "workspace:*",
     "@carbon/documents": "workspace:*",
     "@carbon/env": "workspace:*",
     "@carbon/kv": "workspace:*",
@@ -60,6 +62,7 @@
     "@simplewebauthn/server": "^13.1.0",
     "cookie": "catalog:",
     "dompurify": "catalog:",
+    "google-auth-library": "11.0.2",
     "jose": "catalog:",
     "nanoid": "catalog:",
     "zustand": "catalog:"

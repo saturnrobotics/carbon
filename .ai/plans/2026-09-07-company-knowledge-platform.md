@@ -473,7 +473,7 @@ Release acceptance (local implementation):
 - [x] Configured library and identity are required; deferred HTTP routes stay disabled.
 - [x] Bounded PDF/raster upload, extraction review, and fixed metadata fields are
       implemented. The isolated parser contract is tested; live parser execution
-      remains a staging gate.
+      remains a local container integration gate.
 - [x] Publish reviewed metadata and immutable original-version references; retries
       are idempotent, review changes cannot silently mutate published versions,
       and deleted documents cannot be resurrected.
@@ -488,8 +488,10 @@ Release acceptance (local implementation):
       keyword performance is reported separately from cloud latency.
 - [x] Independent service release inputs, pinned configuration rules, and operator
       bootstrap/recovery instructions are provided.
-- [ ] Operational staging: real Google SSO, parser OCI image build/execution,
-      private ingress, service rollout/rollback and pilot acceptance.
+- [ ] Local container integration: real parser image, emulated object storage,
+      service integration, recovery and complete browser workflow.
+- [ ] Restricted production verification: real Google SSO, private ingress,
+      service IAM, storage permissions, rollout/rollback and pilot acceptance.
 
 Deferred from this release: Drive synchronization, semantic/vector retrieval,
 generated answers, receipt-aware "recently received" disambiguation, voice,
@@ -498,6 +500,49 @@ existing implementation of those paths is unreleased work. The manual-v1 runtime
 and release configuration must not activate them even if old environment values
 remain. Authentication is verified locally using synthetic assertions; a successful
 local test does not establish real Google sign-in or deployed service readiness.
+
+
+### Revised release approach: local Docker validation
+
+The user approved replacing mandatory cloud staging with local Docker testing.
+This section supersedes any requirement below to provision a nonproduction GCP
+project or stage a release there. No ephemeral or permanent cloud staging
+infrastructure is required. The manual-v1 feature boundary is unchanged.
+
+Next steps, in order:
+
+1. Build the manual-v1 service images from an isolated release checkout that
+   excludes deferred working-tree changes. Retry the parser build with the
+   expanded Docker allocation. Verify actual PDF text extraction and raster OCR.
+2. Add a repeatable local container harness under `contrib/deploying/knowledge/`
+   for the web, query and ingestion services, disposable PostgreSQL, Redis,
+   object-storage emulator and local job execution. Use the real parser image.
+   Keep identity assertions synthetic and confined to the test harness; production
+   services must not acquire an authentication bypass. Use synthetic records and
+   dedicated volumes; never reset an existing developer database.
+3. Extend `apps/knowledge/tests/manual-workflow.spec.ts` and the worker integration
+   tests to exercise real extraction and storage through upload, review, publish,
+   search and exact-version download. Verify rejected identities, company/source
+   permissions, warmed-cache revocation, deletion, retries and duplicate delivery.
+   Verify the emulator supports generation/precondition behavior required by the
+   storage adapter; document any unsupported behavior as a cloud check.
+4. Exercise service restarts, local backup/restore and independent image updates.
+   Record browser and service latency separately from existing database timings.
+   Run scoped unit, integration, security and browser gates and record results in
+   the run log. A local restart test is not proof of Cloud Run rollout behavior.
+5. Prepare the concrete production resource/release plan and initial user grants.
+   Confirm the production target and initial user identity before applying it.
+   Deploy only the manual-v1 units with access restricted to the initial tester.
+   Verify Google sign-in, denied access, Cloud Run IAM/ingress, real GCS object
+   generations and permissions, parser execution, and service promotion/rollback
+   using synthetic documents before admitting company documents or more users.
+
+Kanban and the Carbon application servers are not required in this local stack;
+use the required Carbon database schema and synthetic identity/membership rows.
+Drive, voice, commands and shared cross-app sign-in migration remain deferred.
+Local validation cannot certify managed IAM, Google sign-in, or cloud networking.
+The restricted production checks cover those boundaries without a second cloud
+application environment. No production resource changes have been made.
 
 
 Implementation is in progress. See `.ai/runs/2026-09-07-company-knowledge-platform.md`

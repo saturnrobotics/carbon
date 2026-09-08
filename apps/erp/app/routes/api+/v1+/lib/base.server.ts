@@ -1,6 +1,7 @@
 // oRPC context + middleware shared by the HTTP transport and the MCP/agent bridges.
 
 import type { ManifestEntry, ToolPermission } from "@carbon/api";
+import type { Permission } from "@carbon/auth";
 import type { Database } from "@carbon/database";
 import { ORPCError, os } from "@orpc/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -21,9 +22,15 @@ export interface AuthedContext {
    *  is an already-authorized in-process caller (the in-app agent behind the route's
    *  requirePermissions, and the workflow engine acting as the workflow's owner) —
    *  not "oauth" because that names a wire protocol, not a trust decision. */
-  authKind: "api-key" | "oauth" | "session";
+  authKind: "api-key" | "oauth" | "session" | "workforce";
   /** The API key's scopes: `{ "<module>_<action>": [companyId, …] }`. */
   scopes: Record<string, string[]>;
+  workforce?: {
+    allowedOperations: readonly string[];
+    capabilities: readonly string[];
+    permissions: Record<string, Permission>;
+    policyVersion: string;
+  };
 }
 
 export const base = os.$context<AuthedContext>();
@@ -50,6 +57,46 @@ export function assertScopes(
   }
 }
 
+const WORKFORCE_CAPABILITIES: Readonly<Record<string, string>> = {
+  knowledge_resolveItems: "knowledge.read",
+  knowledge_getRecentReceipts: "knowledge.read",
+  knowledge_getRecentReceiptItems: "knowledge.read",
+  knowledge_getItemIdentity: "knowledge.read",
+  knowledge_getDocumentReferences: "knowledge.read",
+  knowledge_getPurchaseStatus: "knowledge.read",
+  knowledge_createProcurementDraft: "carbon.procurement.draft"
+};
+
+export function assertWorkforceAuthorization(
+  context: AuthedContext,
+  meta: ManifestEntry
+): void {
+  const workforce = context.workforce;
+  const capability = WORKFORCE_CAPABILITIES[meta.name];
+  if (
+    !workforce ||
+    !capability ||
+    !workforce.allowedOperations.includes(meta.name) ||
+    !workforce.capabilities.includes(capability) ||
+    meta.permission.module === null
+  ) {
+    throw new ORPCError("FORBIDDEN", {
+      message: "Workforce caller is not authorized for this operation"
+    });
+  }
+  for (const action of meta.permission.actions) {
+    if (
+      !workforce.permissions[meta.permission.module]?.[action]?.includes(
+        context.companyId
+      )
+    ) {
+      throw new ORPCError("FORBIDDEN", {
+        message: "Current user permission does not authorize this operation"
+      });
+    }
+  }
+}
+
 /** Per-operation gate middleware — runs the scope check for API-key callers.
  *  The blocked-name guard is belt-and-braces: blocked tools are already excluded
  *  from the manifest at generation time, so this only fires if that exclusion
@@ -57,8 +104,13 @@ export function assertScopes(
 export const gate = (meta: ManifestEntry) =>
   base.middleware(async ({ context, next }) => {
     if (isMcpBlockedTool(meta.name)) throw new ORPCError("NOT_FOUND");
+    if (meta.module === "knowledge" && context.authKind !== "workforce") {
+      throw new ORPCError("NOT_FOUND");
+    }
     if (context.authKind === "api-key") {
       assertScopes(context.scopes, context.companyId, meta.permission);
+    } else if (context.authKind === "workforce") {
+      assertWorkforceAuthorization(context, meta);
     }
     return next();
   });

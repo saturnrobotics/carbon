@@ -44,6 +44,17 @@ export function getUserClaims(userId: string, companyId: string) {
   );
 }
 
+/** Resolve authorization claims from the source of truth for delegated calls. */
+export async function getFreshUserClaims(userId: string, companyId: string) {
+  const rawClaims = await getClaims(getCarbonServiceRole(), userId, companyId);
+  if (rawClaims.error || rawClaims.data === null) {
+    throw new Error("Failed to get current user claims");
+  }
+  const claims = makePermissionsFromClaims(rawClaims.data as Json[]);
+  if (!claims) throw new Error("Failed to get current user claims");
+  return claims;
+}
+
 async function loadUserClaims(userId: string, companyId: string) {
   let claims: {
     permissions: Record<string, Permission>;

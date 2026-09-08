@@ -10,6 +10,7 @@ import { setCompanyId } from "@carbon/auth/company.server";
 import { userHasVerifiedTotpFactor } from "@carbon/auth/mfa.server";
 import {
   destroyAuthSession,
+  expireLegacyAuthCookie,
   flash,
   getAuthSession,
   setAuthSession,
@@ -167,6 +168,7 @@ export async function action({ request }: ActionFunctionArgs) {
     return redirect(path.to.authenticatedRoot, {
       headers: [
         ["Set-Cookie", ssoSessionCookie],
+        ["Set-Cookie", await expireLegacyAuthCookie(request)],
         ["Set-Cookie", setCompanyId(ssoCompanyId)]
       ]
     });
@@ -203,7 +205,10 @@ export async function action({ request }: ActionFunctionArgs) {
         authSession
       });
       return redirect(path.to.mfa, {
-        headers: [["Set-Cookie", pendingCookie]]
+        headers: [
+          ["Set-Cookie", pendingCookie],
+          ["Set-Cookie", await expireLegacyAuthCookie(request)]
+        ]
       });
     }
 
@@ -214,6 +219,7 @@ export async function action({ request }: ActionFunctionArgs) {
     return redirect(path.to.authenticatedRoot, {
       headers: [
         ["Set-Cookie", sessionCookie],
+        ["Set-Cookie", await expireLegacyAuthCookie(request)],
         ["Set-Cookie", companyIdCookie]
       ]
     });

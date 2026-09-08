@@ -28,6 +28,7 @@ DB types, Supabase/Kysely clients, audit config, event system types, rate limiti
 pnpm db:migrate          # Apply pending migrations + regenerate types
 pnpm db:types            # Regenerate types only
 pnpm db:check:datasets   # Dry-run every demo dataset against the schema (writes nothing)
+pnpm --filter @carbon/database test  # Offline CLI regressions (Node test runner via tsx)
 pnpm --filter @carbon/database typecheck
 ```
 
@@ -79,6 +80,9 @@ option, which both the dev CLI and the `company-template` job use; it is not exp
 `pnpm db:check:datasets` (`src/check-datasets.ts` → `datasets/verify.ts`) catches schema drift:
 it applies every dataset to a scratch company inside a transaction it always rolls back, so it
 writes nothing. The pre-commit hook runs it on any `packages/database/**` change.
+With no configured local database it reports an explicit skip before constructing
+a connection pool. A skip is not a dataset-validation pass; configured database
+schema/dataset failures still block the commit.
 
 Per-module seed scripts were folded into this structure: `seed-change-orders.ts` and its
 `db:seed:change-orders` script are gone, replaced by `tiers/08-change-orders.ts`.

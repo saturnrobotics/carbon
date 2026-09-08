@@ -149,17 +149,92 @@ Bank and mailbox credentials are separate private deployment inputs.
 Use [the branch workflow](WORKFLOW.md) to create features from `saturn/main`, merge
 finished features back, and merge the latest `upstream/main`. Resolve conflicts,
 run the relevant verification, review privacy and licensing, then run `make deploy`.
-Deployment fetches upstream to check freshness and publishes `saturn/main`; it
-does not merge unreviewed upstream changes during a rollout.
+Deployment fetches upstream to check freshness and publishes `saturn/main`;
+it does not merge unreviewed upstream changes during a rollout.
 
-The script builds the candidate release before stopping the existing stack. It
-then stops all Carbon containers and Docker, takes a **consistent pre-deployment
-snapshot**, restarts Docker, applies pending migrations using the dedicated ops
-image, installs the private auth policy and seeds only required system lookups.
-It never resets the database, imports demo companies or repairs migration history.
-Application/database credentials are reused. Supplied Google credentials are
-updated on deployment; generated database/JWT/session credentials are not rotated
-implicitly.
+### Automatic release preparation
+
+After the one-time account and credential setup, the normal deployment command is:
+
+```bash
+make deploy
+```
+
+It generates the release manifest, selects the required rollout, takes a recovery
+snapshot before coordinated maintenance, and applies the release. Missing initial
+release tracking is initialized through that same command. There is no separate
+manifest-writing or baseline command to run. `make deploy-check` and
+`make deploy-plan` are optional diagnostic commands, not prerequisite steps.
+
+Preparation requires the workspace dependencies (including the repository's
+Turbo binary), Docker Buildx, registry access, and an authenticated `gcloud`
+session with permission to list the deployment VM and reach it through IAP/SSH.
+The preview can inspect a work in progress; it is not approval of uncommitted
+source. Apply still requires a clean, reviewed `saturn/main` checkout.
+
+The generated `.local/release-plan.json` contains the complete desired ERP/MES
+inventory; `.local/release-preview.json` contains the comparison with the last
+successful deployment. Both are gitignored, atomically replaced with mode 600,
+and contain content fingerprints rather than credential values. The command
+prints only affected service names and maintenance reasons. It resolves the
+Node base image digests and passes those same pinned references to host builds.
+Every apply regenerates inputs, so an old preview cannot silently authorize a
+different revision. The explicit `--release-plan PATH` option remains available
+for operators supplying a custom reviewed input.
+
+A server installed before release manifests has no verified baseline. `make deploy`
+detects this and automatically chooses the existing coordinated snapshot/migration
+rollout. It does not pretend the running images match the current source. Shared
+database, authentication, routing, or infrastructure changes select the same
+rollout. The command explains its choice before proceeding; coordinated maintenance
+can interrupt service. Ordinary app-only changes keep the routine service-scoped
+path after the baseline exists. `--maintenance` remains an optional operator
+override to force maintenance, and the old `make deploy-maintenance` alias remains
+compatible, but neither is required for normal use.
+
+A failed state read stops preparation instead of being treated as a first
+installation. New installations initially mark host-generated secret
+versions as unknown; the next preparation observes their actual hashes and may
+select one additional app reconfiguration. Existing persistent secrets are never
+generated or rotated by the preview.
+
+Preparation fingerprints shared renderer files conservatively: a change to code
+that can configure infrastructure requires maintenance even if a particular edit
+only affects an app. It does not establish rollback safety for the host's existing
+shared secret-file writes; secret changes still need operational review.
+
+The private release planner is the authority for a routine application release.
+It fingerprints each service's source closure, workspace dependencies, lockfile
+and catalog, generated inputs, build configuration, base image, runtime config,
+and pinned secret versions. It preserves an unchanged service's deployed commit,
+image digest, source link, and content-addressed config mount. A no-op performs
+no VM mutation. Unknown changed-input ownership stops for review; path-filtered
+CI is only a convenience.
+
+For repository-backed planning, each service declares its pnpm `workspace` name,
+the build `task` (normally `build`), its Docker or other `build_paths`, and the
+pinned `base_image_digest`. The planner runs the checked-in Turbo binary to obtain
+the transitive task graph and `turbo prune --docker` closure. It fingerprints only
+the resulting lockfile plus catalog entries actually referenced by that closure;
+manual `owned_paths` remain available for non-workspace release units. A release
+invoked through `deploy.py` materializes these inputs from the reviewed checkout
+before comparing the last successful manifest.
+
+Routine releases build, reconfigure, and restart only the selected ERP or MES
+container. PostgreSQL, Redis, Inngest, GoTrue/auth hooks, edge runtime, proxy and
+network services are health-checked as dependencies and are never restarted by a
+routine app release. Before promotion, the controller compares the expected
+manifest generation and active service configuration digest. A stale plan or
+manual configuration drift stops instead of being overwritten. A failed app
+health check restores only that changed app's previously compatible Compose
+definition; it never restores the shared database.
+
+Database migrations, auth hooks, private-role isolation, edge runtime, proxy/
+network changes, base infrastructure, and first installation select maintenance
+automatically inside `make deploy`. That path quiesces the stack, takes a
+consistent snapshot, applies the maintenance work, and verifies the complete
+stack. It never resets the database, imports demo companies, repairs migration
+history, or rotates generated database/JWT/session credentials implicitly.
 
 All durable state is under `/var/lib/carbon` on the retained data disk, including
 Docker volumes, database, uploaded files, Inngest state, secrets, certificates,
@@ -179,16 +254,15 @@ images nor old source releases are pruned automatically. Monitor disk space,
 certificate renewals, snapshots and costs. The VM and data disk have deletion
 protection/retention; the script provides no destructive uninstall command.
 
-If a deployment fails after migration starts, it reports failure rather than
-automatically running old code against a changed schema. Inspect private VM logs
-through `gcloud compute ssh ... --tunnel-through-iap`. The active and previous
-Compose descriptions are in `/var/lib/carbon/runtime/`; release files referenced
-by those descriptions remain in `/var/lib/carbon/prepared/` and `releases/`.
-Resume a fixed release with the normal deploy command. If rollback is required,
-stop the VM, restore the **whole** pre-deployment data snapshot to a new retained
-disk, attach it as `carbon-data`, and boot the matching source release. Restore
-database, files and secrets together; do not downgrade the schema by rerunning
-old migrations. Never run the old and recovered Tailscale identities concurrently.
+If a maintenance deployment fails after migration starts, it reports failure
+rather than automatically running old code against a changed schema. Inspect
+private VM logs through `gcloud compute ssh ... --tunnel-through-iap`. The active
+and previous Compose descriptions are in `/var/lib/carbon/runtime/`; release files
+referenced by those descriptions remain in `/var/lib/carbon/prepared/` and
+`releases/`. For stateful recovery, restore the **whole** pre-maintenance snapshot
+to a new retained disk and boot the matching source release. Restore database,
+files and secrets together; do not downgrade the schema by rerunning old
+migrations. Never run the old and recovered Tailscale identities concurrently.
 Practice this recovery on a separate isolated VM before relying on it.
 
 ## Private database clients

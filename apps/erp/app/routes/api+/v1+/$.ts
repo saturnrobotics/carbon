@@ -6,7 +6,7 @@
 // after resolving the API key into context. No CORS: keys must not live in browsers.
 
 import type { ActionFunctionArgs } from "react-router";
-import { resolveApiKeyContext } from "./lib/authenticate.server";
+import { resolveApiContext } from "./lib/authenticate.server";
 import { openApiHandler } from "./lib/handler.server";
 
 const PREFIX = "/api/v1";
@@ -17,7 +17,14 @@ export async function action({ request }: ActionFunctionArgs) {
   }
 
   // Throws a 401/403/429 Response on auth failure, which propagates as the response.
-  const context = await resolveApiKeyContext(request);
+  const path = new URL(request.url).pathname
+    .slice(`${PREFIX}/`.length)
+    .split("/");
+  if (path.length !== 2 || path.some((part) => !part)) {
+    return Response.json({ error: "Operation not found" }, { status: 404 });
+  }
+  const operation = `${path[0]}_${path[1]}`;
+  const context = await resolveApiContext(request, operation);
 
   const { matched, response } = await openApiHandler.handle(request, {
     prefix: PREFIX,

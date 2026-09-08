@@ -24,6 +24,53 @@ SECRETS = {"CLOUDFLARE_API_TOKEN": "test-token", "GOOGLE_CLIENT_ID": "test.apps.
 
 
 class ValidationTests(unittest.TestCase):
+    def test_commit_change_during_preparation_stops_before_publication(self):
+        desired = {"prepared_source_commit": "a" * 40}
+        planned = {"expected_generation": 2, "build": {}, "configure": {}, "migrate": {}, "deploy": {}}
+        with patch.object(deploy, "revision", return_value="b" * 40), patch.object(deploy, "publish_source") as publish:
+            with self.assertRaisesRegex(ValueError, "Source changed"):
+                deploy.deploy(fixture(), desired, prepared_release=planned)
+            publish.assert_not_called()
+
+    def test_plan_prepares_automatically_without_deploying(self):
+        with patch.object(deploy.sys, "argv", ["deploy.py", "--plan"]), \
+             patch.object(deploy, "private_json", side_effect=[fixture(), SECRETS]), \
+             patch.object(deploy.Path, "exists", return_value=False), \
+             patch.object(deploy, "run", return_value="a" * 40), \
+             patch("prepare_release.prepare", return_value=({}, {"build": {}, "configure": {}, "deploy": {}, "unchanged": {}})) as prepare, \
+             patch.object(deploy, "deploy") as rollout:
+            deploy.main()
+            prepare.assert_called_once()
+            rollout.assert_not_called()
+
+    def test_apply_generates_inputs_without_reading_a_manual_manifest(self):
+        desired = {"prepared_source_commit": "a" * 40}
+        planned = {"build": {"erp": []}, "configure": {}, "deploy": {"erp": []}, "unchanged": {"mes": []}}
+        with patch.object(deploy.sys, "argv", ["deploy.py", "--apply"]), \
+             patch.object(deploy, "private_json", side_effect=[fixture(), SECRETS]) as read, \
+             patch.object(deploy.Path, "exists", return_value=False), \
+             patch.object(deploy, "revision", return_value="a" * 40), \
+             patch("prepare_release.prepare", return_value=(desired, planned)) as prepare, \
+             patch.object(deploy, "deploy") as rollout:
+            deploy.main()
+            self.assertEqual(read.call_count, 2)
+            prepare.assert_called_once()
+            self.assertEqual(rollout.call_args.kwargs["prepared_release"], planned)
+
+    def test_noop_stops_before_publication_or_cloud_changes(self):
+        planned = {"expected_generation": 2, "build": {}, "configure": {}, "migrate": {}, "deploy": {}}
+        with patch.object(deploy, "revision", return_value="a" * 40), \
+             patch.object(deploy, "publish_source") as publish, patch.object(deploy, "Cloud") as cloud:
+            deploy.deploy(fixture(), {}, prepared_release=planned)
+            publish.assert_not_called()
+            cloud.assert_not_called()
+
+    def test_missing_private_input_reports_actionable_error(self):
+        with tempfile.TemporaryDirectory() as directory:
+            missing = Path(directory) / "release-plan.json"
+            with self.assertRaisesRegex(ValueError, r"Missing private configuration file: .*release-plan\.json"):
+                deploy.private_json(missing)
+
     def test_valid_private_configuration(self):
         self.assertEqual(deploy.validate(fixture(), SECRETS)["REGION"], "us-east1")
 

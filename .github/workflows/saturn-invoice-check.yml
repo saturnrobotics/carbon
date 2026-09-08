@@ -25,6 +25,15 @@ jobs:
       INNGEST_SIGNING_KEY: test
       INNGEST_EVENT_KEY: test
       SESSION_SECRET: invoice-ci-session-secret
+      AUTH_PROVIDERS: email
+      DISABLE_RESEND: "true"
+      RESEND_API_KEY: re_invoice_ci
+      CLOUDFLARE_TURNSTILE_SITE_KEY: ""
+      CLOUDFLARE_TURNSTILE_SECRET_KEY: ""
+      POSTHOG_API_HOST: http://localhost:3000
+      POSTHOG_PROJECT_PUBLIC_KEY: ""
+      STRIPE_SECRET_KEY: ""
+      GOOGLE_PLACES_API_KEY: ""
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -39,6 +48,14 @@ jobs:
           python3 -m unittest discover -s contrib/deploying/gcp-tailscale -p 'test_*invoice*.py'
       - name: Install pinned test browser
         run: pnpm --dir apps/erp exec playwright-core install --with-deps chromium
+      - name: Prepare disposable development environment
+        run: |
+          test ! -e .env
+          cp .env.example .env
+          # Dev compose mounts this file even with --no-portless. Use Ubuntu's
+          # public CA bundle; no local proxy or private certificate is needed.
+          mkdir -p "$HOME/.portless"
+          cp /etc/ssl/certs/ca-certificates.crt "$HOME/.portless/ca.pem"
       - name: Isolated database and browser regressions
         # GitHub-hosted checkout only: crbn owns new volumes, migrations and
         # teardown. This command must not be copied into a working local stack.

@@ -26,6 +26,16 @@ rules — this file does not repeat them:
 - **Backend data**: Supabase client (`SupabaseClient<Database>`) for most reads/
   writes; Kysely for multi-row transactions (see services/database rules).
 
+## Lint and Formatting
+
+Lint and formatter compliance is required for every code change. Follow the root
+`AGENTS.md` **Lint Requirements**: run scoped `pnpm exec biome check --write`,
+review the safe fixes, repair remaining diagnostics at their cause, and verify
+with `--error-on-warnings`. Do not hide unused bindings with underscore renames,
+dummy reads, or lint suppressions. Use optional catch binding (`catch { ... }`)
+when the exception value is intentionally unnecessary. Agents own this cleanup
+before handoff; do not leave it to the user or rely only on the commit hook.
+
 ## Imports
 
 - `~/*` → app code, mapped to `./app/*` in each app's `tsconfig.json`

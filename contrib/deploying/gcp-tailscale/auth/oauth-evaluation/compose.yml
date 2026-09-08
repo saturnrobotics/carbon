@@ -1,0 +1,165 @@
+services:
+  postgres:
+    image: supabase/postgres:15.14.1.112
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+      JWT_SECRET: synthetic-oauth-evaluation-jwt-secret
+    command:
+      - postgres
+      - -c
+      - fsync=off
+      - -c
+      - synchronous_commit=off
+      - -c
+      - full_page_writes=off
+      - -c
+      - max_connections=60
+      - -c
+      - shared_buffers=64MB
+      - -c
+      - "listen_addresses=*"
+    # This evaluation must not leave a customer-sized database on Docker's disk.
+    # The test data is disposable and is intentionally bounded in memory.
+    tmpfs:
+      - /var/lib/postgresql/data:size=768m,mode=0700
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  db-init:
+    image: supabase/postgres:15.14.1.112
+    depends_on:
+      postgres:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-ec"]
+    command:
+      - |
+        until pg_isready -h postgres -U postgres -d postgres; do sleep 1; done
+        PGPASSWORD=postgres psql -h postgres -U supabase_admin -d postgres -v ON_ERROR_STOP=1 -c "ALTER ROLE supabase_auth_admin WITH PASSWORD 'postgres'; ALTER ROLE supabase_storage_admin WITH PASSWORD 'postgres'; ALTER ROLE authenticator WITH PASSWORD 'postgres';
+        CREATE SCHEMA IF NOT EXISTS _realtime AUTHORIZATION supabase_admin;
+        CREATE SCHEMA IF NOT EXISTS storage AUTHORIZATION supabase_storage_admin;
+        CREATE TABLE IF NOT EXISTS public.oauth_probe (id integer PRIMARY KEY, value text NOT NULL);
+        INSERT INTO public.oauth_probe (id, value) VALUES (1, 'synthetic-read') ON CONFLICT (id) DO UPDATE SET value = EXCLUDED.value;
+        ALTER TABLE public.oauth_probe ENABLE ROW LEVEL SECURITY;
+        GRANT USAGE ON SCHEMA public TO anon, authenticated;
+        GRANT SELECT ON public.oauth_probe TO anon, authenticated;
+        CREATE OR REPLACE FUNCTION public.oauth_probe_mutation() RETURNS text LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS 'BEGIN INSERT INTO public.oauth_probe (id, value) VALUES (2, ''oauth-token-write'') ON CONFLICT (id) DO UPDATE SET value = EXCLUDED.value; RETURN ''mutated''; END;';
+        REVOKE ALL ON FUNCTION public.oauth_probe_mutation() FROM PUBLIC;
+        GRANT EXECUTE ON FUNCTION public.oauth_probe_mutation() TO authenticated;"
+
+  gotrue:
+    image: supabase/gotrue:v2.189.0
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+    ports:
+      - "127.0.0.1:${AUTH_PORT:-18999}:9999"
+    environment:
+      GOTRUE_API_HOST: 0.0.0.0
+      GOTRUE_API_PORT: 9999
+      API_EXTERNAL_URL: http://127.0.0.1:${AUTH_PORT:-18999}
+      GOTRUE_DB_DRIVER: postgres
+      GOTRUE_DB_DATABASE_URL: postgres://supabase_auth_admin:postgres@postgres:5432/postgres
+      GOTRUE_SITE_URL: http://127.0.0.1:${AUTH_PORT:-18999}
+      GOTRUE_URI_ALLOW_LIST: http://127.0.0.1:${CALLBACK_PORT:-18994}/callback
+      GOTRUE_DISABLE_SIGNUP: "false"
+      GOTRUE_JWT_SECRET: synthetic-oauth-evaluation-jwt-secret
+      GOTRUE_JWT_EXP: 3600
+      GOTRUE_JWT_AUD: authenticated
+      GOTRUE_JWT_DEFAULT_GROUP_NAME: authenticated
+      GOTRUE_JWT_ADMIN_ROLES: service_role
+      GOTRUE_EXTERNAL_EMAIL_ENABLED: "true"
+      GOTRUE_MAILER_AUTOCONFIRM: "true"
+      GOTRUE_SMTP_HOST: ""
+      GOTRUE_OAUTH_SERVER_ENABLED: "true"
+      GOTRUE_OAUTH_SERVER_ALLOW_DYNAMIC_REGISTRATION: "false"
+      GOTRUE_OAUTH_SERVER_AUTHORIZATION_PATH: /oauth/authorizations
+      GOTRUE_OAUTH_SERVER_DEFAULT_SCOPE: "openid email profile"
+
+  postgrest:
+    image: postgrest/postgrest:v13.0.8
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+      gotrue:
+        condition: service_started
+    ports:
+      - "127.0.0.1:${REST_PORT:-18998}:3000"
+    environment:
+      PGRST_DB_URI: postgres://authenticator:postgres@postgres:5432/postgres
+      PGRST_DB_SCHEMAS: public,storage,graphql_public
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_JWT_SECRET: synthetic-oauth-evaluation-jwt-secret
+      PGRST_DB_POOL: 5
+
+  storage:
+    image: supabase/storage-api:v1.58.4
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+      postgrest:
+        condition: service_started
+    ports:
+      - "127.0.0.1:${STORAGE_PORT:-18997}:5000"
+    environment:
+      ANON_KEY: ${SYNTHETIC_ANON_KEY}
+      SERVICE_KEY: ${SYNTHETIC_SERVICE_KEY}
+      POSTGREST_URL: http://postgrest:3000
+      PGRST_JWT_SECRET: synthetic-oauth-evaluation-jwt-secret
+      DATABASE_URL: postgres://supabase_storage_admin:postgres@postgres:5432/postgres
+      STORAGE_BACKEND: file
+      FILE_STORAGE_BACKEND_PATH: /var/lib/storage
+      FILE_SIZE_LIMIT: 1000000
+      TENANT_ID: synthetic
+      REGION: synthetic
+      GLOBAL_S3_BUCKET: synthetic
+      ENABLE_IMAGE_TRANSFORMATION: "false"
+    tmpfs:
+      - /var/lib/storage:size=64m,mode=0700
+
+  realtime:
+    image: supabase/realtime:v2.89.0
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+    ports:
+      - "127.0.0.1:${REALTIME_PORT:-18996}:4000"
+    environment:
+      PORT: 4000
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: supabase_admin
+      DB_PASSWORD: postgres
+      DB_NAME: postgres
+      DB_AFTER_CONNECT_QUERY: SET search_path TO _realtime
+      DB_ENC_KEY: supabaserealtime
+      API_JWT_SECRET: synthetic-oauth-evaluation-jwt-secret
+      METRICS_JWT_SECRET: synthetic-oauth-evaluation-jwt-secret
+      SECRET_KEY_BASE: UpNVntn3cDxHJpq99YMc1T1AQgQpc8kfYTuRgBiYa15BLrx8etQoXz3gZv1/u2oq
+      APP_NAME: realtime
+      ERL_AFLAGS: -proto_dist inet_tcp
+      DNS_NODES: "''"
+      SEED_SELF_HOST: "true"
+      RUN_JANITOR: "true"
+
+  edge-runtime:
+    image: supabase/edge-runtime:v1.74.0
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+    ports:
+      - "127.0.0.1:${EDGE_PORT:-18995}:9000"
+    environment:
+      TZ: UTC
+      JWT_SECRET: synthetic-oauth-evaluation-jwt-secret
+      SUPABASE_URL: http://postgrest:3000
+      SUPABASE_ANON_KEY: ${SYNTHETIC_ANON_KEY}
+      SUPABASE_SERVICE_ROLE_KEY: ${SYNTHETIC_SERVICE_KEY}
+      VERIFY_JWT: "false"
+    volumes:
+      - ${EDGE_FUNCTIONS_PATH:-./functions}:/home/deno/functions:ro
+      - ${EDGE_DISPATCHER_PATH:-../../../../../packages/dev/docker/edge-main}:/home/deno/main:ro
+    command: ["start", "--main-service", "/home/deno/main"]

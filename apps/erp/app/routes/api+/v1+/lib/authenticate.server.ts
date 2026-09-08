@@ -9,6 +9,10 @@ import {
   getCompanyIdFromAPIKey,
   requirePermissions
 } from "@carbon/auth/auth.server";
+import {
+  authorizeCarbonWorkforceRequest,
+  PORTAL_USER_EVIDENCE_HEADER
+} from "@carbon/auth/workforce.server";
 import type { AuthedContext } from "./base.server";
 
 /**
@@ -66,4 +70,37 @@ export async function resolveApiKeyContext(
   }
 
   return authenticateApiKey(request.url, rawKey);
+}
+
+export async function resolveApiContext(
+  request: Request,
+  operation: string
+): Promise<AuthedContext> {
+  const authorization = request.headers.get("authorization") ?? "";
+  const bearer = /^bearer\s+/i.test(authorization)
+    ? authorization.replace(/^bearer\s+/i, "").trim()
+    : "";
+  const isWorkforce =
+    request.headers.has(PORTAL_USER_EVIDENCE_HEADER) ||
+    (Boolean(bearer) && !bearer.startsWith("crbn_"));
+  if (!isWorkforce) return resolveApiKeyContext(request);
+
+  const authorized = await authorizeCarbonWorkforceRequest({
+    request,
+    operation
+  });
+  return {
+    client: authorized.client,
+    userId: authorized.principal.actorId,
+    companyId: authorized.principal.companyId,
+    companyGroupId: authorized.companyGroupId,
+    authKind: "workforce",
+    scopes: {},
+    workforce: {
+      allowedOperations: authorized.allowedOperations,
+      capabilities: authorized.principal.capabilities,
+      permissions: authorized.permissions,
+      policyVersion: authorized.principal.policyVersion
+    }
+  };
 }

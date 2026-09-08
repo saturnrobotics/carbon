@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Carbon private release plan",
+  "type": "object",
+  "required": ["schema_version", "generation", "services"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "generation": { "type": "integer", "minimum": 1 },
+    "services": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": { "$ref": "#/$defs/service" }
+    },
+    "input_owners": { "type": "object" },
+    "changed_inputs": { "type": "array", "items": { "type": "string" } }
+  },
+  "$defs": {
+    "service": {
+      "type": "object",
+      "required": [
+        "source_commit",
+        "source_code_url",
+        "inputs",
+        "runtime_config",
+        "secret_versions"
+      ],
+      "properties": {
+        "workspace": { "type": "string", "minLength": 1 },
+        "task": { "type": "string", "minLength": 1 },
+        "owned_paths": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "build_paths": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "source_commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "source_code_url": { "type": "string", "format": "uri" },
+        "inputs": {
+          "type": "object",
+          "required": ["base_image_digest"],
+          "properties": {
+            "base_image_digest": { "type": "string", "minLength": 1 }
+          },
+          "additionalProperties": true
+        },
+        "runtime_config": { "type": "object" },
+        "secret_versions": { "type": "object" },
+        "build_receipt": { "type": "object" },
+        "migration": { "type": ["object", "null"] }
+      },
+      "not": { "required": ["workspace", "owned_paths"] },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

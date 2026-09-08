@@ -17,6 +17,7 @@ Carbon is a manufacturing ERP/MES/QMS. It contains apps for ERP, MES, academy, a
 - Read `.ai/lessons.md` before non-trivial changes to avoid known pitfalls.
 - Preserve behavior unless the user or a spec explicitly asks for a behavior change.
 - Keep changes minimal, focused, and integrated through real call sites.
+- All added or changed code must pass the applicable lint and formatting rules before handoff or commit. Run scoped safe autofixes, inspect the diff, and fix remaining diagnostics properly; never leave lint cleanup as user homework (see Lint Requirements below).
 - Use existing components — grep `packages/react/src/` and `apps/erp/app/components/` before writing UI.
 - Enter plan mode for non-trivial tasks (3+ steps or architectural decisions).
 - Use subagents liberally to keep the main context window clean.
@@ -42,6 +43,13 @@ Carbon is a manufacturing ERP/MES/QMS. It contains apps for ERP, MES, academy, a
 - Never scatter service/models files — one `{module}.service.ts` and one `{module}.models.ts` per module.
 - Never rebuild the database to test changes — wait for the user.
 - Never commit credentials, tokens, or private keys.
+
+## Lint Requirements
+
+- Use the existing autofixer on the files/packages being changed: `pnpm exec biome check --write <changed-paths>`. This applies safe fixes, formatting, and import organization. Do not apply blanket `--unsafe` fixes.
+- Fix the underlying issue for every remaining error or warning introduced by the change. Do not prefix unused names with `_`, add dummy reads such as `void error`, disable rules, or add suppression comments merely to silence diagnostics. Remove unnecessary bindings or correct incomplete logic while preserving side effects and required API contracts. For an intentionally unused caught exception, use `catch { ... }`.
+- Re-run `pnpm exec biome check --error-on-warnings <changed-paths>` after fixes, then the relevant tests and scoped typecheck when behavior or types are affected. Confirm the intended files were actually checked; an ignored/unmatched file is not lint proof. Use the appropriate checks for languages outside Biome's coverage.
+- Keep fixes scoped. Report unrelated pre-existing findings accurately without weakening lint configuration or disguising them as a passing check. Fix newly introduced diagnostics before declaring work complete; the commit hook is a backstop, not the first lint run.
 
 ## Validation Commands
 

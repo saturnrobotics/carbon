@@ -14,6 +14,11 @@ development stack.
 The checker builds `@carbon/config` before package tests, whose Vitest preset is a
 generated export. CI invokes the tracked `packages/dev/bin/crbn` router directly;
 it does not depend on a developer's shell installation or prebuilt CLI output.
+The disposable checkout copies the public `.env.example` before `crbn` generates
+`.env.local` and links both files. CI disables optional external integrations and
+supplies Ubuntu's public CA bundle for the dev compose certificate mounts.
+`--minimal` retains GoTrue, Storage, Kong, PostgREST, Realtime, edge functions and
+Inngest; Redis starts separately. Only Studio, Postgres Meta and Inbucket are omitted.
 
 From the repository root, run credential-free unit checks:
 

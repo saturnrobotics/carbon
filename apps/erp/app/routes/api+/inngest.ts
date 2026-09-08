@@ -1,7 +1,9 @@
+import { getUserScopedClient } from "@carbon/auth/client.server";
 import {
   functions,
   inngest,
   setInvoiceIntakeValidation,
+  setProcurementScheduleDispatch,
   setWorkflowDispatch
 } from "@carbon/jobs/inngest";
 import { serve } from "inngest/remix";
@@ -44,6 +46,18 @@ function wireWorkflowDispatch() {
     callOperation(name, { ...context, authKind: "session", scopes: {} }, args)
   );
   setWorkflowDispatch(executeFunction);
+  setProcurementScheduleDispatch(async (context, payload) =>
+    callOperation(
+      "knowledge_createProcurementDraft",
+      {
+        ...context,
+        client: await getUserScopedClient(context.userId),
+        authKind: "session",
+        scopes: {}
+      },
+      payload
+    )
+  );
   setInvoiceIntakeValidation(validateHydratedInvoiceIntake);
   dispatchWired = true;
 }

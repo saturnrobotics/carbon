@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Provision and update a private Carbon VM. No cloud calls without --apply."""
+"""Provision a private Carbon VM; --plan observes cloud state, --apply deploys."""
 
 import argparse
 import ipaddress
@@ -18,12 +18,50 @@ import urllib.request
 import private_postgres
 import payment_sync
 import invoice_inference
+import release_plan
+import prepare_release
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[2]
 DEPLOY_BRANCH = "saturn/main"
 SECRET_KEYS = {"CLOUDFLARE_API_TOKEN", "TAILSCALE_AUTH_KEY", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "RESEND_API_KEY"}
 CONFIG_KEYS = {"PROJECT_ID", "REGION", "ZONE", "VM_NAME", "MACHINE_TYPE", "DATA_DISK_GB", "DNS_ZONE_NAME", "ERP_HOST", "MES_HOST", "SUPABASE_HOST", "AUTH_ALLOWED_GOOGLE_DOMAIN", "ACME_EMAIL", "TAILSCALE_HOSTNAME", "SOURCE_REPO_URL"}
+
+
+def verify_rollout_state(plan, current, observed_config_digests):
+    """Fail closed on a stale controller or a hand-edited running service."""
+    if current.get("generation") != plan.get("expected_generation"):
+        raise ValueError("Release manifest generation changed; re-plan before promotion")
+    for name, service in plan.get("services", {}).items():
+        expected = service.get("observed_config_digest")
+        if expected and observed_config_digests.get(name) != expected:
+            raise ValueError(f"Manual configuration drift for {name}; review it before promotion")
+
+
+def routine_host_actions(plan, *, maintenance=False):
+    """Describe VM lifecycle actions without performing network or shell work."""
+    if maintenance:
+        return [("host-deploy", "prepare"), ("host-deploy", "quiesce"), ("host-deploy", "maintenance-apply")]
+    actions = [("host-deploy", "prepare")]
+    if plan.get("migrate"):
+        actions.append(("host-deploy", "routine-migrate"))
+    if plan.get("deploy"):
+        actions.append(("host-deploy", "routine-apply"))
+    return actions
+
+
+def read_last_successful_manifest(cloud):
+    """Read the private controller state without treating a first install as drift."""
+    raw = cloud.ssh("sudo", "python3", "-c",
+        "from pathlib import Path; p=Path('/var/lib/carbon/runtime/release-manifest.json'); "
+        "print(p.read_text() if p.exists() else '{\"generation\":0,\"services\":{}}')", capture=True)
+    try:
+        value = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise ValueError("Existing release manifest is invalid; review private VM state") from exc
+    if not isinstance(value, dict):
+        raise ValueError("Existing release manifest is invalid; review private VM state")
+    return value
 
 
 def run(args, *, capture=False, input=None, capture_error=False):
@@ -34,7 +72,15 @@ def run(args, *, capture=False, input=None, capture_error=False):
 
 def private_json(path):
     path = path.expanduser().resolve()
-    if path.stat().st_mode & 0o077:
+    try:
+        mode = path.stat().st_mode
+    except FileNotFoundError:
+        raise ValueError(
+            f"Missing private configuration file: {path}. "
+            "Prepare this input using contrib/deploying/gcp-tailscale/README.md "
+            "and restrict its permissions with chmod 600 before retrying."
+        ) from None
+    if mode & 0o077:
         raise ValueError(f"Restrict private configuration permissions: chmod 600 {path}")
     # Even non-secret project/domain configuration must not enter the public fork.
     try:
@@ -278,8 +324,28 @@ def publish_source(config, rev):
             raise ValueError("Could not reach GitHub to verify public source; check your connection and retry") from None
 
 
-def deploy(config):
+def deploy(config, desired_release=None, *, maintenance=False, prepared_release=None):
     rev = revision()
+    if desired_release is None:
+        desired_release, prepared_release = prepare_release.prepare(
+            config, REPO, rev, Cloud(config), HERE / ".local/release-plan.json")
+    if desired_release.get("prepared_source_commit", rev) != rev:
+        raise ValueError("Source changed during release preparation; run deployment again to regenerate the plan")
+    if prepared_release is None:
+        previous = prepare_release.observe(Cloud(config))["manifest"]
+        desired_release = release_plan.materialize_repository_inputs(desired_release, REPO)
+        prepared_release = release_plan.plan(desired_release, previous)
+        for key in ("maintenance_required", "maintenance_fingerprint", "maintenance_reasons"):
+            if key in desired_release:
+                prepared_release[key] = desired_release[key]
+    planned_release = prepared_release
+    maintenance = bool(maintenance or planned_release.get("maintenance_required")
+                       or planned_release.get("expected_generation", 0) == 0)
+    if maintenance:
+        print("Automatically selected coordinated maintenance: prepare images, create a recovery snapshot, apply changes, and verify services.", flush=True)
+    if not planned_release["build"] and not planned_release["configure"] and not planned_release["migrate"] and not maintenance:
+        print("Release plan is a no-op; no source publication or cloud mutations were issued.")
+        return
     publish_source(config, rev)
     config = {**config, "DEPLOY_REVISION": rev, "SOURCE_CODE_URL": config["SOURCE_REPO_URL"] + "/tree/" + rev}
     cf = Cloudflare(config["CLOUDFLARE_API_TOKEN"])
@@ -297,6 +363,15 @@ def deploy(config):
             if attempt == 29:
                 raise
             time.sleep(5)
+    previous_release = read_last_successful_manifest(cloud)
+    if previous_release.get("generation", 0) != planned_release["expected_generation"]:
+        raise ValueError("Release manifest generation changed; re-plan before promotion")
+    # The host checks the running Compose/container labels immediately before
+    # promotion. Do not compare a manifest to itself here: it cannot detect a
+    # hand-edited VM revision.
+    config = {**config, "RELEASE_PLAN": planned_release, "RELEASE_MAINTENANCE": maintenance}
+    if desired_release.get("base_images"):
+        config["RELEASE_BASE_IMAGES"] = desired_release["base_images"]
     staging = cloud.ssh("mktemp", "-d", "/tmp/carbon-upload.XXXXXXXX", capture=True).strip()
     if not re.fullmatch(r"/tmp/carbon-upload\.[A-Za-z0-9]+", staging):
         raise ValueError("Unexpected remote staging path")
@@ -322,20 +397,29 @@ def deploy(config):
             release = "/var/lib/carbon/releases/" + rev
             script = release + "/contrib/deploying/gcp-tailscale/host-deploy.sh"
             cloud.ssh("sudo", "bash", release + "/contrib/deploying/gcp-tailscale/certificates.sh")
-            cloud.ssh("sudo", "bash", script, "/var/lib/carbon/config.json", release, "prepare")
-            cloud.ssh("sudo", "bash", script, "/var/lib/carbon/config.json", release, "quiesce")
-            # Every rollout gets a consistent snapshot with Docker stopped. A failed
-            # migration leaves the stack stopped for deliberate recovery, not an
-            # automatic downgrade against a potentially changed schema.
-            cloud.ssh("sudo", "systemctl", "stop", "docker.service", "docker.socket")
-            try:
-                cloud.ssh("sudo", "sync")
-                snapshot = f"{config['VM_NAME']}-pre-{rev[:8]}-{int(time.time())}"
-                cloud.call("compute", "snapshots", "create", snapshot, "--source-disk", config["VM_NAME"] + "-data", "--source-disk-zone", config["ZONE"], "--storage-location", config["REGION"], "--description", "Carbon stopped-service pre-deployment snapshot")
-            finally:
-                cloud.ssh("sudo", "systemctl", "start", "docker.service")
-            print("Recovery snapshot created:", snapshot)
-            cloud.ssh("sudo", "bash", script, "/var/lib/carbon/config.json", release, "apply")
+            for _, action in routine_host_actions(planned_release, maintenance=maintenance):
+                cloud.ssh("sudo", "bash", script, "/var/lib/carbon/config.json", release, action)
+                if action == "quiesce":
+                    # Coordinated snapshots are selected for maintenance only. A
+                    # routine app rollout never stops Docker or shared services.
+                    try:
+                        try:
+                            cloud.ssh("sudo", "systemctl", "stop", "docker.service", "docker.socket")
+                            cloud.ssh("sudo", "sync")
+                            snapshot = f"{config['VM_NAME']}-pre-{rev[:8]}-{int(time.time())}"
+                            cloud.call("compute", "snapshots", "create", snapshot, "--source-disk", config["VM_NAME"] + "-data", "--source-disk-zone", config["ZONE"], "--storage-location", config["REGION"], "--description", "Carbon maintenance recovery snapshot")
+                        finally:
+                            cloud.ssh("sudo", "systemctl", "start", "docker.service")
+                    except (OSError, subprocess.CalledProcessError):
+                        # Compose stop marks containers deliberately stopped;
+                        # restarting Docker alone does not bring them back.
+                        if desired_release.get("previous_runtime_exists") or planned_release["expected_generation"] > 0:
+                            try:
+                                cloud.ssh("sudo", "bash", script, "/var/lib/carbon/config.json", release, "start")
+                            except (OSError, subprocess.CalledProcessError):
+                                print("Recovery snapshot failed, and restarting the previous services also failed; inspect the private VM logs.", file=sys.stderr)
+                        raise
+                    print("Maintenance recovery snapshot created:", snapshot)
             cloud.check_vm()
             cloud.check_firewall()
             cloud.ssh("sudo", "bash", script, "/var/lib/carbon/config.json", release, "check")
@@ -349,7 +433,11 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", type=Path, default=HERE / ".local/config.json")
     parser.add_argument("--secrets", type=Path, default=HERE / ".local/secrets.json")
-    parser.add_argument("--apply", action="store_true", help="create/update GCP resources and deploy the committed source")
+    action = parser.add_mutually_exclusive_group()
+    action.add_argument("--apply", action="store_true", help="prepare and deploy the committed source")
+    action.add_argument("--plan", action="store_true", help="prepare a private release preview using read-only cloud queries")
+    parser.add_argument("--release-plan", type=Path, help="explicit custom desired-input manifest; normally generated automatically")
+    parser.add_argument("--maintenance", action="store_true", help="force coordinated maintenance; normally selected automatically")
     args = parser.parse_args()
     config = validate(private_json(args.config), private_json(args.secrets))
     inference_path = args.config.with_name("invoice-inference.json")
@@ -361,13 +449,28 @@ def main():
         from backups.setup import configuration, Provisioner
         backup_settings = private_json(backup_path)
         backup_config = configuration(config, backup_settings)
-    if args.apply:
-        deploy(config)
+    if args.apply or args.plan:
+        rev = revision() if args.apply else run(["git", "-C", str(REPO), "rev-parse", "HEAD"], capture=True).strip()
+        if args.plan:
+            print("Preview uses this working tree. Apply regenerates from a clean, reviewed deployment branch.")
+        if args.release_plan:
+            desired_release = release_plan.materialize_repository_inputs(private_json(args.release_plan), REPO)
+            previous = prepare_release.observe(Cloud(config))["manifest"]
+            planned = release_plan.plan(desired_release, previous)
+            for key in ("maintenance_fingerprint", "maintenance_required", "maintenance_reasons"):
+                if key in desired_release:
+                    planned[key] = desired_release[key]
+        else:
+            desired_release, planned = prepare_release.prepare(config, REPO, rev, Cloud(config), HERE / ".local/release-plan.json")
+        prepare_release.print_summary(planned)
+        if args.plan:
+            return
+        deploy(config, desired_release, maintenance=args.maintenance, prepared_release=planned)
         if backup_settings is not None:
             Provisioner(backup_config, backup_path.resolve().parent).provision(backup_settings.get("alert_email", ""))
     else:
         print("Configuration valid. No cloud requests or changes made.")
-        print("Apply creates a private VM, NAT, retained data disk and snapshot schedule; sets three DNS-only Tailscale A records; builds, snapshots, migrates and verifies the full stack.")
+        print("make deploy-plan previews affected services using read-only cloud queries. make deploy generates its release manifest automatically.")
         print("Run make deploy from clean, reviewed saturn/main; it publishes that commit and deploys from this laptop.")
 
 

@@ -2,12 +2,19 @@ import type { Database, Json } from "@carbon/database";
 import { fetchAllFromTable, getCompanyTimeZone } from "@carbon/database";
 import type { Kysely, KyselyDatabase } from "@carbon/database/client";
 import { getLogger } from "@carbon/logger";
-import { datetime, getPurchaseOrderStatus } from "@carbon/utils";
+import {
+  applyRate,
+  datetime,
+  EPSILON,
+  getPurchaseOrderStatus,
+  round
+} from "@carbon/utils";
 import type {
   PostgrestResponse,
   PostgrestSingleResponse,
   SupabaseClient
 } from "@supabase/supabase-js";
+import { sql } from "kysely";
 import type { z } from "zod";
 import { getEmployeeJob } from "~/modules/people";
 import type { GenericQueryFilters } from "~/utils/query";
@@ -3072,4 +3079,539 @@ export async function getDefaultAttachmentsForPO(
       path: `${prefix}/${f.name}`
     }));
   });
+}
+
+export type ProcurementDraftContext = {
+  companyId: string;
+  companyGroupId: string;
+  actorId: string;
+  canCreatePurchasing: boolean;
+  /** Registered Carbon purchasing source used for the durable knowledge outbox. */
+  knowledgeSourceId: string;
+  /** Resolves a configured non-base supplier currency before the write transaction. */
+  resolveExchangeRate?: (args: {
+    companyId: string;
+    currencyCode: string;
+  }) => Promise<number>;
+};
+
+export type ProcurementDraftInput = {
+  idempotencyKey: string;
+  payloadHash: string;
+  supplierId: string;
+  receivingLocationId: string;
+  orderDate: string;
+  /** Customer/requested receiving date, distinct from orderDate. */
+  requestedArrivalDate?: string;
+  lines: Array<{
+    /** Stable Carbon item number (`item.readableId`). */
+    itemId: string;
+    /** Exact immutable item revision (`item.id`). */
+    itemRevisionId: string;
+    quantity: number;
+    /** Proposal fields are compared to ERP authority and never persisted as authority. */
+    purchaseUnitOfMeasureCode: string;
+    inventoryUnitOfMeasureCode: string;
+    conversionFactor: number;
+    supplierUnitPrice?: number;
+  }>;
+};
+
+type AuthoritativeProcurementLine = {
+  itemId: string;
+  description: string;
+  itemType: "Part" | "Material" | "Tool" | "Service" | "Consumable" | "Fixture";
+  supplierPartId: string;
+  purchaseQuantity: number;
+  purchaseUnitOfMeasureCode: string;
+  inventoryUnitOfMeasureCode: string;
+  conversionFactor: number;
+  supplierUnitPrice: number | null;
+  supplierTaxAmount: number;
+  taxPercent: number;
+};
+
+const procurementLineTypes = new Set<AuthoritativeProcurementLine["itemType"]>([
+  "Part",
+  "Material",
+  "Tool",
+  "Service",
+  "Consumable",
+  "Fixture"
+]);
+
+function isStoredPrecision(value: number) {
+  return Number.isFinite(value) && Math.abs(round(value) - value) <= EPSILON;
+}
+
+function requireProcurementProposalShape(input: ProcurementDraftInput) {
+  if (
+    !/^[0-9a-f]{64}$/.test(input.payloadHash) ||
+    !input.idempotencyKey ||
+    input.idempotencyKey.length > 256 ||
+    !input.supplierId ||
+    !input.receivingLocationId ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(input.orderDate) ||
+    input.lines.length === 0 ||
+    input.lines.length > 100
+  ) {
+    throw new Error("Invalid procurement draft input");
+  }
+
+  for (const line of input.lines) {
+    if (
+      !line.itemId ||
+      !line.itemRevisionId ||
+      !line.purchaseUnitOfMeasureCode ||
+      !line.inventoryUnitOfMeasureCode ||
+      !isStoredPrecision(line.quantity) ||
+      line.quantity <= 0 ||
+      !isStoredPrecision(line.conversionFactor) ||
+      line.conversionFactor <= 0 ||
+      (line.supplierUnitPrice !== undefined &&
+        (!isStoredPrecision(line.supplierUnitPrice) ||
+          line.supplierUnitPrice < 0))
+    ) {
+      throw new Error(
+        "Each procurement line needs a precise positive quantity and valid item revision and UoMs"
+      );
+    }
+  }
+}
+
+/**
+ * Creates only a Draft PO. It resolves every business value from Carbon tables in
+ * the same transaction and treats proposal UoMs/prices/factors as stale-data
+ * assertions, never as authority.
+ */
+export async function createProcurementDraft(
+  db: Kysely<KyselyDatabase>,
+  context: ProcurementDraftContext,
+  input: ProcurementDraftInput
+) {
+  if (!context.canCreatePurchasing) {
+    throw new Error("Purchasing create permission is required");
+  }
+  requireProcurementProposalShape(input);
+
+  try {
+    return await db.transaction().execute(async (trx) => {
+      const receipt = await trx
+        .selectFrom("knowledgeCommandReceipt")
+        .select(["payloadHash", "purchaseOrderId"])
+        .where("companyId", "=", context.companyId)
+        .where("actorId", "=", context.actorId)
+        .where("action", "=", "carbon.procurement.draft")
+        .where("idempotencyKey", "=", input.idempotencyKey)
+        .executeTakeFirst();
+      if (receipt) {
+        const existing = receipt as {
+          payloadHash: string;
+          purchaseOrderId: string;
+        };
+        if (existing.payloadHash !== input.payloadHash) {
+          throw new Error(
+            "Idempotency key was reused with a different payload"
+          );
+        }
+        return { purchaseOrderId: existing.purchaseOrderId, replayed: true };
+      }
+
+      const source = await sql<{ id: string }>`
+        select id from knowledge.source
+        where id = ${context.knowledgeSourceId}
+          and "companyId" = ${context.companyId}
+          and kind = 'carbon'
+          and status = 'active'
+      `.execute(trx);
+      if (!source.rows[0]) {
+        throw new Error(
+          "Carbon purchasing source is not registered for this company"
+        );
+      }
+
+      const [supplier, location, payment, shipping, company] =
+        await Promise.all([
+          trx
+            .selectFrom("supplier")
+            .select(["id", "currencyCode", "supplierStatus", "taxPercent"])
+            .where("id", "=", input.supplierId)
+            .where("companyId", "=", context.companyId)
+            .executeTakeFirst(),
+          trx
+            .selectFrom("location")
+            .select("id")
+            .where("id", "=", input.receivingLocationId)
+            .where("companyId", "=", context.companyId)
+            .executeTakeFirst(),
+          trx
+            .selectFrom("supplierPayment")
+            .select([
+              "invoiceSupplierId",
+              "invoiceSupplierContactId",
+              "invoiceSupplierLocationId",
+              "paymentTermId"
+            ])
+            .where("supplierId", "=", input.supplierId)
+            .where("companyId", "=", context.companyId)
+            .executeTakeFirst(),
+          trx
+            .selectFrom("supplierShipping")
+            .select([
+              "shippingMethodId",
+              "shippingTermId",
+              "incoterm",
+              "incotermLocation"
+            ])
+            .where("supplierId", "=", input.supplierId)
+            .where("companyId", "=", context.companyId)
+            .executeTakeFirst(),
+          trx
+            .selectFrom("company")
+            .select("baseCurrencyCode")
+            .where("id", "=", context.companyId)
+            .executeTakeFirst()
+        ]);
+
+      if (!supplier || supplier.supplierStatus !== "Active") {
+        throw new Error("Supplier is not an active supplier in this company");
+      }
+      if (!location)
+        throw new Error("Receiving location is not in this company");
+      if (!payment || !shipping || !company?.baseCurrencyCode) {
+        throw new Error(
+          "Supplier defaults or company base currency are not configured"
+        );
+      }
+
+      const currencyCode = supplier.currencyCode ?? company.baseCurrencyCode;
+      const currency = await trx
+        .selectFrom("currency")
+        .select("decimalPlaces")
+        .where("companyGroupId", "=", context.companyGroupId)
+        .where("code", "=", currencyCode)
+        .where("active", "=", true)
+        .executeTakeFirst();
+      if (!currency)
+        throw new Error(
+          "Supplier currency is not configured for this company group"
+        );
+
+      const exchangeRate =
+        currencyCode === company.baseCurrencyCode
+          ? 1
+          : await context.resolveExchangeRate?.({
+              companyId: context.companyId,
+              currencyCode
+            });
+      if (
+        !exchangeRate ||
+        !isStoredPrecision(exchangeRate) ||
+        exchangeRate <= 0
+      ) {
+        throw new Error(
+          "A current authoritative exchange rate is required for this supplier currency"
+        );
+      }
+
+      const lines: AuthoritativeProcurementLine[] = [];
+      for (const proposalLine of input.lines) {
+        const item = await trx
+          .selectFrom("item")
+          .select([
+            "id",
+            "readableId",
+            "readableIdWithRevision",
+            "description",
+            "type",
+            "unitOfMeasureCode",
+            "revisionStatus",
+            "changeOrderId"
+          ])
+          .where("id", "=", proposalLine.itemRevisionId)
+          .where("readableId", "=", proposalLine.itemId)
+          .where("companyId", "=", context.companyId)
+          .executeTakeFirst();
+        if (
+          !item ||
+          !procurementLineTypes.has(
+            item.type as AuthoritativeProcurementLine["itemType"]
+          )
+        ) {
+          throw new Error(
+            "Requested item revision is not permitted for purchasing"
+          );
+        }
+        if (item.revisionStatus === "Obsolete" || !item.unitOfMeasureCode) {
+          throw new Error(
+            "Requested item revision is not released for purchasing"
+          );
+        }
+
+        const currentRevision = await trx
+          .selectFrom("item")
+          .select("id")
+          .where("readableId", "=", item.readableId)
+          .where("companyId", "=", context.companyId)
+          .where("type", "=", item.type)
+          .where("revisionStatus", "!=", "Obsolete")
+          .orderBy(
+            sql`case when coalesce(revision, '') in ('', '0') then 1 else 0 end`
+          )
+          .orderBy("createdAt", "desc")
+          .executeTakeFirst();
+        if (currentRevision?.id !== item.id) {
+          throw new Error(
+            "Requested item revision is no longer the current released revision"
+          );
+        }
+
+        if (item.changeOrderId) {
+          const changeOrder = await trx
+            .selectFrom("changeOrder")
+            .select("status")
+            .where("id", "=", item.changeOrderId)
+            .where("companyId", "=", context.companyId)
+            .executeTakeFirst();
+          if (!changeOrder || changeOrder.status !== "Done") {
+            throw new Error(
+              "Requested item revision has an unreleased engineering change order"
+            );
+          }
+        }
+
+        const replenishment = await trx
+          .selectFrom("itemReplenishment")
+          .select([
+            "purchasingBlocked",
+            "purchasingUnitOfMeasureCode",
+            "conversionFactor"
+          ])
+          .where("itemId", "=", item.id)
+          .where("companyId", "=", context.companyId)
+          .executeTakeFirst();
+        if (replenishment?.purchasingBlocked) {
+          throw new Error("Requested item revision is blocked from purchasing");
+        }
+
+        const supplierPart = await trx
+          .selectFrom("supplierPart")
+          .select([
+            "id",
+            "supplierUnitOfMeasureCode",
+            "conversionFactor",
+            "unitPrice"
+          ])
+          .where("supplierId", "=", supplier.id)
+          .where("itemId", "=", item.id)
+          .where("companyId", "=", context.companyId)
+          .where("active", "=", true)
+          .executeTakeFirst();
+        if (
+          !supplierPart ||
+          !isStoredPrecision(supplierPart.conversionFactor) ||
+          supplierPart.conversionFactor <= 0
+        ) {
+          throw new Error(
+            "Supplier purchase settings are missing or have an invalid conversion factor"
+          );
+        }
+
+        const purchaseUom =
+          supplierPart.supplierUnitOfMeasureCode ??
+          replenishment?.purchasingUnitOfMeasureCode ??
+          item.unitOfMeasureCode;
+        const conversionFactor = supplierPart.conversionFactor;
+        if (
+          proposalLine.purchaseUnitOfMeasureCode !== purchaseUom ||
+          proposalLine.inventoryUnitOfMeasureCode !== item.unitOfMeasureCode ||
+          Math.abs(proposalLine.conversionFactor - conversionFactor) >
+            EPSILON ||
+          (proposalLine.supplierUnitPrice !== undefined &&
+            proposalLine.supplierUnitPrice !== (supplierPart.unitPrice ?? 0))
+        ) {
+          throw new Error(
+            "Procurement proposal is stale; confirm the current supplier purchase settings"
+          );
+        }
+
+        const price = supplierPart.unitPrice;
+        const taxPercent = supplier.taxPercent ?? 0;
+        if (
+          !isStoredPrecision(taxPercent) ||
+          taxPercent < 0 ||
+          taxPercent > 1
+        ) {
+          throw new Error("Supplier tax configuration is invalid");
+        }
+        const supplierTaxAmount =
+          price === null
+            ? 0
+            : applyRate(
+                price * proposalLine.quantity,
+                taxPercent,
+                currency.decimalPlaces
+              );
+
+        lines.push({
+          itemId: item.id,
+          description:
+            item.description ?? item.readableIdWithRevision ?? item.readableId,
+          itemType: item.type as AuthoritativeProcurementLine["itemType"],
+          supplierPartId: supplierPart.id,
+          purchaseQuantity: proposalLine.quantity,
+          purchaseUnitOfMeasureCode: purchaseUom,
+          inventoryUnitOfMeasureCode: item.unitOfMeasureCode,
+          conversionFactor,
+          supplierUnitPrice: price,
+          supplierTaxAmount,
+          taxPercent
+        });
+      }
+
+      // get_next_sequence uses UPDATE ... RETURNING in PostgreSQL, so concurrent
+      // transactions serialize on the sequence row instead of read/then-write allocation.
+      const sequence = await sql<{ purchaseOrderId: string }>`
+      select get_next_sequence('purchaseOrder', ${context.companyId}) as "purchaseOrderId"
+    `.execute(trx);
+      const purchaseOrderId = sequence.rows[0]?.purchaseOrderId;
+      if (!purchaseOrderId)
+        throw new Error("Could not allocate purchase order sequence");
+
+      const interaction = await trx
+        .insertInto("supplierInteraction")
+        .values({ companyId: context.companyId, supplierId: supplier.id })
+        .returning("id")
+        .executeTakeFirstOrThrow();
+      const order = await trx
+        .insertInto("purchaseOrder")
+        .values({
+          purchaseOrderId,
+          purchaseOrderType: "Purchase",
+          status: "Draft",
+          supplierId: supplier.id,
+          supplierInteractionId: interaction.id,
+          orderDate: input.orderDate,
+          currencyCode,
+          exchangeRate,
+          exchangeRateUpdatedAt: datetime.timestamp(),
+          companyId: context.companyId,
+          createdBy: context.actorId,
+          updatedBy: context.actorId
+        })
+        .returning("id")
+        .executeTakeFirstOrThrow();
+
+      await Promise.all([
+        trx
+          .insertInto("purchaseOrderDelivery")
+          .values({
+            id: order.id,
+            locationId: location.id,
+            shippingMethodId: shipping.shippingMethodId,
+            shippingTermId: shipping.shippingTermId,
+            incoterm: shipping.incoterm,
+            incotermLocation: shipping.incotermLocation,
+            ...(input.requestedArrivalDate
+              ? { receiptRequestedDate: input.requestedArrivalDate }
+              : {}),
+            companyId: context.companyId
+          })
+          .execute(),
+        trx
+          .insertInto("purchaseOrderPayment")
+          .values({
+            id: order.id,
+            paymentTermId: payment.paymentTermId,
+            invoiceSupplierId: payment.invoiceSupplierId ?? supplier.id,
+            invoiceSupplierContactId: payment.invoiceSupplierContactId,
+            invoiceSupplierLocationId: payment.invoiceSupplierLocationId,
+            companyId: context.companyId
+          })
+          .execute(),
+        trx
+          .insertInto("purchaseOrderLine")
+          .values(
+            lines.map((line, index) => ({
+              purchaseOrderId: order.id,
+              purchaseOrderLineType: line.itemType,
+              itemId: line.itemId,
+              description: line.description,
+              purchaseQuantity: line.purchaseQuantity,
+              purchaseUnitOfMeasureCode: line.purchaseUnitOfMeasureCode,
+              inventoryUnitOfMeasureCode: line.inventoryUnitOfMeasureCode,
+              conversionFactor: line.conversionFactor,
+              supplierPartId: line.supplierPartId,
+              supplierUnitPrice: line.supplierUnitPrice,
+              supplierTaxAmount: line.supplierTaxAmount,
+              taxPercent: line.taxPercent,
+              exchangeRate,
+              locationId: location.id,
+              sortOrder: index + 1,
+              companyId: context.companyId,
+              createdBy: context.actorId,
+              updatedBy: context.actorId
+            }))
+          )
+          .execute()
+      ]);
+
+      await sql`
+        insert into knowledge.outbox (
+          "companyId", "createdBy", "sourceId", "entityType", "entityId",
+          "sourceVersion", "eventType", payload
+        ) values (
+          ${context.companyId}, ${context.actorId}, ${context.knowledgeSourceId}, 'purchaseOrder',
+          ${order.id}, ${order.id}, 'upsert', jsonb_build_object('purchaseOrderId', ${order.id}::text)
+        )
+      `.execute(trx);
+
+      try {
+        await trx
+          .insertInto("knowledgeCommandReceipt")
+          .values({
+            companyId: context.companyId,
+            actorId: context.actorId,
+            action: "carbon.procurement.draft",
+            idempotencyKey: input.idempotencyKey,
+            payloadHash: input.payloadHash,
+            purchaseOrderId: order.id
+          })
+          .execute();
+      } catch (error) {
+        // A concurrent retry can win only at the receipt uniqueness constraint.
+        // Let the transaction roll back, then the caller retries to read its receipt.
+        throw error;
+      }
+
+      return { purchaseOrderId: order.id, replayed: false };
+    });
+  } catch (error) {
+    // The receipt unique index is the concurrency authority. If another
+    // transaction committed the same command while this one was validating,
+    // read its receipt after our transaction has rolled back.
+    if ((error as { code?: string }).code === "23505") {
+      const receipt = await db
+        .selectFrom("knowledgeCommandReceipt")
+        .select(["payloadHash", "purchaseOrderId"])
+        .where("companyId", "=", context.companyId)
+        .where("actorId", "=", context.actorId)
+        .where("action", "=", "carbon.procurement.draft")
+        .where("idempotencyKey", "=", input.idempotencyKey)
+        .executeTakeFirst();
+      if (receipt) {
+        const existing = receipt as {
+          payloadHash: string;
+          purchaseOrderId: string;
+        };
+        if (existing.payloadHash !== input.payloadHash) {
+          throw new Error(
+            "Idempotency key was reused with a different payload"
+          );
+        }
+        return { purchaseOrderId: existing.purchaseOrderId, replayed: true };
+      }
+    }
+    throw error;
+  }
 }

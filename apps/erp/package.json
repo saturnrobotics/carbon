@@ -24,6 +24,7 @@
     "@carbon/kv": "workspace:*",
     "@carbon/lib": "workspace:*",
     "@carbon/locale": "workspace:*",
+    "@carbon/knowledge": "workspace:*",
     "@carbon/logger": "workspace:*",
     "@carbon/notifications": "workspace:*",
     "@carbon/onboarding": "workspace:*",

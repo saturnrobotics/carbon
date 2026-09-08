@@ -41,6 +41,7 @@ export const MODULE_LIST = [
   "documents",
   "inventory",
   "invoicing",
+  "knowledge",
   "items",
   "people",
   "production",
@@ -82,6 +83,10 @@ const DESCRIPTION_OVERRIDES: Record<string, string> = {
   inventory_updateWarehouseTransfer: "Update an existing warehouse transfer",
 };
 
+const CLASSIFICATION_OVERRIDES: Record<string, Classification> = {
+  knowledge_resolveItems: "READ"
+};
+
 // Per-tool overrides of the auto-computed injectAuth set. The default rule
 // (insert* → companyId + createdBy + updatedBy) is wrong for tools that spread
 // their argument object straight into an INSERT on an append-only ledger table.
@@ -97,6 +102,9 @@ const DESCRIPTION_OVERRIDES: Record<string, string> = {
 // notificationPreference, which (like userModulePreference) carries no
 // createdBy/updatedBy columns at all — injecting them breaks the write.
 const INJECT_AUTH_OVERRIDES: Record<string, AuthField[]> = {
+  // The knowledge procurement command has a strict payload and stamps actor,
+  // company, source and audit state inside its server-only execution boundary.
+  knowledge_createProcurementDraft: [],
   inventory_insertManualInventoryAdjustment: ["companyId", "createdBy"],
   accounting_upsertFixedAssetUsageLog: ["companyId", "createdBy"],
   account_upsertNotificationPreference: ["companyId"],
@@ -115,6 +123,19 @@ const PERMISSION_MODULE_MAP: Record<string, string | null> = {
 // module than their service module (spot-checked against the real routes). Keep
 // this hand-curated list small and grounded — each entry needs a verified route.
 const PERMISSION_OVERRIDES: Record<string, ToolPermission> = {
+  knowledge_resolveItems: { module: "parts", actions: ["view"] },
+  knowledge_getItemIdentity: { module: "parts", actions: ["view"] },
+  knowledge_getDocumentReferences: { module: "parts", actions: ["view"] },
+  knowledge_getRecentReceipts: { module: "inventory", actions: ["view"] },
+  knowledge_getRecentReceiptItems: { module: "inventory", actions: ["view"] },
+  knowledge_getPurchaseStatus: { module: "purchasing", actions: ["view"] },
+  // This server-only command is deliberately excluded from the browser-facing
+  // knowledge.service barrel. It is still a canonical API operation, parsed
+  // from knowledge.mcp.server.ts below.
+  knowledge_createProcurementDraft: {
+    module: "purchasing",
+    actions: ["create"]
+  },
   // API-key management is an admin capability: every route in the family —
   // x+/settings+/api-keys.tsx (list loader), api-keys.new.tsx, api-keys.$id.tsx,
   // api-keys.delete.$id.tsx — gates on { update: "users" }, not "settings".
@@ -1465,7 +1486,8 @@ export function buildAllToolMetadata(opts: BuildOptions = {}): ManifestEntry[] {
       const toolName = `${mod}_${func.name}`;
       if (MCP_BLOCKED_TOOL_NAMES.includes(toolName)) continue;
 
-      const classification = classifyFunction(func.name, content);
+      const classification =
+        CLASSIFICATION_OVERRIDES[toolName] ?? classifyFunction(func.name, content);
       const injectAuth =
         INJECT_AUTH_OVERRIDES[toolName] ||
         computeInjectAuth(func.name, classification);

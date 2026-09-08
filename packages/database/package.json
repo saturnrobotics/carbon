@@ -49,6 +49,7 @@
     "db:seed:dev": "tsx src/seed-dev.ts",
     "deploy": "supabase link --project-ref $SUPABASE_PROJECT_ID && supabase db push",
     "lint": "biome lint --write ",
+    "test": "tsx --test src/*.test.ts",
     "typecheck": "tsgo --noEmit"
   },
   "sideEffects": false,

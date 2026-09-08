@@ -77,6 +77,13 @@ export async function loader({ request }: LoaderFunctionArgs) {
   const hasGoogleAuth = isAuthProviderEnabled("google");
   const hasPasskeyAuth = isAuthProviderEnabled("passkey");
   const hasSsoAuth = isSsoEnabled();
+  const autoGoogle =
+    new URL(request.url).searchParams.get("workforce") === "google" &&
+    hasGoogleAuth &&
+    !hasEmailAuth &&
+    !hasOutlookAuth &&
+    !hasPasskeyAuth &&
+    !hasSsoAuth;
 
   if (authSession) {
     if (await verifyAuthSession(authSession)) {
@@ -89,7 +96,8 @@ export async function loader({ request }: LoaderFunctionArgs) {
         hasOutlookAuth,
         hasGoogleAuth,
         hasPasskeyAuth,
-        hasSsoAuth
+        hasSsoAuth,
+        autoGoogle
       },
       { headers: cookieHeaders }
     );
@@ -100,7 +108,8 @@ export async function loader({ request }: LoaderFunctionArgs) {
     hasOutlookAuth,
     hasGoogleAuth,
     hasPasskeyAuth,
-    hasSsoAuth
+    hasSsoAuth,
+    autoGoogle
   };
 }
 
@@ -293,7 +302,8 @@ export default function LoginRoute() {
     hasOutlookAuth,
     hasGoogleAuth,
     hasPasskeyAuth,
-    hasSsoAuth
+    hasSsoAuth,
+    autoGoogle
   } = useLoaderData<typeof loader>();
 
   const [searchParams] = useSearchParams();
@@ -307,6 +317,7 @@ export default function LoginRoute() {
   const [ssoLoading, setSsoLoading] = useState(false);
   const [ssoError, setSsoError] = useState<string | null>(null);
   const conditionalAbortRef = useRef<AbortController | null>(null);
+  const autoGoogleStarted = useRef(false);
 
   const fetcher = useFetcher<Result & { mode?: string; email?: string }>();
   const theme = useMode();
@@ -433,7 +444,7 @@ export default function LoginRoute() {
       provider: "google",
       options: {
         redirectTo: `${window.location.origin}/callback${
-          redirectTo ? `?redirectTo=${redirectTo}` : ""
+          redirectTo ? `?redirectTo=${encodeURIComponent(redirectTo)}` : ""
         }`
       }
     });
@@ -442,6 +453,12 @@ export default function LoginRoute() {
       toast.error(error.message);
     }
   };
+
+  useMount(() => {
+    if (!autoGoogle || autoGoogleStarted.current) return;
+    autoGoogleStarted.current = true;
+    void onSignInWithGoogle();
+  });
 
   const onSignInWithAzure = async () => {
     const { error } = await carbonClient.auth.signInWithOAuth({

@@ -1,5 +1,35 @@
 # Lessons Learned
 
+## Database-check preflight must precede pool construction
+
+**Context:** Running a database-dependent commit check in a checkout without local database configuration.
+
+**Problem:** The check handled failed connections but constructed a pool first; its required URL was undefined, so initialization threw an opaque TypeError before the environment policy could run.
+
+**Rule:** Check required configuration before constructing database clients. Preserve the command's existing distinction between unavailable development infrastructure and actual validation failure. Report skipped checks explicitly; never report them as passing validation. Cover both missing configuration and configured validation failures in CLI regressions.
+
+**Applies to:** Dataset checks, backup checks, and other database-dependent developer commands.
+
+## Autofixes need semantic review and complete lint verification
+
+**Context:** An unused catch binding remained in newly added code and Biome offered an underscore rename as an unsafe fix.
+
+**Problem:** Treating a diagnostic as an operator task or applying a name-only workaround leaves unnecessary code and weakens the engineering handoff.
+
+**Rule:** Run scoped safe autofixes, inspect their changes, and repair remaining diagnostics at the cause. Omit an unused catch binding instead of renaming it; preserve side effects when removing other unused values. Never add dummy reads, suppressions, or rule exemptions merely to quiet lint. Verify changed code with lint before declaring completion.
+
+**Applies to:** All agent-authored code, lint cleanup, and commit preparation.
+
+## Deployment machinery is the agent's responsibility
+
+**Context:** Completing deployment automation for an operator who wants to add features and run `make deploy`.
+
+**Problem:** Requiring hand-written release inputs, mandatory preview commands, and a separate baseline command turned internal deployment work into operator homework.
+
+**Rule:** Keep the normal deployment interface to `make deploy`. Generate inputs and select the appropriate rollout automatically, including initial release tracking, while retaining recovery snapshots and verification. Treat planning/check commands as optional diagnostics. Complete setup and routine integration work within the authorized scope; ask for user action only when access or a product decision cannot be resolved by the agent. Report actual verification and remaining blockers clearly instead of assigning an engineering checklist to the user.
+
+**Applies to:** Deployment tooling, feature delivery, and operator handoffs.
+
 ## Reparse safety must include corrections saved before the job starts
 
 **Context:** A later receipt or explicit reparse starts a new extraction generation for an existing intake.
@@ -1563,3 +1593,14 @@ full-screen ERP route.
 **Rule:** Exercise capture, review, publication, replay and deletion through the exact runtime roles early, including a publisher without admin. Keep permissions tied to the operation, never repair a failure by broadening the fixture user. Give each integration run unique content and clean its own visible fixture records even after a failed assertion.
 
 **Applies to:** Forced-RLS document workflows, immutable publication, and shared disposable integration databases.
+
+
+## Separate local integration proof from managed-cloud configuration proof
+
+**Context:** Planning release verification for a small independently deployed service.
+
+**Problem:** A cloud staging environment was presented as necessary when local containers could cover most functional and security behavior.
+
+**Rule:** Prefer isolated local integration tests when requested. Identify the specific managed-cloud boundaries that require live verification and test them with restricted access and synthetic data on the intended deployment. Do not turn a recommended staging topology into an approved requirement.
+
+**Applies to:** Deployment planning, local emulators, and initial cloud acceptance.

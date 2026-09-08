@@ -52,6 +52,16 @@ class PrivateStackTests(unittest.TestCase):
         self.assertEqual(self.stack["networks"]["internal"]["driver"], "bridge")
         self.assertNotIn("network_mode", self.stack["services"]["caddy"])
 
+    def test_each_application_keeps_its_own_config_digest(self):
+        config = {**self.config, "RELEASE_PLAN": {"services": {
+            "erp": {"config_digest": "sha256:" + "1" * 64},
+            "mes": {"config_digest": "sha256:" + "2" * 64},
+        }}}
+        module.render(config, REPO, self.output, self.state)
+        stack = json.loads((self.output / "compose.json").read_text())
+        self.assertEqual(stack["services"]["erp"]["labels"]["com.carbon.release.config-digest"], "sha256:" + "1" * 64)
+        self.assertEqual(stack["services"]["mes"]["labels"]["com.carbon.release.config-digest"], "sha256:" + "2" * 64)
+
     def test_public_addresses_and_config_injection_are_rejected(self):
         for ip in ("0.0.0.0", "127.0.0.1", "192.168.1.2", "::", "100.128.0.1"):
             with self.subTest(ip=ip), self.assertRaises(ValueError):
@@ -123,6 +133,21 @@ class PrivateStackTests(unittest.TestCase):
         self.assertEqual(ops["profiles"], ["ops"])
         for app in ("erp", "mes"):
             self.assertEqual(self.stack["services"][app]["environment"]["SOURCE_CODE_URL"], self.config["SOURCE_CODE_URL"])
+
+    def test_unaffected_service_keeps_its_own_immutable_source_and_config_identity(self):
+        previous = "b" * 40
+        config = {
+            **self.config,
+            "RELEASE_PLAN": {"services": {
+                "erp": {"source_commit": "a" * 40, "source_code_url": self.config["SOURCE_CODE_URL"], "image_digest": "sha256:abcdef", "config_mount_path": "/var/lib/carbon/config/abcdef.json"},
+                "mes": {"source_commit": previous, "source_code_url": "https://github.com/example/carbon/tree/" + previous, "image_digest": "sha256:123456", "config_mount_path": "/var/lib/carbon/config/123456.json"},
+            }},
+        }
+        module.render(config, REPO, self.output, self.state)
+        stack = json.loads((self.output / "compose.json").read_text())
+        self.assertEqual(stack["services"]["mes"]["image"], "carbon/mes:" + previous)
+        self.assertEqual(stack["services"]["mes"]["environment"]["SOURCE_CODE_URL"], "https://github.com/example/carbon/tree/" + previous)
+        self.assertEqual(stack["services"]["mes"]["labels"]["com.carbon.release.config-mount"], "/var/lib/carbon/config/123456.json")
 
     def test_compose_schema(self):
         subprocess.run(["docker", "compose", "--file", str(self.output / "compose.json"), "config", "--quiet"], check=True)
