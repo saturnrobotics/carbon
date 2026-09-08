@@ -149,12 +149,17 @@ python3 contrib/deploying/knowledge/release.py \
 
 ## Release validation: local first
 
+The active implementation goal ends after local validation. Production steps
+below describe later operations and are not authorized work for this goal.
+
 A separate cloud staging environment is not required. Finish the local Docker
 integration gate before deploying: use disposable PostgreSQL and Redis, emulated
 object storage, local job execution, and the actual parser image to exercise the
 browser upload/review/publish/search/download workflow. Test revocation, deletion,
-retries and recovery with synthetic fixtures. The existing browser proof still
-substitutes storage and parser execution; this expanded gate is pending.
+retries and recovery with synthetic fixtures. The Docker browser gate uses actual
+PDF extraction, immutable object storage in the emulator, PostgreSQL RLS, Redis
+and Inngest retries. Synthetic Google identity and parser-job transport are
+confined to separate test image targets.
 
 Local identity fixtures and emulators do not prove Google IAP, MFA/access levels,
 Cloud Run IAM, private network routes, real GCS generation/permission behavior or
@@ -167,3 +172,94 @@ deletion, health-gated promotion and rollback before broader use. Follow
 
 See the approved plan's “Revised release approach: local Docker validation” for
 execution order. No cloud environment has been provisioned for this release.
+
+
+## Local Docker workflow
+
+Use Docker Compose v2, Corepack/pnpm, Python 3 and a Chromium installation for
+Playwright. Run commands from the repository root. All fixture identities and
+passwords are synthetic; these test images must never be deployed publicly.
+The runner uses ports 4200, 4301, 4302 and 59910–59914 on loopback. Resolve a
+port conflict without stopping an unrelated development database. The host-facing
+Compose network uses a normal bridge so loopback published ports work on Docker
+Desktop. The parser has only an internal network, with storage reached through
+the test proxy. Local bridge networking does not prove production egress policy.
+
+```bash
+corepack pnpm install --frozen-lockfile
+contrib/deploying/knowledge/build-images.sh native
+contrib/deploying/knowledge/build-images.sh e2e
+corepack pnpm --filter knowledge exec playwright install chromium
+KNOWLEDGE_E2E_PRESERVE_FIXTURE=1 contrib/deploying/knowledge/local-stack.sh test
+```
+
+The preserve flag retains the synthetic published manual and tombstone for
+subsequent performance and recovery checks. Omit it for normal test cleanup.
+The stack persists its own named PostgreSQL, Redis, storage and Inngest volumes.
+`local-stack.sh up` applies pending private migrations and idempotent synthetic
+fixtures without resetting a developer database. Use `local-stack.sh status`,
+`local-stack.sh logs ingest` and `local-stack.sh stop` to inspect or stop only
+this stack. Stopping preserves its volumes.
+
+For an explicit production architecture build, use `build-images.sh amd64`.
+Production targets use their production entry points; separate `e2e` targets
+supply local identity and job-transport adapters. The browser portal runs the
+application through its Vite test configuration. Production entry points also
+require separate runtime smoke checks; browser success alone does not establish
+that production configuration is correct.
+
+Verify private build-context exclusions and run the parser proof independently
+of the browser stack:
+
+```bash
+python3 contrib/deploying/knowledge/verify-build-context.py
+python3 contrib/deploying/knowledge/verify-parser-container.py
+KNOWLEDGE_PARSER_TEST_IMAGE=knowledge-manual-local-parser:manual-v1-amd64 \
+  python3 contrib/deploying/knowledge/verify-parser-container.py
+```
+
+This invokes the production parser command for a text PDF and raster OCR image,
+checks extracted identifiers, checks duplicate output generation stability and
+rejects a nonexistent input generation. The test-only storage proxy adapts the
+SDK metadata URL path to the emulator; it does not synthesize object bytes,
+generations or extraction results.
+
+After a successful browser journey, run the lifecycle proof against the retained
+synthetic manual, then stop task services before the isolated restore proof. The proof refuses a running writer, restores into newly named
+disposable resources, then removes only its restore targets and temporary rows.
+It preserves original stack volumes; restart the stack afterward.
+
+```bash
+contrib/deploying/knowledge/verify-local-lifecycle.sh
+contrib/deploying/knowledge/local-stack.sh stop
+python3 contrib/deploying/knowledge/verify-local-recovery.py --synthetic --disposable
+contrib/deploying/knowledge/local-stack.sh up
+```
+
+The lifecycle proof restarts storage/database and application/background services,
+checks unchanged container IDs and exact downloads, then builds a portal image
+with a new proof label and updates only that service with `--no-deps`. It verifies
+a changed portal image/container and unchanged IDs for every other service. This
+proves local update isolation, not a business behavior change or cloud rollout.
+The original image tag is restored afterward; the updated test container remains
+until the next `local-stack.sh up` reconciles it.
+
+The restore compares immutable object generations and SHA-256 hashes, database
+references, tombstones, RLS search results, roles, ownership, policies and ACLs.
+Emulator object metadata uses filesystem extended attributes: a plain tar backup
+is insufficient. The proof preserves these attributes using GNU tar. This is a
+local database/object recovery drill, not a production GCS backup procedure.
+
+Measure the direct query service using an exact part number from the latest
+published synthetic manual:
+
+```bash
+python3 contrib/deploying/knowledge/local-performance.py --synthetic \
+  --url http://127.0.0.1:4302/v1/query --text '<published synthetic part number>' \
+  --requests 100 --concurrency 4
+```
+
+This reports HTTP latency and throughput with real PostgreSQL and Redis. A small
+synthetic corpus and emulated authentication cannot establish production scale,
+Google authentication latency or cloud network performance. The first request is
+not asserted to be a cold-cache measurement.

@@ -6,13 +6,49 @@ import {
   test
 } from "@playwright/test";
 
-const e2eGateway = "http://127.0.0.1:4301";
+const e2eGateway =
+  process.env.KNOWLEDGE_E2E_GATEWAY_URL ?? "http://127.0.0.1:4301";
+const queryFixture =
+  process.env.KNOWLEDGE_E2E_QUERY_FIXTURE_URL ?? "http://127.0.0.1:4302";
 const runId = crypto.randomUUID();
 const manualTitle = `E2E motor manual ${runId}`;
 const manualPart = `EM-${runId.slice(0, 8)}`;
-const manualPdf = Buffer.from(
-  `%PDF-1.4\n% ${runId}\n1 0 obj<< /Type /Catalog >>endobj\ntrailer<<>>\n%%EOF\n`,
-  "utf8"
+const replacementPart = `${manualPart}-B`;
+
+function textPdf(text: string): Buffer {
+  const escaped = text
+    .replace(/\\/g, "\\\\")
+    .replace(/\(/g, "\\(")
+    .replace(/\)/g, "\\)");
+  const stream = `BT\n/F1 18 Tf\n72 720 Td\n(${escaped}) Tj\nET\n`;
+  const objects = [
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>",
+    `<< /Length ${Buffer.byteLength(stream)} >>\nstream\n${stream}endstream`,
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>"
+  ];
+  let body = "%PDF-1.4\n";
+  const offsets = [0];
+  for (const [index, object] of objects.entries()) {
+    offsets.push(Buffer.byteLength(body));
+    body += `${index + 1} 0 obj\n${object}\nendobj\n`;
+  }
+  const xref = Buffer.byteLength(body);
+  body += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+  body += offsets
+    .slice(1)
+    .map((offset) => `${String(offset).padStart(10, "0")} 00000 n \n`)
+    .join("");
+  body += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+  return Buffer.from(body, "ascii");
+}
+
+const manualPdf = textPdf(
+  `${manualPart} ${manualTitle} revision A Test bench replacement procedure`
+);
+const replacementPdf = textPdf(
+  `${replacementPart} ${manualTitle} revision B Test bench inspection procedure`
 );
 
 async function actorPage(
@@ -49,6 +85,7 @@ async function waitForClientNavigation(page: Page) {
 }
 
 async function uploadReviewAndPublish(page: Page) {
+  const uploadStarted = performance.now();
   await page.goto("/");
   await waitForClientNavigation(page);
   await page.getByRole("link", { name: "Upload a manual" }).click();
@@ -65,6 +102,18 @@ async function uploadReviewAndPublish(page: Page) {
   await expect(
     page.getByRole("heading", { name: "Review document" })
   ).toBeVisible();
+
+  await expect
+    .poll(
+      async () => {
+        await page.reload();
+        return page.getByLabel("Source evidence").textContent();
+      },
+      { timeout: 90_000 }
+    )
+    .toContain(manualPart);
+  const extractionMilliseconds = performance.now() - uploadStarted;
+  await waitForClientNavigation(page);
 
   await page.getByLabel("Title").fill(manualPart);
   await page.getByLabel("Manufacturer").fill("E2E Motors");
@@ -90,6 +139,7 @@ async function uploadReviewAndPublish(page: Page) {
   await page.getByRole("button", { name: "Publish manual" }).click();
   expect((await published).status()).toBeLessThan(400);
 
+  const publishStarted = performance.now();
   await page.goto("/");
   await page.getByLabel("Search manuals").fill(manualPart);
   await page.getByRole("button", { name: "Search manuals" }).click();
@@ -98,21 +148,79 @@ async function uploadReviewAndPublish(page: Page) {
     exact: true
   });
   await expect(download).toBeVisible();
+  const searchMilliseconds = performance.now() - publishStarted;
+  const repeated = page.waitForResponse(
+    (response) =>
+      new URL(response.url()).pathname === "/api/query" &&
+      response.request().method() === "POST"
+  );
+  await page.getByRole("button", { name: "Search manuals" }).click();
+  expect((await repeated).status()).toBe(200);
   const href = await download.getAttribute("href");
-  return href ? new URL(href, page.url()).pathname : null;
+  return {
+    downloadPath: href ? new URL(href, page.url()).pathname : null,
+    extractionMilliseconds,
+    searchMilliseconds
+  };
 }
 
-test.setTimeout(120_000);
+test.setTimeout(180_000);
 
-test("manual workflow confines capture, review, search, original download, revocation, and removal to the authorized library", async ({
+test("manual workflow uses real extraction, durable delivery, Redis, and exact immutable download", async ({
   browser,
   request
-}) => {
+}, testInfo) => {
   const bob = await actorPage(browser, "bob");
   const alice = await actorPage(browser, "alice");
   try {
-    const downloadPath = await uploadReviewAndPublish(bob.page);
+    const initialDelivery = await (
+      await request.get(`${e2eGateway}/__e2e/status`)
+    ).json();
+    const initialCache = await (
+      await request.get(`${queryFixture}/__e2e/cache`)
+    ).json();
+    expect(
+      (await request.post(`${e2eGateway}/__e2e/fail-next-parser`)).ok()
+    ).toBeTruthy();
+    const { downloadPath, extractionMilliseconds, searchMilliseconds } =
+      await uploadReviewAndPublish(bob.page);
     expect(downloadPath).toMatch(/^\/documents\/[^/]+\/versions\/[^/]+$/);
+
+    await expect
+      .poll(
+        async () => {
+          const response = await request.get(`${e2eGateway}/__e2e/status`);
+          return response.json();
+        },
+        { timeout: 30_000 }
+      )
+      .toMatchObject({
+        pending: 0
+      });
+    const delivery = await (
+      await request.get(`${e2eGateway}/__e2e/status`)
+    ).json();
+    expect(delivery.injectedFailures).toBe(
+      initialDelivery.injectedFailures + 1
+    );
+    expect(delivery.processAttempts).toBeGreaterThanOrEqual(
+      initialDelivery.processAttempts + 2
+    );
+    expect(delivery.maximumAttempt).toBeGreaterThanOrEqual(1);
+    expect(delivery.parserCalls).toBeGreaterThanOrEqual(
+      initialDelivery.parserCalls + 1
+    );
+    const cache = await (
+      await request.get(`${queryFixture}/__e2e/cache`)
+    ).json();
+    expect(cache.sets).toBeGreaterThanOrEqual(initialCache.sets + 1);
+    expect(cache.hits).toBeGreaterThanOrEqual(initialCache.hits + 1);
+    await testInfo.attach("manual-workflow-timings.json", {
+      body: Buffer.from(
+        JSON.stringify({ extractionMilliseconds, searchMilliseconds })
+      ),
+      contentType: "application/json"
+    });
 
     // This is a browser click through the web proxy, not a direct worker call.
     const originalResponse = bob.page.waitForResponse(
@@ -134,7 +242,7 @@ test("manual workflow confines capture, review, search, original download, revoc
     expect(stream).not.toBeNull();
     const bytes: Buffer[] = [];
     for await (const chunk of stream!) bytes.push(Buffer.from(chunk));
-    expect(Buffer.concat(bytes).subarray(0, 5).toString()).toBe("%PDF-");
+    expect(Buffer.concat(bytes)).toEqual(manualPdf);
 
     // Alice is a real second fixture user in a different company. The app never
     // receives an actor/company override from the browser; its synthetic test
@@ -184,7 +292,7 @@ test("manual workflow confines capture, review, search, original download, revoc
     await bob.page.goto("/");
     await bob.page.getByLabel("Search manuals").fill(manualPart);
     await bob.page.getByRole("button", { name: "Search manuals" }).click();
-    await bob.page.getByRole("link", { name: "Remove manual" }).click();
+    await bob.page.getByRole("link", { name: "Remove manual" }).first().click();
     await Promise.all([
       bob.page.waitForURL("/"),
       bob.page.getByRole("button", { name: "Confirm removal" }).click()
@@ -196,7 +304,102 @@ test("manual workflow confines capture, review, search, original download, revoc
     ).toBeVisible();
     const removedOriginal = await bob.page.goto(downloadPath!);
     expect(removedOriginal?.status()).not.toBe(200);
+
+    // Upload the identical bytes again. Background processing reuses the
+    // immutable extraction, and review rejects the existing content hash.
+    await bob.page.goto("/intake");
+    await waitForClientNavigation(bob.page);
+    await bob.page.getByLabel("Manual file").setInputFiles({
+      name: "e2e-motor-manual.pdf",
+      mimeType: "application/pdf",
+      buffer: manualPdf
+    });
+    await Promise.all([
+      bob.page.waitForURL(/\/intake\/[A-Za-z0-9_-]+$/),
+      bob.page.getByRole("button", { name: "Upload manual" }).click()
+    ]);
+    await expect
+      .poll(
+        async () => {
+          await bob.page.reload();
+          return bob.page.getByLabel("Source evidence").textContent();
+        },
+        { timeout: 90_000 }
+      )
+      .toContain(manualPart);
+    await waitForClientNavigation(bob.page);
+    await bob.page.getByLabel("Title").fill(`${manualPart} duplicate`);
+    await bob.page.getByLabel("Manufacturer").fill("E2E Motors");
+    await bob.page.getByLabel("Part number").fill(manualPart);
+    await bob.page.getByLabel("Revision").fill("A");
+    await bob.page.getByLabel("Machine").fill("Test bench");
+    const duplicateReview = bob.page.waitForResponse(
+      (response) =>
+        /\/intake\/[^/]+$/.test(new URL(response.url()).pathname) &&
+        response.request().method() === "POST"
+    );
+    await bob.page.getByRole("button", { name: "Save review" }).click();
+    expect((await duplicateReview).status()).toBe(409);
+
+    // Preserve a second, distinct document for performance and recovery checks.
+    // The first document remains tombstoned and its original download denied.
+    await bob.page.goto("/intake");
+    await waitForClientNavigation(bob.page);
+    await bob.page.getByLabel("Manual file").setInputFiles({
+      name: "e2e-motor-manual-revision-b.pdf",
+      mimeType: "application/pdf",
+      buffer: replacementPdf
+    });
+    await Promise.all([
+      bob.page.waitForURL(/\/intake\/[A-Za-z0-9_-]+$/),
+      bob.page.getByRole("button", { name: "Upload manual" }).click()
+    ]);
+    await expect
+      .poll(
+        async () => {
+          await bob.page.reload();
+          return bob.page.getByLabel("Source evidence").textContent();
+        },
+        { timeout: 90_000 }
+      )
+      .toContain(replacementPart);
+    await waitForClientNavigation(bob.page);
+    await bob.page.getByLabel("Title").fill(`${manualPart} replacement`);
+    await bob.page.getByLabel("Manufacturer").fill("E2E Motors");
+    await bob.page.getByLabel("Part number").fill(replacementPart);
+    await bob.page.getByLabel("Revision").fill("B");
+    await bob.page.getByLabel("Machine").fill("Test bench");
+    const replacementReview = bob.page.waitForResponse(
+      (response) =>
+        /\/intake\/[^/]+$/.test(new URL(response.url()).pathname) &&
+        response.request().method() === "POST"
+    );
+    await bob.page.getByRole("button", { name: "Save review" }).click();
+    expect((await replacementReview).status()).toBe(204);
+    await bob.page.reload();
+    const replacementPublish = bob.page.waitForResponse(
+      (response) =>
+        /\/intake\/[^/]+$/.test(new URL(response.url()).pathname) &&
+        response.request().method() === "POST"
+    );
+    await bob.page.getByRole("button", { name: "Publish manual" }).click();
+    expect((await replacementPublish).status()).toBeLessThan(400);
+    await bob.page.goto("/");
+    await bob.page.getByLabel("Search manuals").fill(replacementPart);
+    await bob.page.getByRole("button", { name: "Search manuals" }).click();
+    await expect(
+      bob.page.getByRole("link", { name: "Download original", exact: true })
+    ).toBeVisible();
+    const replacementDelivery = await (
+      await request.get(`${e2eGateway}/__e2e/status`)
+    ).json();
+    expect(replacementDelivery.parserCalls).toBeGreaterThanOrEqual(
+      initialDelivery.parserCalls + 2
+    );
   } finally {
+    await request.post(`${e2eGateway}/__e2e/restore/bob`);
+    if (process.env.KNOWLEDGE_E2E_PRESERVE_FIXTURE !== "1")
+      await request.post(`${e2eGateway}/__e2e/cleanup`);
     await Promise.all([bob.context.close(), alice.context.close()]);
   }
 });

@@ -1,0 +1,212 @@
+name: knowledge-manual-local
+
+services:
+  postgres:
+    image: supabase/postgres:15.14.1.112@sha256:241b86a756cb940f8a6c285c13b2f088a2590e2cfd1e024b4ba554dfc23e4393
+    environment:
+      POSTGRES_DB: knowledge_test
+      POSTGRES_PASSWORD: synthetic-test-only
+      POSTGRES_USER: supabase_admin
+    labels:
+      knowledge.disposable: "true"
+      knowledge.stack: manual-local
+    ports:
+      - "127.0.0.1:59910:5432"
+    volumes:
+      - knowledge_postgres:/var/lib/postgresql/data
+    networks: [knowledge_internal]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U supabase_admin -d knowledge_test"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+
+  bootstrap:
+    image: postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777
+    profiles: [setup]
+    environment: &database_environment
+      KNOWLEDGE_E2E_DATABASE_URL: postgresql://supabase_admin:synthetic-test-only@postgres:5432/knowledge_test
+    volumes:
+      - ../../..:/repo:ro
+    command: ["/repo/contrib/deploying/knowledge/local-stack-bootstrap.sh", "bootstrap"]
+    networks: [knowledge_internal]
+
+  schema:
+    image: knowledge-manual-local-schema:manual-v1
+    profiles: [setup]
+    environment:
+      KNOWLEDGE_MIGRATION_DATABASE_URL: postgresql://supabase_admin:synthetic-test-only@postgres:5432/knowledge_test
+    networks: [knowledge_internal]
+
+  fixture:
+    image: postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777
+    profiles: [setup]
+    environment: *database_environment
+    volumes:
+      - ../../..:/repo:ro
+    command: ["/repo/contrib/deploying/knowledge/local-stack-bootstrap.sh", "fixture"]
+    networks: [knowledge_internal]
+
+  storage:
+    image: fsouza/fake-gcs-server@sha256:797ce226d62f947c009dc40246b30cfb456b8473d8241407f9d6f2c04e4d69ef
+    entrypoint: ["/bin/fake-gcs-server"]
+    command:
+      - -scheme
+      - http
+      - -host
+      - 0.0.0.0
+      - -port
+      - "4443"
+      - -public-host
+      - storage:4443
+      - -filesystem-root
+      - /data
+    labels:
+      knowledge.disposable: "true"
+      knowledge.stack: manual-local
+    ports:
+      - "127.0.0.1:59912:4443"
+    volumes:
+      - knowledge_storage:/data
+    networks: [knowledge_internal]
+
+  redis:
+    image: redis:7-alpine@sha256:6ab0b6e7381779332f97b8ca76193e45b0756f38d4c0dcda72dbb3c32061ab99
+    command: ["redis-server", "--appendonly", "yes"]
+    labels:
+      knowledge.disposable: "true"
+      knowledge.stack: manual-local
+    ports:
+      - "127.0.0.1:59911:6379"
+      - "127.0.0.1:4302:4302"
+    volumes:
+      - knowledge_redis:/data
+    networks: [knowledge_internal]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+
+  parser:
+    image: knowledge-manual-local-parser-e2e:manual-v1
+    environment:
+      STORAGE_EMULATOR_HOST: http://storage-api:8081
+    depends_on:
+      storage-api:
+        condition: service_started
+    networks: [parser_internal]
+
+  storage-api:
+    image: knowledge-manual-local-parser-e2e:manual-v1
+    command: ["node", "/usr/local/bin/images-storage-emulator-proxy.mjs"]
+    environment:
+      KNOWLEDGE_STORAGE_EMULATOR_TARGET: http://storage:4443
+      PORT: "8081"
+    depends_on:
+      storage:
+        condition: service_started
+    networks: [knowledge_internal, parser_internal]
+
+  ingest:
+    image: knowledge-manual-local-ingest-e2e:manual-v1
+    command: ["node", "e2e-dist/local-ingest.js"]
+    restart: unless-stopped
+    environment:
+      INNGEST_BASE_URL: http://inngest:8288/
+      INNGEST_DEV: "1"
+      KNOWLEDGE_E2E_DATABASE_URL: postgresql://supabase_admin:synthetic-test-only@postgres:5432/knowledge_test
+      KNOWLEDGE_E2E_PARSER_URL: http://parser:8080
+      KNOWLEDGE_E2E_SYNTHETIC_FIXTURES: "1"
+      PORT: "4301"
+      STORAGE_EMULATOR_HOST: http://storage-api:8081
+    depends_on:
+      postgres:
+        condition: service_healthy
+      parser:
+        condition: service_started
+    labels:
+      knowledge.disposable: "true"
+      knowledge.stack: manual-local
+    ports:
+      - "127.0.0.1:4301:4301"
+    networks: [knowledge_internal, parser_internal]
+
+  inngest:
+    image: inngest/inngest:v1.19.4@sha256:d53a2edc9f1d5d9185fdb3a36f840a81533c19ba67109aed3a1b852f2db838d6
+    command:
+      - inngest
+      - dev
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8288"
+      - --persist
+      - --retry-interval
+      - "1"
+      - --no-discovery
+      - --sdk-url
+      - http://ingest:4301/api/inngest
+    depends_on:
+      - ingest
+    labels:
+      knowledge.disposable: "true"
+      knowledge.stack: manual-local
+    ports:
+      - "127.0.0.1:59914:8288"
+    volumes:
+      - knowledge_inngest:/data
+    working_dir: /data
+    networks: [knowledge_internal]
+
+  query:
+    image: knowledge-manual-local-ingest-e2e:manual-v1
+    command: ["node", "e2e-dist/local-query.js"]
+    restart: unless-stopped
+    environment:
+      KNOWLEDGE_E2E_DATABASE_URL: postgresql://supabase_admin:synthetic-test-only@postgres:5432/knowledge_test
+      KNOWLEDGE_E2E_SYNTHETIC_FIXTURES: "1"
+      KNOWLEDGE_REDIS_URL: redis://localhost:6379
+      PORT: "4302"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    labels:
+      knowledge.disposable: "true"
+      knowledge.stack: manual-local
+    network_mode: service:redis
+
+  portal:
+    image: knowledge-manual-local-web-e2e:manual-v1
+    environment:
+      KNOWLEDGE_COMPANY_ID: company-b
+      KNOWLEDGE_E2E_DOCKER: "1"
+      KNOWLEDGE_E2E_SYNTHETIC_FIXTURES: "1"
+      KNOWLEDGE_MANUAL_SOURCE_JSON: '{"sourceId":"source-b","displayName":"Operations manuals"}'
+      KNOWLEDGE_QUERY_AUDIENCE: e2e-query
+      KNOWLEDGE_QUERY_URL: http://redis:4302
+      KNOWLEDGE_WEB_ORIGIN: https://localhost:4200
+      KNOWLEDGE_WORKER_AUDIENCE: e2e-worker
+      KNOWLEDGE_WORKER_URL: http://ingest:4301
+    depends_on:
+      - ingest
+      - query
+    labels:
+      knowledge.disposable: "true"
+      knowledge.stack: manual-local
+    ports:
+      - "127.0.0.1:4200:4200"
+    networks: [knowledge_internal]
+
+networks:
+  knowledge_internal:
+  parser_internal:
+    internal: true
+
+volumes:
+  knowledge_inngest:
+  knowledge_postgres:
+  knowledge_redis:
+  knowledge_storage:

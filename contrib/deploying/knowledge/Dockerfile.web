@@ -16,10 +16,22 @@ COPY --from=pruner /repo/out/full/ ./
 RUN pnpm --filter knowledge build
 RUN pnpm --filter knowledge deploy --prod --legacy --ignore-scripts /runtime
 
+FROM builder AS e2e
+WORKDIR /repo/apps/knowledge
+ENV NODE_ENV=test
+ENV KNOWLEDGE_RELEASE_PROFILE=manual-v1
+ENV PORT=4200
+RUN apk add --no-cache openssl
+COPY contrib/deploying/knowledge/images-web-e2e.mjs /usr/local/bin/images-web-e2e.mjs
+EXPOSE 4200
+CMD ["node", "/usr/local/bin/images-web-e2e.mjs"]
+
 FROM node:22-alpine AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
+ENV KNOWLEDGE_RELEASE_PROFILE=manual-v1
 ENV PORT=8080
 COPY --from=builder /runtime ./
+RUN rm -rf app tests .react-router
 EXPOSE 8080
 CMD ["node", "node_modules/@react-router/serve/bin.js", "build/server/index.js"]

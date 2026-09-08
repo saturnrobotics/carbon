@@ -1,6 +1,11 @@
 import { defineConfig } from "@playwright/test";
 
 const externalBaseUrl = process.env.KNOWLEDGE_E2E_BASE_URL;
+if (
+  externalBaseUrl &&
+  new URL(externalBaseUrl).href !== "https://localhost:4200/"
+)
+  throw new Error("KNOWLEDGE_E2E_BASE_URL must be the fixed local test origin");
 
 export default defineConfig({
   testDir: "./tests",

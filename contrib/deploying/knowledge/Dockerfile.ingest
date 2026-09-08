@@ -16,10 +16,33 @@ COPY --from=pruner /repo/out/full/ ./
 RUN pnpm --filter knowledge-worker build
 RUN pnpm --filter knowledge-worker deploy --prod --legacy --ignore-scripts /runtime
 
-FROM node:22-alpine AS runtime
+FROM pruner AS e2e-pruner
+RUN corepack pnpm dlx turbo@2.9.6 prune knowledge-worker knowledge-query --docker --out-dir out-e2e
+
+FROM node:22-alpine AS e2e-builder
+WORKDIR /repo
+RUN corepack enable
+COPY --from=e2e-pruner /repo/out-e2e/json/ ./
+RUN pnpm install --frozen-lockfile --ignore-scripts
+COPY --from=e2e-pruner /repo/out-e2e/full/ ./
+RUN pnpm --filter knowledge-worker exec tsup \
+  src/test/local-ingest.ts src/test/local-query.ts \
+  --format esm --no-splitting --out-dir e2e-dist
+
+FROM node:22-alpine AS runtime-base
 WORKDIR /app
 ENV NODE_ENV=production
+ENV KNOWLEDGE_RELEASE_PROFILE=manual-v1
 ENV PORT=8080
 COPY --from=builder /runtime ./
+
+FROM e2e-builder AS e2e
+WORKDIR /repo/apps/knowledge-worker
+ENV NODE_ENV=test
+ENV KNOWLEDGE_RELEASE_PROFILE=manual-v1
+ENV KNOWLEDGE_E2E_SYNTHETIC_FIXTURES=1
+CMD ["node", "e2e-dist/local-ingest.js"]
+
+FROM runtime-base AS runtime
 EXPOSE 8080
 CMD ["node", "dist/index.js"]

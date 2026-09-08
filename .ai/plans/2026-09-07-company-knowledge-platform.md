@@ -472,8 +472,8 @@ Release acceptance (local implementation):
 
 - [x] Configured library and identity are required; deferred HTTP routes stay disabled.
 - [x] Bounded PDF/raster upload, extraction review, and fixed metadata fields are
-      implemented. The isolated parser contract is tested; live parser execution
-      remains a local container integration gate.
+      implemented. The production parser command now passes real PDF extraction
+      and raster OCR checks in local containers.
 - [x] Publish reviewed metadata and immutable original-version references; retries
       are idempotent, review changes cannot silently mutate published versions,
       and deleted documents cannot be resurrected.
@@ -482,13 +482,13 @@ Release acceptance (local implementation):
 - [x] Deny other companies and unauthorized users; warmed search caches and direct
       download links stop working after revocation or deletion.
 - [x] Complete HTTPS browser workflow passed against disposable real PostgreSQL.
-      Google assertion verification, GCS, and Cloud Run parser execution are
-      explicitly substituted external boundaries in that local test.
+      Google assertions and parser-job transport are synthetic; actual extraction,
+      emulated object storage, Redis and Inngest execute in local containers.
 - [x] Scoped unit/integration, type, build and role-security checks passed. Local
       keyword performance is reported separately from cloud latency.
 - [x] Independent service release inputs, pinned configuration rules, and operator
       bootstrap/recovery instructions are provided.
-- [ ] Local container integration: real parser image, emulated object storage,
+- [x] Local container integration: real parser image, emulated object storage,
       service integration, recovery and complete browser workflow.
 - [ ] Restricted production verification: real Google SSO, private ingress,
       service IAM, storage permissions, rollout/rollback and pilot acceptance.
@@ -501,6 +501,27 @@ and release configuration must not activate them even if old environment values
 remain. Authentication is verified locally using synthetic assertions; a successful
 local test does not establish real Google sign-in or deployed service readiness.
 
+
+### Active goal: local-only completion
+
+The user subsequently narrowed the active goal to local verification only.
+Production preparation, deployment and user rollout are deferred. Do not create
+cloud resources while executing this goal. This boundary supersedes later
+production steps in the release approach and the broader roadmap below.
+
+- [x] Build all six production manual workflow images from the isolated release checkout (native ARM and AMD64).
+- [x] Verify actual PDF extraction and raster OCR through the parser container.
+- [x] Run portal, query, ingestion, PostgreSQL, Redis, storage emulator and background processing in the local Docker stack.
+- [x] Prove upload, real extraction, review, publication, search and exact original download.
+- [x] Prove permissions, tenant isolation, warmed-cache revocation, deletion, retries and duplicate prevention.
+- [x] Prove service restarts, isolated backup/restore and independent service updates.
+- [x] Complete relevant automated gates and record local workflow latency.
+
+Astra owns integration and security review; separate Sol agents own images/parser
+and local integration; Luna runs prescribed checks and records evidence. Each
+agent has explicit file ownership. No agent may count mocked extraction or a
+cloud-specific assumption as local integration evidence. Target three hours
+elapsed, without skipping a gate to meet that target.
 
 ### Revised release approach: local Docker validation
 
@@ -545,9 +566,10 @@ The restricted production checks cover those boundaries without a second cloud
 application environment. No production resource changes have been made.
 
 
-Implementation is in progress. See `.ai/runs/2026-09-07-company-knowledge-platform.md`
-for verified local evidence and outstanding operational gates. Checkboxes below
-require the entire task acceptance boundary, not merely implemented code.
+The seven-step local goal is complete. See
+`.ai/runs/2026-09-08-local-manual-verification.md` for verified evidence and limits.
+The broader roadmap below remains deferred; its checkboxes require each entire
+task acceptance boundary, not merely implemented code.
 
 - [ ] Task 01: Add contracts, isolated test tooling, and package boundaries.
 - [ ] Task 02: Build a dependency-aware release planner.

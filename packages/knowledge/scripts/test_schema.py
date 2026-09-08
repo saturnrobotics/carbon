@@ -70,6 +70,32 @@ class PolicyTests(unittest.TestCase):
     def setUpClass(cls):
         sql(Path(__file__).with_name('policy-fixtures.sql').read_text())
 
+    def test_ingest_source_read_uses_machine_scope_without_human_helper_acl_failure(self):
+        result = sql("""
+BEGIN;
+INSERT INTO knowledge.source(id,"companyId","createdBy",kind,"externalId","displayName","ownerId",classification,"providerPolicy")
+VALUES
+ ('ingest-source-proof','company-b','bob','upload','ingest-proof','Synthetic ingest proof','bob','internal',
+  '{"machineCallers":["ingest-proof-caller"],"ingestDatabaseRoles":["supabase_admin"]}'),
+ ('ingest-source-denied','company-b','bob','upload','ingest-denied','Synthetic denied source','bob','internal',
+  '{"machineCallers":["another-caller"],"ingestDatabaseRoles":["supabase_admin"]}');
+SET LOCAL ROLE knowledge_ingest;
+SET LOCAL knowledge.company_id='company-b';
+SET LOCAL knowledge.actor_id='';
+SET LOCAL knowledge.caller_id='ingest-proof-caller';
+SET LOCAL knowledge.source_id='ingest-source-proof';
+SELECT 'allowed:' || coalesce(string_agg(id,',' ORDER BY id),'') FROM knowledge.source;
+SET LOCAL knowledge.caller_id='unassigned-caller';
+SELECT 'wrong-caller:' || count(*) FROM knowledge.source;
+SET LOCAL knowledge.caller_id='ingest-proof-caller';
+SET LOCAL knowledge.company_id='company-a';
+SELECT 'wrong-company:' || count(*) FROM knowledge.source;
+ROLLBACK;
+""")
+        self.assertIn('allowed:ingest-source-proof', result.splitlines())
+        self.assertIn('wrong-caller:0', result.splitlines())
+        self.assertIn('wrong-company:0', result.splitlines())
+
     def test_visible_manual_and_chunks_exclude_same_blob_with_other_acl(self):
         self.assertEqual(as_reader('alice', 'company-a', 'SELECT id FROM knowledge.document ORDER BY id'), ['doc-a'])
         self.assertEqual(as_reader('alice', 'company-a', 'SELECT text FROM knowledge.chunk ORDER BY id'), ['Visible manual'])

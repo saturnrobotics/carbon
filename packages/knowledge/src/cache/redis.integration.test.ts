@@ -8,7 +8,9 @@ it("the first connection can populate and read an authorized cache envelope", as
   const url = new URL(configured);
   if (
     !["127.0.0.1", "localhost"].includes(url.hostname) ||
-    url.port !== "59913" ||
+    (url.protocol !== "redis:" && url.protocol !== "rediss:") ||
+    !url.port ||
+    url.port === "6379" ||
     process.env.KNOWLEDGE_TEST_DATABASE_DISPOSABLE !== "1"
   )
     throw Error("Refusing non-disposable Redis");

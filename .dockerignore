@@ -94,3 +94,12 @@ llm
 
 **/__pycache__/
 **/*.pyc
+
+# Keep private inputs excluded after the knowledge tooling allow-list above.
+# Docker uses the last matching rule, including directory re-inclusions.
+**/.local
+**/.env*
+**/secrets/
+**/*.secret
+**/.terraform
+**/*.tfstate*

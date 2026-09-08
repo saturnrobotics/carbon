@@ -1604,3 +1604,36 @@ full-screen ERP route.
 **Rule:** Prefer isolated local integration tests when requested. Identify the specific managed-cloud boundaries that require live verification and test them with restricted access and synthetic data on the intended deployment. Do not turn a recommended staging topology into an approved requirement.
 
 **Applies to:** Deployment planning, local emulators, and initial cloud acceptance.
+
+
+## Execute each container's default entrypoint after a successful build
+
+**Context:** A standalone schema job compiled successfully into an ESM container artifact.
+
+**Problem:** Its bundler included a CommonJS database driver without a compatible require bridge, so the image crashed on a Node builtin before reaching the database. Image build success did not establish executable runtime correctness.
+
+**Rule:** Smoke each production container through its default entrypoint, including finite jobs, against an explicitly disposable fixture. Keep runtime dependencies external or use the existing ESM require bridge when bundling CommonJS. Verify the intended deployment architecture separately from the laptop's native architecture.
+
+**Applies to:** Standalone service/job images, tsup bundles and local release validation.
+
+
+## Exercise each runtime role against every helper in an applicable RLS policy
+
+**Context:** The real background delivery path selected an upload source as the ingestion role.
+
+**Problem:** A shared source SELECT policy referenced a human visibility helper in another OR branch. PostgreSQL required its EXECUTE privilege even though the machine branch was the intended authorization path; mocked processor tests did not catch the failure.
+
+**Rule:** Verify helper execution privileges through actual runtime-role queries. Do not rely on Boolean short-circuiting to avoid permission checks. Use a narrow helper grant or role-specific policy, then prove that unassigned callers, sources and companies still return no rows.
+
+**Applies to:** Shared RLS policies and background ingestion role integration tests.
+
+
+## Verify effective container arguments and final context exclusions
+
+**Context:** Local container validation used a third-party storage emulator and a tooling allow-list in `.dockerignore`.
+
+**Problem:** Compose `command` did not replace seed-loading arguments baked into the image entrypoint, so storage restart reassigned immutable generations. A later Docker context allow-list also overrode earlier exclusions for private local files.
+
+**Rule:** Inspect effective container `Path`/`Args`, not only Compose `command`, when startup behavior matters. Override the entrypoint explicitly when removing baked arguments. Put private-path exclusions after broad re-inclusions and prove them with synthetic files through an actual Docker build.
+
+**Applies to:** Persistent emulators, immutable object references, Docker build contexts and local deployment configuration.

@@ -48,7 +48,7 @@ export default defineConfig({
     // shim restores the known HTTPS loopback origin before the real action and
     // its production CSRF assertion execute.
     origin: "https://localhost:4200",
-    host: "127.0.0.1",
+    host: process.env.KNOWLEDGE_E2E_DOCKER === "1" ? "0.0.0.0" : "127.0.0.1",
     port: 4200,
     strictPort: true,
     https: {
