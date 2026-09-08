@@ -1,0 +1,166 @@
+{
+  "schemaVersion": 1,
+  "scope": "local disposable PostgreSQL retrieval and RLS only; excludes IAP, HTTP, model synthesis, and true OS cache eviction",
+  "fixture": {
+    "questions": 500,
+    "concurrentUsers": 10,
+    "documents": 500,
+    "logicalChunks": 100000,
+    "chunkRowsIncludingLexicalAndVectorProfiles": 200000,
+    "aclSelectivityPerUser": 0.1
+  },
+  "coldDefinition": "first measured pass in a new evaluator process after fixture verification and ANALYZE; operating-system page cache is not evicted",
+  "warmDefinition": "second measured pass in the same process and database",
+  "plans": {
+    "exact-acl": {
+      "planningTimeMs": 0.3,
+      "executionTimeMs": 4.072,
+      "plan": {
+        "Node Type": "Index Only Scan",
+        "Parallel Aware": false,
+        "Async Capable": false,
+        "Scan Direction": "Forward",
+        "Index Name": "document_id_sourceId_companyId_key",
+        "Relation Name": "document",
+        "Alias": "document",
+        "Startup Cost": 0.27,
+        "Total Cost": 5.07,
+        "Plan Rows": 1,
+        "Plan Width": 12,
+        "Actual Startup Time": 4.059,
+        "Actual Total Time": 4.06,
+        "Actual Rows": 1,
+        "Actual Loops": 1,
+        "Index Cond": "((id = 'perf_doc_000'::text) AND (\"sourceId\" = 'perf_source_100k'::text) AND (\"companyId\" = 'company-a'::text))",
+        "Rows Removed by Index Recheck": 0,
+        "Filter": "((CURRENT_USER = 'knowledge_migrate'::name) OR (pg_has_role(CURRENT_USER, 'knowledge_read'::name, 'member'::text) AND knowledge.document_visible(\"companyId\", id, NULL::text)) OR (pg_has_role(CURRENT_USER, 'knowledge_ingest'::name, 'member'::text) AND knowledge.machine_source(\"companyId\", \"sourceId\")) OR (pg_has_role(CURRENT_USER, 'knowledge_review'::name, 'member'::text) AND knowledge.document_review(\"companyId\", id, 'review'::text)) OR (CURRENT_USER = 'knowledge_retention_owner'::name))",
+        "Rows Removed by Filter": 0,
+        "Heap Fetches": 0,
+        "Shared Hit Blocks": 1632,
+        "Shared Read Blocks": 68,
+        "Shared Dirtied Blocks": 0,
+        "Shared Written Blocks": 0,
+        "Local Hit Blocks": 0,
+        "Local Read Blocks": 0,
+        "Local Dirtied Blocks": 0,
+        "Local Written Blocks": 0,
+        "Temp Read Blocks": 0,
+        "Temp Written Blocks": 0
+      }
+    },
+    "lexical": {
+      "planningTimeMs": 0.01,
+      "executionTimeMs": 13.161,
+      "plan": {
+        "Node Type": "Function Scan",
+        "Parallel Aware": false,
+        "Async Capable": false,
+        "Function Name": "search_lexical",
+        "Alias": "search_lexical",
+        "Startup Cost": 0.25,
+        "Total Cost": 10.25,
+        "Plan Rows": 1000,
+        "Plan Width": 432,
+        "Actual Startup Time": 13.152,
+        "Actual Total Time": 13.153,
+        "Actual Rows": 10,
+        "Actual Loops": 1,
+        "Shared Hit Blocks": 11654,
+        "Shared Read Blocks": 65,
+        "Shared Dirtied Blocks": 0,
+        "Shared Written Blocks": 0,
+        "Local Hit Blocks": 0,
+        "Local Read Blocks": 0,
+        "Local Dirtied Blocks": 0,
+        "Local Written Blocks": 0,
+        "Temp Read Blocks": 0,
+        "Temp Written Blocks": 0
+      }
+    },
+    "vector": {
+      "planningTimeMs": 0.012,
+      "executionTimeMs": 51.847,
+      "plan": {
+        "Node Type": "Function Scan",
+        "Parallel Aware": false,
+        "Async Capable": false,
+        "Function Name": "search_vector_exact",
+        "Alias": "search_vector_exact",
+        "Startup Cost": 0.25,
+        "Total Cost": 10.25,
+        "Plan Rows": 1000,
+        "Plan Width": 432,
+        "Actual Startup Time": 51.838,
+        "Actual Total Time": 51.839,
+        "Actual Rows": 10,
+        "Actual Loops": 1,
+        "Shared Hit Blocks": 46267,
+        "Shared Read Blocks": 5060,
+        "Shared Dirtied Blocks": 0,
+        "Shared Written Blocks": 0,
+        "Local Hit Blocks": 0,
+        "Local Read Blocks": 0,
+        "Local Dirtied Blocks": 0,
+        "Local Written Blocks": 0,
+        "Temp Read Blocks": 0,
+        "Temp Written Blocks": 0
+      }
+    }
+  },
+  "phases": {
+    "cold:exact-acl": {
+      "count": 500,
+      "errors": 0,
+      "errorRate": 0,
+      "recallAt10": 1,
+      "p50Ms": 4.605333999999857,
+      "p95Ms": 6.897041000000172,
+      "p99Ms": 11.892084000000068
+    },
+    "cold:lexical": {
+      "count": 500,
+      "errors": 0,
+      "errorRate": 0,
+      "recallAt10": 1,
+      "p50Ms": 22.780083999999988,
+      "p95Ms": 27.46912499999962,
+      "p99Ms": 30.099874999999884
+    },
+    "cold:vector": {
+      "count": 500,
+      "errors": 0,
+      "errorRate": 0,
+      "recallAt10": 1,
+      "p50Ms": 380.97775,
+      "p95Ms": 518.1182499999995,
+      "p99Ms": 548.0166660000014
+    },
+    "warm:exact-acl": {
+      "count": 500,
+      "errors": 0,
+      "errorRate": 0,
+      "recallAt10": 1,
+      "p50Ms": 4.858000000000175,
+      "p95Ms": 7.733625000000757,
+      "p99Ms": 8.632707999997365
+    },
+    "warm:lexical": {
+      "count": 500,
+      "errors": 0,
+      "errorRate": 0,
+      "recallAt10": 1,
+      "p50Ms": 24.22975000000224,
+      "p95Ms": 29.11175000000003,
+      "p99Ms": 34.030791000001045
+    },
+    "warm:vector": {
+      "count": 500,
+      "errors": 0,
+      "errorRate": 0,
+      "recallAt10": 1,
+      "p50Ms": 381.4783750000024,
+      "p95Ms": 412.6134170000005,
+      "p99Ms": 422.56579199999396
+    }
+  }
+}

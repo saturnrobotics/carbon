@@ -6,6 +6,9 @@
     "includes": [
       "./**/app/**/*.ts*",
       "./**/app/**/*.tsx*",
+      "./knowledge*/src/**/*.ts",
+      "./knowledge*/tests/**/*.ts",
+      "./knowledge*/*.ts",
       "!**/mcp*/lib/tools/**",
       "!**/mcp*/lib/server.ts"
     ]

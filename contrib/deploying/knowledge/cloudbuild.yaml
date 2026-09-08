@@ -1,0 +1,33 @@
+# Caller supplies immutable commit tag and one selected unit. This is a build-only
+# pipeline: release.py verifies the resulting OCI digest before any promotion.
+substitutions:
+  _UNIT: "probe"
+  _REPOSITORY: "knowledge"
+steps:
+  - name: gcr.io/cloud-builders/docker
+    id: build-selected-unit
+    entrypoint: bash
+    args:
+      - -ceu
+      - |
+        case "${_UNIT}" in
+          probe|web|query|ingest|parser|actions|schema) ;;
+          *) echo "Unknown knowledge unit" >&2; exit 2 ;;
+        esac
+        docker build --file "contrib/deploying/knowledge/Dockerfile.${_UNIT}" \
+          --tag "${_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_UNIT}:${COMMIT_SHA}" .
+  - name: gcr.io/cloud-builders/docker
+    id: push-selected-unit
+    entrypoint: bash
+    args:
+      - -ceu
+      - |
+        IMAGE="${_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_UNIT}:${COMMIT_SHA}"
+        docker push "$$IMAGE"
+        DIGEST="$$(docker inspect --format='{{index .RepoDigests 0}}' "$$IMAGE" | sed 's/.*@//')"
+        [[ "$$DIGEST" =~ ^sha256:[0-9a-f]{64}$$ ]] || { echo "registry did not return an immutable digest" >&2; exit 1; }
+        jq -n --arg unit "${_UNIT}" --arg image "$${IMAGE%@*}@$$DIGEST" --arg digest "$$DIGEST" \
+          '{unit: $$unit, image: $$image, image_digest: $$digest, source_commit: "${COMMIT_SHA}"}' \
+          | tee /workspace/build-receipt.json
+options:
+  logging: CLOUD_LOGGING_ONLY

@@ -1,0 +1,9 @@
+{
+  "extends": "@carbon/config/tsconfig/base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "strict": true
+  },
+  "include": ["scripts", "src"],
+  "exclude": ["node_modules", "dist"]
+}

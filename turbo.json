@@ -84,6 +84,39 @@
         "apps/erp/app/routes/api+/mcp+/lib/tool-metadata.json",
         "apps/erp/app/routes/api+/mcp+/lib/tool-manifest.digest.json"
       ]
+    },
+    "migration:new": {
+      "cache": false,
+      "outputs": ["migrations/**"]
+    },
+    "migrate:test": {
+      "cache": false,
+      "outputs": []
+    },
+    "generate:types": {
+      "cache": false,
+      "outputs": ["src/database.types.ts"]
+    },
+    "evaluate": {
+      "cache": false,
+      "outputs": []
+    },
+    "verify:security": {
+      "cache": false,
+      "outputs": []
+    },
+    "verify:deployment": {
+      "cache": false,
+      "outputs": []
+    },
+    "knowledge#build": {
+      "dependsOn": ["^build"]
+    },
+    "knowledge-query#build": {
+      "dependsOn": ["^build"]
+    },
+    "knowledge-worker#build": {
+      "dependsOn": ["^build"]
     }
   }
 }

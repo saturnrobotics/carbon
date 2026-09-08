@@ -1,0 +1,85 @@
+name: Knowledge platform checks
+
+on:
+  pull_request:
+    paths:
+      - "apps/knowledge*/**"
+      - "packages/knowledge/**"
+      - "packages/database/**"
+      - "contrib/deploying/knowledge/**"
+      - "contrib/deploying/gcp-tailscale/release*"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "turbo.json"
+      - ".github/workflows/knowledge-check.yml"
+  push:
+    branches: [saturn/main]
+    paths: ["apps/knowledge*/**", "packages/knowledge/**", "contrib/deploying/knowledge/**", "pnpm-lock.yaml", "turbo.json"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  foundation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - run: terraform -chdir=contrib/deploying/knowledge init -backend=false
+      - run: terraform -chdir=contrib/deploying/knowledge validate
+      - run: python3 -m unittest discover -s contrib/deploying/knowledge -p 'test_*.py'
+
+  runtime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      KNOWLEDGE_TEST_DATABASE_DISPOSABLE: "1"
+      KNOWLEDGE_TEST_DATABASE_URL: postgresql://knowledge_test_migrator:synthetic-test-only@127.0.0.1:59910/knowledge_test
+      KNOWLEDGE_TEST_REDIS_URL: redis://127.0.0.1:59913
+      KNOWLEDGE_E2E_SYNTHETIC_FIXTURES: "1"
+      KNOWLEDGE_E2E_DATABASE_URL: postgresql://knowledge_test_migrator:synthetic-test-only@127.0.0.1:59910/knowledge_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: corepack pnpm install --frozen-lockfile
+      - name: Start isolated synthetic PostgreSQL and Redis
+        run: |
+          docker run -d --name knowledge-schema-test --label knowledge.disposable=true --tmpfs /var/lib/postgresql/data:rw,size=2147483648 -p 127.0.0.1:59910:5432 -e POSTGRES_USER=supabase_admin -e POSTGRES_PASSWORD=synthetic-test-only -e POSTGRES_DB=knowledge_test supabase/postgres:15.14.1.112 postgres -D /etc/postgresql -c max_wal_size=128MB -c min_wal_size=32MB -c checkpoint_timeout=30s
+          docker run -d --name knowledge-cache-test --label knowledge.disposable=true -p 127.0.0.1:59913:6379 redis:7-alpine redis-server --save '' --appendonly no --maxmemory 64mb --maxmemory-policy allkeys-lru
+          for attempt in $(seq 1 30); do
+            if docker exec -e PGPASSWORD=synthetic-test-only knowledge-schema-test psql -X -U supabase_admin -d knowledge_test -At -c 'SELECT 1'; then break; fi
+            sleep 1
+          done
+          python3 packages/knowledge/scripts/setup-disposable.py
+      - name: Runtime unit and integration tests
+        run: |
+          corepack pnpm --filter @carbon/knowledge test
+          corepack pnpm --filter knowledge test
+          corepack pnpm --filter knowledge-query test
+          corepack pnpm --filter knowledge-worker test
+          corepack pnpm --filter @carbon/knowledge test:integration
+          corepack pnpm --filter knowledge-query exec vitest run --config ../../packages/knowledge/vitest.integration.config.ts src/query.integration.test.ts
+          python3 packages/knowledge/scripts/test_schema.py
+          python3 packages/knowledge/scripts/test_function_boundary.py
+          python3 packages/knowledge/scripts/test_epochs.py
+          python3 packages/knowledge/scripts/test_budgets.py
+          python3 packages/knowledge/scripts/test_machine_budgets.py
+          python3 packages/knowledge/scripts/test_request_limits.py
+          corepack pnpm --filter @carbon/knowledge verify:security
+      - name: Manual browser workflow
+        run: |
+          corepack pnpm --filter knowledge exec playwright install --with-deps chromium
+          corepack pnpm --filter knowledge test:e2e -- manual-workflow.spec.ts
+      - name: Independent production builds and typechecks
+        run: |
+          corepack pnpm exec turbo run typecheck --concurrency=2 --filter=@carbon/knowledge --filter=knowledge --filter=knowledge-query --filter=knowledge-worker
+          corepack pnpm exec turbo run build --concurrency=2 --filter=knowledge --filter=knowledge-query --filter=knowledge-worker
+      - name: Stop only this job's synthetic services
+        if: always()
+        run: docker rm -f knowledge-schema-test knowledge-cache-test

@@ -1514,3 +1514,52 @@ full-screen ERP route.
 **Problem:** A Gemini Developer API `generateContentRequest` wrapper was sent to Vertex `countTokens`. Mock responses accepted it, but the live endpoint rejected it before paid admission.
 **Rule:** Validate the exact provider's REST request shape against its reference and a bounded live preflight. Vertex `countTokens` takes `contents`, `model`, and `generationConfig` at the top level. Preserve the full generation schema in the estimate and keep provider diagnostics in private artifacts.
 **Applies to:** Managed inference adapters and their boundary tests.
+## A shared executor acquires callers nobody planned for — grep every importer before deleting one
+
+**Context:** The oRPC migration plan said MCP `call_tool` and the in-app agent were the two consumers of the MCP `direct-executor.ts`, so once both moved to `callOperation` the file could be deleted. A pre-deletion grep found a THIRD caller: `apps/erp/app/routes/api+/inngest.ts` registered `executeFunction` as the workflow engine's `setWorkflowDispatch` seam — every customer workflow `*.create` action ran through it.
+
+**Problem:** A convenient shared function gets wired into new seams (dependency-injection slots, dispatchers, adapters) without its own file ever changing, so the mental list of "who uses this" goes stale. Deleting it on the strength of the plan's caller list would have broken customer workflow create actions in production while every named caller kept working.
+
+**Rule:** Before deleting or changing the contract of any shared executor/service entry point, grep the WHOLE repo for its name (not just imports of its file — injection sites pass it by value: `setX(fn)`, `register(fn)`, config objects), and treat each hit as a caller to migrate in the same change. A DI/seam registration is a caller even though the dependency arrow points away from the file.
+
+**Applies to:** `apps/erp/app/routes/api+/v1+/lib/call.server.ts` (the shared entry point now), `packages/jobs/src/workflows/actions/dispatcher.ts`, any `set*`/`register*` seam.
+
+## In a bulk API sweep, a 4xx carrying a service's generic fallback string is a finding, not a pass
+
+**Context:** The 1,495-operation API sweep triaged all 274 WRITE-op 400s as "reached the DB, expected FK rejections" and flagged only 500s. `inventory_insertManualInventoryAdjustment` came back 400 with `"Failed to create manual inventory adjustment"` and was waved through — but that string is the service's FALLBACK for an edge-function error whose real message was suppressed. A customer later hit exactly this: the published schema advertised 12 `adjustmentType` values (the validator spread `itemLedgerTypes` into its enum) while the `post-inventory-adjustment` edge function accepts 5, so every LLM-guided "add stock" call failed undiagnosably.
+
+**Problem:** Bucketing sweep results by status code alone treats "the request was validly rejected" and "the error was swallowed somewhere in the chain" as the same outcome. The ops most likely to be broken-by-contract-drift are precisely the ones that fail with a generic message, because the generic message IS the symptom of a suppressed real error.
+
+**Rule:** When triaging sweep failures, grep the response bodies for known fallback strings (`"Failed to *"` service fallbacks, `getEdgeFunctionErrorMessage` second arguments) and treat each match as a defect to root-cause: either the advertised schema disagrees with the actual acceptor (enum/shape drift between a `.models.ts` validator and an edge function's `payloadValidator`), or an error-sanitization layer is eating a legible message. Published-schema enums must be exactly what the write path accepts — never a wider "domain" enum reused for convenience.
+
+**Applies to:** API/MCP sweep scripts, `apps/erp/app/modules/*/[a-z]*.models.ts` validators that feed `client.functions.invoke` wrappers, `packages/database/supabase/functions/lib/response.ts`, `apps/erp/app/utils/error.ts`.
+
+## Do not change shared disposable-database credentials to run a test
+
+**Context:** Parallel agents used one explicitly disposable knowledge-schema database with a documented synthetic migrator login.
+
+**Problem:** Changing the shared test role's password locally let one integration run proceed but interrupted another agent's migration run.
+
+**Rule:** Use the documented shared-fixture credential exactly as provided. If it is missing or fails, ask the fixture owner or use a separately created disposable database; never alter a shared test role's password for convenience.
+
+**Applies to:** Shared disposable PostgreSQL fixtures and parallel migration/integration test runs.
+
+## SECURITY DEFINER does not bypass forced row security for a table owner
+
+**Context:** A maintenance function needed narrowly scoped access to purge expired rows from forced-RLS tables.
+
+**Problem:** Owning a `SECURITY DEFINER` function with the table-owner role still left its updates and deletes subject to `FORCE ROW LEVEL SECURITY`. Moving the function to a dedicated owner also restored PostgreSQL's default `PUBLIC EXECUTE` grant unless the new owner reset the ACL.
+
+**Rule:** For fixed-policy maintenance over forced-RLS tables, use a non-login, non-bypass function-owner role with explicit operation-specific table grants and RLS policies. Temporarily grant only what is needed to transfer ownership, remove every temporary membership, and revoke `PUBLIC EXECUTE` after the final ownership change. Test the function through its real caller role and prove ordinary runtime roles cannot execute it.
+
+**Applies to:** Retention, recovery, administrative repair, and other `SECURITY DEFINER` functions over forced-RLS schemas.
+
+## Prove restricted-role publication before building the surrounding workflow
+
+**Context:** A document workflow passed mocked services but failed its first browser run with a publish-only user.
+
+**Problem:** INSERT/UPDATE with RETURNING or ON CONFLICT invokes additional PostgreSQL SELECT-policy checks, including visibility of the new row. An owner-admin grant also both escalated uploaders and made publication require admin. Repeated failed tests left published fixture documents in later suites' search corpus.
+
+**Rule:** Exercise capture, review, publication, replay and deletion through the exact runtime roles early, including a publisher without admin. Keep permissions tied to the operation, never repair a failure by broadening the fixture user. Give each integration run unique content and clean its own visible fixture records even after a failed assertion.
+
+**Applies to:** Forced-RLS document workflows, immutable publication, and shared disposable integration databases.

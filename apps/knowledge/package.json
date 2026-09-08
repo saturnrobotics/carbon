@@ -1,0 +1,38 @@
+{
+  "name": "knowledge",
+  "version": "0.0.0",
+  "type": "module",
+  "private": true,
+  "sideEffects": false,
+  "scripts": {
+    "build": "react-router build",
+    "clean": "rimraf .cache .turbo node_modules build",
+    "dev": "react-router dev",
+    "start": "NODE_ENV=production react-router-serve ./build/server/index.js",
+    "test": "vitest run --passWithNoTests=false",
+    "test:e2e": "playwright test",
+    "typecheck": "tsgo --noEmit",
+    "typegen": "react-router typegen"
+  },
+  "dependencies": {
+    "@carbon/knowledge": "workspace:*",
+    "@react-router/dev": "catalog:",
+    "@react-router/serve": "catalog:",
+    "@vercel/react-router": "catalog:",
+    "isbot": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "react-router": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@carbon/config": "workspace:*",
+    "@playwright/test": "1.62.0",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "rimraf": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:"
+  }
+}

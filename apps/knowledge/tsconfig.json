@@ -1,0 +1,9 @@
+{
+  "extends": "@carbon/config/tsconfig/vite.json",
+  "compilerOptions": {
+    "paths": { "~/*": ["./app/*"] },
+    "rootDirs": [".", ".react-router/types"]
+  },
+  "include": ["app", ".react-router/types", "*.ts", "tests"],
+  "exclude": ["build", "node_modules"]
+}

@@ -9,6 +9,10 @@
 
 # Dependencies & build output
 node_modules
+**/node_modules
+**/test-results
+**/playwright-report
+**/.cert
 .turbo
 .cache
 dist
@@ -59,6 +63,12 @@ packages/database/supabase/seed.sql
 .claude-flow
 .superpowers
 .carbon-worktree
+.ai
+.codex
+**/.local
+**/.terraform
+**/*.tfstate*
+**/.env*
 .mcp.json
 opencode.json
 .pr-review
@@ -72,8 +82,15 @@ opencode.json
 # Not needed inside the image
 docs
 contrib
+!contrib/
+!contrib/deploying/
+!contrib/deploying/knowledge/
+!contrib/deploying/knowledge/**
 llm
 
 # OS / logs
 .DS_Store
 *.log
+
+**/__pycache__/
+**/*.pyc

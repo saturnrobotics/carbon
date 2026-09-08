@@ -1,0 +1,31 @@
+{
+  "name": "knowledge-query",
+  "version": "0.0.0",
+  "type": "module",
+  "private": true,
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --out-dir dist",
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/index.js",
+    "test": "vitest run --passWithNoTests=false",
+    "typecheck": "tsgo --noEmit"
+  },
+  "dependencies": {
+    "@carbon/knowledge": "workspace:*",
+    "pg": "8.20.0",
+    "@carbon/utils": "workspace:*",
+    "@internationalized/date": "catalog:",
+    "google-auth-library": "11.0.2",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@carbon/config": "workspace:*",
+    "@types/node": "catalog:",
+    "tsup": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "@types/pg": "8.15.6"
+  }
+}

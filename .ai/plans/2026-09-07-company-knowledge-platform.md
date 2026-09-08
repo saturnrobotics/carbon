@@ -455,6 +455,55 @@ answer. Do not optimize aggregate averages by hiding slow or unauthorized cases.
 
 ## 3. Progress and dependency graph
 
+### Approved release boundary: manual-v1
+
+The user approved narrowing the current implementation to the complete read-only
+manual workflow. This section supersedes the broader release scope below; the
+24-task program remains a follow-on roadmap, not a claim about this release.
+
+The application permits authorized document intake and curation; natural-language
+queries themselves are read-only. The release uses one configured upload library,
+Google workforce identity, current company/source permissions, exact and keyword
+retrieval, and original immutable document versions. It requires no model provider.
+Access follows the configured library's real permissions, not an advisory metadata
+label. Search results are evidence links and snippets, not generated answers.
+
+Release acceptance (local implementation):
+
+- [x] Configured library and identity are required; deferred HTTP routes stay disabled.
+- [x] Bounded PDF/raster upload, extraction review, and fixed metadata fields are
+      implemented. The isolated parser contract is tested; live parser execution
+      remains a staging gate.
+- [x] Publish reviewed metadata and immutable original-version references; retries
+      are idempotent, review changes cannot silently mutate published versions,
+      and deleted documents cannot be resurrected.
+- [x] Find a published manual by identifiers/keywords and download its exact
+      original through fresh authorization, as an attachment with sniffing disabled.
+- [x] Deny other companies and unauthorized users; warmed search caches and direct
+      download links stop working after revocation or deletion.
+- [x] Complete HTTPS browser workflow passed against disposable real PostgreSQL.
+      Google assertion verification, GCS, and Cloud Run parser execution are
+      explicitly substituted external boundaries in that local test.
+- [x] Scoped unit/integration, type, build and role-security checks passed. Local
+      keyword performance is reported separately from cloud latency.
+- [x] Independent service release inputs, pinned configuration rules, and operator
+      bootstrap/recovery instructions are provided.
+- [ ] Operational staging: real Google SSO, parser OCI image build/execution,
+      private ingress, service rollout/rollback and pilot acceptance.
+
+Deferred from this release: Drive synchronization, semantic/vector retrieval,
+generated answers, receipt-aware "recently received" disambiguation, voice,
+Kanban commands, purchasing actions, and generic CRM/engineering adapters. Any
+existing implementation of those paths is unreleased work. The manual-v1 runtime
+and release configuration must not activate them even if old environment values
+remain. Authentication is verified locally using synthetic assertions; a successful
+local test does not establish real Google sign-in or deployed service readiness.
+
+
+Implementation is in progress. See `.ai/runs/2026-09-07-company-knowledge-platform.md`
+for verified local evidence and outstanding operational gates. Checkboxes below
+require the entire task acceptance boundary, not merely implemented code.
+
 - [ ] Task 01: Add contracts, isolated test tooling, and package boundaries.
 - [ ] Task 02: Build a dependency-aware release planner.
 - [ ] Task 03: Remove Carbon's routine full-stack rollout coupling.
