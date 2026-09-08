@@ -20,6 +20,19 @@ SPEC.loader.exec_module(ci)
 
 
 class ScopeTests(unittest.TestCase):
+    def test_swagger_helpers_and_proof_require_real_schema_verification(self):
+        registry = json.loads(
+            (Path(__file__).parents[1] / "generated-artifacts.json").read_text()
+        )
+        for path in (
+            "scripts/lib/swagger-schema.ts",
+            "scripts/lib/swagger-schema.test.ts",
+            "scripts/lib/swagger-partner-alias.sql",
+            ".fork/tests/schema-artifacts.test.ts",
+        ):
+            with self.subTest(path=path):
+                self.assertTrue(all(ci.classify([path], registry=registry).values()))
+
     def test_authored_docs_keep_source_checks_without_database_or_runtime_jobs(self):
         scope = ci.classify([".fork/plans/example.md", "docs/content/guide.mdx"])
         self.assertEqual(

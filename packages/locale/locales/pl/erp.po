@@ -6927,6 +6927,9 @@ msgstr "Powód wykluczenia"
 msgid "Executive P&L"
 msgstr "Rachunek zysków i strat dla kierownictwa"
 
+msgid "Exempt"
+msgstr "Zwolniony z podatku"
+
 msgid "Exemption Certificate"
 msgstr "Certifikat Zwolnienia"
 
@@ -16783,6 +16786,9 @@ msgstr "Procent podatku"
 msgid "Tax Residual Value %"
 msgstr "Podatkowa wartość rezydualna %"
 
+msgid "Tax Status"
+msgstr "Status podatkowy"
+
 msgid "Tax Useful Life (default)"
 msgstr "Okres użytkowania dla podatku (domyślnie)"
 
@@ -16797,6 +16803,9 @@ msgstr "Podatki, rabaty i wysyłka są wyświetlane prawidłowo"
 
 msgid "Tax:"
 msgstr "Podatek:"
+
+msgid "Taxable"
+msgstr "Podlegający opodatkowaniu"
 
 msgid "Taxes"
 msgstr "Podatki"

@@ -6927,6 +6927,9 @@ msgstr "Motivo de exclusión"
 msgid "Executive P&L"
 msgstr "Estado de Resultados Ejecutivo"
 
+msgid "Exempt"
+msgstr "Exento de impuestos"
+
 msgid "Exemption Certificate"
 msgstr "Certificado de Exención"
 
@@ -16783,6 +16786,9 @@ msgstr "Porcentaje de Impuesto"
 msgid "Tax Residual Value %"
 msgstr "Valor residual fiscal %"
 
+msgid "Tax Status"
+msgstr "Estado fiscal"
+
 msgid "Tax Useful Life (default)"
 msgstr "Vida útil fiscal (predeterminada)"
 
@@ -16797,6 +16803,9 @@ msgstr "Los impuestos, descuentos y envío están representados correctamente."
 
 msgid "Tax:"
 msgstr "Impuesto:"
+
+msgid "Taxable"
+msgstr "Sujeto a impuestos"
 
 msgid "Taxes"
 msgstr "Impuestos"

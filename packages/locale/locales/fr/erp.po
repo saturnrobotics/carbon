@@ -6927,6 +6927,9 @@ msgstr "Motif d’exclusion"
 msgid "Executive P&L"
 msgstr "Compte de résultat exécutif"
 
+msgid "Exempt"
+msgstr "Exonéré de taxe"
+
 msgid "Exemption Certificate"
 msgstr "Certificat d'Exonération"
 
@@ -16783,6 +16786,9 @@ msgstr "Pourcentage de taxe"
 msgid "Tax Residual Value %"
 msgstr "Valeur résiduelle fiscale %"
 
+msgid "Tax Status"
+msgstr "Statut fiscal"
+
 msgid "Tax Useful Life (default)"
 msgstr "Durée d'utilité fiscale (par défaut)"
 
@@ -16797,6 +16803,9 @@ msgstr "Les taxes, les remises et les frais d'expédition sont correctement repr
 
 msgid "Tax:"
 msgstr "Taxe :"
+
+msgid "Taxable"
+msgstr "Assujetti à la taxe"
 
 msgid "Taxes"
 msgstr "Taxes"

@@ -6927,6 +6927,9 @@ msgstr "제외 사유"
 msgid "Executive P&L"
 msgstr "경영진 손익계산"
 
+msgid "Exempt"
+msgstr "면세"
+
 msgid "Exemption Certificate"
 msgstr "면세 증명서"
 
@@ -16783,6 +16786,9 @@ msgstr "세금 비율"
 msgid "Tax Residual Value %"
 msgstr "세금 잔존가액 %"
 
+msgid "Tax Status"
+msgstr "과세 상태"
+
 msgid "Tax Useful Life (default)"
 msgstr "세금 내용연수 (기본값)"
 
@@ -16797,6 +16803,9 @@ msgstr "세금, 할인, 배송비가 올바르게 표시됩니다."
 
 msgid "Tax:"
 msgstr "세금:"
+
+msgid "Taxable"
+msgstr "과세"
 
 msgid "Taxes"
 msgstr "세금"

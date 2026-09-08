@@ -6927,6 +6927,9 @@ msgstr "बाहर रखने का कारण"
 msgid "Executive P&L"
 msgstr "कार्यकारी P&L"
 
+msgid "Exempt"
+msgstr "कर मुक्त"
+
 msgid "Exemption Certificate"
 msgstr "छूट प्रमाणपत्र"
 
@@ -16783,6 +16786,9 @@ msgstr "कर प्रतिशत"
 msgid "Tax Residual Value %"
 msgstr "कर अवशिष्ट मूल्य %"
 
+msgid "Tax Status"
+msgstr "कर स्थिति"
+
 msgid "Tax Useful Life (default)"
 msgstr "कर उपयोगी जीवन (डिफ़ॉल्ट)"
 
@@ -16797,6 +16803,9 @@ msgstr "कर, छूट और शिपिंग का सही ढंग �
 
 msgid "Tax:"
 msgstr "कर:"
+
+msgid "Taxable"
+msgstr "कर योग्य"
 
 msgid "Taxes"
 msgstr "कर"

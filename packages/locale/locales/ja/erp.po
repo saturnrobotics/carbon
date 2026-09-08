@@ -6927,6 +6927,9 @@ msgstr "除外理由"
 msgid "Executive P&L"
 msgstr "経営幹部向けP&L"
 
+msgid "Exempt"
+msgstr "非課税"
+
 msgid "Exemption Certificate"
 msgstr "免除証明書"
 
@@ -16782,6 +16785,9 @@ msgstr "税率"
 msgid "Tax Residual Value %"
 msgstr "税務残存価額 %"
 
+msgid "Tax Status"
+msgstr "課税ステータス"
+
 msgid "Tax Useful Life (default)"
 msgstr "税務耐用年数（デフォルト）"
 
@@ -16796,6 +16802,9 @@ msgstr "税金、値引、送料が正しく表示される"
 
 msgid "Tax:"
 msgstr "税:"
+
+msgid "Taxable"
+msgstr "課税"
 
 msgid "Taxes"
 msgstr "税金"

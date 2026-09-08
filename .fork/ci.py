@@ -34,6 +34,7 @@ GLOBAL_INPUTS = {
 SCHEMA_INPUTS = {
     ".fork/schema.py",
     ".fork/tests/test_schema.py",
+    ".fork/tests/schema-artifacts.test.ts",
     "scripts/generate-db-types.ts",
     "scripts/generate-swagger-docs.ts",
     "packages/database/src/types.ts",
@@ -385,6 +386,17 @@ def application(root, base):
             "--filter=!@carbon/jobs",
         ],
         job_unit_command,
+        [
+            "corepack",
+            "pnpm",
+            "--filter",
+            "erp",
+            "exec",
+            "vitest",
+            "run",
+            "test/localization-rendering.integration.test.ts",
+            "--passWithNoTests=false",
+        ],
         [
             "corepack",
             "pnpm",

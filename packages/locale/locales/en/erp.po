@@ -6927,6 +6927,9 @@ msgstr "Exclusion reason"
 msgid "Executive P&L"
 msgstr "Executive P&L"
 
+msgid "Exempt"
+msgstr "Exempt"
+
 msgid "Exemption Certificate"
 msgstr "Exemption Certificate"
 
@@ -16783,6 +16786,9 @@ msgstr "Tax Percent"
 msgid "Tax Residual Value %"
 msgstr "Tax Residual Value %"
 
+msgid "Tax Status"
+msgstr "Tax Status"
+
 msgid "Tax Useful Life (default)"
 msgstr "Tax Useful Life (default)"
 
@@ -16797,6 +16803,9 @@ msgstr "Tax, discounts, and shipping are represented correctly"
 
 msgid "Tax:"
 msgstr "Tax:"
+
+msgid "Taxable"
+msgstr "Taxable"
 
 msgid "Taxes"
 msgstr "Taxes"

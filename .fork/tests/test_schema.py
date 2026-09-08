@@ -3,7 +3,12 @@
 import importlib.util
 import json
 from pathlib import Path
+import subprocess
+import tempfile
+import threading
 import unittest
+import urllib.error
+import urllib.request
 
 SPEC = importlib.util.spec_from_file_location(
     "fork_schema", Path(__file__).parents[1] / "schema.py"
@@ -11,6 +16,109 @@ SPEC = importlib.util.spec_from_file_location(
 schema = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(schema)
 PREFIX = schema.MIGRATIONS
+
+
+class StudioAdapterTests(unittest.TestCase):
+    def setUp(self):
+        self.queries = []
+
+        def query(body):
+            self.queries.append(json.loads(body))
+            return [{"synthetic": "catalog proof"}]
+
+        self.server = schema.http.server.ThreadingHTTPServer(
+            ("127.0.0.1", 0),
+            schema.studio_schema_adapter(b'{"swagger":"2.0"}', "SELECT 1;", query),
+        )
+        self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
+        self.thread.start()
+        self.addCleanup(self.close)
+
+    def close(self):
+        self.server.shutdown()
+        self.server.server_close()
+        self.thread.join()
+
+    def post(self, path, body):
+        request = urllib.request.Request(
+            f"http://127.0.0.1:{self.server.server_port}{path}",
+            data=json.dumps(body).encode(),
+            headers={"Content-Type": "application/json"},
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=5) as response:
+                return response.status, json.load(response)
+        except urllib.error.HTTPError as error:
+            with error:
+                return error.code, None
+
+    def test_real_generator_endpoint_returns_allocated_catalog_proof(self):
+        status, result = self.post(
+            "/api/platform/pg-meta/default/query", {"query": "SELECT 1;"}
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(result, [{"synthetic": "catalog proof"}])
+        self.assertEqual(self.queries, [{"query": "SELECT 1;"}])
+
+    def test_arbitrary_query_and_extra_execution_options_are_rejected(self):
+        for body in (
+            {"query": "DROP TABLE example"},
+            {"query": "SELECT 1;", "connection": "another"},
+        ):
+            with self.subTest(body=body):
+                status, _ = self.post("/api/platform/pg-meta/default/query", body)
+                self.assertEqual(status, 400)
+        self.assertEqual(self.queries, [])
+
+    def test_other_studio_projects_are_rejected(self):
+        status, _ = self.post(
+            "/api/platform/pg-meta/another/query", {"query": "SELECT 1;"}
+        )
+        self.assertEqual(status, 404)
+        self.assertEqual(self.queries, [])
+
+
+class RevisionInputTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory(prefix="carbon-schema-input-")
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        self.helper = self.root / "scripts/lib/example.ts"
+        self.helper.parent.mkdir(parents=True)
+        self.helper.write_text("export const example = true;\n")
+        self.git("init", "-q")
+        self.git("config", "user.name", "Synthetic Test")
+        self.git("config", "user.email", "test@example.com")
+        self.git("add", "scripts/lib/example.ts")
+        self.git("commit", "-qm", "synthetic base")
+        self.revision = self.git("rev-parse", "HEAD")
+
+    def git(self, *args):
+        return subprocess.check_output(
+            ["git", "-C", str(self.root), *args], text=True
+        ).strip()
+
+    def test_deleted_committed_generator_cannot_attest_head(self):
+        self.helper.unlink()
+        with self.assertRaisesRegex(ValueError, "uncommitted"):
+            schema.check_revision_inputs(self.root, self.revision)
+
+    def test_candidate_cannot_be_its_own_upgrade_baseline(self):
+        with self.assertRaisesRegex(ValueError, "precede"):
+            schema.check_upgrade_baseline(self.root, self.revision, self.revision)
+
+    def test_real_prior_commit_is_an_upgrade_baseline(self):
+        self.helper.write_text("export const example = false;\n")
+        self.git("add", "scripts/lib/example.ts")
+        self.git("commit", "-qm", "synthetic candidate")
+        schema.check_upgrade_baseline(
+            self.root, self.revision, self.git("rev-parse", "HEAD")
+        )
+
+    def test_sql_proof_is_a_generator_input(self):
+        path = "scripts/lib/swagger-partner-alias.sql"
+        (self.root / path).write_text("SELECT 1;\n")
+        self.assertIn(path, schema.generation_inputs(self.root))
 
 
 class ProvenanceTests(unittest.TestCase):

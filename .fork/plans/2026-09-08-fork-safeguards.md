@@ -35,3 +35,28 @@ Run generator and fork suites, relevant deployment tests, frozen fresh install, 
 See `.fork/decisions/2026-09-08-fork-safeguard-validation.md` for actual results and inherited failures. GitHub protection was applied and independently verified. Local safeguard/generator/operator suites and scoped typechecks passed; generated artifacts were rebuilt and reviewed. Independent reviewers found and helped close false-pass paths in CI, source snapshots, and disposable provenance.
 
 Full promotion remains blocked by two existing ERP localization tests and nondeterministic Swagger primary-key annotations across otherwise identical disposable schemas. Keep those results failed and the implementation branch unpromoted; do not claim Task 6's integration requirement is complete until exact-SHA mandatory CI passes. No existing database was rebuilt, no source was published, and the original checkout's lockfile edit remains untouched.
+
+## Authorized blocker repairs
+
+The user authorized both repairs after diagnosis. The original checkout is now
+clean following the user's removal of the unnecessary lockfile edit.
+
+- [x] Replace inaccurate localization checks with syntax-aware regression guards,
+  translate the three customer tax labels, and prove an actual locale switch.
+  Run the focused localization tests, catalog extraction/compilation, the full ERP
+  test suite, and scoped ERP typecheck.
+- [x] Correct the Swagger producer's known duplicate-alias primary-key annotation
+  using verified database lineage and constraints. Preserve foreign-key metadata
+  and strict artifact comparison; add rejection fixtures for changed assumptions.
+  Register transitive inputs and require the generator regressions in CI.
+- [ ] Regenerate from owned disposable infrastructure, review the proposed
+  artifacts, then prove fresh/upgrade convergence and repeatability for the
+  committed candidate. Run safeguard tests, source lint, and an independent review.
+  Record local evidence separately from the remaining exact-SHA remote CI gate.
+
+Local repair checks: 1,016 ERP unit tests, 49 standalone generator/wiring tests,
+111 safeguard Python tests, scoped ERP typecheck, and the real browser locale
+switch passed. Disposable repair generation applied all 1,000 migrations and
+produced identical artifacts twice. The reviewed Swagger output changes only the
+two alias descriptions; the DB type copies and backup manifest still match.
+Strict committed fresh/upgrade verification follows the candidate commit.

@@ -15,6 +15,7 @@ import json
 import os
 from pathlib import Path
 import re
+import runpy
 import signal
 import subprocess
 import sys
@@ -33,6 +34,23 @@ ARTIFACTS = {
     "swagger": "packages/database/src/swagger-docs-schema.ts",
     "backup": "packages/jobs/manifests/schema.json",
 }
+GENERATION_PATTERNS = (
+    ".fork/schema.py",
+    ".fork/schema-*.ts",
+    ".fork/tests/schema-*.test.ts",
+    ".fork/verify.py",
+    ".fork/generated-artifacts.json",
+    "scripts/generate-db-types.ts",
+    "scripts/generate-swagger-docs.ts",
+    "scripts/lib/*.ts",
+    "scripts/lib/*.sql",
+    "packages/jobs/src/backups/**/*.ts",
+    "package.json",
+    "packages/jobs/package.json",
+    "pnpm-lock.yaml",
+    "pnpm-workspace.yaml",
+    "tsconfig.json",
+)
 
 
 def check_artifact_inventory(registry):
@@ -72,26 +90,75 @@ def check_committed_inputs(committed, current):
 
 
 def generation_inputs(root):
-    patterns = (
-        ".fork/schema.py",
-        ".fork/schema-*.ts",
-        ".fork/generated-artifacts.json",
-        "scripts/generate-db-types.ts",
-        "scripts/generate-swagger-docs.ts",
-        "scripts/lib/*.ts",
-        "packages/jobs/src/backups/**/*.ts",
-        "package.json",
-        "packages/jobs/package.json",
-        "pnpm-lock.yaml",
-        "pnpm-workspace.yaml",
-        "tsconfig.json",
-    )
     return {
         path.relative_to(root).as_posix(): path.read_bytes()
-        for pattern in patterns
+        for pattern in GENERATION_PATTERNS
         for path in root.glob(pattern)
         if path.is_file()
     }
+
+
+def check_revision_inputs(root, revision):
+    current = generation_inputs(root)
+    tracked = set(
+        git(root, "ls-tree", "-r", "--name-only", revision).decode().splitlines()
+    )
+    matches = runpy.run_path(str(Path(__file__).with_name("verify.py")))["matches"]
+    check_committed_inputs(
+        {
+            path: git(root, "show", f"{revision}:{path}")
+            for path in tracked
+            if matches(path, GENERATION_PATTERNS)
+        },
+        current,
+    )
+
+
+def check_upgrade_baseline(root, base, revision):
+    if base == revision:
+        raise ValueError("upgrade baseline must precede the candidate")
+    git(root, "merge-base", "--is-ancestor", base, revision)
+
+
+def studio_schema_adapter(payload, proof_sql, query):
+    class StudioSchemaAdapter(http.server.BaseHTTPRequestHandler):
+        def do_POST(self):
+            if self.path != "/api/platform/pg-meta/default/query":
+                self.send_error(404)
+                return
+            try:
+                length = int(self.headers.get("Content-Length", "0"))
+                if not 0 < length <= 1_000_000:
+                    raise ValueError("invalid request length")
+                body = self.rfile.read(length)
+                if json.loads(body) != {"query": proof_sql}:
+                    raise ValueError("unexpected catalog query")
+            except (ValueError, UnicodeError):
+                self.send_error(400)
+                return
+            try:
+                result = json.dumps(query(body)).encode()
+            except (OSError, ValueError):
+                self.send_error(502, "Allocated catalog proof unavailable")
+                return
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(result)
+
+        def do_GET(self):
+            if self.path != "/api/platform/projects/default/api/rest":
+                self.send_error(404)
+                return
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(payload)
+
+        def log_message(self, format, *args):
+            pass
+
+    return StudioSchemaAdapter
 
 
 def bootstrap_ready(tables_ready, services):
@@ -618,20 +685,21 @@ class DisposableStack:
             raise ValueError("disposable PostgREST schema generation failed") from error
         payload = json.dumps(swagger).encode()
 
-        class StudioSchemaAdapter(http.server.BaseHTTPRequestHandler):
-            def do_GET(self):
-                if self.path != "/api/platform/projects/default/api/rest":
-                    self.send_error(404)
-                    return
-                self.send_response(200)
-                self.send_header("Content-Type", "application/json")
-                self.end_headers()
-                self.wfile.write(payload)
+        meta_port = self.published_port("meta", 8080)
+        proof_sql = (self.root / "scripts/lib/swagger-partner-alias.sql").read_text()
 
-            def log_message(self, format, *args):
-                pass
+        def query(body):
+            request = urllib.request.Request(
+                f"http://127.0.0.1:{meta_port}/query",
+                data=body,
+                headers={"Content-Type": "application/json"},
+            )
+            with urllib.request.urlopen(request, timeout=60) as response:
+                return json.load(response)
 
-        server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), StudioSchemaAdapter)
+        server = http.server.ThreadingHTTPServer(
+            ("127.0.0.1", 0), studio_schema_adapter(payload, proof_sql, query)
+        )
         thread = threading.Thread(target=server.serve_forever, daemon=True)
         thread.start()
         self.env["PORT_STUDIO"] = str(server.server_port)
@@ -710,20 +778,10 @@ def main():
     base_revision = (
         git(root, "rev-parse", "--verify", args.base + "^{commit}").decode().strip()
     )
-    git(root, "merge-base", "--is-ancestor", base_revision, revision)
+    check_upgrade_baseline(root, base_revision, revision)
     current_inputs = generation_inputs(root)
     if not args.regenerate:
-        tracked = set(
-            git(root, "ls-tree", "-r", "--name-only", revision).decode().splitlines()
-        )
-        check_committed_inputs(
-            {
-                path: git(root, "show", f"{revision}:{path}")
-                for path in current_inputs
-                if path in tracked
-            },
-            current_inputs,
-        )
+        check_revision_inputs(root, revision)
         check_platform_inputs(
             {
                 path: git(root, "show", f"{base_revision}:{path}")

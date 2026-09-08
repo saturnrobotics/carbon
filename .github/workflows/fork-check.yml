@@ -80,6 +80,7 @@ jobs:
       - name: Test generator failures and dispatch wiring
         run: |
           corepack pnpm exec tsx --test scripts/lib/generate-db-types.test.ts
+          corepack pnpm exec tsx --test scripts/lib/swagger-schema.test.ts
           corepack pnpm exec tsx --test .fork/tests/*.test.ts
           corepack pnpm check:manifest
           corepack pnpm check:workflow-catalog
@@ -144,7 +145,9 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: corepack pnpm install --frozen-lockfile
-      - name: Scoped unit tests, generated routes, types, and builds
+      - name: Install the pinned browser for locale-switch verification
+        run: corepack pnpm --dir apps/erp exec playwright-core install --with-deps chromium
+      - name: Scoped unit tests, locale rendering, generated routes, types, and builds
         env:
           FORK_BASE: ${{ needs.prepare.outputs.base }}
         run: python3 .fork/ci.py application --base "$FORK_BASE"

@@ -6927,6 +6927,9 @@ msgstr "Причина исключения"
 msgid "Executive P&L"
 msgstr "П&У для руководства"
 
+msgid "Exempt"
+msgstr "Не облагается налогом"
+
 msgid "Exemption Certificate"
 msgstr "Сертификат освобождения"
 
@@ -16783,6 +16786,9 @@ msgstr "Процент налога"
 msgid "Tax Residual Value %"
 msgstr "Налоговая ликвидационная стоимость %"
 
+msgid "Tax Status"
+msgstr "Налоговый статус"
+
 msgid "Tax Useful Life (default)"
 msgstr "Налоговый срок полезного использования (по умолчанию)"
 
@@ -16797,6 +16803,9 @@ msgstr "Налоги, скидки и доставка указаны прави
 
 msgid "Tax:"
 msgstr "Налог:"
+
+msgid "Taxable"
+msgstr "Облагается налогом"
 
 msgid "Taxes"
 msgstr "Налоги"

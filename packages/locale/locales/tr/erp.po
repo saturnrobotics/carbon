@@ -6927,6 +6927,9 @@ msgstr "Hariç tutma gerekçesi"
 msgid "Executive P&L"
 msgstr "Yönetici P&L"
 
+msgid "Exempt"
+msgstr "Vergiden muaf"
+
 msgid "Exemption Certificate"
 msgstr "İstisnai Sertifika"
 
@@ -16783,6 +16786,9 @@ msgstr "Vergi Yüzdesi"
 msgid "Tax Residual Value %"
 msgstr "Vergi Kalıntı Değeri %"
 
+msgid "Tax Status"
+msgstr "Vergi durumu"
+
 msgid "Tax Useful Life (default)"
 msgstr "Vergi faydalı ömrü (varsayılan)"
 
@@ -16797,6 +16803,9 @@ msgstr "Vergi, iskontoler ve gönderim bedeli doğru şekilde temsil ediliyor"
 
 msgid "Tax:"
 msgstr "Vergi:"
+
+msgid "Taxable"
+msgstr "Vergiye tabi"
 
 msgid "Taxes"
 msgstr "Vergiler"

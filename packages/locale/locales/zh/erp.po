@@ -6927,6 +6927,9 @@ msgstr "排除原因"
 msgid "Executive P&L"
 msgstr "执行损益表"
 
+msgid "Exempt"
+msgstr "免税"
+
 msgid "Exemption Certificate"
 msgstr "豁免证书"
 
@@ -16783,6 +16786,9 @@ msgstr "税收百分比"
 msgid "Tax Residual Value %"
 msgstr "税务残值 %"
 
+msgid "Tax Status"
+msgstr "税务状态"
+
 msgid "Tax Useful Life (default)"
 msgstr "税使用年限（默认）"
 
@@ -16797,6 +16803,9 @@ msgstr "税费、折扣和运费均正确表示"
 
 msgid "Tax:"
 msgstr "税:"
+
+msgid "Taxable"
+msgstr "应税"
 
 msgid "Taxes"
 msgstr "税"

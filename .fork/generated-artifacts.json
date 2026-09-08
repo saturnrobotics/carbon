@@ -86,7 +86,9 @@
       "group": "schema",
       "inputs": [
         "packages/database/supabase/migrations/**",
-        "scripts/generate-swagger-docs.ts"
+        "scripts/generate-swagger-docs.ts",
+        "scripts/lib/swagger-schema*",
+        "scripts/lib/swagger-partner-alias.sql"
       ],
       "tracked": ["packages/database/src/swagger-docs-schema.ts"],
       "command": ["corepack", "pnpm", "run", "generate:swagger"],

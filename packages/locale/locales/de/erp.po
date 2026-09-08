@@ -6927,6 +6927,9 @@ msgstr "Ausschlussgrund"
 msgid "Executive P&L"
 msgstr "Geschäftsführungs-Gewinn- und Verlustrechnung"
 
+msgid "Exempt"
+msgstr "Steuerbefreit"
+
 msgid "Exemption Certificate"
 msgstr "Ausnahmezertifikat"
 
@@ -16783,6 +16786,9 @@ msgstr "Steuerprozentsatz"
 msgid "Tax Residual Value %"
 msgstr "Steuerlicher Restwert %"
 
+msgid "Tax Status"
+msgstr "Steuerstatus"
+
 msgid "Tax Useful Life (default)"
 msgstr "Steuerliche Nutzungsdauer (Standard)"
 
@@ -16797,6 +16803,9 @@ msgstr "Steuern, Rabatte und Versand werden korrekt dargestellt"
 
 msgid "Tax:"
 msgstr "Steuern:"
+
+msgid "Taxable"
+msgstr "Steuerpflichtig"
 
 msgid "Taxes"
 msgstr "Steuern"
