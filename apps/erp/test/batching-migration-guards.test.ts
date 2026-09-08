@@ -19,7 +19,7 @@ const migrations = join(
 );
 const read = (rel: string) => readFileSync(join(migrations, rel), "utf8");
 
-const migration = read("20260821024449_job-operation-batching.sql");
+const migration = read("20260905132037_job-operation-batching.sql");
 
 describe("get_batchable_operations is tenant-scoped via RLS", () => {
   test("the candidate RPC runs as SECURITY INVOKER so the caller's RLS applies", () => {
@@ -39,17 +39,19 @@ describe("started operations are excluded from batch candidates", () => {
     );
   });
 
-  test("the lane branch renders Active AND Completing batches (read-only Completing)", () => {
-    // The board shows Active batches (drag targets) and Completing batches
-    // (read-only, awaiting a retry in MES). Both must appear as lanes.
-    expect(migration).toMatch(/OR b\."status"\s+IN\s*\('Active',\s*'Completing'\)/);
+  test("the lane branch renders Planned, Active and Completing batches", () => {
+    // Planned and Active batches are drag targets; Completing batches remain
+    // visible read-only while awaiting a retry in MES.
+    expect(migration).toMatch(
+      /OR b\."status"\s+IN\s*\('Planned',\s*'Active',\s*'Completing'\)/
+    );
   });
 });
 
 describe("batch status enum", () => {
-  test("is Active/Completing/Completed with Completing from day one", () => {
+  test("includes the complete Planned/Active/Completing/Completed lifecycle", () => {
     expect(migration).toMatch(
-      /CREATE TYPE "jobOperationBatchStatus" AS ENUM \('Active', 'Completing', 'Completed'\)/
+      /CREATE TYPE "jobOperationBatchStatus" AS ENUM \('Planned', 'Active', 'Completing', 'Completed'\)/
     );
   });
 

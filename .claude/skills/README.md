@@ -4,6 +4,10 @@ Source of truth for agent skills (tracked in git). Copied into `.codex/skills/`
 by `.ai/scripts/install-skills.sh` (runs on `pnpm prepare`; manually:
 `pnpm install-skills`). Authoring rules: `writing-skills/SKILL.md`.
 
+For work retained on this fork, [the fork policy](../../.fork/agent-policy.md)
+overrides the inherited artifact destinations below. Use `.fork/` for authored
+fork records and ignored `.fork/local/` for execution logs and transient state.
+
 ## Pipelines
 
 **Feature** (phased, human gates at spec + plan):
@@ -45,6 +49,7 @@ in root-cause, BLOCKED in fix) always surface to the human.
 
 | Skill | Purpose | Produces |
 |-------|---------|----------|
+| `fork-maintenance` | Verified upstream integration, conflict handling, and durable fork safeguards | isolated candidate + `.fork/` records |
 | `research` | Competitor/industry survey for a feature | `.ai/research/{slug}.md` |
 | `spec-writing` | Design + spec with Open Questions hard stop | `.ai/specs/{date}-{slug}.md` |
 | `grill` | Interview stress-test of a plan/spec/design, one question at a time | resolutions in the spec/plan, or `.ai/runs/{date}-grill-{slug}.md` |

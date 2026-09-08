@@ -1,0 +1,181 @@
+name: Fork verification
+
+on:
+  push:
+    branches: [saturn/main, "sync/**"]
+  pull_request:
+    branches: [saturn/main]
+  workflow_dispatch:
+    inputs:
+      base:
+        description: Previous reviewed integration commit (full SHA, an ancestor of the candidate)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fork-verification-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHONDONTWRITEBYTECODE: "1"
+  CARBON_EDITION: community
+  CARBON_PORTLESS: "0"
+
+jobs:
+  prepare:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      revision: ${{ steps.prepare.outputs.revision }}
+      base: ${{ steps.prepare.outputs.base }}
+      upstream: ${{ steps.prepare.outputs.upstream }}
+      scope: ${{ steps.prepare.outputs.scope }}
+      schema: ${{ steps.prepare.outputs.schema }}
+      application: ${{ steps.prepare.outputs.application }}
+      invoice: ${{ steps.prepare.outputs.invoice }}
+      knowledge: ${{ steps.prepare.outputs.knowledge }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The scheduled dispatcher targets this workflow on saturn/main, so
+          # its event SHA and every checkout identify the same candidate.
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Validate immutable source before dependency installation
+        id: prepare
+        env:
+          FORK_EXPECTED_REVISION: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          git fetch --no-tags https://github.com/crbnos/carbon.git refs/heads/main
+          merged_upstream="$(git merge-base HEAD FETCH_HEAD)"
+          python3 .fork/ci.py prepare --revision "$FORK_EXPECTED_REVISION" --upstream "$merged_upstream"
+      - name: Exercise failure fixtures before any lifecycle scripts
+        run: python3 .fork/ci.py unittest --directory .fork/tests
+
+  source:
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CARBON_ISOLATION_TEST_IMAGE: postgres:15.14-alpine
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.revision }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: corepack pnpm install --frozen-lockfile
+      - name: Verify outputs against their committed baseline and repeat generation
+        run: python3 .fork/verify.py generated --group source --group knowledge --group build --group routes
+      - name: Test generator failures and dispatch wiring
+        run: |
+          corepack pnpm exec tsx --test scripts/lib/generate-db-types.test.ts
+          corepack pnpm exec tsx --test .fork/tests/*.test.ts
+          corepack pnpm check:manifest
+          corepack pnpm check:workflow-catalog
+      - name: Install the lint tool version used by the safeguard fixtures
+        run: python3 -m pip install --disable-pip-version-check ruff==0.4.1 PyYAML==6.0.2
+      - name: Strict lint of every changed supported source file
+        env:
+          FORK_BASE: ${{ needs.prepare.outputs.base }}
+        run: python3 .fork/ci.py lint --base "$FORK_BASE"
+      - name: Verify actual Biome discovery for scripts and fork test roots
+        run: python3 .fork/tests/biome-live.py
+      - name: Operator and policy regression suites
+        run: |
+          docker pull "$CARBON_ISOLATION_TEST_IMAGE"
+          python3 .fork/ci.py unittest --directory .fork/tests
+          python3 .fork/ci.py unittest --directory contrib/deploying/gcp-tailscale
+  schema:
+    needs: prepare
+    if: needs.prepare.outputs.schema == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.revision }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: corepack pnpm install --frozen-lockfile
+      - name: Fresh and upgrade schemas in newly allocated disposable infrastructure
+        env:
+          FORK_BASE: ${{ needs.prepare.outputs.base }}
+        run: python3 .fork/schema.py --base "$FORK_BASE"
+
+  application:
+    needs: prepare
+    if: needs.prepare.outputs.application == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      INVOICE_INTAKE_ENABLED: "false"
+      INNGEST_SIGNING_KEY: test
+      INNGEST_EVENT_KEY: test
+      SESSION_SECRET: synthetic-ci-session-secret
+      AUTH_PROVIDERS: email
+      DISABLE_RESEND: "true"
+      RESEND_API_KEY: re_synthetic_ci
+      POSTHOG_API_HOST: http://localhost:3000
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.revision }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: corepack pnpm install --frozen-lockfile
+      - name: Scoped unit tests, generated routes, types, and builds
+        env:
+          FORK_BASE: ${{ needs.prepare.outputs.base }}
+        run: python3 .fork/ci.py application --base "$FORK_BASE"
+
+  invoice:
+    needs: prepare
+    if: needs.prepare.outputs.invoice == 'true'
+    uses: ./.github/workflows/saturn-invoice-check.yml
+    with:
+      verified_revision: ${{ needs.prepare.outputs.revision }}
+
+  knowledge:
+    needs: prepare
+    if: needs.prepare.outputs.knowledge == 'true'
+    uses: ./.github/workflows/knowledge-check.yml
+    with:
+      verified_revision: ${{ needs.prepare.outputs.revision }}
+
+  fork-verified:
+    name: fork-verified
+    needs: [prepare, source, schema, application, invoice, knowledge]
+    if: always() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.revision || github.sha }}
+          persist-credentials: false
+      - name: Require every selected check for the exact candidate
+        env:
+          FORK_NEEDS_JSON: ${{ toJSON(needs) }}
+          FORK_REVISION: ${{ needs.prepare.outputs.revision }}
+        run: python3 .fork/ci.py aggregate --revision "$FORK_REVISION"

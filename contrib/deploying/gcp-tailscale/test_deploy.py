@@ -24,6 +24,18 @@ SECRETS = {"CLOUDFLARE_API_TOKEN": "test-token", "GOOGLE_CLIENT_ID": "test.apps.
 
 
 class ValidationTests(unittest.TestCase):
+    def test_unverified_revision_stops_before_publication_or_cloud_mutations(self):
+        planned = {"expected_generation": 2, "build": {"erp": []}, "configure": {}, "migrate": {}, "deploy": {"erp": []}}
+        with patch.object(deploy, "revision", return_value="a" * 40), \
+             patch.object(deploy, "verify_source", create=True) as verification, \
+             patch.object(deploy, "publish_source", side_effect=ValueError("published before verification")) as publish, \
+             patch.object(deploy, "Cloud") as cloud:
+            verification.require_verified.side_effect = ValueError("Fork verification is missing")
+            with self.assertRaisesRegex(ValueError, "Fork verification is missing"):
+                deploy.deploy(fixture(), {}, prepared_release=planned)
+            publish.assert_not_called()
+            cloud.assert_not_called()
+
     def test_commit_change_during_preparation_stops_before_publication(self):
         desired = {"prepared_source_commit": "a" * 40}
         planned = {"expected_generation": 2, "build": {}, "configure": {}, "migrate": {}, "deploy": {}}

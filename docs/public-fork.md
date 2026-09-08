@@ -33,29 +33,39 @@ git remote add upstream https://github.com/crbnos/carbon.git
 
 If `upstream` already exists, inspect it with `git remote get-url upstream` before
 changing it. `saturn/main` is the shared deployment branch. Start feature branches
-there, merge completed and verified features back into it, then merge the latest
-`upstream/main` before deployment. Prefer merges to rewriting the history of a
-shared branch. Do not reset the fork to upstream or force-push away changes.
+there and merge upstream into an isolated candidate branch. After verification,
+fast-forward the shared branch to that exact candidate commit. Preserve ancestry;
+do not reset the fork to upstream, rebase shared history, or force-push away changes.
 
 ```bash
 git switch saturn/main
 bash contrib/deploying/gcp-tailscale/fork.sh feature feature/example
-# Implement, review, verify, and commit the feature.
+# Implement and commit; review before authorized candidate publication.
+# Open a PR to saturn/main and wait for Fork verification / fork-verified.
 bash contrib/deploying/gcp-tailscale/fork.sh finish feature/example
 bash contrib/deploying/gcp-tailscale/fork.sh sync
-# Review the merged result and run the relevant checks.
+# Sync prints a separate candidate worktree and branch when upstream changed.
+# Resolve and regenerate there, commit, submit for verification, then promote.
 make deploy
 ```
 
 The helpers require a clean working tree, preserve normal Git hooks, and stop on
-conflicts. `sync` fetches and merges `upstream/main` directly into `saturn/main`;
+conflicts. `sync` fetches and merges `upstream/main` in a separate worktree and
+`sync/upstream-*` branch, preserving the original checkout and `saturn/main`.
+`finish` and `promote` require a candidate that includes the current shared branch,
+Git-snapshot preflight, and successful `Fork verification` for the exact candidate
+SHA before fast-forwarding the shared branch;
 `bash scripts/sync-upstream.sh` is a compatibility entry point for that command.
 There is no unattended merge job. Run `sync` regularly and before deployments.
 The full [branch workflow](../contrib/deploying/gcp-tailscale/WORKFLOW.md) includes
 collaboration, conflict recovery, and step-by-step commands.
 
-`make deploy` runs from the laptop with a clean checkout of `saturn/main`. It
-checks for unmerged upstream commits, publishes the reviewed deployment revision
+`make deploy` runs from the laptop with a clean checkout of `saturn/main`. Before
+publication or cloud mutations, it requires a successful `fork-check.yml` workflow
+and its `fork-verified` job for that exact revision. A verified candidate run at
+the same SHA is sufficient; missing, pending, skipped, failed, or unrelated
+results block deployment. No-op releases perform no publication or cloud mutations.
+The command checks for unmerged upstream commits, publishes the reviewed deployment revision
 to `origin/saturn/main` without force-pushing, and verifies anonymous source access.
 It then uploads a Git archive of the local commit to the deployment host for
 building. Publication is part of this command; inspect committed changes for
@@ -66,6 +76,8 @@ Keep deployment-specific changes under `contrib/deploying/gcp-tailscale/` and
 prefer focused additions over edits to upstream root files such as `README.md`.
 The root `Makefile` is a small entry point; put deployment behavior in the
 contributed scripts to reduce recurring upstream merge conflicts.
+Keep fork-specific agent policy and records in [`.fork/`](../.fork/README.md);
+avoid appending fork-only lessons or task records to upstream's shared `.ai/` files.
 
 Review upstream release notes and changes to authentication, dependencies,
 migrations, licensing, and deployment configuration. Resolve conflicts while

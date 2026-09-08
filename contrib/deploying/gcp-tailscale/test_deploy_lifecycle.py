@@ -72,6 +72,7 @@ class DeployLifecycleTests(unittest.TestCase):
         with ExitStack() as stack:
             stack.enter_context(redirect_stdout(io.StringIO()))
             stack.enter_context(patch.object(deploy, "revision", return_value=REVISION))
+            verification = stack.enter_context(patch.object(deploy.verify_source, "require_verified"))
             publish = stack.enter_context(patch.object(deploy, "publish_source"))
             factory = stack.enter_context(patch.object(deploy, "Cloud", return_value=cloud))
             dns = stack.enter_context(patch.object(deploy, "Cloudflare"))
@@ -81,6 +82,10 @@ class DeployLifecycleTests(unittest.TestCase):
             stack.enter_context(patch.object(deploy, "run", side_effect=archive))
             try:
                 deploy.deploy(config, desired, prepared_release=planned)
+                if publish.called:
+                    verification.assert_called_once_with(config["SOURCE_REPO_URL"], REVISION)
+                else:
+                    verification.assert_not_called()
             except ValueError as exc:
                 self.fail(f"Automatic deployment rejected a valid planned release: {exc}")
         return events, uploaded, cloud, publish, factory, dns, inference

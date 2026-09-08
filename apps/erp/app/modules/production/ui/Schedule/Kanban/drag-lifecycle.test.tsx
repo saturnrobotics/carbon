@@ -170,8 +170,8 @@ const operationItems = [
 
 // A live batch collapses to one draggable card in its work-center column.
 // Dragging it to another column reassigns the whole batch's work center
-// (intent "update" → priorityBatchingUpdate), while a within-column drop is a
-// no-op (member priorities own the card's position).
+// (intent "update" → priorityBatchingUpdate), while a within-column reorder
+// updates member priorities through the "reprioritize" intent.
 const batchItem = {
   id: "batch:BAT1",
   columnId: "wc-1",
@@ -777,13 +777,28 @@ describe("Operations board drag lifecycle", () => {
     );
   });
 
-  it("does not reassign a batch dropped within its own column", () => {
+  it("reprioritizes a batch within its own column without reassigning its work center", () => {
     const board = captureOperationsBoard([...operationItems, batchItem]);
 
     startItemDrag(board, batchItem);
     board.onDragEnd({
       active: itemActive(batchItem),
       over: itemOver(operationItems[0])
+    });
+
+    expect(submit).toHaveBeenCalledExactlyOnceWith(
+      { intent: "reprioritize", batchId: "BAT1", priority: -1 },
+      expect.objectContaining({ action: "/priority/batching/update" })
+    );
+  });
+
+  it("does not submit when a batch is dropped on itself", () => {
+    const board = captureOperationsBoard([...operationItems, batchItem]);
+
+    startItemDrag(board, batchItem);
+    board.onDragEnd({
+      active: itemActive(batchItem),
+      over: itemOver(batchItem)
     });
 
     expect(submit).not.toHaveBeenCalled();

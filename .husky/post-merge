@@ -1,4 +1,8 @@
 #!/bin/sh
+# Preserve committed evidence. Regeneration is explicit and checked against Git.
+if [ -f .fork/verify.py ]; then
+    exec python3 .fork/verify.py preflight --revision HEAD
+fi
 # Fresh git worktrees / clones lack .husky/_/ until `pnpm install` runs its
 # prepare script. Without this guard the hook crashes with a cryptic
 # ".husky/_/husky.sh: No such file or directory". Skip hooks gracefully instead.

@@ -8,9 +8,8 @@ import {
 } from "@carbon/jobs/inngest";
 import { serve } from "inngest/remix";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
-import { callOperation } from "./v1+/lib/call.server";
 import { validateHydratedInvoiceIntake } from "~/modules/invoicing/invoicing.server";
-import { executeFunction } from "./mcp+/lib/direct-executor";
+import { callOperation } from "./v1+/lib/call.server";
 
 /**
  * Inngest API endpoint.
@@ -45,7 +44,6 @@ function wireWorkflowDispatch() {
   setWorkflowDispatch((name, context, args) =>
     callOperation(name, { ...context, authKind: "session", scopes: {} }, args)
   );
-  setWorkflowDispatch(executeFunction);
   setProcurementScheduleDispatch(async (context, payload) =>
     callOperation(
       "knowledge_createProcurementDraft",

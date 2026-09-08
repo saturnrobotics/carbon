@@ -1,5 +1,6 @@
 import { requirePermissions } from "@carbon/auth/auth.server";
 import { getCarbonServiceRole } from "@carbon/auth/client.server";
+import { runLocationSchedule } from "@carbon/ee/planning";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@carbon/auth", () => ({
@@ -15,6 +16,12 @@ vi.mock("@carbon/auth/client.server", () => ({
 }));
 vi.mock("@carbon/auth/session.server", () => ({
   flash: vi.fn(async () => ({}))
+}));
+vi.mock("@carbon/ee/planning", () => ({
+  runLocationSchedule: vi.fn()
+}));
+vi.mock("~/services/database.server", () => ({
+  getDatabaseClient: vi.fn()
 }));
 vi.mock("@carbon/logger", () => ({
   getLogger: () => ({ error: vi.fn() })
@@ -45,6 +52,7 @@ vi.mock("~/modules/production", () => ({
 }));
 
 import { updateJobStatus } from "~/modules/production";
+import { getDatabaseClient } from "~/services/database.server";
 import { action } from "./$jobId.status";
 
 type QueryResult = { data: unknown; error: unknown };
@@ -97,6 +105,18 @@ function setup() {
     userId: "user-1"
   } as any);
   vi.mocked(getCarbonServiceRole).mockReturnValue(serviceRole as any);
+  const db = {} as ReturnType<typeof getDatabaseClient>;
+  vi.mocked(getDatabaseClient).mockReturnValue(db);
+  vi.mocked(runLocationSchedule).mockImplementation(async () => {
+    events.push("runLocationSchedule");
+    return {
+      locationId: "location-1",
+      jobsScheduled: 1,
+      jobsFailed: 0,
+      conflictsDetected: 0,
+      newlyLate: []
+    };
+  });
   vi.mocked(updateJobStatus).mockImplementation(async () => {
     events.push("updateJobStatus");
     return { data: { id: "job-1" }, error: null } as any;
@@ -136,13 +156,19 @@ describe("Job release status action", () => {
 
     expect(updateJobStatus).toHaveBeenCalledOnce();
     expect(events).toContain("updateJobStatus");
-    expect(events).toContain("invoke:schedule");
-    // Regression guard: the `schedule` edge function only batches jobs already
+    expect(runLocationSchedule).toHaveBeenCalledExactlyOnceWith({
+      db: getDatabaseClient(),
+      client: getCarbonServiceRole(),
+      locationId: "location-1",
+      companyId: "company-1",
+      userId: "user-1"
+    });
+    // Regression guard: the in-process scheduler only batches jobs already
     // Ready/In Progress/Paused. If the status is committed AFTER the scheduler
     // runs, the freshly released job is filtered out of its own schedule run and
     // never lands in capacityReservation / the forecast.
     expect(events.indexOf("updateJobStatus")).toBeLessThan(
-      events.indexOf("invoke:schedule")
+      events.indexOf("runLocationSchedule")
     );
   });
 });

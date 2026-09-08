@@ -1,6 +1,6 @@
 {
-  "totalTools": 1494,
-  "modules": 15,
+  "totalTools": 1503,
+  "modules": 16,
   "tools": [
     {"name":"account_deleteUserAttributeValue","classification":"DESTRUCTIVE","paramCount":2,"schema":"0d38e12233b4","response":"bcde375ebd4c","injectAuth":"companyId","permission":"none"},
     {"name":"account_getAccount","classification":"READ","paramCount":1,"schema":"3797626bd17e","response":"8adb0e14ee10","injectAuth":"companyId","permission":"none"},
@@ -151,7 +151,7 @@
     {"name":"documents_getDocumentExtensions","classification":"READ","paramCount":0,"schema":"efddc7bd8bbc","response":"b24f77557f86","injectAuth":"companyId","permission":"documents:view"},
     {"name":"documents_getDocumentLabels","classification":"READ","paramCount":0,"schema":"efddc7bd8bbc","response":"7e2eeb0066ab","injectAuth":"companyId","permission":"documents:view"},
     {"name":"documents_getDocuments","classification":"READ","paramCount":6,"schema":"848cac7bea79","response":"1531ae9cb61a","injectAuth":"companyId","permission":"documents:view"},
-    {"name":"documents_insertDocumentExtraction","classification":"WRITE","paramCount":4,"schema":"790f2b883984","response":"d181256b2684","injectAuth":"companyId+createdBy+updatedBy","permission":"documents:create"},
+    {"name":"documents_insertDocumentExtraction","classification":"WRITE","paramCount":4,"schema":"1629051978c1","response":"d181256b2684","injectAuth":"companyId+createdBy+updatedBy","permission":"documents:create"},
     {"name":"documents_insertDocumentFavorite","classification":"WRITE","paramCount":1,"schema":"3797626bd17e","response":"bcde375ebd4c","injectAuth":"companyId+createdBy+updatedBy","permission":"documents:create"},
     {"name":"documents_insertDocumentLabel","classification":"WRITE","paramCount":2,"schema":"5c453c6c156d","response":"bcde375ebd4c","injectAuth":"companyId+createdBy+updatedBy","permission":"documents:create"},
     {"name":"documents_moveDocumentToTrash","classification":"WRITE","paramCount":1,"schema":"3797626bd17e","response":"bcde375ebd4c","injectAuth":"companyId+updatedBy","permission":"documents:update"},
@@ -201,11 +201,7 @@
     {"name":"inventory_getKanban","classification":"READ","paramCount":1,"schema":"369f807bc840","response":"a54d43903486","injectAuth":"companyId","permission":"inventory:view"},
     {"name":"inventory_getKanbans","classification":"READ","paramCount":2,"schema":"68cb4a73d5a9","response":"1e5027ab2d56","injectAuth":"companyId","permission":"inventory:view"},
     {"name":"inventory_getPickingList","classification":"READ","paramCount":1,"schema":"0a4ec3e7319b","response":"227255936b96","injectAuth":"companyId","permission":"inventory:view"},
-<<<<<<< HEAD
-    {"name":"inventory_getPickingListAvailability","classification":"READ","paramCount":1,"schema":"0a4ec3e7319b","response":"d8bb760d2850","injectAuth":"companyId","permission":"inventory:view"},
-=======
-    {"name":"inventory_getPickingListAvailability","classification":"READ","paramCount":1,"schema":"0a4ec3e7319b","response":"671b0869176d","injectAuth":"companyId","permission":"inventory:view"},
->>>>>>> 5202fbcb54 (knowledge base work step 1)
+    {"name":"inventory_getPickingListAvailability","classification":"READ","paramCount":1,"schema":"0a4ec3e7319b","response":"07f4a59328ba","injectAuth":"companyId","permission":"inventory:view"},
     {"name":"inventory_getPickingListLine","classification":"READ","paramCount":1,"schema":"063a6777d378","response":"b51ad23d436f","injectAuth":"companyId","permission":"inventory:view"},
     {"name":"inventory_getPickingListLines","classification":"READ","paramCount":1,"schema":"0a4ec3e7319b","response":"cc66c1b66f31","injectAuth":"companyId","permission":"inventory:view"},
     {"name":"inventory_getPickingListLineTrackedEntities","classification":"READ","paramCount":1,"schema":"063a6777d378","response":"51dd622ce168","injectAuth":"companyId","permission":"inventory:view"},
@@ -327,6 +323,7 @@
     {"name":"invoicing_getPayment","classification":"READ","paramCount":1,"schema":"3797626bd17e","response":"dcd7a2b028c7","injectAuth":"companyId","permission":"invoicing:view"},
     {"name":"invoicing_getPayments","classification":"READ","paramCount":8,"schema":"8294255666da","response":"cb3415df82d8","injectAuth":"companyId","permission":"invoicing:view"},
     {"name":"invoicing_getPurchaseInvoice","classification":"READ","paramCount":1,"schema":"9fcbb4e4e012","response":"8af6fcfff1cc","injectAuth":"companyId","permission":"invoicing:view"},
+    {"name":"invoicing_getPurchaseInvoiceAttachments","classification":"READ","paramCount":1,"schema":"79cd487d4e95","response":"b4051645d5d6","injectAuth":"companyId","permission":"invoicing:view"},
     {"name":"invoicing_getPurchaseInvoiceDelivery","classification":"READ","paramCount":1,"schema":"9fcbb4e4e012","response":"57af27aeef3b","injectAuth":"companyId","permission":"invoicing:view"},
     {"name":"invoicing_getPurchaseInvoiceLine","classification":"READ","paramCount":1,"schema":"af656ed8709f","response":"4bbbdc4a9046","injectAuth":"companyId","permission":"invoicing:view"},
     {"name":"invoicing_getPurchaseInvoiceLines","classification":"READ","paramCount":1,"schema":"9fcbb4e4e012","response":"d40f758d4c25","injectAuth":"companyId","permission":"invoicing:view"},
@@ -396,11 +393,7 @@
     {"name":"items_findChangeNoticesForItem","classification":"READ","paramCount":2,"schema":"10c8230a9f49","response":"e0196d4b0041","injectAuth":"companyId","permission":"parts:view"},
     {"name":"items_findOtherOpenChangeNoticesForItem","classification":"READ","paramCount":2,"schema":"8a1da983320d","response":"e0196d4b0041","injectAuth":"companyId","permission":"parts:view"},
     {"name":"items_getBomHasShelfLifeManagedInput","classification":"READ","paramCount":1,"schema":"623ca47a6c74","response":"7cb541e84f22","injectAuth":"companyId","permission":"parts:view"},
-<<<<<<< HEAD
-    {"name":"items_getBomItemAttributes","classification":"READ","paramCount":1,"schema":"c4ca22fd1816","response":"d8bb760d2850","injectAuth":"companyId","permission":"parts:view"},
-=======
-    {"name":"items_getBomItemAttributes","classification":"READ","paramCount":1,"schema":"c4ca22fd1816","response":"671b0869176d","injectAuth":"companyId","permission":"parts:view"},
->>>>>>> 5202fbcb54 (knowledge base work step 1)
+    {"name":"items_getBomItemAttributes","classification":"READ","paramCount":1,"schema":"c4ca22fd1816","response":"07f4a59328ba","injectAuth":"companyId","permission":"parts:view"},
     {"name":"items_getChangeNotice","classification":"READ","paramCount":1,"schema":"29578070edb2","response":"09c0b464284c","injectAuth":"companyId","permission":"parts:view"},
     {"name":"items_getChangeNoticeActions","classification":"READ","paramCount":1,"schema":"29578070edb2","response":"949f86b5cda3","injectAuth":"companyId","permission":"parts:view"},
     {"name":"items_getChangeNoticeAffectedItems","classification":"READ","paramCount":1,"schema":"29578070edb2","response":"5483e69d7515","injectAuth":"companyId","permission":"parts:view"},
@@ -782,19 +775,11 @@
     {"name":"production_insertJob","classification":"WRITE","paramCount":2,"schema":"fea224e085b1","response":"ad63dfd9d877","injectAuth":"companyId+createdBy+updatedBy","permission":"production:create"},
     {"name":"production_invalidateAssemblyModelCache","classification":"DESTRUCTIVE","paramCount":1,"schema":"277f7d872d8c","response":"bcde375ebd4c","injectAuth":"companyId","permission":"production:update"},
     {"name":"production_issueMaterial","classification":"WRITE","paramCount":7,"schema":"0408bd8c9bde","response":"none","injectAuth":"companyId","permission":"production:update"},
-<<<<<<< HEAD
-    {"name":"production_maxToolQuantityByItem","classification":"WRITE","paramCount":1,"schema":"8b9e90037b9a","response":"d8bb760d2850","injectAuth":"companyId","permission":"production:update"},
+    {"name":"production_maxToolQuantityByItem","classification":"WRITE","paramCount":1,"schema":"8b9e90037b9a","response":"07f4a59328ba","injectAuth":"companyId","permission":"production:update"},
     {"name":"production_movePeopleAssignment","classification":"DESTRUCTIVE","paramCount":2,"schema":"a726aa587ccc","response":"fe5e1dc03da5","injectAuth":"companyId+updatedBy","permission":"production:update"},
     {"name":"production_movePeopleWeek","classification":"DESTRUCTIVE","paramCount":5,"schema":"fec8ebf1add4","response":"3badaa1686e8","injectAuth":"companyId+updatedBy","permission":"production:update"},
     {"name":"production_notifyScheduleInputsChanged","classification":"WRITE","paramCount":3,"schema":"172bee52ed70","response":"none","injectAuth":"companyId","permission":"production:update"},
-    {"name":"production_planAssemblyStepMarkerSync","classification":"WRITE","paramCount":2,"schema":"f32958f213ae","response":"bec53722aec4","injectAuth":"companyId","permission":"production:update"},
-=======
-    {"name":"production_maxToolQuantityByItem","classification":"WRITE","paramCount":1,"schema":"8b9e90037b9a","response":"671b0869176d","injectAuth":"companyId","permission":"production:update"},
-    {"name":"production_movePeopleAssignment","classification":"DESTRUCTIVE","paramCount":2,"schema":"a726aa587ccc","response":"fe5e1dc03da5","injectAuth":"companyId+updatedBy","permission":"production:update"},
-    {"name":"production_movePeopleWeek","classification":"DESTRUCTIVE","paramCount":5,"schema":"fec8ebf1add4","response":"3badaa1686e8","injectAuth":"companyId+updatedBy","permission":"production:update"},
-    {"name":"production_notifyScheduleInputsChanged","classification":"WRITE","paramCount":3,"schema":"de0d8dcb6949","response":"none","injectAuth":"companyId","permission":"production:update"},
-    {"name":"production_planAssemblyStepMarkerSync","classification":"WRITE","paramCount":2,"schema":"f32958f213ae","response":"15208da24278","injectAuth":"companyId","permission":"production:update"},
->>>>>>> 5202fbcb54 (knowledge base work step 1)
+    {"name":"production_planAssemblyStepMarkerSync","classification":"WRITE","paramCount":2,"schema":"f32958f213ae","response":"ad8aca8a437c","injectAuth":"companyId","permission":"production:update"},
     {"name":"production_pullJobMaterialMakeMethod","classification":"WRITE","paramCount":2,"schema":"e27f48bbab4c","response":"bcde375ebd4c","injectAuth":"companyId","permission":"production:update"},
     {"name":"production_reassignAssemblyStepComponents","classification":"DESTRUCTIVE","paramCount":4,"schema":"99f3d689165d","response":"none","injectAuth":"companyId","permission":"production:update"},
     {"name":"production_recalculateJobMakeMethodRequirements","classification":"WRITE","paramCount":1,"schema":"3797626bd17e","response":"none","injectAuth":"companyId+updatedBy","permission":"production:update"},
@@ -875,12 +860,8 @@
     {"name":"production_upsertProductionQuantity","classification":"WRITE","paramCount":6,"schema":"6ea5f7475d17","response":"3797626bd17e","injectAuth":"companyId+createdBy+updatedBy","permission":"production:create+update"},
     {"name":"production_upsertScrapReason","classification":"WRITE","paramCount":2,"schema":"df56b99ec46e","response":"8394fbabd845","injectAuth":"companyId+createdBy+updatedBy","permission":"production:create+update"},
     {"name":"purchasing_closePurchaseOrder","classification":"WRITE","paramCount":1,"schema":"28cffcd9d6e8","response":"3797626bd17e","injectAuth":"companyId+updatedBy","permission":"purchasing:update"},
-<<<<<<< HEAD
     {"name":"purchasing_convertSupplierQuoteToOrder","classification":"WRITE","paramCount":2,"schema":"03ce7e291c3c","response":"5cb338fa12e6","injectAuth":"companyId+updatedBy","permission":"purchasing:update"},
-=======
-    {"name":"purchasing_convertSupplierQuoteToOrder","classification":"WRITE","paramCount":2,"schema":"c31a76296c27","response":"5cb338fa12e6","injectAuth":"companyId+updatedBy","permission":"purchasing:update"},
-    {"name":"purchasing_createProcurementDraft","classification":"WRITE","paramCount":2,"schema":"5eac6f4773fa","response":"96bbe2a3556a","injectAuth":"companyId+createdBy+updatedBy","permission":"purchasing:create"},
->>>>>>> 5202fbcb54 (knowledge base work step 1)
+    {"name":"purchasing_createProcurementDraft","classification":"WRITE","paramCount":2,"schema":"553f9d99113f","response":"96bbe2a3556a","injectAuth":"companyId+createdBy+updatedBy","permission":"purchasing:create"},
     {"name":"purchasing_deletePurchaseOrder","classification":"DESTRUCTIVE","paramCount":1,"schema":"28cffcd9d6e8","response":"bcde375ebd4c","injectAuth":"companyId","permission":"purchasing:delete"},
     {"name":"purchasing_deletePurchaseOrderLine","classification":"DESTRUCTIVE","paramCount":1,"schema":"ed69a5b8e424","response":"bcde375ebd4c","injectAuth":"companyId","permission":"purchasing:delete"},
     {"name":"purchasing_deletePurchasingRFQ","classification":"DESTRUCTIVE","paramCount":1,"schema":"4e16cef99961","response":"bcde375ebd4c","injectAuth":"companyId","permission":"purchasing:delete"},
@@ -1389,7 +1370,7 @@
     {"name":"settings_getWebhooks","classification":"READ","paramCount":3,"schema":"04eded31eebb","response":"f236afae1a37","injectAuth":"companyId","permission":"settings:view"},
     {"name":"settings_getWebhookTables","classification":"READ","paramCount":0,"schema":"efddc7bd8bbc","response":"633f9f3bffc6","injectAuth":"companyId","permission":"settings:view"},
     {"name":"settings_insertSubsidiary","classification":"WRITE","paramCount":19,"schema":"82b2e088fca6","response":"3797626bd17e","injectAuth":"companyId+createdBy+updatedBy","permission":"settings:create"},
-    {"name":"settings_resolveSections","classification":"WRITE","paramCount":1,"schema":"0eb0c2be01ed","response":"9cf53d9645e3","injectAuth":"companyId","permission":"settings:update"},
+    {"name":"settings_resolveSections","classification":"WRITE","paramCount":1,"schema":"0eb0c2be01ed","response":"59781d2a00b3","injectAuth":"companyId","permission":"settings:update"},
     {"name":"settings_updateAccountingEnabledSetting","classification":"WRITE","paramCount":1,"schema":"82d5e14a67e0","response":"bcde375ebd4c","injectAuth":"companyId+updatedBy","permission":"settings:update"},
     {"name":"settings_updateAccountsPayableAddressSetting","classification":"WRITE","paramCount":1,"schema":"7a679bb0d746","response":"bcde375ebd4c","injectAuth":"companyId+updatedBy","permission":"settings:update"},
     {"name":"settings_updateAccountsPayableBillingAddress","classification":"WRITE","paramCount":10,"schema":"e8f633d64584","response":"bcde375ebd4c","injectAuth":"companyId+updatedBy","permission":"settings:update"},

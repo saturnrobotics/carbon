@@ -42,7 +42,7 @@
     "check:workflow-catalog": "tsx scripts/check-workflow-catalog.ts",
     "ci:deploy": "pnpm --filter ci ci:deploy",
     "ci:migrations": "pnpm --filter ci ci:migrations",
-    "clean": "turbo run clean && rimraf ./node_modules && rimraf ./pnpm-lock.yaml",
+    "clean": "turbo run clean && rimraf ./node_modules",
     "db:check:backups": "pnpm --filter @carbon/jobs db:check:backups --",
     "db:check:datasets": "pnpm --filter @carbon/database db:check:datasets --",
     "db:function:new": "pnpm --filter @carbon/database db:function:new",

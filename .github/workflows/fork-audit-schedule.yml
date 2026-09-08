@@ -1,0 +1,52 @@
+name: Schedule fork audit
+
+on:
+  schedule:
+    - cron: "23 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: scheduled-fork-audit-dispatch
+  cancel-in-progress: false
+
+jobs:
+  policy-audit:
+    name: Advisory branch protection audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: saturn/main
+          persist-credentials: false
+      - name: Report drift or unavailable policy-reading permission
+        # A workflow token's policy visibility must be proven separately from
+        # the administrator session used during setup. Failure remains visible
+        # here; it neither attests a source SHA nor prevents the full audit.
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 .fork/github_policy.py --repo "$GITHUB_REPOSITORY" --check
+
+  dispatch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # A schedule's own check belongs to the default-branch SHA. It may dispatch
+      # an audit, but must never attest to a different branch's checked-out SHA.
+      - name: Dispatch complete verification on the integration branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          previous_revision="$(gh api "repos/$GITHUB_REPOSITORY/commits/saturn%2Fmain" --jq '.parents[0].sha')"
+          if [[ ! "$previous_revision" =~ ^[0-9a-f]{40}$ ]]; then
+            echo 'The integration branch has no verifiable previous commit.' >&2
+            exit 1
+          fi
+          gh api --method POST "repos/$GITHUB_REPOSITORY/actions/workflows/fork-check.yml/dispatches" \
+            -f ref=saturn/main -f "inputs[base]=$previous_revision"

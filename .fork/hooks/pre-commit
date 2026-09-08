@@ -1,0 +1,13 @@
+#!/bin/sh
+set -eu
+# Inspect the index before formatters/installers can conceal corrupt evidence.
+python3 .fork/verify.py preflight --revision index
+if [ ! -x node_modules/.bin/lint-staged ]; then
+    echo "Fork commit checks need pinned dependencies: corepack pnpm install --frozen-lockfile" >&2
+    exit 1
+fi
+# Do not park unrelated changes on the repository's shared stash stack.
+corepack pnpm exec lint-staged --no-stash
+python3 .fork/verify.py preflight --revision index
+# Full source/schema/runtime checks are enforced for this exact SHA by CI and
+# promotion. Never consult a developer database or auto-stage generated output.

@@ -567,7 +567,7 @@ application environment. No production resource changes have been made.
 
 
 The seven-step local goal is complete. See
-`.ai/runs/2026-09-08-local-manual-verification.md` for verified evidence and limits.
+`.fork/decisions/archive/2026-09-08-local-manual-verification.md` for verified evidence and limits.
 The broader roadmap below remains deferred; its checkboxes require each entire
 task acceptance boundary, not merely implemented code.
 
@@ -1929,8 +1929,8 @@ No live GCP, Workspace, Supabase, or Drive configuration was inspected.
 - R8: packages/jobs/src/invoice-intake/ and apps/erp/app/modules/invoicing/ui/InvoiceDocuments/
   — reusable extraction, provenance, correction-preservation, and review precedents.
 - R9: .ai/plans/2026-09-07-orpc-completion.md,
-  .ai/plans/2026-09-06-private-gcp-self-host.md,
-  .ai/plans/2026-09-06-shared-private-postgres.md — related work; do not duplicate
+  .fork/plans/2026-09-06-private-gcp-self-host.md,
+  .fork/plans/2026-09-06-shared-private-postgres.md — related work; do not duplicate
   or regress completed changes.
 
 ### Primary external sources

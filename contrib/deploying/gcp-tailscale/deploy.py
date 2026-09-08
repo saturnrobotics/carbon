@@ -4,7 +4,6 @@
 import argparse
 import ipaddress
 import json
-import os
 from pathlib import Path
 import re
 import shlex
@@ -20,6 +19,7 @@ import payment_sync
 import invoice_inference
 import release_plan
 import prepare_release
+import verify_source
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[2]
@@ -128,7 +128,7 @@ def validate(config, secrets):
             raise ValueError(f"Invalid {key}; use 2–26 lowercase letters, digits or hyphens")
     if not re.fullmatch(r"[a-z][a-z0-9-]+", config["MACHINE_TYPE"]):
         raise ValueError("Invalid MACHINE_TYPE")
-    if type(config["DATA_DISK_GB"]) is not int or config["DATA_DISK_GB"] < 100:
+    if not isinstance(config["DATA_DISK_GB"], int) or isinstance(config["DATA_DISK_GB"], bool) or config["DATA_DISK_GB"] < 100:
         raise ValueError("DATA_DISK_GB must be an integer of at least 100")
     domain_pattern = r"(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}"
     for key in ("DNS_ZONE_NAME", "ERP_HOST", "MES_HOST", "SUPABASE_HOST", "AUTH_ALLOWED_GOOGLE_DOMAIN"):
@@ -346,6 +346,7 @@ def deploy(config, desired_release=None, *, maintenance=False, prepared_release=
     if not planned_release["build"] and not planned_release["configure"] and not planned_release["migrate"] and not maintenance:
         print("Release plan is a no-op; no source publication or cloud mutations were issued.")
         return
+    verify_source.require_verified(config["SOURCE_REPO_URL"], rev)
     publish_source(config, rev)
     config = {**config, "DEPLOY_REVISION": rev, "SOURCE_CODE_URL": config["SOURCE_REPO_URL"] + "/tree/" + rev}
     cf = Cloudflare(config["CLOUDFLARE_API_TOKEN"])

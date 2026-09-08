@@ -19,26 +19,35 @@ const allTools = metadata.tools as Tool[];
 // PERMISSION_OVERRIDES in scripts/lib/service-metadata.ts — route-verified
 // exceptions that win over the derivation rules. Pinned exactly below and
 // excluded from the rule-based assertions.
-const OVERRIDDEN = new Set([
-  "settings_getApiKeys",
-  "settings_upsertApiKey",
-  "settings_deleteApiKey"
-]);
+const EXPECTED_OVERRIDES: Record<string, Tool["permission"]> = {
+  settings_getApiKeys: { module: "users", actions: ["update"] },
+  settings_upsertApiKey: { module: "users", actions: ["update"] },
+  settings_deleteApiKey: { module: "users", actions: ["update"] },
+  knowledge_resolveItems: { module: "parts", actions: ["view"] },
+  knowledge_getItemIdentity: { module: "parts", actions: ["view"] },
+  knowledge_getDocumentReferences: { module: "parts", actions: ["view"] },
+  knowledge_getRecentReceipts: { module: "inventory", actions: ["view"] },
+  knowledge_getRecentReceiptItems: { module: "inventory", actions: ["view"] },
+  knowledge_getPurchaseStatus: { module: "purchasing", actions: ["view"] },
+  knowledge_createProcurementDraft: {
+    module: "purchasing",
+    actions: ["create"]
+  }
+};
 
-const tools = allTools.filter((t) => !OVERRIDDEN.has(t.name));
+const tools = allTools.filter(
+  (t) => !Object.hasOwn(EXPECTED_OVERRIDES, t.name)
+);
 
 const funcName = (t: Tool) => t.name.slice(t.module.length + 1).toLowerCase();
 
 describe("permission overrides", () => {
-  it("API-key management gates on users_update, matching its ERP routes", () => {
-    for (const name of OVERRIDDEN) {
-      const t = allTools.find((t) => t.name === name);
-      expect(t, name).toBeDefined();
-      expect(t?.permission, name).toEqual({
-        module: "users",
-        actions: ["update"]
-      });
-    }
+  it.each(
+    Object.entries(EXPECTED_OVERRIDES)
+  )("%s keeps its explicit permission gate", (name, permission) => {
+    const t = allTools.find((t) => t.name === name);
+    expect(t, name).toBeDefined();
+    expect(t?.permission, name).toEqual(permission);
   });
 });
 

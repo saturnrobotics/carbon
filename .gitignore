@@ -119,3 +119,7 @@ apps/knowledge/playwright-report/
 
 **/__pycache__/
 **/*.pyc
+
+# Fork execution state is private/local; durable policy and decisions live in .fork/.
+.fork/local/
+.ai/state.db

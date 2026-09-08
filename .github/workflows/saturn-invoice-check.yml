@@ -6,12 +6,18 @@ on:
   pull_request:
     branches: [saturn/main]
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      verified_revision:
+        description: Exact candidate already inspected by the fork preflight
+        required: true
+        type: string
 
 permissions:
   contents: read
 
 concurrency:
-  group: saturn-invoice-${{ github.ref }}
+  group: saturn-invoice-${{ github.ref }}-${{ inputs.verified_revision || github.workflow }}
   cancel-in-progress: true
 
 jobs:
@@ -36,6 +42,9 @@ jobs:
       GOOGLE_PLACES_API_KEY: ""
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.verified_revision || github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:

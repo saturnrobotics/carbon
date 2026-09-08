@@ -1,4 +1,8 @@
 #!/bin/sh
+# Fork checks run even before Husky initialization; preserve upstream fallback.
+if [ -f .fork/hooks/pre-commit ]; then
+    exec sh .fork/hooks/pre-commit
+fi
 # Fresh git worktrees / clones lack .husky/_/ until `pnpm install` runs its
 # prepare script. Without this guard the hook crashes with a cryptic
 # ".husky/_/husky.sh: No such file or directory". Skip hooks gracefully instead.

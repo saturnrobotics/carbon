@@ -1,7 +1,7 @@
 # Invoice document intake — implementation plan
 
-**Spec:** `.ai/specs/implemented/2026-09-06-invoice-intake.md`
-**Research:** `.ai/research/invoice-intake.md`
+**Spec:** `.fork/specs/implemented/2026-09-06-invoice-intake.md`
+**Research:** `.fork/research/invoice-intake.md`
 **Branch:** `feature/invoice-intake`, created from `saturn/main`
 **Status:** Initial implementation deployed; end-to-end completion claim superseded by the receipt-flow audit. See `2026-09-07-mercury-receipt-corrections.md` for the authorized Mercury-only correction scope. Gmail completion is deferred.
 

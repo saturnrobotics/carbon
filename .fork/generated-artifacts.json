@@ -1,0 +1,155 @@
+{
+  "version": 1,
+  "forbidden_tracked": [
+    "**/__pycache__/**",
+    "**/*.pyc",
+    "**/.cert/**",
+    "**/test-results/**",
+    "**/playwright-report/**",
+    ".fork/local/**",
+    ".ai/scratch/**",
+    ".ai/state.db",
+    ".codex/**"
+  ],
+  "identical_copies": [
+    [
+      "packages/database/src/types.ts",
+      "packages/database/supabase/functions/lib/types.ts"
+    ]
+  ],
+  "artifacts": [
+    {
+      "id": "mcp",
+      "kind": "generated-contract",
+      "group": "source",
+      "inputs": [
+        "apps/erp/app/**/*.ts",
+        "packages/**/*.ts",
+        "apps/erp/tsconfig.json",
+        "scripts/lib/**",
+        "scripts/generate-mcp.ts",
+        "pnpm-lock.yaml"
+      ],
+      "tracked": [
+        "apps/erp/app/routes/api+/mcp+/lib/tool-manifest.digest.json"
+      ],
+      "untracked": ["apps/erp/app/routes/api+/mcp+/lib/tool-metadata.json"],
+      "command": ["corepack", "pnpm", "run", "generate:mcp"],
+      "compare": "json",
+      "root_scripts": ["generate:mcp"]
+    },
+    {
+      "id": "workflow-catalog",
+      "kind": "generated-contract",
+      "group": "source",
+      "inputs": [
+        "packages/workflows/src/catalog/**",
+        "packages/database/src/swagger-docs-schema.ts",
+        "scripts/generate-workflow-catalog.ts"
+      ],
+      "tracked": ["packages/workflows/src/catalog/*.generated.ts"],
+      "command": ["corepack", "pnpm", "run", "generate:workflow-catalog"],
+      "root_scripts": ["generate:workflow-catalog"]
+    },
+    {
+      "id": "agent-kb",
+      "kind": "generated-contract",
+      "group": "knowledge",
+      "inputs": ["docs/content/**", "scripts/generate-agent-kb.ts"],
+      "tracked": [
+        "apps/erp/app/modules/agent/kb/**/*.md",
+        "apps/erp/app/modules/agent/kb/manifest.json"
+      ],
+      "command": ["corepack", "pnpm", "run", "generate:agent-kb"],
+      "root_scripts": ["generate:agent-kb"]
+    },
+    {
+      "id": "db-types",
+      "kind": "generated-contract",
+      "group": "schema",
+      "inputs": [
+        "packages/database/supabase/migrations/**",
+        "scripts/generate-db-types.ts",
+        "scripts/lib/generate-db-types*",
+        "pnpm-lock.yaml"
+      ],
+      "tracked": [
+        "packages/database/src/types.ts",
+        "packages/database/supabase/functions/lib/types.ts"
+      ],
+      "command": ["corepack", "pnpm", "run", "generate:types"],
+      "root_scripts": ["generate:types", "db:types"]
+    },
+    {
+      "id": "swagger",
+      "kind": "generated-contract",
+      "group": "schema",
+      "inputs": [
+        "packages/database/supabase/migrations/**",
+        "scripts/generate-swagger-docs.ts"
+      ],
+      "tracked": ["packages/database/src/swagger-docs-schema.ts"],
+      "command": ["corepack", "pnpm", "run", "generate:swagger"],
+      "root_scripts": ["generate:swagger"]
+    },
+    {
+      "id": "backup-schema",
+      "kind": "generated-contract",
+      "group": "schema-manifest",
+      "inputs": [
+        "packages/database/supabase/migrations/**",
+        "packages/jobs/src/backups/**",
+        "packages/jobs/src/scripts/check-backups.ts"
+      ],
+      "tracked": ["packages/jobs/manifests/schema.json"],
+      "command": ["corepack", "pnpm", "db:check:backups"]
+    },
+    {
+      "id": "pdf-fonts",
+      "kind": "build-output",
+      "group": "build",
+      "inputs": ["packages/documents/scripts/generate-fonts.mjs"],
+      "untracked": ["packages/documents/src/pdf/fonts.data.ts"],
+      "command": ["corepack", "pnpm", "--filter", "@carbon/documents", "build"]
+    },
+    {
+      "id": "locale-compiled",
+      "kind": "build-output",
+      "group": "build",
+      "inputs": ["packages/locale/locales/**/*.po", "lingui.config.js"],
+      "untracked": ["packages/locale/locales/**/*.mjs"],
+      "command": ["corepack", "pnpm", "run", "lingui:compile"]
+    },
+    {
+      "id": "lockfile",
+      "kind": "dependency-resolution",
+      "tracked": ["pnpm-lock.yaml"],
+      "inputs": [
+        "package.json",
+        "pnpm-workspace.yaml",
+        "**/package.json",
+        ".npmrc",
+        "patches/**"
+      ],
+      "verification": ["corepack", "pnpm", "install", "--frozen-lockfile"],
+      "note": "Keep prior resolutions; reconcile declarations before pnpm conflict repair. Do not regenerate by deleting."
+    },
+    {
+      "id": "translations",
+      "kind": "authored-and-extracted",
+      "tracked": ["packages/locale/locales/**/*.po"],
+      "inputs": ["apps/**", "packages/**", "lingui.config.js"],
+      "verification": ["corepack", "pnpm", "run", "lingui:compile"],
+      "note": "Preserve authored translations; normalize extraction and review union results."
+    },
+    {
+      "id": "route-types",
+      "kind": "build-output",
+      "group": "routes",
+      "root_scripts": ["typegen"],
+      "inputs": ["apps/*/app/**", "apps/*/react-router.config.ts"],
+      "untracked": ["apps/erp/.react-router/**"],
+      "command": ["corepack", "pnpm", "--filter", "erp", "typegen"]
+    }
+  ]
+}

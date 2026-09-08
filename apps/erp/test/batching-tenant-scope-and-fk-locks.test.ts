@@ -20,10 +20,7 @@ const migrations = join(
   "migrations"
 );
 const read = (rel: string) => readFileSync(join(migrations, rel), "utf8");
-const migration = read("20260821024449_job-operation-batching.sql");
-const memberFkFix = read(
-  "20260904151137_batch-member-fk-set-null-companyid.sql"
-);
+const migration = read("20260905132037_job-operation-batching.sql");
 
 describe("batch candidates are tenant-scoped (AC[0])", () => {
   test("get_batchable_operations runs SECURITY INVOKER so the caller's RLS scopes rows", () => {
@@ -68,19 +65,17 @@ describe("batch membership is pinned to one company via composite FKs", () => {
     // referencing column, including the NOT NULL `companyId` — so deleting a
     // batch (or a `DELETE FROM company` cascade) would raise a not-null
     // violation. The PG15 column-list form nulls ONLY the batch pointer.
-    // 20260904151137 fixes both member FKs to this form.
-    expect(memberFkFix).toMatch(
+    // The consolidated migration includes the fix for both member FKs.
+    expect(migration).toMatch(
       /ADD CONSTRAINT "jobOperation_jobOperationBatchId_fkey"[\s\S]*?ON DELETE SET NULL \("jobOperationBatchId"\)/
     );
-    expect(memberFkFix).toMatch(
+    expect(migration).toMatch(
       /ADD CONSTRAINT "productionEvent_jobOperationBatchId_fkey"[\s\S]*?ON DELETE SET NULL \("jobOperationBatchId"\)/
     );
   });
 
   test("jobOperationBatch has a composite tenant PK and companyId FK", () => {
-    expect(migration).toMatch(
-      /PRIMARY KEY \("id", "companyId"\)/
-    );
+    expect(migration).toMatch(/PRIMARY KEY \("id", "companyId"\)/);
     expect(migration).toMatch(
       /"jobOperationBatch_companyId_fkey" FOREIGN KEY \("companyId"\)\s*REFERENCES "company"\("id"\)/s
     );

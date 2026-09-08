@@ -17,6 +17,12 @@ on:
     branches: [saturn/main]
     paths: ["apps/knowledge*/**", "packages/knowledge/**", "contrib/deploying/knowledge/**", "pnpm-lock.yaml", "turbo.json", ".dockerignore"]
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      verified_revision:
+        description: Exact candidate already inspected by the fork preflight
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -27,6 +33,9 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.verified_revision || github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
       - uses: hashicorp/setup-terraform@v3
       - run: terraform -chdir=contrib/deploying/knowledge init -backend=false
       - run: terraform -chdir=contrib/deploying/knowledge validate
@@ -41,6 +50,9 @@ jobs:
       KNOWLEDGE_TEST_REDIS_URL: redis://127.0.0.1:59913
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.verified_revision || github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
@@ -64,6 +76,7 @@ jobs:
           corepack pnpm --filter knowledge-query test
           corepack pnpm --filter knowledge-worker test
           corepack pnpm --filter @carbon/knowledge test:integration
+          corepack pnpm --filter @carbon/jobs exec vitest run src/procurement-schedule/execute.integration.test.ts
           corepack pnpm --filter knowledge-query exec vitest run --config ../../packages/knowledge/vitest.integration.config.ts src/query.integration.test.ts src/local-security.integration.test.ts
           python3 packages/knowledge/scripts/test_schema.py
           python3 packages/knowledge/scripts/test_function_boundary.py

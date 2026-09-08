@@ -1,6 +1,3 @@
-# Lingui catalogs are large, sorted, generated files. Both branches insert
-# msgids in the same alphabetical regions, which git's default 3-way line
-# merge cannot reconcile. Union-merge keeps both sides' lines instead of
-# conflicting; run `pnpm lingui:extract && pnpm lingui:clean` afterward to
-# dedupe, re-sort, and prune the result.
-packages/locale/locales/**/*.po merge=union
+# Catalogs contain authored translations. Surface conflicting edits for review;
+# extraction/compilation validates the reconciled result before promotion.
+packages/locale/locales/**/*.po merge=text

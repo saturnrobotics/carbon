@@ -73,6 +73,7 @@ function makeClient(responses: Scripted[]) {
     order: () => builder,
     limit: () => builder,
     single: () => Promise.resolve(next()),
+    maybeSingle: () => Promise.resolve(next()),
     then: (resolve: (v: Scripted) => unknown) => resolve(next())
   };
   return { from: () => builder } as any;
@@ -106,6 +107,7 @@ function makeRecordingClient(responses: Scripted[]) {
       order: () => builder,
       limit: () => builder,
       single: () => Promise.resolve(next()),
+      maybeSingle: () => Promise.resolve(next()),
       then: (resolve: (v: Scripted) => unknown) => resolve(next())
     };
     return builder;
@@ -221,6 +223,8 @@ describe("closeAccountingPeriod — sequential close", () => {
       },
       { data: [] }, // active definitions (none configured)
       { data: [] }, // existing tasks (none)
+      { data: { timezone: "UTC" }, error: null }, // company business calendar
+      { data: [] }, // external sync readiness starts its integration lookup first
       { count: 0 }, // readiness: draft journals
       { data: [] }, // readiness: posted journals in period
       { count: 0 }, // readiness: draft depreciation
@@ -296,6 +300,8 @@ describe("closePeriodWithChecklist — Blocker gate + Auto-task persistence", ()
           }
         ]
       }, // existing tasks — no instantiation needed
+      { data: { timezone: "UTC" }, error: null }, // company business calendar
+      { data: [] }, // external sync readiness starts its integration lookup first
       { count: 2 }, // readiness: draft journals present -> Blocker failing
       { data: [] }, // readiness: posted journals in period
       { count: 0 }, // readiness: draft depreciation
@@ -352,6 +358,8 @@ describe("closePeriodWithChecklist — Blocker gate + Auto-task persistence", ()
           }
         ]
       },
+      { data: { timezone: "UTC" }, error: null }, // company business calendar
+      { data: [] }, // external sync readiness starts its integration lookup first
       { count: 0 }, // readiness: no draft journals -> Blocker passing
       { data: [] }, // readiness: posted journals in period
       { count: 0 }, // readiness: draft depreciation
