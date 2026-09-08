@@ -49,14 +49,19 @@ clean following the user's removal of the unnecessary lockfile edit.
   using verified database lineage and constraints. Preserve foreign-key metadata
   and strict artifact comparison; add rejection fixtures for changed assumptions.
   Register transitive inputs and require the generator regressions in CI.
-- [ ] Regenerate from owned disposable infrastructure, review the proposed
+- [x] Regenerate from owned disposable infrastructure, review the proposed
   artifacts, then prove fresh/upgrade convergence and repeatability for the
   committed candidate. Run safeguard tests, source lint, and an independent review.
   Record local evidence separately from the remaining exact-SHA remote CI gate.
 
-Local repair checks: 1,016 ERP unit tests, 94 standalone generator/wiring tests,
+Local repair checks: 1,016 ERP unit tests, 104 standalone generator/wiring tests,
 111 safeguard Python tests, scoped ERP typecheck, and the real browser locale
 switch passed. Disposable repair generation applied all 1,000 migrations and
 produced identical artifacts twice. The reviewed Swagger output changes only the
 two alias descriptions; the DB type copies and backup manifest still match.
-Strict committed fresh/upgrade verification follows the candidate commit.
+Strict committed verification passed for `67a0aed1c8`: fresh, upgrade, and
+committed artifacts agree, including repeated generation on each database path.
+This local evidence does not replace the exact-SHA remote promotion requirement.
+The required source job additionally checks all 7,085 extracted message IDs
+without rewriting catalogs; ten regression tests cover omissions, extraction
+failures, obsolete entries, and agreement with runtime language choices.

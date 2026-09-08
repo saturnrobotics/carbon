@@ -84,8 +84,10 @@ jobs:
           corepack pnpm exec tsx --test .fork/tests/*.test.ts
           corepack pnpm check:manifest
           corepack pnpm check:workflow-catalog
-      - name: Require complete translation catalogs
-        run: corepack pnpm exec linguito check
+      - name: Require extracted and complete translation catalogs
+        run: |
+          corepack pnpm exec tsx .fork/check-locales.ts
+          corepack pnpm exec linguito check
       - name: Install the lint tool version used by the safeguard fixtures
         run: python3 -m pip install --disable-pip-version-check ruff==0.4.1 PyYAML==6.0.2
       - name: Strict lint of every changed supported source file

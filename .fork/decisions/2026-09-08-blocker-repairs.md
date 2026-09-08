@@ -17,6 +17,15 @@ Compilation alone had accepted older missing batch-release messages and a
 malformed Japanese entry. All 37 older gaps are filled, preserving placeholders
 and other authored translations; the completeness check and compilation pass.
 
+The additional read-only source-coverage check uses the pinned Lingui extractor
+and verifies every current message ID in every configured locale. It rejects
+missing or obsolete active entries, failed extraction, and empty extraction.
+Required regression tests also compare configured locales with runtime language
+choices. All 7,085 source messages are covered across two catalogs and thirteen
+locales, with catalog bytes unchanged. The standalone suite now passes 104 tests,
+including ten coverage regressions. Explicit-ID message wording still requires
+translation review; ID coverage does not prove translated text is correct.
+
 Swagger generation verifies the complete known `partners` view definition and its
 ordered `(id, abilityId)` source key using Studio's catalog-query endpoint. Only
 the known duplicate-alias primary-key annotation is normalized. The generated
@@ -41,3 +50,11 @@ generator tests, browser locale regression, scoped typechecks, strict lint,
 generation comparison, and fresh/upgrade schema comparison. The root safeguards
 plan records progress; local raw evidence stays ignored. Remote `fork-verified`
 must still succeed for the exact promoted SHA.
+
+Local verification of `67a0aed1c8` passed: 1,016 ERP unit tests, the real browser
+locale switch, 94 standalone generator/wiring tests, 111 safeguard tests, scoped
+typechecks and strict lint, frozen installation, translation completeness,
+repeated generation, and strict disposable fresh/upgrade comparison against the
+committed artifacts. Both database paths apply all 1,000 migrations and repeat
+artifact generation. Allocated resources were removed. The branch is unpromoted
+pending the required remote verification.

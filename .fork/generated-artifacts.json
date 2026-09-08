@@ -142,7 +142,7 @@
       "tracked": ["packages/locale/locales/**/*.po"],
       "inputs": ["apps/**", "packages/**", "lingui.config.js"],
       "verification": ["corepack", "pnpm", "exec", "linguito", "check"],
-      "note": "Preserve authored translations and require completeness; locale-compiled separately verifies compilation. Normalize extraction and review union results."
+      "note": "Require read-only source coverage via .fork/check-locales.ts and translation completeness via linguito; locale-compiled separately verifies compilation. Preserve authored obsolete translations."
     },
     {
       "id": "route-types",
