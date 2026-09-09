@@ -18,5 +18,11 @@ current-tree changes; keep raw findings outside tracked source and never echo
 credential values. Distinguish fork-origin leaks from inherited public history
 before changing upstream ancestry.
 
+Inventory refs by object type: agent snapshot refs can point directly to trees,
+which commit-oriented rewrite tools may skip. Account for linked-worktree indexes,
+HEAD reflogs and recovery pointers. Examine dropped staging snapshots before
+pruning; retain sanitized recovery refs when unique work cannot be ruled out.
+Verify actual object removal after cleanup, in addition to ref reachability.
+
 Applies to → Agent commits, Terraform and Docker workflows, source archives,
 fork privacy reviews, and authorized local history cleanup.
