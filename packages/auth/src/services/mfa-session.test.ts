@@ -14,6 +14,8 @@ vi.mock("@carbon/kv", () => ({
 
 vi.mock("../config/env", () => ({
   DOMAIN: "localhost",
+  ERP_URL: "http://localhost:3000",
+  MES_URL: "http://localhost:3001",
   CarbonEdition: "Community",
   CONTROLLED_ENVIRONMENT: false,
   REFRESH_ACCESS_TOKEN_THRESHOLD: 60,

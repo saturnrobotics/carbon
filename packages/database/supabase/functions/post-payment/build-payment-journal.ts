@@ -40,8 +40,8 @@
 // means a loss, for both AR and AP. This is the same quantity the stored
 // `invoiceSettlement.fxGainLossAmount` captures, so the subledger reconciles.
 
+import { accountTypeFromClass, credit, debit } from "../lib/utils.ts";
 import { assertBalanced, EPSILON, round } from "../shared/precision.ts";
-import { credit, debit } from "../lib/utils.ts";
 
 // A journal line this builder emits. Deliberately self-contained — a pure unit
 // shouldn't depend on the generated DB types, and `journalLine.documentType`'s
@@ -73,6 +73,12 @@ export interface PaymentJournalApplicationInput {
 export interface PaymentJournalAccounts {
   controlAccountId: string | null;
   discountAccountId: string | null;
+  // The discount account's glAccountClass. Drives the discount line's natural-
+  // balance sign so a customer discount (Revenue) debits contra-revenue and a
+  // supplier discount (Expense/COGS) credits contra-cost. Resolved by index.ts;
+  // optional so callers without a discount need not supply it (falls back to
+  // "expense" for back-compat).
+  discountAccountClass?: string | null;
   writeOffAccountId: string | null;
   fxGainAccountId: string | null;
   fxLossAccountId: string | null;
@@ -133,15 +139,16 @@ export function buildPaymentJournal(
     journalLineReference,
     applications,
     accounts,
-    fee,
+    fee
   } = input;
 
   const {
     controlAccountId,
     discountAccountId,
+    discountAccountClass,
     writeOffAccountId,
     fxGainAccountId,
-    fxLossAccountId,
+    fxLossAccountId
   } = accounts;
 
   if (!controlAccountId) {
@@ -179,7 +186,7 @@ export function buildPaymentJournal(
       documentId: paymentId,
       documentLineReference: fields.documentLineReference,
       journalLineReference,
-      companyId,
+      companyId
     });
   };
 
@@ -194,12 +201,12 @@ export function buildPaymentJournal(
   const netBase = round(grossBase - feeBase);
   pushLine(cashIn ? "debit" : "credit", "asset", netBase, {
     accountId: bankAccount,
-    description: "Bank / Cash",
+    description: "Bank / Cash"
   });
   if (feeBase > 0) {
     pushLine(cashIn ? "debit" : "credit", "expense", feeBase, {
       accountId: fee!.accountId,
-      description: fee!.description ?? "Payment Processing Fee",
+      description: fee!.description ?? "Payment Processing Fee"
     });
   }
 
@@ -207,9 +214,9 @@ export function buildPaymentJournal(
   //    rate. FX is accumulated and plugged once below.
   let totalFxImpact = 0; // base ccy; +ve = gain, −ve = loss (both AR and AP)
   for (const app of applications) {
-    const invId = (isAR
-      ? app.targetSalesInvoiceId
-      : app.targetPurchaseInvoiceId) as string;
+    const invId = (
+      isAR ? app.targetSalesInvoiceId : app.targetPurchaseInvoiceId
+    ) as string;
     const applied = Number(app.appliedAmount);
     const discount = Number(app.discountAmount);
     const writeOff = Number(app.writeOffAmount);
@@ -225,7 +232,7 @@ export function buildPaymentJournal(
       {
         accountId: controlAccountId,
         description: isAR ? "Accounts Receivable" : "Accounts Payable",
-        documentLineReference: invId,
+        documentLineReference: invId
       }
     );
 
@@ -238,13 +245,20 @@ export function buildPaymentJournal(
           `Missing ${isAR ? "customer" : "supplier"} payment discount account default`
         );
       }
-      pushLine(cashIn ? "debit" : "credit", "expense", round(discount * invRate), {
-        accountId: discountAccountId,
-        description: isAR
-          ? "Customer Payment Discount"
-          : "Supplier Payment Discount",
-        documentLineReference: invId,
-      });
+      pushLine(
+        cashIn ? "debit" : "credit",
+        discountAccountClass
+          ? accountTypeFromClass(discountAccountClass)
+          : "expense",
+        round(discount * invRate),
+        {
+          accountId: discountAccountId,
+          description: isAR
+            ? "Customer Payment Discount"
+            : "Supplier Payment Discount",
+          documentLineReference: invId
+        }
+      );
     }
 
     // Write-off: at TARGET rate (an invoice-currency relief, not cash, so it
@@ -263,7 +277,7 @@ export function buildPaymentJournal(
         {
           accountId: writeOffAccountId,
           description: isAR ? "Bad Debt Expense" : "Vendor Write-Off Income",
-          documentLineReference: invId,
+          documentLineReference: invId
         }
       );
     }
@@ -286,7 +300,8 @@ export function buildPaymentJournal(
   //    columns were NUMERIC(19,4) a 1e-4 band was exactly "smaller than one
   //    storable unit"; at scale 5 that same literal drops ten storable units.
   const unappliedInPaymentCcy =
-    totalAmount - applications.reduce((sum, a) => sum + Number(a.appliedAmount), 0);
+    totalAmount -
+    applications.reduce((sum, a) => sum + Number(a.appliedAmount), 0);
   if (Math.abs(unappliedInPaymentCcy) > EPSILON) {
     const buildingCredit = unappliedInPaymentCcy > 0;
     pushLine(
@@ -301,7 +316,7 @@ export function buildPaymentJournal(
             : "Accounts Receivable (credit applied)"
           : buildingCredit
             ? "Accounts Payable (on-account credit)"
-            : "Accounts Payable (credit applied)",
+            : "Accounts Payable (credit applied)"
       }
     );
   }
@@ -316,7 +331,7 @@ export function buildPaymentJournal(
       }
       pushLine("credit", "revenue", fxBase, {
         accountId: fxGainAccountId,
-        description: "Realized FX Gain",
+        description: "Realized FX Gain"
       });
     } else {
       if (!fxLossAccountId) {
@@ -324,7 +339,7 @@ export function buildPaymentJournal(
       }
       pushLine("debit", "expense", fxBase, {
         accountId: fxLossAccountId,
-        description: "Realized FX Loss",
+        description: "Realized FX Loss"
       });
     }
   }

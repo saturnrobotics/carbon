@@ -19,7 +19,7 @@ export const dimensions = [
   { name: "Customer", entityType: "Customer" },
   { name: "Supplier", entityType: "Supplier" },
   { name: "Item", entityType: "Item" },
-  { name: "Scrap Reason", entityType: "ScrapReason" },
+  { name: "Scrap Reason", entityType: "ScrapReason" }
 ] as const;
 
 export const supplierStatuses = [
@@ -193,11 +193,31 @@ export const changeOrderTypes = [
 ] as const;
 
 export const nonConformanceRequiredActions = [
-  { name: "Corrective Action", systemType: "Corrective" as const, createdBy: "system" },
-  { name: "Preventive Action", systemType: "Preventive" as const, createdBy: "system" },
-  { name: "Containment Action", systemType: "Containment" as const, createdBy: "system" },
-  { name: "Verification", systemType: "Verification" as const, createdBy: "system" },
-  { name: "Customer Communication", systemType: "Communication" as const, createdBy: "system" },
+  {
+    name: "Corrective Action",
+    systemType: "Corrective" as const,
+    createdBy: "system"
+  },
+  {
+    name: "Preventive Action",
+    systemType: "Preventive" as const,
+    createdBy: "system"
+  },
+  {
+    name: "Containment Action",
+    systemType: "Containment" as const,
+    createdBy: "system"
+  },
+  {
+    name: "Verification",
+    systemType: "Verification" as const,
+    createdBy: "system"
+  },
+  {
+    name: "Customer Communication",
+    systemType: "Communication" as const,
+    createdBy: "system"
+  },
   { name: "Root Cause Analysis", createdBy: "system" },
   { name: "Inventory", createdBy: "system" },
   { name: "WIP", createdBy: "system" },
@@ -216,7 +236,10 @@ export const changeOrderRequiredActions = [
   { name: "Update BOM / Routing", createdBy: "system" },
   { name: "Cost Impact Review", createdBy: "system" },
   { name: "Quality Review", createdBy: "system" },
-  { name: "Inventory Disposition (rework / scrap / use-as-is)", createdBy: "system" },
+  {
+    name: "Inventory Disposition (rework / scrap / use-as-is)",
+    createdBy: "system"
+  },
   { name: "Notify Affected Parties", createdBy: "system" }
 ] as const;
 
@@ -611,7 +634,6 @@ export const currencies = [
   { code: "ZWL", decimalPlaces: 0, createdBy: "system" }
 ] as const;
 
-
 // Chart of accounts - parent-child tree structure
 // key/parentKey are used to resolve parentId at insert time (not stored in the database)
 // Group accounts have number: null (they are organizational containers)
@@ -622,151 +644,1264 @@ export const accounts = [
   // ═══════════════════════════════════════════════════════════
   // BALANCE SHEET
   // ═══════════════════════════════════════════════════════════
-  { key: "balance-sheet", number: null, name: "Balance Sheet", isGroup: true, parentKey: null, accountType: null, incomeBalance: "Balance Sheet", class: null, consolidatedRate: "Current", isSystem: true, createdBy: "system" },
+  {
+    key: "balance-sheet",
+    number: null,
+    name: "Balance Sheet",
+    isGroup: true,
+    parentKey: null,
+    accountType: null,
+    incomeBalance: "Balance Sheet",
+    class: null,
+    consolidatedRate: "Current",
+    isSystem: true,
+    createdBy: "system"
+  },
 
   // ─── 1000-1999: ASSETS ───
-  { key: "assets", number: null, name: "Assets", isGroup: true, parentKey: "balance-sheet", accountType: "Other Current Asset", incomeBalance: "Balance Sheet", class: "Asset", consolidatedRate: "Current", createdBy: "system" },
+  {
+    key: "assets",
+    number: null,
+    name: "Assets",
+    isGroup: true,
+    parentKey: "balance-sheet",
+    accountType: "Other Current Asset",
+    incomeBalance: "Balance Sheet",
+    class: "Asset",
+    consolidatedRate: "Current",
+    createdBy: "system"
+  },
 
   // Cash & Bank
-  { key: "cash-and-bank", number: null, name: "Cash & Bank", isGroup: true, parentKey: "assets", accountType: "Bank", incomeBalance: "Balance Sheet", class: "Asset", consolidatedRate: "Current", createdBy: "system" },
-  { key: "1010", number: "1010", name: "Bank - Cash", isGroup: false, parentKey: "cash-and-bank", accountType: "Bank", incomeBalance: "Balance Sheet", class: "Asset", consolidatedRate: "Current", createdBy: "system" },
-  { key: "1020", number: "1020", name: "Bank - Local Currency", isGroup: false, parentKey: "cash-and-bank", accountType: "Bank", incomeBalance: "Balance Sheet", class: "Asset", consolidatedRate: "Current", createdBy: "system" },
-  { key: "1030", number: "1030", name: "Bank - Foreign Currency", isGroup: false, parentKey: "cash-and-bank", accountType: "Bank", incomeBalance: "Balance Sheet", class: "Asset", consolidatedRate: "Current", createdBy: "system" },
+  {
+    key: "cash-and-bank",
+    number: null,
+    name: "Cash & Bank",
+    isGroup: true,
+    parentKey: "assets",
+    accountType: "Bank",
+    incomeBalance: "Balance Sheet",
+    class: "Asset",
+    consolidatedRate: "Current",
+    createdBy: "system"
+  },
+  {
+    key: "1010",
+    number: "1010",
+    name: "Bank - Cash",
+    isGroup: false,
+    parentKey: "cash-and-bank",
+    accountType: "Bank",
+    incomeBalance: "Balance Sheet",
+    class: "Asset",
+    consolidatedRate: "Current",
+    createdBy: "system"
+  },
+  {
+    key: "1020",
+    number: "1020",
+    name: "Bank - Local Currency",
+    isGroup: false,
+    parentKey: "cash-and-bank",
+    accountType: "Bank",
+    incomeBalance: "Balance Sheet",
+    class: "Asset",
+    consolidatedRate: "Current",
+    createdBy: "system"
+  },
+  {
+    key: "1030",
+    number: "1030",
+    name: "Bank - Foreign Currency",
+    isGroup: false,
+    parentKey: "cash-and-bank",
+    accountType: "Bank",
+    incomeBalance: "Balance Sheet",
+    class: "Asset",
+    consolidatedRate: "Current",
+    createdBy: "system"
+  },
 
   // Receivables
-  { key: "receivables", number: null, name: "Receivables", isGroup: true, parentKey: "assets", accountType: "Accounts Receivable", incomeBalance: "Balance Sheet", class: "Asset", consolidatedRate: "Current", createdBy: "system" },
-  { key: "1110", number: "1110", name: "Accounts Receivable", isGroup: false, parentKey: "receivables", accountType: "Accounts Receivable", incomeBalance: "Balance Sheet", class: "Asset", consolidatedRate: "Current", createdBy: "system" },
-  { key: "1130", number: "1130", name: "Inter-Company Receivables", isGroup: false, parentKey: "receivables", accountType: "Accounts Receivable", incomeBalance: "Balance Sheet", class: "Asset", consolidatedRate: "Current", createdBy: "system" },
-  { key: "1150", number: "1150", name: "Supplier Prepayments", isGroup: false, parentKey: "receivables", accountType: "Other Current Asset", incomeBalance: "Balance Sheet", class: "Asset", consolidatedRate: "Current", createdBy: "system" },
+  {
+    key: "receivables",
+    number: null,
+    name: "Receivables",
+    isGroup: true,
+    parentKey: "assets",
+    accountType: "Accounts Receivable",
+    incomeBalance: "Balance Sheet",
+    class: "Asset",
+    consolidatedRate: "Current",
+    createdBy: "system"
+  },
+  {
+    key: "1110",
+    number: "1110",
+    name: "Accounts Receivable",
+    isGroup: false,
+    parentKey: "receivables",
+    accountType: "Accounts Receivable",
+    incomeBalance: "Balance Sheet",
+    class: "Asset",
+    consolidatedRate: "Current",
+    createdBy: "system"
+  },
+  {
+    key: "1130",
+    number: "1130",
+    name: "Inter-Company Receivables",
+    isGroup: false,
+    parentKey: "receivables",
+    accountType: "Accounts Receivable",
+    incomeBalance: "Balance Sheet",
+    class: "Asset",
+    consolidatedRate: "Current",
+    createdBy: "system"
+  },
+  {
+    key: "1150",
+    number: "1150",
+    name: "Supplier Prepayments",
+    isGroup: false,
+    parentKey: "receivables",
+    accountType: "Other Current Asset",
+    incomeBalance: "Balance Sheet",
+    class: "Asset",
+    consolidatedRate: "Current",
+    createdBy: "system"
+  },
 
   // Inventory
-  { key: "inventory", number: null, name: "Inventory & Stock", isGroup: true, parentKey: "assets", accountType: "Inventory", incomeBalance: "Balance Sheet", class: "Asset", consolidatedRate: "Current", createdBy: "system" },
-  { key: "1210", number: "1210", name: "Raw Materials", isGroup: false, parentKey: "inventory", accountType: "Inventory", incomeBalance: "Balance Sheet", class: "Asset", consolidatedRate: "Current", createdBy: "system" },
-  { key: "1220", number: "1220", name: "Finished Goods", isGroup: false, parentKey: "inventory", accountType: "Inventory", incomeBalance: "Balance Sheet", class: "Asset", consolidatedRate: "Current", createdBy: "system" },
-  { key: "1230", number: "1230", name: "Work In Progress (WIP)", isGroup: false, parentKey: "inventory", accountType: "Inventory", incomeBalance: "Balance Sheet", class: "Asset", consolidatedRate: "Current", createdBy: "system" },
-  { key: "1240", number: "1240", name: "Inventory Reserves / Allowances", isGroup: false, parentKey: "inventory", accountType: "Inventory", incomeBalance: "Balance Sheet", class: "Asset", consolidatedRate: "Current", createdBy: "system" },
+  {
+    key: "inventory",
+    number: null,
+    name: "Inventory & Stock",
+    isGroup: true,
+    parentKey: "assets",
+    accountType: "Inventory",
+    incomeBalance: "Balance Sheet",
+    class: "Asset",
+    consolidatedRate: "Current",
+    createdBy: "system"
+  },
+  {
+    key: "1210",
+    number: "1210",
+    name: "Raw Materials",
+    isGroup: false,
+    parentKey: "inventory",
+    accountType: "Inventory",
+    incomeBalance: "Balance Sheet",
+    class: "Asset",
+    consolidatedRate: "Current",
+    createdBy: "system"
+  },
+  {
+    key: "1220",
+    number: "1220",
+    name: "Finished Goods",
+    isGroup: false,
+    parentKey: "inventory",
+    accountType: "Inventory",
+    incomeBalance: "Balance Sheet",
+    class: "Asset",
+    consolidatedRate: "Current",
+    createdBy: "system"
+  },
+  {
+    key: "1230",
+    number: "1230",
+    name: "Work In Progress (WIP)",
+    isGroup: false,
+    parentKey: "inventory",
+    accountType: "Inventory",
+    incomeBalance: "Balance Sheet",
+    class: "Asset",
+    consolidatedRate: "Current",
+    createdBy: "system"
+  },
+  {
+    key: "1240",
+    number: "1240",
+    name: "Inventory Reserves / Allowances",
+    isGroup: false,
+    parentKey: "inventory",
+    accountType: "Inventory",
+    incomeBalance: "Balance Sheet",
+    class: "Asset",
+    consolidatedRate: "Current",
+    createdBy: "system"
+  },
 
   // Property, Plant & Equipment
-  { key: "ppe", number: null, name: "Property, Plant & Equipment", isGroup: true, parentKey: "assets", accountType: "Fixed Asset", incomeBalance: "Balance Sheet", class: "Asset", consolidatedRate: "Current", createdBy: "system" },
-  { key: "1310", number: "1310", name: "Fixed Asset Acquisition Cost", isGroup: false, parentKey: "ppe", accountType: "Fixed Asset", incomeBalance: "Balance Sheet", class: "Asset", consolidatedRate: "Current", createdBy: "system" },
-  { key: "1320", number: "1320", name: "Fixed Asset Acquisition Cost on Disposal", isGroup: false, parentKey: "ppe", accountType: "Fixed Asset", incomeBalance: "Balance Sheet", class: "Asset", consolidatedRate: "Current", createdBy: "system" },
-  { key: "1330", number: "1330", name: "Accumulated Depreciation", isGroup: false, parentKey: "ppe", accountType: "Accumulated Depreciation", incomeBalance: "Balance Sheet", class: "Asset", consolidatedRate: "Current", createdBy: "system" },
-  { key: "1340", number: "1340", name: "Accumulated Depreciation on Disposal", isGroup: false, parentKey: "ppe", accountType: "Accumulated Depreciation", incomeBalance: "Balance Sheet", class: "Asset", consolidatedRate: "Current", createdBy: "system" },
-  { key: "1350", number: "1350", name: "Machinery & Equipment", isGroup: false, parentKey: "ppe", accountType: "Fixed Asset", incomeBalance: "Balance Sheet", class: "Asset", consolidatedRate: "Current", createdBy: "system" },
-  { key: "1360", number: "1360", name: "Buildings & Leasehold Improvements", isGroup: false, parentKey: "ppe", accountType: "Fixed Asset", incomeBalance: "Balance Sheet", class: "Asset", consolidatedRate: "Current", createdBy: "system" },
+  {
+    key: "ppe",
+    number: null,
+    name: "Property, Plant & Equipment",
+    isGroup: true,
+    parentKey: "assets",
+    accountType: "Fixed Asset",
+    incomeBalance: "Balance Sheet",
+    class: "Asset",
+    consolidatedRate: "Current",
+    createdBy: "system"
+  },
+  {
+    key: "1310",
+    number: "1310",
+    name: "Fixed Asset Acquisition Cost",
+    isGroup: false,
+    parentKey: "ppe",
+    accountType: "Fixed Asset",
+    incomeBalance: "Balance Sheet",
+    class: "Asset",
+    consolidatedRate: "Current",
+    createdBy: "system"
+  },
+  {
+    key: "1320",
+    number: "1320",
+    name: "Fixed Asset Acquisition Cost on Disposal",
+    isGroup: false,
+    parentKey: "ppe",
+    accountType: "Fixed Asset",
+    incomeBalance: "Balance Sheet",
+    class: "Asset",
+    consolidatedRate: "Current",
+    createdBy: "system"
+  },
+  {
+    key: "1330",
+    number: "1330",
+    name: "Accumulated Depreciation",
+    isGroup: false,
+    parentKey: "ppe",
+    accountType: "Accumulated Depreciation",
+    incomeBalance: "Balance Sheet",
+    class: "Asset",
+    consolidatedRate: "Current",
+    createdBy: "system"
+  },
+  {
+    key: "1340",
+    number: "1340",
+    name: "Accumulated Depreciation on Disposal",
+    isGroup: false,
+    parentKey: "ppe",
+    accountType: "Accumulated Depreciation",
+    incomeBalance: "Balance Sheet",
+    class: "Asset",
+    consolidatedRate: "Current",
+    createdBy: "system"
+  },
+  {
+    key: "1350",
+    number: "1350",
+    name: "Machinery & Equipment",
+    isGroup: false,
+    parentKey: "ppe",
+    accountType: "Fixed Asset",
+    incomeBalance: "Balance Sheet",
+    class: "Asset",
+    consolidatedRate: "Current",
+    createdBy: "system"
+  },
+  {
+    key: "1360",
+    number: "1360",
+    name: "Buildings & Leasehold Improvements",
+    isGroup: false,
+    parentKey: "ppe",
+    accountType: "Fixed Asset",
+    incomeBalance: "Balance Sheet",
+    class: "Asset",
+    consolidatedRate: "Current",
+    createdBy: "system"
+  },
 
   // Other Assets
-  { key: "other-assets", number: null, name: "Other Assets", isGroup: true, parentKey: "assets", accountType: "Other Asset", incomeBalance: "Balance Sheet", class: "Asset", consolidatedRate: "Current", createdBy: "system" },
-  { key: "1410", number: "1410", name: "Intangible Assets", isGroup: false, parentKey: "other-assets", accountType: "Other Asset", incomeBalance: "Balance Sheet", class: "Asset", consolidatedRate: "Current", createdBy: "system" },
-  { key: "1420", number: "1420", name: "Accumulated Amortization", isGroup: false, parentKey: "other-assets", accountType: "Other Asset", incomeBalance: "Balance Sheet", class: "Asset", consolidatedRate: "Current", createdBy: "system" },
-  { key: "1430", number: "1430", name: "Investments in Subsidiaries", isGroup: false, parentKey: "other-assets", accountType: "Investments", incomeBalance: "Balance Sheet", class: "Asset", consolidatedRate: "Current", createdBy: "system" },
-  { key: "1440", number: "1440", name: "Deferred Tax Assets", isGroup: false, parentKey: "other-assets", accountType: "Other Asset", incomeBalance: "Balance Sheet", class: "Asset", consolidatedRate: "Current", createdBy: "system" },
+  {
+    key: "other-assets",
+    number: null,
+    name: "Other Assets",
+    isGroup: true,
+    parentKey: "assets",
+    accountType: "Other Asset",
+    incomeBalance: "Balance Sheet",
+    class: "Asset",
+    consolidatedRate: "Current",
+    createdBy: "system"
+  },
+  {
+    key: "1410",
+    number: "1410",
+    name: "Intangible Assets",
+    isGroup: false,
+    parentKey: "other-assets",
+    accountType: "Other Asset",
+    incomeBalance: "Balance Sheet",
+    class: "Asset",
+    consolidatedRate: "Current",
+    createdBy: "system"
+  },
+  {
+    key: "1420",
+    number: "1420",
+    name: "Accumulated Amortization",
+    isGroup: false,
+    parentKey: "other-assets",
+    accountType: "Other Asset",
+    incomeBalance: "Balance Sheet",
+    class: "Asset",
+    consolidatedRate: "Current",
+    createdBy: "system"
+  },
+  {
+    key: "1430",
+    number: "1430",
+    name: "Investments in Subsidiaries",
+    isGroup: false,
+    parentKey: "other-assets",
+    accountType: "Investments",
+    incomeBalance: "Balance Sheet",
+    class: "Asset",
+    consolidatedRate: "Current",
+    createdBy: "system"
+  },
+  {
+    key: "1440",
+    number: "1440",
+    name: "Deferred Tax Assets",
+    isGroup: false,
+    parentKey: "other-assets",
+    accountType: "Other Asset",
+    incomeBalance: "Balance Sheet",
+    class: "Asset",
+    consolidatedRate: "Current",
+    createdBy: "system"
+  },
 
   // ─── 2000-2999: LIABILITIES ───
-  { key: "liabilities", number: null, name: "Liabilities", isGroup: true, parentKey: "balance-sheet", accountType: "Other Current Liability", incomeBalance: "Balance Sheet", class: "Liability", consolidatedRate: "Current", createdBy: "system" },
+  {
+    key: "liabilities",
+    number: null,
+    name: "Liabilities",
+    isGroup: true,
+    parentKey: "balance-sheet",
+    accountType: "Other Current Liability",
+    incomeBalance: "Balance Sheet",
+    class: "Liability",
+    consolidatedRate: "Current",
+    createdBy: "system"
+  },
 
   // Payables
-  { key: "payables", number: null, name: "Payables", isGroup: true, parentKey: "liabilities", accountType: "Accounts Payable", incomeBalance: "Balance Sheet", class: "Liability", consolidatedRate: "Current", createdBy: "system" },
-  { key: "2010", number: "2010", name: "Accounts Payable", isGroup: false, parentKey: "payables", accountType: "Accounts Payable", incomeBalance: "Balance Sheet", class: "Liability", consolidatedRate: "Current", createdBy: "system" },
-  { key: "2020", number: "2020", name: "Inter-Company Payables", isGroup: false, parentKey: "payables", accountType: "Accounts Payable", incomeBalance: "Balance Sheet", class: "Liability", consolidatedRate: "Current", createdBy: "system" },
+  {
+    key: "payables",
+    number: null,
+    name: "Payables",
+    isGroup: true,
+    parentKey: "liabilities",
+    accountType: "Accounts Payable",
+    incomeBalance: "Balance Sheet",
+    class: "Liability",
+    consolidatedRate: "Current",
+    createdBy: "system"
+  },
+  {
+    key: "2010",
+    number: "2010",
+    name: "Accounts Payable",
+    isGroup: false,
+    parentKey: "payables",
+    accountType: "Accounts Payable",
+    incomeBalance: "Balance Sheet",
+    class: "Liability",
+    consolidatedRate: "Current",
+    createdBy: "system"
+  },
+  {
+    key: "2020",
+    number: "2020",
+    name: "Inter-Company Payables",
+    isGroup: false,
+    parentKey: "payables",
+    accountType: "Accounts Payable",
+    incomeBalance: "Balance Sheet",
+    class: "Liability",
+    consolidatedRate: "Current",
+    createdBy: "system"
+  },
 
   // Current Liabilities
-  { key: "current-liabilities", number: null, name: "Current Liabilities", isGroup: true, parentKey: "liabilities", accountType: "Other Current Liability", incomeBalance: "Balance Sheet", class: "Liability", consolidatedRate: "Current", createdBy: "system" },
-  { key: "2110", number: "2110", name: "Customer Prepayments", isGroup: false, parentKey: "current-liabilities", accountType: "Other Current Liability", incomeBalance: "Balance Sheet", class: "Liability", consolidatedRate: "Current", createdBy: "system" },
-  { key: "2125", number: "2125", name: "GR/IR Clearing", isGroup: false, parentKey: "current-liabilities", accountType: "Other Current Liability", incomeBalance: "Balance Sheet", class: "Liability", consolidatedRate: "Current", createdBy: "system" },
-  { key: "2140", number: "2140", name: "Accrued Expenses", isGroup: false, parentKey: "current-liabilities", accountType: "Other Current Liability", incomeBalance: "Balance Sheet", class: "Liability", consolidatedRate: "Current", createdBy: "system" },
-  { key: "2150", number: "2150", name: "Accrued Wages & Salaries", isGroup: false, parentKey: "current-liabilities", accountType: "Other Current Liability", incomeBalance: "Balance Sheet", class: "Liability", consolidatedRate: "Current", createdBy: "system" },
-  { key: "2160", number: "2160", name: "Deferred Revenue", isGroup: false, parentKey: "current-liabilities", accountType: "Other Current Liability", incomeBalance: "Balance Sheet", class: "Liability", consolidatedRate: "Current", createdBy: "system" },
-  { key: "2170", number: "2170", name: "Short-Term Loans", isGroup: false, parentKey: "current-liabilities", accountType: "Other Current Liability", incomeBalance: "Balance Sheet", class: "Liability", consolidatedRate: "Current", createdBy: "system" },
+  {
+    key: "current-liabilities",
+    number: null,
+    name: "Current Liabilities",
+    isGroup: true,
+    parentKey: "liabilities",
+    accountType: "Other Current Liability",
+    incomeBalance: "Balance Sheet",
+    class: "Liability",
+    consolidatedRate: "Current",
+    createdBy: "system"
+  },
+  {
+    key: "2110",
+    number: "2110",
+    name: "Customer Prepayments",
+    isGroup: false,
+    parentKey: "current-liabilities",
+    accountType: "Other Current Liability",
+    incomeBalance: "Balance Sheet",
+    class: "Liability",
+    consolidatedRate: "Current",
+    createdBy: "system"
+  },
+  {
+    key: "2125",
+    number: "2125",
+    name: "GR/IR Clearing",
+    isGroup: false,
+    parentKey: "current-liabilities",
+    accountType: "Other Current Liability",
+    incomeBalance: "Balance Sheet",
+    class: "Liability",
+    consolidatedRate: "Current",
+    createdBy: "system"
+  },
+  {
+    key: "2140",
+    number: "2140",
+    name: "Accrued Expenses",
+    isGroup: false,
+    parentKey: "current-liabilities",
+    accountType: "Other Current Liability",
+    incomeBalance: "Balance Sheet",
+    class: "Liability",
+    consolidatedRate: "Current",
+    createdBy: "system"
+  },
+  {
+    key: "2150",
+    number: "2150",
+    name: "Accrued Wages & Salaries",
+    isGroup: false,
+    parentKey: "current-liabilities",
+    accountType: "Other Current Liability",
+    incomeBalance: "Balance Sheet",
+    class: "Liability",
+    consolidatedRate: "Current",
+    createdBy: "system"
+  },
+  {
+    key: "2160",
+    number: "2160",
+    name: "Deferred Revenue",
+    isGroup: false,
+    parentKey: "current-liabilities",
+    accountType: "Other Current Liability",
+    incomeBalance: "Balance Sheet",
+    class: "Liability",
+    consolidatedRate: "Current",
+    createdBy: "system"
+  },
+  {
+    key: "2170",
+    number: "2170",
+    name: "Short-Term Loans",
+    isGroup: false,
+    parentKey: "current-liabilities",
+    accountType: "Other Current Liability",
+    incomeBalance: "Balance Sheet",
+    class: "Liability",
+    consolidatedRate: "Current",
+    createdBy: "system"
+  },
 
   // Tax Liabilities
-  { key: "tax-liabilities", number: null, name: "Tax Liabilities", isGroup: true, parentKey: "liabilities", accountType: "Tax", incomeBalance: "Balance Sheet", class: "Liability", consolidatedRate: "Current", createdBy: "system" },
-  { key: "2210", number: "2210", name: "Sales Tax Payable", isGroup: false, parentKey: "tax-liabilities", accountType: "Tax", incomeBalance: "Balance Sheet", class: "Liability", consolidatedRate: "Current", createdBy: "system" },
-  { key: "2220", number: "2220", name: "Purchase Tax Payable", isGroup: false, parentKey: "tax-liabilities", accountType: "Tax", incomeBalance: "Balance Sheet", class: "Liability", consolidatedRate: "Current", createdBy: "system" },
-  { key: "2230", number: "2230", name: "Reverse Charge Tax Payable", isGroup: false, parentKey: "tax-liabilities", accountType: "Tax", incomeBalance: "Balance Sheet", class: "Liability", consolidatedRate: "Current", createdBy: "system" },
+  {
+    key: "tax-liabilities",
+    number: null,
+    name: "Tax Liabilities",
+    isGroup: true,
+    parentKey: "liabilities",
+    accountType: "Tax",
+    incomeBalance: "Balance Sheet",
+    class: "Liability",
+    consolidatedRate: "Current",
+    createdBy: "system"
+  },
+  {
+    key: "2210",
+    number: "2210",
+    name: "Sales Tax Payable",
+    isGroup: false,
+    parentKey: "tax-liabilities",
+    accountType: "Tax",
+    incomeBalance: "Balance Sheet",
+    class: "Liability",
+    consolidatedRate: "Current",
+    createdBy: "system"
+  },
+  {
+    key: "2220",
+    number: "2220",
+    name: "Purchase Tax Payable",
+    isGroup: false,
+    parentKey: "tax-liabilities",
+    accountType: "Tax",
+    incomeBalance: "Balance Sheet",
+    class: "Liability",
+    consolidatedRate: "Current",
+    createdBy: "system"
+  },
+  {
+    key: "2230",
+    number: "2230",
+    name: "Reverse Charge Tax Payable",
+    isGroup: false,
+    parentKey: "tax-liabilities",
+    accountType: "Tax",
+    incomeBalance: "Balance Sheet",
+    class: "Liability",
+    consolidatedRate: "Current",
+    createdBy: "system"
+  },
 
   // Long-Term Liabilities
-  { key: "long-term-liabilities", number: null, name: "Long-Term Liabilities", isGroup: true, parentKey: "liabilities", accountType: "Long Term Liability", incomeBalance: "Balance Sheet", class: "Liability", consolidatedRate: "Current", createdBy: "system" },
-  { key: "2410", number: "2410", name: "Long-Term Debt / Loans", isGroup: false, parentKey: "long-term-liabilities", accountType: "Long Term Liability", incomeBalance: "Balance Sheet", class: "Liability", consolidatedRate: "Current", createdBy: "system" },
-  { key: "2420", number: "2420", name: "Deferred Tax Liabilities", isGroup: false, parentKey: "long-term-liabilities", accountType: "Long Term Liability", incomeBalance: "Balance Sheet", class: "Liability", consolidatedRate: "Current", createdBy: "system" },
-  { key: "2430", number: "2430", name: "Pension Obligations", isGroup: false, parentKey: "long-term-liabilities", accountType: "Long Term Liability", incomeBalance: "Balance Sheet", class: "Liability", consolidatedRate: "Current", createdBy: "system" },
+  {
+    key: "long-term-liabilities",
+    number: null,
+    name: "Long-Term Liabilities",
+    isGroup: true,
+    parentKey: "liabilities",
+    accountType: "Long Term Liability",
+    incomeBalance: "Balance Sheet",
+    class: "Liability",
+    consolidatedRate: "Current",
+    createdBy: "system"
+  },
+  {
+    key: "2410",
+    number: "2410",
+    name: "Long-Term Debt / Loans",
+    isGroup: false,
+    parentKey: "long-term-liabilities",
+    accountType: "Long Term Liability",
+    incomeBalance: "Balance Sheet",
+    class: "Liability",
+    consolidatedRate: "Current",
+    createdBy: "system"
+  },
+  {
+    key: "2420",
+    number: "2420",
+    name: "Deferred Tax Liabilities",
+    isGroup: false,
+    parentKey: "long-term-liabilities",
+    accountType: "Long Term Liability",
+    incomeBalance: "Balance Sheet",
+    class: "Liability",
+    consolidatedRate: "Current",
+    createdBy: "system"
+  },
+  {
+    key: "2430",
+    number: "2430",
+    name: "Pension Obligations",
+    isGroup: false,
+    parentKey: "long-term-liabilities",
+    accountType: "Long Term Liability",
+    incomeBalance: "Balance Sheet",
+    class: "Liability",
+    consolidatedRate: "Current",
+    createdBy: "system"
+  },
 
   // ─── 3000-3999: EQUITY ───
-  { key: "equity", number: null, name: "Equity", isGroup: true, parentKey: "balance-sheet", accountType: "Equity - No Close", incomeBalance: "Balance Sheet", class: "Equity", consolidatedRate: "Historical", createdBy: "system" },
-  { key: "3010", number: "3010", name: "Common Stock / Share Capital", isGroup: false, parentKey: "equity", accountType: "Equity - No Close", incomeBalance: "Balance Sheet", class: "Equity", consolidatedRate: "Historical", createdBy: "system" },
-  { key: "3100", number: "3100", name: "Retained Earnings", isGroup: false, parentKey: "equity", accountType: "Retained Earnings", incomeBalance: "Balance Sheet", class: "Equity", consolidatedRate: "Historical", createdBy: "system" },
-  { key: "3200", number: "3200", name: "Reserves (Currency Translation)", isGroup: false, parentKey: "equity", accountType: "Equity - Close", incomeBalance: "Balance Sheet", class: "Equity", consolidatedRate: "Historical", createdBy: "system" },
-  { key: "3300", number: "3300", name: "Dividends Payable", isGroup: false, parentKey: "equity", accountType: "Equity - Close", incomeBalance: "Balance Sheet", class: "Equity", consolidatedRate: "Historical", createdBy: "system" },
+  {
+    key: "equity",
+    number: null,
+    name: "Equity",
+    isGroup: true,
+    parentKey: "balance-sheet",
+    accountType: "Equity - No Close",
+    incomeBalance: "Balance Sheet",
+    class: "Equity",
+    consolidatedRate: "Historical",
+    createdBy: "system"
+  },
+  {
+    key: "3010",
+    number: "3010",
+    name: "Common Stock / Share Capital",
+    isGroup: false,
+    parentKey: "equity",
+    accountType: "Equity - No Close",
+    incomeBalance: "Balance Sheet",
+    class: "Equity",
+    consolidatedRate: "Historical",
+    createdBy: "system"
+  },
+  {
+    key: "3100",
+    number: "3100",
+    name: "Retained Earnings",
+    isGroup: false,
+    parentKey: "equity",
+    accountType: "Retained Earnings",
+    incomeBalance: "Balance Sheet",
+    class: "Equity",
+    consolidatedRate: "Historical",
+    createdBy: "system"
+  },
+  {
+    key: "3200",
+    number: "3200",
+    name: "Reserves (Currency Translation)",
+    isGroup: false,
+    parentKey: "equity",
+    accountType: "Equity - Close",
+    incomeBalance: "Balance Sheet",
+    class: "Equity",
+    consolidatedRate: "Historical",
+    createdBy: "system"
+  },
+  {
+    key: "3300",
+    number: "3300",
+    name: "Dividends Payable",
+    isGroup: false,
+    parentKey: "equity",
+    accountType: "Equity - Close",
+    incomeBalance: "Balance Sheet",
+    class: "Equity",
+    consolidatedRate: "Historical",
+    createdBy: "system"
+  },
 
   // ═══════════════════════════════════════════════════════════
   // INCOME STATEMENT
   // ═══════════════════════════════════════════════════════════
-  { key: "income-statement", number: null, name: "Income Statement", isGroup: true, parentKey: null, accountType: null, incomeBalance: "Income Statement", class: null, consolidatedRate: "Average", isSystem: true, createdBy: "system" },
+  {
+    key: "income-statement",
+    number: null,
+    name: "Income Statement",
+    isGroup: true,
+    parentKey: null,
+    accountType: null,
+    incomeBalance: "Income Statement",
+    class: null,
+    consolidatedRate: "Average",
+    isSystem: true,
+    createdBy: "system"
+  },
 
   // ─── 4000-4999: REVENUE ───
-  { key: "revenue", number: null, name: "Revenue", isGroup: true, parentKey: "income-statement", accountType: "Income", incomeBalance: "Income Statement", class: "Revenue", consolidatedRate: "Average", createdBy: "system" },
-  { key: "4010", number: "4010", name: "Sales", isGroup: false, parentKey: "revenue", accountType: "Income", incomeBalance: "Income Statement", class: "Revenue", consolidatedRate: "Average", createdBy: "system" },
-  { key: "4020", number: "4020", name: "Sales Discounts", isGroup: false, parentKey: "revenue", accountType: "Income", incomeBalance: "Income Statement", class: "Revenue", consolidatedRate: "Average", createdBy: "system" },
-  { key: "4030", number: "4030", name: "Manufacturing Services Revenue", isGroup: false, parentKey: "revenue", accountType: "Income", incomeBalance: "Income Statement", class: "Revenue", consolidatedRate: "Average", createdBy: "system" },
+  {
+    key: "revenue",
+    number: null,
+    name: "Revenue",
+    isGroup: true,
+    parentKey: "income-statement",
+    accountType: "Income",
+    incomeBalance: "Income Statement",
+    class: "Revenue",
+    consolidatedRate: "Average",
+    createdBy: "system"
+  },
+  {
+    key: "4010",
+    number: "4010",
+    name: "Sales",
+    isGroup: false,
+    parentKey: "revenue",
+    accountType: "Income",
+    incomeBalance: "Income Statement",
+    class: "Revenue",
+    consolidatedRate: "Average",
+    createdBy: "system"
+  },
+  {
+    key: "4020",
+    number: "4020",
+    name: "Sales Discounts",
+    isGroup: false,
+    parentKey: "revenue",
+    accountType: "Income",
+    incomeBalance: "Income Statement",
+    class: "Revenue",
+    consolidatedRate: "Average",
+    createdBy: "system"
+  },
+  {
+    key: "4030",
+    number: "4030",
+    name: "Manufacturing Services Revenue",
+    isGroup: false,
+    parentKey: "revenue",
+    accountType: "Income",
+    incomeBalance: "Income Statement",
+    class: "Revenue",
+    consolidatedRate: "Average",
+    createdBy: "system"
+  },
+  {
+    key: "4040",
+    number: "4040",
+    name: "Customer Payment Discounts",
+    isGroup: false,
+    parentKey: "revenue",
+    accountType: "Income",
+    incomeBalance: "Income Statement",
+    class: "Revenue",
+    consolidatedRate: "Average",
+    createdBy: "system"
+  },
 
   // Other Income
-  { key: "other-income", number: null, name: "Other Income", isGroup: true, parentKey: "income-statement", accountType: "Other Income", incomeBalance: "Income Statement", class: "Revenue", consolidatedRate: "Average", createdBy: "system" },
-  { key: "4110", number: "4110", name: "Scrap Sales", isGroup: false, parentKey: "other-income", accountType: "Other Income", incomeBalance: "Income Statement", class: "Revenue", consolidatedRate: "Average", createdBy: "system" },
-  { key: "4120", number: "4120", name: "Foreign Exchange Gains", isGroup: false, parentKey: "other-income", accountType: "Other Income", incomeBalance: "Income Statement", class: "Revenue", consolidatedRate: "Average", createdBy: "system" },
-  { key: "4130", number: "4130", name: "Vendor Write-Off Income", isGroup: false, parentKey: "other-income", accountType: "Other Income", incomeBalance: "Income Statement", class: "Revenue", consolidatedRate: "Average", createdBy: "system" },
-  { key: "4140", number: "4140", name: "Gain on Disposal", isGroup: false, parentKey: "other-income", accountType: "Other Income", incomeBalance: "Income Statement", class: "Revenue", consolidatedRate: "Average", createdBy: "system" },
+  {
+    key: "other-income",
+    number: null,
+    name: "Other Income",
+    isGroup: true,
+    parentKey: "income-statement",
+    accountType: "Other Income",
+    incomeBalance: "Income Statement",
+    class: "Revenue",
+    consolidatedRate: "Average",
+    createdBy: "system"
+  },
+  {
+    key: "4110",
+    number: "4110",
+    name: "Scrap Sales",
+    isGroup: false,
+    parentKey: "other-income",
+    accountType: "Other Income",
+    incomeBalance: "Income Statement",
+    class: "Revenue",
+    consolidatedRate: "Average",
+    createdBy: "system"
+  },
+  {
+    key: "4120",
+    number: "4120",
+    name: "Foreign Exchange Gains",
+    isGroup: false,
+    parentKey: "other-income",
+    accountType: "Other Income",
+    incomeBalance: "Income Statement",
+    class: "Revenue",
+    consolidatedRate: "Average",
+    createdBy: "system"
+  },
+  {
+    key: "4130",
+    number: "4130",
+    name: "Vendor Write-Off Income",
+    isGroup: false,
+    parentKey: "other-income",
+    accountType: "Other Income",
+    incomeBalance: "Income Statement",
+    class: "Revenue",
+    consolidatedRate: "Average",
+    createdBy: "system"
+  },
+  {
+    key: "4140",
+    number: "4140",
+    name: "Gain on Disposal",
+    isGroup: false,
+    parentKey: "other-income",
+    accountType: "Other Income",
+    incomeBalance: "Income Statement",
+    class: "Revenue",
+    consolidatedRate: "Average",
+    createdBy: "system"
+  },
 
   // ─── 5000-5999: COST OF GOODS SOLD ───
-  { key: "cogs", number: null, name: "Cost of Goods Sold", isGroup: true, parentKey: "income-statement", accountType: "Cost of Goods Sold", incomeBalance: "Income Statement", class: "Expense", consolidatedRate: "Average", createdBy: "system" },
-  { key: "5010", number: "5010", name: "Cost of Goods Sold - Direct", isGroup: false, parentKey: "cogs", accountType: "Cost of Goods Sold", incomeBalance: "Income Statement", class: "Expense", consolidatedRate: "Average", createdBy: "system" },
-  { key: "5050", number: "5050", name: "Indirect Materials & Services", isGroup: false, parentKey: "cogs", accountType: "Cost of Goods Sold", incomeBalance: "Income Statement", class: "Expense", consolidatedRate: "Average", createdBy: "system" },
-  { key: "5060", number: "5060", name: "Labor & Machine Absorption", isGroup: false, parentKey: "cogs", accountType: "Cost of Goods Sold", incomeBalance: "Income Statement", class: "Expense", consolidatedRate: "Average", createdBy: "system" },
-  { key: "5070", number: "5070", name: "Overhead Absorption", isGroup: false, parentKey: "cogs", accountType: "Cost of Goods Sold", incomeBalance: "Income Statement", class: "Expense", consolidatedRate: "Average", createdBy: "system" },
+  {
+    key: "cogs",
+    number: null,
+    name: "Cost of Goods Sold",
+    isGroup: true,
+    parentKey: "income-statement",
+    accountType: "Cost of Goods Sold",
+    incomeBalance: "Income Statement",
+    class: "Expense",
+    consolidatedRate: "Average",
+    createdBy: "system"
+  },
+  {
+    key: "5010",
+    number: "5010",
+    name: "Cost of Goods Sold - Direct",
+    isGroup: false,
+    parentKey: "cogs",
+    accountType: "Cost of Goods Sold",
+    incomeBalance: "Income Statement",
+    class: "Expense",
+    consolidatedRate: "Average",
+    createdBy: "system"
+  },
+  {
+    key: "5050",
+    number: "5050",
+    name: "Indirect Materials & Services",
+    isGroup: false,
+    parentKey: "cogs",
+    accountType: "Cost of Goods Sold",
+    incomeBalance: "Income Statement",
+    class: "Expense",
+    consolidatedRate: "Average",
+    createdBy: "system"
+  },
+  {
+    key: "5060",
+    number: "5060",
+    name: "Labor & Machine Absorption",
+    isGroup: false,
+    parentKey: "cogs",
+    accountType: "Cost of Goods Sold",
+    incomeBalance: "Income Statement",
+    class: "Expense",
+    consolidatedRate: "Average",
+    createdBy: "system"
+  },
+  {
+    key: "5070",
+    number: "5070",
+    name: "Overhead Absorption",
+    isGroup: false,
+    parentKey: "cogs",
+    accountType: "Cost of Goods Sold",
+    incomeBalance: "Income Statement",
+    class: "Expense",
+    consolidatedRate: "Average",
+    createdBy: "system"
+  },
+  {
+    key: "5080",
+    number: "5080",
+    name: "Supplier Payment Discounts",
+    isGroup: false,
+    parentKey: "cogs",
+    accountType: "Cost of Goods Sold",
+    incomeBalance: "Income Statement",
+    class: "Expense",
+    consolidatedRate: "Average",
+    createdBy: "system"
+  },
 
   // Variances
-  { key: "variances", number: null, name: "Variances", isGroup: true, parentKey: "cogs", accountType: "Expense", incomeBalance: "Income Statement", class: "Expense", consolidatedRate: "Average", createdBy: "system" },
-  { key: "5210", number: "5210", name: "Purchase Price Variance", isGroup: false, parentKey: "variances", accountType: "Cost of Goods Sold", incomeBalance: "Income Statement", class: "Expense", consolidatedRate: "Average", createdBy: "system" },
-  { key: "5220", number: "5220", name: "Material Usage Variance", isGroup: false, parentKey: "variances", accountType: "Cost of Goods Sold", incomeBalance: "Income Statement", class: "Expense", consolidatedRate: "Average", createdBy: "system" },
-  { key: "5230", number: "5230", name: "Labor & Machine Variance", isGroup: false, parentKey: "variances", accountType: "Cost of Goods Sold", incomeBalance: "Income Statement", class: "Expense", consolidatedRate: "Average", createdBy: "system" },
-  { key: "5240", number: "5240", name: "Overhead Variance", isGroup: false, parentKey: "variances", accountType: "Cost of Goods Sold", incomeBalance: "Income Statement", class: "Expense", consolidatedRate: "Average", createdBy: "system" },
-  { key: "5250", number: "5250", name: "Lot Size Variance", isGroup: false, parentKey: "variances", accountType: "Cost of Goods Sold", incomeBalance: "Income Statement", class: "Expense", consolidatedRate: "Average", createdBy: "system" },
-  { key: "5260", number: "5260", name: "Subcontracting Variance", isGroup: false, parentKey: "variances", accountType: "Cost of Goods Sold", incomeBalance: "Income Statement", class: "Expense", consolidatedRate: "Average", createdBy: "system" },
+  {
+    key: "variances",
+    number: null,
+    name: "Variances",
+    isGroup: true,
+    parentKey: "cogs",
+    accountType: "Expense",
+    incomeBalance: "Income Statement",
+    class: "Expense",
+    consolidatedRate: "Average",
+    createdBy: "system"
+  },
+  {
+    key: "5210",
+    number: "5210",
+    name: "Purchase Price Variance",
+    isGroup: false,
+    parentKey: "variances",
+    accountType: "Cost of Goods Sold",
+    incomeBalance: "Income Statement",
+    class: "Expense",
+    consolidatedRate: "Average",
+    createdBy: "system"
+  },
+  {
+    key: "5220",
+    number: "5220",
+    name: "Material Usage Variance",
+    isGroup: false,
+    parentKey: "variances",
+    accountType: "Cost of Goods Sold",
+    incomeBalance: "Income Statement",
+    class: "Expense",
+    consolidatedRate: "Average",
+    createdBy: "system"
+  },
+  {
+    key: "5230",
+    number: "5230",
+    name: "Labor & Machine Variance",
+    isGroup: false,
+    parentKey: "variances",
+    accountType: "Cost of Goods Sold",
+    incomeBalance: "Income Statement",
+    class: "Expense",
+    consolidatedRate: "Average",
+    createdBy: "system"
+  },
+  {
+    key: "5240",
+    number: "5240",
+    name: "Overhead Variance",
+    isGroup: false,
+    parentKey: "variances",
+    accountType: "Cost of Goods Sold",
+    incomeBalance: "Income Statement",
+    class: "Expense",
+    consolidatedRate: "Average",
+    createdBy: "system"
+  },
+  {
+    key: "5250",
+    number: "5250",
+    name: "Lot Size Variance",
+    isGroup: false,
+    parentKey: "variances",
+    accountType: "Cost of Goods Sold",
+    incomeBalance: "Income Statement",
+    class: "Expense",
+    consolidatedRate: "Average",
+    createdBy: "system"
+  },
+  {
+    key: "5260",
+    number: "5260",
+    name: "Subcontracting Variance",
+    isGroup: false,
+    parentKey: "variances",
+    accountType: "Cost of Goods Sold",
+    incomeBalance: "Income Statement",
+    class: "Expense",
+    consolidatedRate: "Average",
+    createdBy: "system"
+  },
 
   // Inventory Adjustments
-  { key: "inventory-adjustments", number: null, name: "Inventory Adjustments", isGroup: true, parentKey: "cogs", accountType: "Cost of Goods Sold", incomeBalance: "Income Statement", class: "Expense", consolidatedRate: "Average", createdBy: "system" },
-  { key: "5310", number: "5310", name: "Inventory Adjustment", isGroup: false, parentKey: "inventory-adjustments", accountType: "Cost of Goods Sold", incomeBalance: "Income Statement", class: "Expense", consolidatedRate: "Average", createdBy: "system" },
-  { key: "5320", number: "5320", name: "Scrap / Cost of Quality", isGroup: false, parentKey: "inventory-adjustments", accountType: "Cost of Goods Sold", incomeBalance: "Income Statement", class: "Expense", consolidatedRate: "Average", createdBy: "system" },
+  {
+    key: "inventory-adjustments",
+    number: null,
+    name: "Inventory Adjustments",
+    isGroup: true,
+    parentKey: "cogs",
+    accountType: "Cost of Goods Sold",
+    incomeBalance: "Income Statement",
+    class: "Expense",
+    consolidatedRate: "Average",
+    createdBy: "system"
+  },
+  {
+    key: "5310",
+    number: "5310",
+    name: "Inventory Adjustment",
+    isGroup: false,
+    parentKey: "inventory-adjustments",
+    accountType: "Cost of Goods Sold",
+    incomeBalance: "Income Statement",
+    class: "Expense",
+    consolidatedRate: "Average",
+    createdBy: "system"
+  },
+  {
+    key: "5320",
+    number: "5320",
+    name: "Scrap / Cost of Quality",
+    isGroup: false,
+    parentKey: "inventory-adjustments",
+    accountType: "Cost of Goods Sold",
+    incomeBalance: "Income Statement",
+    class: "Expense",
+    consolidatedRate: "Average",
+    createdBy: "system"
+  },
 
   // ─── 6000-6999: OPERATING EXPENSES ───
-  { key: "operating-expenses", number: null, name: "Operating Expenses", isGroup: true, parentKey: "income-statement", accountType: "Expense", incomeBalance: "Income Statement", class: "Expense", consolidatedRate: "Average", createdBy: "system" },
-  { key: "6010", number: "6010", name: "Maintenance Expense", isGroup: false, parentKey: "operating-expenses", accountType: "Expense", incomeBalance: "Income Statement", class: "Expense", consolidatedRate: "Average", createdBy: "system" },
-  { key: "6020", number: "6020", name: "Sales Commissions", isGroup: false, parentKey: "operating-expenses", accountType: "Expense", incomeBalance: "Income Statement", class: "Expense", consolidatedRate: "Average", createdBy: "system" },
-  { key: "6030", number: "6030", name: "Advertising & Marketing", isGroup: false, parentKey: "operating-expenses", accountType: "Expense", incomeBalance: "Income Statement", class: "Expense", consolidatedRate: "Average", createdBy: "system" },
-  { key: "6040", number: "6040", name: "Freight & Shipping Out", isGroup: false, parentKey: "operating-expenses", accountType: "Expense", incomeBalance: "Income Statement", class: "Expense", consolidatedRate: "Average", createdBy: "system" },
-  { key: "6050", number: "6050", name: "Bad Debts Expense", isGroup: false, parentKey: "operating-expenses", accountType: "Expense", incomeBalance: "Income Statement", class: "Expense", consolidatedRate: "Average", createdBy: "system" },
-  { key: "6060", number: "6060", name: "Salaries - Administrative", isGroup: false, parentKey: "operating-expenses", accountType: "Expense", incomeBalance: "Income Statement", class: "Expense", consolidatedRate: "Average", createdBy: "system" },
-  { key: "6070", number: "6070", name: "Rent & Utilities (Non-Factory)", isGroup: false, parentKey: "operating-expenses", accountType: "Expense", incomeBalance: "Income Statement", class: "Expense", consolidatedRate: "Average", createdBy: "system" },
-  { key: "6080", number: "6080", name: "Professional Fees", isGroup: false, parentKey: "operating-expenses", accountType: "Expense", incomeBalance: "Income Statement", class: "Expense", consolidatedRate: "Average", createdBy: "system" },
-  { key: "6090", number: "6090", name: "Travel & Entertainment", isGroup: false, parentKey: "operating-expenses", accountType: "Expense", incomeBalance: "Income Statement", class: "Expense", consolidatedRate: "Average", createdBy: "system" },
-  { key: "6100", number: "6100", name: "Insurance", isGroup: false, parentKey: "operating-expenses", accountType: "Expense", incomeBalance: "Income Statement", class: "Expense", consolidatedRate: "Average", createdBy: "system" },
-  { key: "6110", number: "6110", name: "Bank Charges & Fees", isGroup: false, parentKey: "operating-expenses", accountType: "Expense", incomeBalance: "Income Statement", class: "Expense", consolidatedRate: "Average", createdBy: "system" },
+  {
+    key: "operating-expenses",
+    number: null,
+    name: "Operating Expenses",
+    isGroup: true,
+    parentKey: "income-statement",
+    accountType: "Expense",
+    incomeBalance: "Income Statement",
+    class: "Expense",
+    consolidatedRate: "Average",
+    createdBy: "system"
+  },
+  {
+    key: "6010",
+    number: "6010",
+    name: "Maintenance Expense",
+    isGroup: false,
+    parentKey: "operating-expenses",
+    accountType: "Expense",
+    incomeBalance: "Income Statement",
+    class: "Expense",
+    consolidatedRate: "Average",
+    createdBy: "system"
+  },
+  {
+    key: "6020",
+    number: "6020",
+    name: "Sales Commissions",
+    isGroup: false,
+    parentKey: "operating-expenses",
+    accountType: "Expense",
+    incomeBalance: "Income Statement",
+    class: "Expense",
+    consolidatedRate: "Average",
+    createdBy: "system"
+  },
+  {
+    key: "6030",
+    number: "6030",
+    name: "Advertising & Marketing",
+    isGroup: false,
+    parentKey: "operating-expenses",
+    accountType: "Expense",
+    incomeBalance: "Income Statement",
+    class: "Expense",
+    consolidatedRate: "Average",
+    createdBy: "system"
+  },
+  {
+    key: "6040",
+    number: "6040",
+    name: "Freight & Shipping Out",
+    isGroup: false,
+    parentKey: "operating-expenses",
+    accountType: "Expense",
+    incomeBalance: "Income Statement",
+    class: "Expense",
+    consolidatedRate: "Average",
+    createdBy: "system"
+  },
+  {
+    key: "6050",
+    number: "6050",
+    name: "Bad Debts Expense",
+    isGroup: false,
+    parentKey: "operating-expenses",
+    accountType: "Expense",
+    incomeBalance: "Income Statement",
+    class: "Expense",
+    consolidatedRate: "Average",
+    createdBy: "system"
+  },
+  {
+    key: "6060",
+    number: "6060",
+    name: "Salaries - Administrative",
+    isGroup: false,
+    parentKey: "operating-expenses",
+    accountType: "Expense",
+    incomeBalance: "Income Statement",
+    class: "Expense",
+    consolidatedRate: "Average",
+    createdBy: "system"
+  },
+  {
+    key: "6070",
+    number: "6070",
+    name: "Rent & Utilities (Non-Factory)",
+    isGroup: false,
+    parentKey: "operating-expenses",
+    accountType: "Expense",
+    incomeBalance: "Income Statement",
+    class: "Expense",
+    consolidatedRate: "Average",
+    createdBy: "system"
+  },
+  {
+    key: "6080",
+    number: "6080",
+    name: "Professional Fees",
+    isGroup: false,
+    parentKey: "operating-expenses",
+    accountType: "Expense",
+    incomeBalance: "Income Statement",
+    class: "Expense",
+    consolidatedRate: "Average",
+    createdBy: "system"
+  },
+  {
+    key: "6090",
+    number: "6090",
+    name: "Travel & Entertainment",
+    isGroup: false,
+    parentKey: "operating-expenses",
+    accountType: "Expense",
+    incomeBalance: "Income Statement",
+    class: "Expense",
+    consolidatedRate: "Average",
+    createdBy: "system"
+  },
+  {
+    key: "6100",
+    number: "6100",
+    name: "Insurance",
+    isGroup: false,
+    parentKey: "operating-expenses",
+    accountType: "Expense",
+    incomeBalance: "Income Statement",
+    class: "Expense",
+    consolidatedRate: "Average",
+    createdBy: "system"
+  },
+  {
+    key: "6110",
+    number: "6110",
+    name: "Bank Charges & Fees",
+    isGroup: false,
+    parentKey: "operating-expenses",
+    accountType: "Expense",
+    incomeBalance: "Income Statement",
+    class: "Expense",
+    consolidatedRate: "Average",
+    createdBy: "system"
+  },
 
   // Depreciation & Amortization
-  { key: "depreciation", number: null, name: "Depreciation & Amortization", isGroup: true, parentKey: "operating-expenses", accountType: "Other Expense", incomeBalance: "Income Statement", class: "Expense", consolidatedRate: "Average", createdBy: "system" },
-  { key: "6310", number: "6310", name: "Depreciation Expense", isGroup: false, parentKey: "depreciation", accountType: "Other Expense", incomeBalance: "Income Statement", class: "Expense", consolidatedRate: "Average", createdBy: "system" },
-  { key: "6320", number: "6320", name: "Loss on Disposal", isGroup: false, parentKey: "depreciation", accountType: "Other Expense", incomeBalance: "Income Statement", class: "Expense", consolidatedRate: "Average", createdBy: "system" },
+  {
+    key: "depreciation",
+    number: null,
+    name: "Depreciation & Amortization",
+    isGroup: true,
+    parentKey: "operating-expenses",
+    accountType: "Other Expense",
+    incomeBalance: "Income Statement",
+    class: "Expense",
+    consolidatedRate: "Average",
+    createdBy: "system"
+  },
+  {
+    key: "6310",
+    number: "6310",
+    name: "Depreciation Expense",
+    isGroup: false,
+    parentKey: "depreciation",
+    accountType: "Other Expense",
+    incomeBalance: "Income Statement",
+    class: "Expense",
+    consolidatedRate: "Average",
+    createdBy: "system"
+  },
+  {
+    key: "6320",
+    number: "6320",
+    name: "Loss on Disposal",
+    isGroup: false,
+    parentKey: "depreciation",
+    accountType: "Other Expense",
+    incomeBalance: "Income Statement",
+    class: "Expense",
+    consolidatedRate: "Average",
+    createdBy: "system"
+  },
 
   // ─── 7000-7999: OTHER / NON-OPERATING EXPENSES ───
-  { key: "other-expenses", number: null, name: "Other Expenses", isGroup: true, parentKey: "income-statement", accountType: "Other Expense", incomeBalance: "Income Statement", class: "Expense", consolidatedRate: "Average", createdBy: "system" },
-  { key: "7010", number: "7010", name: "Interest Expense", isGroup: false, parentKey: "other-expenses", accountType: "Other Expense", incomeBalance: "Income Statement", class: "Expense", consolidatedRate: "Average", createdBy: "system" },
-  { key: "7020", number: "7020", name: "Supplier Payment Discounts", isGroup: false, parentKey: "other-expenses", accountType: "Other Expense", incomeBalance: "Income Statement", class: "Expense", consolidatedRate: "Average", createdBy: "system" },
-  { key: "7030", number: "7030", name: "Customer Payment Discounts", isGroup: false, parentKey: "other-expenses", accountType: "Other Expense", incomeBalance: "Income Statement", class: "Expense", consolidatedRate: "Average", createdBy: "system" },
-  { key: "7040", number: "7040", name: "Service Charge Account", isGroup: false, parentKey: "other-expenses", accountType: "Other Expense", incomeBalance: "Income Statement", class: "Expense", consolidatedRate: "Average", createdBy: "system" },
-  { key: "7050", number: "7050", name: "Rounding Account", isGroup: false, parentKey: "other-expenses", accountType: "Other Expense", incomeBalance: "Income Statement", class: "Expense", consolidatedRate: "Average", createdBy: "system" },
-  { key: "7060", number: "7060", name: "Foreign Exchange Losses", isGroup: false, parentKey: "other-expenses", accountType: "Other Expense", incomeBalance: "Income Statement", class: "Expense", consolidatedRate: "Average", createdBy: "system" },
-  { key: "7070", number: "7070", name: "Income Tax Expense", isGroup: false, parentKey: "other-expenses", accountType: "Other Expense", incomeBalance: "Income Statement", class: "Expense", consolidatedRate: "Average", createdBy: "system" },
-  { key: "7080", number: "7080", name: "R&D Expenses", isGroup: false, parentKey: "other-expenses", accountType: "Other Expense", incomeBalance: "Income Statement", class: "Expense", consolidatedRate: "Average", createdBy: "system" },
-  { key: "7090", number: "7090", name: "Deferred Tax Expense", isGroup: false, parentKey: "other-expenses", accountType: "Other Expense", incomeBalance: "Income Statement", class: "Expense", consolidatedRate: "Average", createdBy: "system" },
+  {
+    key: "other-expenses",
+    number: null,
+    name: "Other Expenses",
+    isGroup: true,
+    parentKey: "income-statement",
+    accountType: "Other Expense",
+    incomeBalance: "Income Statement",
+    class: "Expense",
+    consolidatedRate: "Average",
+    createdBy: "system"
+  },
+  {
+    key: "7010",
+    number: "7010",
+    name: "Interest Expense",
+    isGroup: false,
+    parentKey: "other-expenses",
+    accountType: "Other Expense",
+    incomeBalance: "Income Statement",
+    class: "Expense",
+    consolidatedRate: "Average",
+    createdBy: "system"
+  },
+  {
+    key: "7040",
+    number: "7040",
+    name: "Service Charge Account",
+    isGroup: false,
+    parentKey: "other-expenses",
+    accountType: "Other Expense",
+    incomeBalance: "Income Statement",
+    class: "Expense",
+    consolidatedRate: "Average",
+    createdBy: "system"
+  },
+  {
+    key: "7050",
+    number: "7050",
+    name: "Rounding Account",
+    isGroup: false,
+    parentKey: "other-expenses",
+    accountType: "Other Expense",
+    incomeBalance: "Income Statement",
+    class: "Expense",
+    consolidatedRate: "Average",
+    createdBy: "system"
+  },
+  {
+    key: "7060",
+    number: "7060",
+    name: "Foreign Exchange Losses",
+    isGroup: false,
+    parentKey: "other-expenses",
+    accountType: "Other Expense",
+    incomeBalance: "Income Statement",
+    class: "Expense",
+    consolidatedRate: "Average",
+    createdBy: "system"
+  },
+  {
+    key: "7070",
+    number: "7070",
+    name: "Income Tax Expense",
+    isGroup: false,
+    parentKey: "other-expenses",
+    accountType: "Other Expense",
+    incomeBalance: "Income Statement",
+    class: "Expense",
+    consolidatedRate: "Average",
+    createdBy: "system"
+  },
+  {
+    key: "7080",
+    number: "7080",
+    name: "R&D Expenses",
+    isGroup: false,
+    parentKey: "other-expenses",
+    accountType: "Other Expense",
+    incomeBalance: "Income Statement",
+    class: "Expense",
+    consolidatedRate: "Average",
+    createdBy: "system"
+  },
+  {
+    key: "7090",
+    number: "7090",
+    name: "Deferred Tax Expense",
+    isGroup: false,
+    parentKey: "other-expenses",
+    accountType: "Other Expense",
+    incomeBalance: "Income Statement",
+    class: "Expense",
+    consolidatedRate: "Average",
+    createdBy: "system"
+  }
 ] as const;
 
 export const accountDefaults = {
@@ -790,8 +1925,8 @@ export const accountDefaults = {
   assetLossOnDisposalAccount: "6320",
   serviceChargeAccount: "7040",
   interestAccount: "7010",
-  supplierPaymentDiscountAccount: "7020",
-  customerPaymentDiscountAccount: "7030",
+  supplierPaymentDiscountAccount: "5080",
+  customerPaymentDiscountAccount: "4040",
   roundingAccount: "7050",
   assetAquisitionCostAccount: "1310",
   assetAquisitionCostOnDisposalAccount: "1320",
@@ -820,7 +1955,7 @@ export const accountDefaults = {
   realizedExchangeGainAccount: "4120",
   realizedExchangeLossAccount: "7060",
   deferredTaxLiabilityAccountId: "2420",
-  deferredTaxExpenseAccountId: "7090",
+  deferredTaxExpenseAccountId: "7090"
 } as const;
 
 export const fixedAssetClasses = [
@@ -835,7 +1970,7 @@ export const fixedAssetClasses = [
     writeOffAccount: "6320",
     writeDownAccount: "6320",
     gainOnDisposalAccount: "4140",
-    lossOnDisposalAccount: "6320",
+    lossOnDisposalAccount: "6320"
   },
   {
     name: "Machinery & Equipment",
@@ -848,7 +1983,7 @@ export const fixedAssetClasses = [
     writeOffAccount: "6320",
     writeDownAccount: "6320",
     gainOnDisposalAccount: "4140",
-    lossOnDisposalAccount: "6320",
+    lossOnDisposalAccount: "6320"
   },
   {
     name: "Vehicles",
@@ -861,8 +1996,8 @@ export const fixedAssetClasses = [
     writeOffAccount: "6320",
     writeDownAccount: "6320",
     gainOnDisposalAccount: "4140",
-    lossOnDisposalAccount: "6320",
-  },
+    lossOnDisposalAccount: "6320"
+  }
 ];
 
 export const fiscalYearSettings = {

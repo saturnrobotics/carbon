@@ -1,7 +1,7 @@
 {
   "kind": "carbon-company-backup",
   "version": 1,
-  "schemaVersion": "20260908143722",
+  "schemaVersion": "20260909014032",
   "sourceCompanyId": "schema-baseline",
   "sourceCompanyGroupId": null,
   "sourceCompanyName": null,
@@ -4189,7 +4189,11 @@
         "customerEngineeringContactId"
       ]
     },
-    { "name": "salesRfqFavorite", "rows": 0, "columns": ["rfqId", "userId"] },
+    {
+      "name": "salesRfqFavorite",
+      "rows": 0,
+      "columns": ["rfqId", "userId"]
+    },
     {
       "name": "salesRfqLine",
       "rows": 0,
@@ -4367,8 +4371,16 @@
         "updatedBy"
       ]
     },
-    { "name": "jobFavorite", "rows": 0, "columns": ["jobId", "userId"] },
-    { "name": "quoteFavorite", "rows": 0, "columns": ["quoteId", "userId"] },
+    {
+      "name": "jobFavorite",
+      "rows": 0,
+      "columns": ["jobId", "userId"]
+    },
+    {
+      "name": "quoteFavorite",
+      "rows": 0,
+      "columns": ["quoteId", "userId"]
+    },
     {
       "name": "quoteLine",
       "rows": 0,

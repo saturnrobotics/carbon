@@ -57,9 +57,7 @@ export const isoWeekFromYmd = (
   const date = new CalendarDate(year, month, day);
   const thursday = date.add({ days: 3 - getDayOfWeek(date, "en-GB") });
   return (
-    Math.floor(
-      thursday.compare(new CalendarDate(thursday.year, 1, 1)) / 7
-    ) + 1
+    Math.floor(thursday.compare(new CalendarDate(thursday.year, 1, 1)) / 7) + 1
   );
 };
 
@@ -75,13 +73,7 @@ export const interpolateSequenceDate = (
   let result = value;
 
   if (result.includes("%{")) {
-    const {
-      year,
-      month,
-      day,
-      hour: hours,
-      second: seconds
-    } = now(timezone);
+    const { year, month, day, hour: hours, second: seconds } = now(timezone);
     const week = isoWeekFromYmd(year, month, day);
 
     result = result.replace(/%{yyyy}/g, year.toString());
@@ -153,6 +145,26 @@ export const debit = (accountType: AccountType, amount: number) => {
   }
 };
 
+// glAccountClass (Asset|Liability|Equity|Revenue|Expense) → the lowercase
+// AccountType the debit/credit helpers expect. Shared by the payment and memo
+// journal builders so a line's natural-balance sign follows the account's class.
+export const accountTypeFromClass = (glClass: string): AccountType => {
+  switch (glClass) {
+    case "Asset":
+      return "asset";
+    case "Liability":
+      return "liability";
+    case "Equity":
+      return "equity";
+    case "Revenue":
+      return "revenue";
+    case "Expense":
+      return "expense";
+    default:
+      throw new Error(`Unknown GL account class: ${glClass}`);
+  }
+};
+
 export const journalReference = {
   to: {
     purchaseInvoice: (id: string) => `purchase-invoice:${id}`,
@@ -161,6 +173,6 @@ export const journalReference = {
     shipment: (id: string) => `shipment:${id}`,
     job: (id: string) => `job:${id}`,
     materialIssue: (id: string) => `material-issue:${id}`,
-    productionEvent: (id: string) => `production-event:${id}`,
-  },
+    productionEvent: (id: string) => `production-event:${id}`
+  }
 };

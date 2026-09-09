@@ -1,8 +1,6 @@
 import {
   assertIsPost,
   CarbonEdition,
-  CLOUDFLARE_TURNSTILE_SECRET_KEY,
-  CLOUDFLARE_TURNSTILE_SITE_KEY,
   CONTROLLED_ENVIRONMENT,
   carbonClient,
   error,
@@ -12,10 +10,13 @@ import {
   SOURCE_CODE_URL
 } from "@carbon/auth";
 import {
+  getMagicLinkErrorMessage,
   logAuthEvent,
   sendMagicLink,
   signInWithBypassEmail,
-  verifyAuthSession
+  turnstileSiteKey,
+  verifyAuthSession,
+  verifyLoginCaptcha
 } from "@carbon/auth/auth.server";
 import { getCarbonServiceRole } from "@carbon/auth/client.server";
 import {
@@ -37,14 +38,13 @@ import {
   Heading,
   ItarLoginDisclaimer,
   Separator,
+  TurnstileChallenge,
   toast,
-  useMode,
   useMount,
   VStack
 } from "@carbon/react";
 import { Edition } from "@carbon/utils";
 import { Trans, useLingui } from "@lingui/react/macro";
-import { Turnstile } from "@marsidev/react-turnstile";
 import {
   browserSupportsWebAuthn,
   startAuthentication
@@ -97,7 +97,8 @@ export async function loader({ request }: LoaderFunctionArgs) {
         hasGoogleAuth,
         hasPasskeyAuth,
         hasSsoAuth,
-        autoGoogle
+        autoGoogle,
+        turnstileSiteKey
       },
       { headers: cookieHeaders }
     );
@@ -109,7 +110,8 @@ export async function loader({ request }: LoaderFunctionArgs) {
     hasGoogleAuth,
     hasPasskeyAuth,
     hasSsoAuth,
-    autoGoogle
+    autoGoogle,
+    turnstileSiteKey
   };
 }
 
@@ -168,35 +170,12 @@ export async function action({ request }: ActionFunctionArgs) {
     );
   }
 
-  if (
-    CarbonEdition === Edition.Cloud &&
-    CLOUDFLARE_TURNSTILE_SITE_KEY !== "1x00000000000000000000AA"
-  ) {
-    const verifyResponse = await fetch(
-      "https://challenges.cloudflare.com/turnstile/v0/siteverify",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded"
-        },
-        body: new URLSearchParams({
-          secret: CLOUDFLARE_TURNSTILE_SECRET_KEY ?? "",
-          response: turnstileToken ?? "",
-          remoteip: ip
-        })
-      }
+  const captchaError = await verifyLoginCaptcha(turnstileToken, ip);
+  if (captchaError) {
+    return data(
+      error(null, captchaError),
+      await flash(request, error(null, captchaError))
     );
-
-    const verifyData = await verifyResponse.json();
-    if (!verifyData.success) {
-      return data(
-        error(null, "Bot verification failed. Please try again."),
-        await flash(
-          request,
-          error(null, "Bot verification failed. Please try again.")
-        )
-      );
-    }
   }
 
   // Count this attempt against the account. If it tips the account past the
@@ -255,7 +234,7 @@ export async function action({ request }: ActionFunctionArgs) {
   }
 
   if (user.data && user.data.active) {
-    const magicLink = await sendMagicLink(email);
+    const magicLink = await sendMagicLink(email, turnstileToken);
 
     if (magicLink.error) {
       logAuthEvent("login_failed", {
@@ -263,9 +242,10 @@ export async function action({ request }: ActionFunctionArgs) {
         ip,
         reason: "magic link send failed"
       });
+      const message = getMagicLinkErrorMessage(magicLink.error);
       return data(
-        error(magicLink, "Failed to send magic link"),
-        await flash(request, error(magicLink, "Failed to send magic link"))
+        error(magicLink, message),
+        await flash(request, error(magicLink, message))
       );
     }
     logAuthEvent("magic_link_sent", { actor: email, ip });
@@ -281,6 +261,19 @@ export async function action({ request }: ActionFunctionArgs) {
       await flash(request, error(null, "Failed to sign in"))
     );
   } else {
+    // Signup verification codes go out via Resend, never GoTrue.
+    const signupCaptchaError = await verifyLoginCaptcha(
+      turnstileToken,
+      ip,
+      "app"
+    );
+    if (signupCaptchaError) {
+      return data(
+        error(null, signupCaptchaError),
+        await flash(request, error(null, signupCaptchaError))
+      );
+    }
+
     // User doesn't exist, send verification code for signup
     const verificationSent = await sendVerificationCode(email);
 
@@ -303,7 +296,8 @@ export default function LoginRoute() {
     hasGoogleAuth,
     hasPasskeyAuth,
     hasSsoAuth,
-    autoGoogle
+    autoGoogle,
+    turnstileSiteKey: siteKey
   } = useLoaderData<typeof loader>();
 
   const [searchParams] = useSearchParams();
@@ -320,7 +314,6 @@ export default function LoginRoute() {
   const autoGoogleStarted = useRef(false);
 
   const fetcher = useFetcher<Result & { mode?: string; email?: string }>();
-  const theme = useMode();
 
   useEffect(() => {
     if (fetcher.data?.success && fetcher.data.mode) {
@@ -687,7 +680,7 @@ export default function LoginRoute() {
                     isDisabled={
                       fetcher.state !== "idle" ||
                       ssoLoading ||
-                      (!!CLOUDFLARE_TURNSTILE_SITE_KEY && !turnstileToken)
+                      (!!siteKey && !turnstileToken)
                     }
                     isLoading={fetcher.state === "submitting" || ssoLoading}
                     hideShortcutKey
@@ -698,19 +691,10 @@ export default function LoginRoute() {
                   >
                     <Trans>Continue</Trans>
                   </Submit>
-                  {!!CLOUDFLARE_TURNSTILE_SITE_KEY && (
-                    <div className="w-full flex justify-center">
-                      <Turnstile
-                        siteKey={CLOUDFLARE_TURNSTILE_SITE_KEY}
-                        onSuccess={(token) => setTurnstileToken(token)}
-                        onError={() => setTurnstileToken("")}
-                        onExpire={() => setTurnstileToken("")}
-                        options={{
-                          theme: theme === "dark" ? "dark" : "light"
-                        }}
-                      />
-                    </div>
-                  )}
+                  <TurnstileChallenge
+                    siteKey={siteKey ?? undefined}
+                    onToken={setTurnstileToken}
+                  />
                 </>
               )}
             </VStack>

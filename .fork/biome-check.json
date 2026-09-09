@@ -10,5 +10,13 @@
       "**/*.json",
       "**/*.jsonc"
     ]
-  }
+  },
+  "overrides": [
+    {
+      "includes": ["**/supabase/functions/**/*.ts"],
+      "javascript": {
+        "globals": ["Deno"]
+      }
+    }
+  ]
 }

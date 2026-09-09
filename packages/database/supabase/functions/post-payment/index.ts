@@ -1,7 +1,11 @@
 import { serve } from "https://deno.land/std@0.175.0/http/server.ts";
 import { nanoid } from "https://deno.land/x/nanoid@v3.0.0/mod.ts";
 import z from "npm:zod@^4.5.4";
-import { DB, getConnectionPool, getDatabaseClient } from "../lib/database.ts";
+import {
+  type DB,
+  getConnectionPool,
+  getDatabaseClient
+} from "../lib/database.ts";
 import { datetime, getCompanyTimeZone } from "../lib/datetime.ts";
 import { getFunctionLogger } from "../lib/logging.ts";
 import { corsPreflight, errorResponse, jsonResponse } from "../lib/response.ts";
@@ -10,11 +14,11 @@ import { getSupabaseServiceRole } from "../lib/supabase.ts";
 import { getCurrentAccountingPeriod } from "../shared/get-accounting-period.ts";
 import { getNextSequence } from "../shared/get-next-sequence.ts";
 import { getDefaultPostingGroup } from "../shared/get-posting-group.ts";
+import { round } from "../shared/precision.ts";
 import {
   buildPaymentJournal,
-  type PaymentJournalLine,
+  type PaymentJournalLine
 } from "./build-payment-journal.ts";
-import { round } from "../shared/precision.ts";
 
 const pool = getConnectionPool(1);
 const db = getDatabaseClient<DB>(pool);
@@ -33,9 +37,9 @@ const payloadValidator = z.object({
     .object({
       amount: z.number().positive(),
       accountId: z.string(),
-      description: z.string().optional(),
+      description: z.string().optional()
     })
-    .optional(),
+    .optional()
 });
 
 serve(async (req: Request) => {
@@ -55,27 +59,33 @@ serve(async (req: Request) => {
       req.headers.get("carbon-key") ?? "",
       companyId
     );
-    const today = datetime.today(await getCompanyTimeZone(client, companyId)).toString();
+    const today = datetime
+      .today(await getCompanyTimeZone(client, companyId))
+      .toString();
 
     const accountingSettings = await client
       .from("companySettings")
       .select("accountingEnabled")
       .eq("id", companyId)
       .single();
-    const accountingEnabled = accountingSettings.data?.accountingEnabled ?? false;
+    const accountingEnabled =
+      accountingSettings.data?.accountingEnabled ?? false;
 
-    const [payment, applications, credits, accountDefaults] = await Promise.all([
-      client.from("payment").select("*").eq("id", paymentId).single(),
-      client.from("invoiceSettlement").select("*").eq("paymentId", paymentId),
-      client
-        .from("invoiceSettlement")
-        .select("*")
-        .eq("appliedViaPaymentId", paymentId),
-      getDefaultPostingGroup(client, companyId),
-    ]);
+    const [payment, applications, credits, accountDefaults] = await Promise.all(
+      [
+        client.from("payment").select("*").eq("id", paymentId).single(),
+        client.from("invoiceSettlement").select("*").eq("paymentId", paymentId),
+        client
+          .from("invoiceSettlement")
+          .select("*")
+          .eq("appliedViaPaymentId", paymentId),
+        getDefaultPostingGroup(client, companyId)
+      ]
+    );
 
     if (payment.error) throw new Error("Failed to fetch payment");
-    if (applications.error) throw new Error("Failed to fetch payment applications");
+    if (applications.error)
+      throw new Error("Failed to fetch payment applications");
     if (credits.error) throw new Error("Failed to fetch credit applications");
     if (accountingEnabled && accountDefaults.error)
       throw new Error("Failed to fetch account defaults");
@@ -149,7 +159,7 @@ serve(async (req: Request) => {
                 status: "Posted",
                 postedAt: new Date().toISOString(),
                 postedBy: userId,
-                createdBy: userId,
+                createdBy: userId
               })
               .returning(["id"])
               .executeTakeFirstOrThrow();
@@ -167,7 +177,7 @@ serve(async (req: Request) => {
                   documentId: paymentId,
                   documentLineReference: line.documentLineReference,
                   journalLineReference: line.journalLineReference,
-                  companyId,
+                  companyId
                 }))
               )
               .returning(["id"])
@@ -196,7 +206,7 @@ serve(async (req: Request) => {
                       voidLineResults[idxByOriginalId.get(d.journalLineId)!].id,
                     dimensionId: d.dimensionId,
                     valueId: d.valueId,
-                    companyId,
+                    companyId
                   }))
                 )
                 .execute();
@@ -211,7 +221,7 @@ serve(async (req: Request) => {
             voidedAt: new Date().toISOString(),
             voidedBy: userId,
             updatedAt: new Date().toISOString(),
-            updatedBy: userId,
+            updatedBy: userId
           })
           .where("id", "=", paymentId)
           .where("companyId", "=", companyId)
@@ -243,9 +253,9 @@ serve(async (req: Request) => {
     // the cash-vs-total (overApplied) check below.
     const creditByInvoice = new Map<string, number>();
     for (const c of credits.data ?? []) {
-      const invId = (isAR
-        ? c.targetSalesInvoiceId
-        : c.targetPurchaseInvoiceId) as string | null;
+      const invId = (
+        isAR ? c.targetSalesInvoiceId : c.targetPurchaseInvoiceId
+      ) as string | null;
       if (!invId) continue;
       creditByInvoice.set(
         invId,
@@ -258,16 +268,16 @@ serve(async (req: Request) => {
         ...applications.data
           .filter((a) => a.targetSalesInvoiceId)
           .map((a) => a.targetSalesInvoiceId as string),
-        ...(isAR ? [...creditByInvoice.keys()] : []),
-      ]),
+        ...(isAR ? [...creditByInvoice.keys()] : [])
+      ])
     ];
     const purchaseInvoiceIds = [
       ...new Set([
         ...applications.data
           .filter((a) => a.targetPurchaseInvoiceId)
           .map((a) => a.targetPurchaseInvoiceId as string),
-        ...(!isAR ? [...creditByInvoice.keys()] : []),
-      ]),
+        ...(!isAR ? [...creditByInvoice.keys()] : [])
+      ])
     ];
 
     if (isAR && purchaseInvoiceIds.length > 0) {
@@ -295,7 +305,8 @@ serve(async (req: Request) => {
       (sum, a) => sum + Number(a.appliedAmount) * Number(a.sourceExchangeRate),
       0
     );
-    const paymentTotalBase = Number(payment.data.totalAmount) * Number(payment.data.exchangeRate);
+    const paymentTotalBase =
+      Number(payment.data.totalAmount) * Number(payment.data.exchangeRate);
     const overAppliedBase = round(totalAppliedBase - paymentTotalBase);
 
     // --------------------------------------------------------------
@@ -355,7 +366,7 @@ serve(async (req: Request) => {
             .select("id, entityType")
             .eq("companyGroupId", companyGroupId)
             .eq("active", true)
-            .in("entityType", [typeEntityType, entityEntityType]),
+            .in("entityType", [typeEntityType, entityEntityType])
         ]);
         const dimByEntityType = new Map<string, string>();
         for (const d of dimRows.data ?? []) {
@@ -370,14 +381,14 @@ serve(async (req: Request) => {
         if (typeDimensionId && partyTypeId) {
           partyDimensions.push({
             dimensionId: typeDimensionId,
-            valueId: partyTypeId,
+            valueId: partyTypeId
           });
         }
         const entityDimensionId = dimByEntityType.get(entityEntityType);
         if (entityDimensionId) {
           partyDimensions.push({
             dimensionId: entityDimensionId,
-            valueId: partyId,
+            valueId: partyId
           });
         }
 
@@ -394,6 +405,26 @@ serve(async (req: Request) => {
             controlAccountId = icReceivablesAccount;
           }
         }
+      }
+
+      // Resolve the discount account's class so buildPaymentJournal signs the
+      // discount line by the account's real natural balance (customer discount
+      // → Revenue/contra-revenue; supplier discount → Expense/contra-COGS),
+      // mirroring how post-memo resolves its reason account's class.
+      const discountAccountId = isAR
+        ? ad.customerPaymentDiscountAccount
+        : ad.supplierPaymentDiscountAccount;
+      let discountAccountClass: string | null = null;
+      if (discountAccountId) {
+        const discountAccount = await client
+          .from("account")
+          .select("class")
+          .eq("id", discountAccountId)
+          .single();
+        if (discountAccount.error || !discountAccount.data) {
+          throw new Error("Failed to fetch the payment discount account class");
+        }
+        discountAccountClass = discountAccount.data.class as string;
       }
 
       // Build the balanced double-entry. Account-id resolution, the per-
@@ -416,20 +447,19 @@ serve(async (req: Request) => {
           discountAmount: Number(a.discountAmount),
           writeOffAmount: Number(a.writeOffAmount),
           targetExchangeRate: Number(a.targetExchangeRate),
-          sourceExchangeRate: Number(a.sourceExchangeRate),
+          sourceExchangeRate: Number(a.sourceExchangeRate)
         })),
         accounts: {
           controlAccountId,
-          discountAccountId: isAR
-            ? ad.customerPaymentDiscountAccount
-            : ad.supplierPaymentDiscountAccount,
+          discountAccountId,
+          discountAccountClass,
           writeOffAccountId: isAR
             ? ad.customerWriteOffAccount
             : ad.supplierWriteOffAccount,
           fxGainAccountId: ad.realizedExchangeGainAccount,
-          fxLossAccountId: ad.realizedExchangeLossAccount,
+          fxLossAccountId: ad.realizedExchangeLossAccount
         },
-        fee,
+        fee
       });
       journalLineInserts.push(...lines);
     }
@@ -505,7 +535,7 @@ serve(async (req: Request) => {
             status: r.status as string,
             totalAmount: Number(v?.totalAmount ?? 0),
             balance: Number(v?.balance ?? 0),
-            partyId: r.customerId,
+            partyId: r.customerId
           });
         }
       }
@@ -528,7 +558,7 @@ serve(async (req: Request) => {
             status: r.status as string,
             totalAmount: Number(v?.totalAmount ?? 0),
             balance: Number(v?.balance ?? 0),
-            partyId: r.supplierId,
+            partyId: r.supplierId
           });
         }
       }
@@ -536,9 +566,9 @@ serve(async (req: Request) => {
       // Validate each application against the locked invoice state.
       const currentSettledByInvoice = new Map<string, number>();
       for (const app of applications.data) {
-        const invId = (isAR
-          ? app.targetSalesInvoiceId
-          : app.targetPurchaseInvoiceId) as string;
+        const invId = (
+          isAR ? app.targetSalesInvoiceId : app.targetPurchaseInvoiceId
+        ) as string;
         const inv = invoiceById.get(invId);
         if (!inv) throw new Error(`Invoice ${invId} not found`);
         if (inv.partyId !== paymentPartyId) {
@@ -589,7 +619,8 @@ serve(async (req: Request) => {
             `Cannot apply credit to invoice ${invId} in status ${inv.status} (must be ${activeStatus})`
           );
         }
-        const wouldSettle = (currentSettledByInvoice.get(invId) ?? 0) + creditAmt;
+        const wouldSettle =
+          (currentSettledByInvoice.get(invId) ?? 0) + creditAmt;
         if (wouldSettle > inv.balance + 0.0001) {
           throw new Error(
             `Application total (${wouldSettle}) exceeds remaining open amount (${inv.balance}) on invoice ${invId}`
@@ -631,12 +662,15 @@ serve(async (req: Request) => {
             "vp.id",
             "invoiceSettlement.appliedViaPaymentId"
           )
-          .select(["invoiceSettlement.memoId", "invoiceSettlement.appliedAmount"])
+          .select([
+            "invoiceSettlement.memoId",
+            "invoiceSettlement.appliedAmount"
+          ])
           .where("invoiceSettlement.memoId", "in", memoIds)
           .where((eb) =>
             eb.or([
               eb("invoiceSettlement.appliedViaPaymentId", "is", null),
-              eb("vp.status", "=", "Posted"),
+              eb("vp.status", "=", "Posted")
             ])
           )
           .execute();
@@ -747,7 +781,7 @@ serve(async (req: Request) => {
             status: "Posted",
             postedAt: new Date().toISOString(),
             postedBy: userId,
-            createdBy: userId,
+            createdBy: userId
           })
           .returning(["id"])
           .executeTakeFirstOrThrow();
@@ -759,7 +793,7 @@ serve(async (req: Request) => {
             .values(
               journalLineInserts.map((line) => ({
                 ...line,
-                journalId: journalResult.id,
+                journalId: journalResult.id
               }))
             )
             .returning(["id"])
@@ -775,7 +809,7 @@ serve(async (req: Request) => {
                     journalLineId: jl.id,
                     dimensionId: d.dimensionId,
                     valueId: d.valueId,
-                    companyId,
+                    companyId
                   }))
                 )
               )
@@ -793,7 +827,7 @@ serve(async (req: Request) => {
           postedAt: new Date().toISOString(),
           postedBy: userId,
           updatedAt: new Date().toISOString(),
-          updatedBy: userId,
+          updatedBy: userId
         })
         .where("id", "=", paymentId)
         .where("companyId", "=", companyId)

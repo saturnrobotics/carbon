@@ -1,14 +1,14 @@
 import {
   assert,
   assertEquals,
-  assertThrows,
+  assertThrows
 } from "https://deno.land/std@0.175.0/testing/asserts.ts";
-import {
-  buildPaymentJournal,
-  type BuildPaymentJournalInput,
-  type PaymentJournalAccounts,
-} from "./build-payment-journal.ts";
 import { round } from "../shared/precision.ts";
+import {
+  type BuildPaymentJournalInput,
+  buildPaymentJournal,
+  type PaymentJournalAccounts
+} from "./build-payment-journal.ts";
 
 // Golden-master tests for the GL journal a payment posts. Each asserts the exact
 // natural-balance-signed `amount` on each line (asset/expense debits are +,
@@ -20,9 +20,10 @@ import { round } from "../shared/precision.ts";
 const ACCOUNTS: PaymentJournalAccounts = {
   controlAccountId: "control", // receivables (AR) or payables (AP); driver resolves
   discountAccountId: "discount",
+  discountAccountClass: "Revenue", // AR default: customer discount is contra-revenue
   writeOffAccountId: "writeoff",
   fxGainAccountId: "fxgain",
-  fxLossAccountId: "fxloss",
+  fxLossAccountId: "fxloss"
 };
 
 const arBase = (
@@ -43,11 +44,11 @@ const arBase = (
       discountAmount: 0,
       writeOffAmount: 0,
       targetExchangeRate: 1,
-      sourceExchangeRate: 1,
-    },
+      sourceExchangeRate: 1
+    }
   ],
   accounts: { ...ACCOUNTS },
-  ...over,
+  ...over
 });
 
 const apBase = (
@@ -63,10 +64,12 @@ const apBase = (
       discountAmount: 0,
       writeOffAmount: 0,
       targetExchangeRate: 1,
-      sourceExchangeRate: 1,
-    },
+      sourceExchangeRate: 1
+    }
   ],
-  ...over,
+  // AP: supplier discount is contra-COGS (Expense natural balance).
+  accounts: { ...ACCOUNTS, discountAccountClass: "Expense" },
+  ...over
 });
 
 const balanced = (signedDebitTotal: number) =>
@@ -77,12 +80,15 @@ const line = <T extends { description: string }>(
   description: string
 ) => lines.find((l) => l.description === description);
 
-
 // Magnitude posted to the control account for a specific invoice (the lines are
 // natural-balance signed, so take the absolute value to compare to the
 // subledger settled amount).
 const controlMagnitudeFor = (
-  lines: { description: string; documentLineReference?: string; amount: number }[],
+  lines: {
+    description: string;
+    documentLineReference?: string;
+    amount: number;
+  }[],
   invoiceId: string
 ) => {
   const l = lines.find(
@@ -136,7 +142,7 @@ Deno.test("AP full payment, no FX: CR bank / DR payables, balanced", () => {
 // Discount / write-off — invoice-currency reliefs, no FX.
 // ---------------------------------------------------------------------------
 
-Deno.test("AR discount: bank 90 / receivables 100 / discount expense 10", () => {
+Deno.test("AR discount: bank 90 / receivables 100 / discount contra-revenue -10", () => {
   const { lines, signedDebitTotal } = buildPaymentJournal(
     arBase({
       totalAmount: 90,
@@ -147,9 +153,9 @@ Deno.test("AR discount: bank 90 / receivables 100 / discount expense 10", () => 
           discountAmount: 10,
           writeOffAmount: 0,
           targetExchangeRate: 1,
-          sourceExchangeRate: 1,
-        },
-      ],
+          sourceExchangeRate: 1
+        }
+      ]
     })
   );
 
@@ -157,7 +163,7 @@ Deno.test("AR discount: bank 90 / receivables 100 / discount expense 10", () => 
   assertEquals(line(lines, "Accounts Receivable")!.amount, -100); // (90+10)*1
   const discount = line(lines, "Customer Payment Discount")!;
   assertEquals(discount.accountId, "discount");
-  assertEquals(discount.amount, 10); // debit expense
+  assertEquals(discount.amount, -10); // debit to a Revenue-class account (contra-revenue)
   assert(balanced(signedDebitTotal));
 });
 
@@ -172,9 +178,9 @@ Deno.test("AR write-off: bad debt expense debited", () => {
           discountAmount: 0,
           writeOffAmount: 10,
           targetExchangeRate: 1,
-          sourceExchangeRate: 1,
-        },
-      ],
+          sourceExchangeRate: 1
+        }
+      ]
     })
   );
 
@@ -195,15 +201,40 @@ Deno.test("AP write-off: vendor write-off income credited (revenue)", () => {
           discountAmount: 0,
           writeOffAmount: 10,
           targetExchangeRate: 1,
-          sourceExchangeRate: 1,
-        },
-      ],
+          sourceExchangeRate: 1
+        }
+      ]
     })
   );
 
   const wo = line(lines, "Vendor Write-Off Income")!;
   assertEquals(wo.accountId, "writeoff");
   assertEquals(wo.amount, 10); // credit revenue → natural-positive
+  assert(balanced(signedDebitTotal));
+});
+
+Deno.test("AP discount: supplier discount credited to a contra-COGS (Expense) account", () => {
+  const { lines, signedDebitTotal } = buildPaymentJournal(
+    apBase({
+      totalAmount: 90,
+      applications: [
+        {
+          targetPurchaseInvoiceId: "pi_1",
+          appliedAmount: 90,
+          discountAmount: 10,
+          writeOffAmount: 0,
+          targetExchangeRate: 1,
+          sourceExchangeRate: 1
+        }
+      ]
+    })
+  );
+
+  assertEquals(line(lines, "Bank / Cash")!.amount, -90); // credit asset (cash out)
+  assertEquals(line(lines, "Accounts Payable")!.amount, -100); // (90+10)×1, debit liability → natural-negative
+  const discount = line(lines, "Supplier Payment Discount")!;
+  assertEquals(discount.accountId, "discount");
+  assertEquals(discount.amount, -10); // credit to an Expense/COGS account → contra-cost
   assert(balanced(signedDebitTotal));
 });
 
@@ -215,7 +246,7 @@ Deno.test("AP write-off: vendor write-off income credited (revenue)", () => {
 Deno.test("AR with processor fee: net bank + fee expense / gross receivables, balanced", () => {
   const { lines, signedDebitTotal } = buildPaymentJournal(
     arBase({
-      fee: { amount: 3, accountId: "servicecharge" },
+      fee: { amount: 3, accountId: "servicecharge" }
     })
   );
 
@@ -231,7 +262,11 @@ Deno.test("AR with processor fee: net bank + fee expense / gross receivables, ba
 Deno.test("AR with processor fee and custom description", () => {
   const { lines } = buildPaymentJournal(
     arBase({
-      fee: { amount: 3, accountId: "servicecharge", description: "Stripe processing fee — INV-1" },
+      fee: {
+        amount: 3,
+        accountId: "servicecharge",
+        description: "Stripe processing fee — INV-1"
+      }
     })
   );
 
@@ -251,9 +286,9 @@ Deno.test("AR with processor fee and FX: fee stays gross-of-FX, entry still bala
           discountAmount: 0,
           writeOffAmount: 0,
           targetExchangeRate: 1.0,
-          sourceExchangeRate: 1.2,
-        },
-      ],
+          sourceExchangeRate: 1.2
+        }
+      ]
     })
   );
 
@@ -280,9 +315,9 @@ Deno.test("AR collected above booked rate → FX Gain (credit revenue)", () => {
           discountAmount: 0,
           writeOffAmount: 0,
           targetExchangeRate: 1.0,
-          sourceExchangeRate: 1.2,
-        },
-      ],
+          sourceExchangeRate: 1.2
+        }
+      ]
     })
   );
 
@@ -306,9 +341,9 @@ Deno.test("AR collected below booked rate → FX Loss (debit expense)", () => {
           discountAmount: 0,
           writeOffAmount: 0,
           targetExchangeRate: 1.0,
-          sourceExchangeRate: 0.8,
-        },
-      ],
+          sourceExchangeRate: 0.8
+        }
+      ]
     })
   );
 
@@ -332,9 +367,9 @@ Deno.test("AP paid ABOVE booked rate → FX Loss (debit expense)", () => {
           discountAmount: 0,
           writeOffAmount: 0,
           targetExchangeRate: 1.0,
-          sourceExchangeRate: 1.2,
-        },
-      ],
+          sourceExchangeRate: 1.2
+        }
+      ]
     })
   );
 
@@ -357,9 +392,9 @@ Deno.test("AP paid BELOW booked rate → FX Gain (credit revenue)", () => {
           discountAmount: 0,
           writeOffAmount: 0,
           targetExchangeRate: 1.0,
-          sourceExchangeRate: 0.8,
-        },
-      ],
+          sourceExchangeRate: 0.8
+        }
+      ]
     })
   );
 
@@ -385,9 +420,9 @@ Deno.test("AR partial: unapplied cash builds on-account credit", () => {
           discountAmount: 0,
           writeOffAmount: 0,
           targetExchangeRate: 1,
-          sourceExchangeRate: 1,
-        },
-      ],
+          sourceExchangeRate: 1
+        }
+      ]
     })
   );
 
@@ -410,9 +445,9 @@ Deno.test("AR over-application draws down existing credit (inverse side)", () =>
           discountAmount: 0,
           writeOffAmount: 0,
           targetExchangeRate: 1,
-          sourceExchangeRate: 1,
-        },
-      ],
+          sourceExchangeRate: 1
+        }
+      ]
     })
   );
 
@@ -439,7 +474,7 @@ Deno.test("AR two invoices with discount and FX all balance", () => {
           discountAmount: 0,
           writeOffAmount: 0,
           targetExchangeRate: 1.0,
-          sourceExchangeRate: 1.1,
+          sourceExchangeRate: 1.1
         },
         {
           targetSalesInvoiceId: "si_2",
@@ -447,9 +482,9 @@ Deno.test("AR two invoices with discount and FX all balance", () => {
           discountAmount: 10,
           writeOffAmount: 0,
           targetExchangeRate: 1.0,
-          sourceExchangeRate: 1.1,
-        },
-      ],
+          sourceExchangeRate: 1.1
+        }
+      ]
     })
   );
 
@@ -488,9 +523,9 @@ Deno.test("throws when a discount is taken but no discount account is set", () =
               discountAmount: 10,
               writeOffAmount: 0,
               targetExchangeRate: 1,
-              sourceExchangeRate: 1,
-            },
-          ],
+              sourceExchangeRate: 1
+            }
+          ]
         })
       ),
     Error,
@@ -512,9 +547,9 @@ Deno.test("throws when an FX gain arises but no FX gain account is set", () => {
               discountAmount: 0,
               writeOffAmount: 0,
               targetExchangeRate: 1.0,
-              sourceExchangeRate: 1.2,
-            },
-          ],
+              sourceExchangeRate: 1.2
+            }
+          ]
         })
       ),
     Error,
@@ -536,9 +571,9 @@ Deno.test("throws when a write-off arises but no write-off account is set", () =
               discountAmount: 0,
               writeOffAmount: 10,
               targetExchangeRate: 1,
-              sourceExchangeRate: 1,
-            },
-          ],
+              sourceExchangeRate: 1
+            }
+          ]
         })
       ),
     Error,
@@ -599,9 +634,9 @@ Deno.test("storable unapplied dust still emits an on-account line", () => {
           discountAmount: 0,
           writeOffAmount: 0,
           targetExchangeRate: 1,
-          sourceExchangeRate: 1,
-        },
-      ],
+          sourceExchangeRate: 1
+        }
+      ]
     })
   );
   assertEquals(
@@ -622,9 +657,9 @@ Deno.test("float-noise unapplied is dropped and the entry still balances", () =>
           discountAmount: 0,
           writeOffAmount: 0,
           targetExchangeRate: 1,
-          sourceExchangeRate: 1,
-        },
-      ],
+          sourceExchangeRate: 1
+        }
+      ]
     })
   );
   assert(line(lines, "Accounts Receivable (on-account credit)") === undefined);
@@ -640,14 +675,38 @@ Deno.test("AR three invoices fully settled: one cash + three control lines", () 
     arBase({
       totalAmount: 60,
       applications: [
-        { targetSalesInvoiceId: "si_1", appliedAmount: 10, discountAmount: 0, writeOffAmount: 0, targetExchangeRate: 1, sourceExchangeRate: 1 },
-        { targetSalesInvoiceId: "si_2", appliedAmount: 20, discountAmount: 0, writeOffAmount: 0, targetExchangeRate: 1, sourceExchangeRate: 1 },
-        { targetSalesInvoiceId: "si_3", appliedAmount: 30, discountAmount: 0, writeOffAmount: 0, targetExchangeRate: 1, sourceExchangeRate: 1 },
-      ],
+        {
+          targetSalesInvoiceId: "si_1",
+          appliedAmount: 10,
+          discountAmount: 0,
+          writeOffAmount: 0,
+          targetExchangeRate: 1,
+          sourceExchangeRate: 1
+        },
+        {
+          targetSalesInvoiceId: "si_2",
+          appliedAmount: 20,
+          discountAmount: 0,
+          writeOffAmount: 0,
+          targetExchangeRate: 1,
+          sourceExchangeRate: 1
+        },
+        {
+          targetSalesInvoiceId: "si_3",
+          appliedAmount: 30,
+          discountAmount: 0,
+          writeOffAmount: 0,
+          targetExchangeRate: 1,
+          sourceExchangeRate: 1
+        }
+      ]
     })
   );
 
-  assertEquals(lines.filter((l) => l.description === "Accounts Receivable").length, 3);
+  assertEquals(
+    lines.filter((l) => l.description === "Accounts Receivable").length,
+    3
+  );
   assertEquals(line(lines, "Bank / Cash")!.amount, 60);
   assert(line(lines, "Accounts Receivable (on-account credit)") === undefined);
   assertEquals(controlMagnitudeFor(lines, "si_1"), 10);
@@ -661,16 +720,35 @@ Deno.test("AR overpayment across multiple invoices: single draw-down line", () =
     arBase({
       totalAmount: 150,
       applications: [
-        { targetSalesInvoiceId: "si_1", appliedAmount: 100, discountAmount: 0, writeOffAmount: 0, targetExchangeRate: 1, sourceExchangeRate: 1 },
-        { targetSalesInvoiceId: "si_2", appliedAmount: 80, discountAmount: 0, writeOffAmount: 0, targetExchangeRate: 1, sourceExchangeRate: 1 },
-      ],
+        {
+          targetSalesInvoiceId: "si_1",
+          appliedAmount: 100,
+          discountAmount: 0,
+          writeOffAmount: 0,
+          targetExchangeRate: 1,
+          sourceExchangeRate: 1
+        },
+        {
+          targetSalesInvoiceId: "si_2",
+          appliedAmount: 80,
+          discountAmount: 0,
+          writeOffAmount: 0,
+          targetExchangeRate: 1,
+          sourceExchangeRate: 1
+        }
+      ]
     })
   );
 
   // applied 180 vs cash 150 → 30 drawn from existing credit (inverse side).
   const draw = line(lines, "Accounts Receivable (credit applied)")!;
   assertEquals(draw.amount, 30); // debit asset
-  assertEquals(lines.filter((l) => l.description === "Accounts Receivable (on-account credit)").length, 0);
+  assertEquals(
+    lines.filter(
+      (l) => l.description === "Accounts Receivable (on-account credit)"
+    ).length,
+    0
+  );
   assert(balanced(signedDebitTotal));
 });
 
@@ -679,9 +757,23 @@ Deno.test("AP underpayment across multiple invoices builds credit", () => {
     apBase({
       totalAmount: 200,
       applications: [
-        { targetPurchaseInvoiceId: "pi_1", appliedAmount: 60, discountAmount: 0, writeOffAmount: 0, targetExchangeRate: 1, sourceExchangeRate: 1 },
-        { targetPurchaseInvoiceId: "pi_2", appliedAmount: 60, discountAmount: 0, writeOffAmount: 0, targetExchangeRate: 1, sourceExchangeRate: 1 },
-      ],
+        {
+          targetPurchaseInvoiceId: "pi_1",
+          appliedAmount: 60,
+          discountAmount: 0,
+          writeOffAmount: 0,
+          targetExchangeRate: 1,
+          sourceExchangeRate: 1
+        },
+        {
+          targetPurchaseInvoiceId: "pi_2",
+          appliedAmount: 60,
+          discountAmount: 0,
+          writeOffAmount: 0,
+          targetExchangeRate: 1,
+          sourceExchangeRate: 1
+        }
+      ]
     })
   );
 
@@ -707,15 +799,15 @@ Deno.test("AR discount + write-off + FX on one invoice all coexist, balanced", (
           discountAmount: 10,
           writeOffAmount: 10,
           targetExchangeRate: 1.0,
-          sourceExchangeRate: 1.2,
-        },
-      ],
+          sourceExchangeRate: 1.2
+        }
+      ]
     })
   );
 
   assertEquals(line(lines, "Bank / Cash")!.amount, 96); // 80 × 1.2
   assertEquals(line(lines, "Accounts Receivable")!.amount, -100); // (80+10+10) × 1.0
-  assertEquals(line(lines, "Customer Payment Discount")!.amount, 10); // 10 × 1.0
+  assertEquals(line(lines, "Customer Payment Discount")!.amount, -10); // −(10 × 1.0): debit to Revenue = contra-revenue
   assertEquals(line(lines, "Bad Debt Expense")!.amount, 10); // 10 × 1.0
   assertEquals(line(lines, "Realized FX Gain")!.amount, 16); // 80 × (1.2 − 1.0)
   assert(balanced(signedDebitTotal));
@@ -733,9 +825,9 @@ Deno.test("FX accrues on applied principal only, never on discount/write-off", (
           discountAmount: 50,
           writeOffAmount: 0,
           targetExchangeRate: 1.0,
-          sourceExchangeRate: 1.5,
-        },
-      ],
+          sourceExchangeRate: 1.5
+        }
+      ]
     })
   );
 
@@ -750,9 +842,23 @@ Deno.test("opposing per-invoice FX nets to zero → no FX plug line", () => {
       exchangeRate: 1.0,
       totalAmount: 200,
       applications: [
-        { targetSalesInvoiceId: "si_1", appliedAmount: 100, discountAmount: 0, writeOffAmount: 0, targetExchangeRate: 1.0, sourceExchangeRate: 1.1 }, // +10
-        { targetSalesInvoiceId: "si_2", appliedAmount: 100, discountAmount: 0, writeOffAmount: 0, targetExchangeRate: 1.0, sourceExchangeRate: 0.9 }, // −10
-      ],
+        {
+          targetSalesInvoiceId: "si_1",
+          appliedAmount: 100,
+          discountAmount: 0,
+          writeOffAmount: 0,
+          targetExchangeRate: 1.0,
+          sourceExchangeRate: 1.1
+        }, // +10
+        {
+          targetSalesInvoiceId: "si_2",
+          appliedAmount: 100,
+          discountAmount: 0,
+          writeOffAmount: 0,
+          targetExchangeRate: 1.0,
+          sourceExchangeRate: 0.9
+        } // −10
+      ]
     })
   );
 
@@ -782,9 +888,9 @@ Deno.test("magnitudes round to 4 dp and the entry still balances", () => {
           discountAmount: 0,
           writeOffAmount: 0,
           targetExchangeRate: 1.0,
-          sourceExchangeRate: 1.11111,
-        },
-      ],
+          sourceExchangeRate: 1.11111
+        }
+      ]
     })
   );
 
@@ -805,7 +911,7 @@ Deno.test("control posting ties out to subledger settled per invoice (AR & AP)",
   const apps = [
     { applied: 100, discount: 5, writeOff: 0, invRate: 1.0 },
     { applied: 40, discount: 0, writeOff: 10, invRate: 1.25 },
-    { applied: 7.5, discount: 2.5, writeOff: 0, invRate: 0.8 },
+    { applied: 7.5, discount: 2.5, writeOff: 0, invRate: 0.8 }
   ];
 
   for (const isReceipt of [true, false]) {
@@ -815,13 +921,14 @@ Deno.test("control posting ties out to subledger settled per invoice (AR & AP)",
       exchangeRate: 1.0,
       totalAmount: apps.reduce((s, a) => s + a.applied, 0),
       applications: apps.map((a, i) => ({
-        [isReceipt ? "targetSalesInvoiceId" : "targetPurchaseInvoiceId"]: `inv_${i}`,
+        [isReceipt ? "targetSalesInvoiceId" : "targetPurchaseInvoiceId"]:
+          `inv_${i}`,
         appliedAmount: a.applied,
         discountAmount: a.discount,
         writeOffAmount: a.writeOff,
         targetExchangeRate: a.invRate,
-        sourceExchangeRate: 1.0,
-      })),
+        sourceExchangeRate: 1.0
+      }))
     });
 
     apps.forEach((a, i) => {
@@ -845,7 +952,7 @@ Deno.test("matrix: every scenario balances with the correct FX side", () => {
     { discount: 0, writeOff: 0 },
     { discount: 5, writeOff: 0 },
     { discount: 0, writeOff: 5 },
-    { discount: 3, writeOff: 4 },
+    { discount: 3, writeOff: 4 }
   ];
 
   for (const isReceipt of [true, false]) {
@@ -854,21 +961,24 @@ Deno.test("matrix: every scenario balances with the correct FX side", () => {
         for (const relief of reliefs) {
           const applied = 100;
           const base = isReceipt ? arBase() : apBase();
-          const { lines, signedDebitTotal, totalFxImpact } = buildPaymentJournal({
-            ...base,
-            exchangeRate: payRate,
-            totalAmount: applied,
-            applications: [
-              {
-                [isReceipt ? "targetSalesInvoiceId" : "targetPurchaseInvoiceId"]: "inv",
-                appliedAmount: applied,
-                discountAmount: relief.discount,
-                writeOffAmount: relief.writeOff,
-                targetExchangeRate: invRate,
-                sourceExchangeRate: payRate,
-              },
-            ],
-          });
+          const { lines, signedDebitTotal, totalFxImpact } =
+            buildPaymentJournal({
+              ...base,
+              exchangeRate: payRate,
+              totalAmount: applied,
+              applications: [
+                {
+                  [isReceipt
+                    ? "targetSalesInvoiceId"
+                    : "targetPurchaseInvoiceId"]: "inv",
+                  appliedAmount: applied,
+                  discountAmount: relief.discount,
+                  writeOffAmount: relief.writeOff,
+                  targetExchangeRate: invRate,
+                  sourceExchangeRate: payRate
+                }
+              ]
+            });
 
           assert(
             Math.abs(signedDebitTotal) < 0.01,
@@ -878,8 +988,10 @@ Deno.test("matrix: every scenario balances with the correct FX side", () => {
           const expectedFx =
             (isReceipt ? 1 : -1) * applied * (payRate - invRate);
           if (Math.abs(expectedFx) > 0.0001) {
-            const side = expectedFx > 0 ? "Realized FX Gain" : "Realized FX Loss";
-            const wrong = expectedFx > 0 ? "Realized FX Loss" : "Realized FX Gain";
+            const side =
+              expectedFx > 0 ? "Realized FX Gain" : "Realized FX Loss";
+            const wrong =
+              expectedFx > 0 ? "Realized FX Loss" : "Realized FX Gain";
             assert(line(lines, side) !== undefined, `missing ${side}`);
             assert(line(lines, wrong) === undefined, `unexpected ${wrong}`);
           }

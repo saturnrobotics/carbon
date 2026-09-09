@@ -14,6 +14,27 @@ SPEC.loader.exec_module(ci)
 
 
 class BiomeLiveTests(unittest.TestCase):
+    def test_deno_globals_are_scoped_without_hiding_unknown_names(self):
+        with tempfile.TemporaryDirectory(prefix="carbon-deno-lint-") as directory:
+            path = (
+                Path(directory)
+                / "packages/database/supabase/functions/example/example.test.ts"
+            )
+            path.parent.mkdir(parents=True)
+            path.write_text('Deno.test("example", () => Promise.resolve());\n')
+            result = ci.biome(ROOT, [str(path)], expanded=True, write=True)
+            self.assertEqual(result.returncode, 0, result.stdout)
+            path.write_text('Deno.test("example", () => missingRuntimeValue());\n')
+            result = ci.biome(ROOT, [str(path)], expanded=True)
+            self.assertNotEqual(result.returncode, 0)
+            diagnostics = json.loads(result.stdout)["diagnostics"]
+            self.assertTrue(
+                any(
+                    d["category"] == "lint/correctness/noUndeclaredVariables"
+                    for d in diagnostics
+                )
+            )
+
     def test_every_previously_ignored_source_root_is_checked_and_formatted(self):
         with tempfile.TemporaryDirectory(prefix="carbon-biome-fixture-") as directory:
             paths = []

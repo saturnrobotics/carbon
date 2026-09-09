@@ -16,6 +16,8 @@ const ABSOLUTE_MS = 12 * 60 * 60 * 1000;
 
 vi.mock("../config/env", () => ({
   DOMAIN: "localhost",
+  ERP_URL: "http://localhost:3000",
+  MES_URL: "http://localhost:3001",
   CarbonEdition: "Community",
   CONTROLLED_ENVIRONMENT: false,
   REFRESH_ACCESS_TOKEN_THRESHOLD: 60,
