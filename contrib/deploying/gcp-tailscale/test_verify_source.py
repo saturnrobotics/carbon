@@ -93,6 +93,61 @@ class VerificationTests(unittest.TestCase):
             ):
                 self.check(runs=[workflow_run(status=status)])
 
+    def test_missing_and_unfinished_runs_are_distinct_pending_results(self):
+        for runs in (
+            [],
+            [workflow_run(status="queued", conclusion=None)],
+            [workflow_run(status="in_progress", conclusion=None)],
+            [
+                workflow_run(),
+                workflow_run(id=32, run_number=5, status="waiting", conclusion=None),
+            ],
+        ):
+            with self.subTest(runs=runs), self.assertRaises(ValueError) as failure:
+                self.check(runs=runs)
+            self.assertIs(
+                type(failure.exception),
+                getattr(verify_source, "VerificationPending", None),
+            )
+
+    def test_completed_unsuccessful_run_identifies_the_validated_latest_run(self):
+        for conclusion in (None, "failure", "skipped", "cancelled", "timed_out"):
+            with self.subTest(conclusion=conclusion), self.assertRaises(
+                ValueError
+            ) as failure:
+                self.check(
+                    runs=[
+                        workflow_run(),
+                        workflow_run(id=32, run_number=5, conclusion=conclusion),
+                    ]
+                )
+            self.assertIs(
+                type(failure.exception),
+                getattr(verify_source, "VerificationFailed", None),
+            )
+            self.assertEqual(failure.exception.run_id, 32)
+
+    def test_invalid_run_identity_is_neither_pending_nor_repairable_failure(self):
+        for identifier in (True, 0, -1, "31", "untrusted/path"):
+            for status in ("queued", "completed"):
+                with self.subTest(identifier=identifier, status=status):
+                    with self.assertRaises(ValueError) as failure:
+                        self.check(
+                            runs=[
+                                workflow_run(
+                                    id=identifier, status=status, conclusion="failure"
+                                )
+                            ]
+                        )
+                    self.assertIs(type(failure.exception), ValueError)
+
+    def test_failed_exception_rejects_unvalidated_identifiers(self):
+        exception_type = getattr(verify_source, "VerificationFailed", None)
+        self.assertIsNotNone(exception_type)
+        for identifier in (True, 0, -1, "31", None):
+            with self.subTest(identifier=identifier), self.assertRaises(ValueError):
+                exception_type("Fork verification failed", run_id=identifier)
+
     def test_wrong_revision_branch_repository_workflow_and_event_are_rejected(self):
         for changes in [
             {"head_sha": "b" * 40},

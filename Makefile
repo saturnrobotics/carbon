@@ -4,14 +4,14 @@
 
 help:
 	@printf '%s\n' \
-	  'make sync          Merge upstream/main into an isolated candidate for agent review and verification.' \
+	  'make sync          Run the resumable Codex upstream integration agent (publishes candidate for CI).' \
 	  'make deploy        Prepare and deploy; automatically handle required setup and migrations.' \
 	  'make deploy-check  Validate private deployment settings without cloud changes.' \
 	  'make deploy-plan   Generate a private preview using read-only cloud queries.' \
 	  'Setup guide: contrib/deploying/gcp-tailscale/README.md'
 
 sync:
-	@bash ./contrib/deploying/gcp-tailscale/fork.sh sync
+	@python3 ./contrib/deploying/gcp-tailscale/sync_agent.py $(SYNC_ARGS)
 
 deploy-check:
 	@bash ./contrib/deploying/gcp-tailscale/deploy.sh

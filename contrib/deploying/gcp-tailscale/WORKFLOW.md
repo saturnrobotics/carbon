@@ -3,14 +3,14 @@
 `saturn/main` is the shared integration and deployment branch. Keep `origin`
 pointed at the public fork and `upstream` at `https://github.com/crbnos/carbon.git`.
 Merge upstream in an isolated candidate, then fast-forward the shared branch to
-that verified commit. The helpers never force-push, delete branches, or choose
-conflict resolutions. Follow the [fork agent policy](../../../.fork/agent-policy.md)
+that verified commit. The Git helpers never force-push or delete branches. The managed Codex worker
+reconciles conflicts while the controller verifies and promotes its result. Follow the [fork agent policy](../../../.fork/agent-policy.md)
 for generated files and persistent agent records.
 
 Keep custom deployment code and operator documentation under this directory.
 Avoid changing upstream root files such as `README.md` when a local document or
 wrapper can do the job. The existing root `Makefile` remains a small entry point
-for `make deploy`. Put actual operator settings only in ignored `.local/` files.
+for `make deploy` and `make sync`. Put actual operator settings only in ignored `.local/` files.
 
 ## Start a feature
 
@@ -47,47 +47,95 @@ branch, and fast-forwards `saturn/main`. It creates no extra merge commit that
 would need fresh verification. Missing, pending, skipped, failed, or unrelated
 verification blocks promotion. Candidate branches are retained.
 
-## Ask the agent to update upstream
+## Run the upstream integration agent
 
-The coding agent owns the sync from discovery through verified promotion. Ask:
+From the original checkout, run:
 
-> Sync this fork with upstream. Resume any existing integration, preserve my
-> working changes, resolve conflicts, regenerate outputs, run verification,
-> publish the candidate for CI, and promote the verified commit to `saturn/main`.
-> Do not deploy.
+```bash
+make sync
+```
 
-The agent finds the right worktree and baseline; you do not need to copy paths,
-edit generated files, install individual tools, or relay each command. An upstream
-sync request covers the publication and promotion needed to finish that request
-unless you restrict its scope. Deployment requires a separate request. Credentials,
-destructive actions, and bypassing protections are never implied.
+This launches the installed Codex CLI using its existing local login. It creates
+an isolated candidate, resolves authored conflicts, regenerates outputs, repairs
+CI failures, and fast-forwards local `saturn/main` only after exact-SHA CI passes.
+It merges upstream ancestry; it never rebases shared history. It publishes the
+candidate branch for CI. It does **not** push `saturn/main` or deploy. Deployment
+remains `make deploy`; that command performs its own current verification check.
 
-The agent must:
+Check prerequisites or saved progress without starting the agent:
 
-1. Inspect the current checkout, `git worktree list`, merge state, and existing
-   edits. Resume the existing sync candidate when present. Record the original
-   checkout and previous reviewed full SHA in `.fork/plans/`, keeping local paths
-   and runtime evidence in ignored `.fork/local/`.
-2. Reconcile authored intent, including manifests and new migrations. Preserve
-   unrelated original-checkout edits and upstream records. Bootstrap the pinned
-   tools in the candidate and repair locally fixable integration failures.
-3. Regenerate database outputs in infrastructure owned by `.fork/schema.py`, then
-   dependent source outputs. Review changes, run the required checks, and commit
-   with normal hooks.
-4. Publish the candidate when covered by the request, watch its exact-SHA CI,
-   diagnose failures, and repeat verification after fixes. Promote only after
-   `fork-verified` succeeds. Report the resulting SHA and verification evidence.
+```bash
+make sync SYNC_ARGS=--check
+make sync SYNC_ARGS=--status
+```
 
-Missing local packages or a stopped local Docker service are tasks for the agent
-to resolve within the authorized environment. Do not end the task with a manual
-checklist at the first recoverable failure. Preserve the candidate and ask only
-for access or a decision the agent cannot obtain, such as unavailable credentials
-or conflicting work that cannot safely be preserved. Required checks stay
-unverified until they actually pass; deployment remains separate.
+Prerequisites are Python 3.11+, Git, a recent Codex CLI supporting structured exec
+output and configuration isolation, an existing `codex login`, `gh`, and normal
+Git permission to push the public fork. The worker installs pinned project tools
+inside its candidate. Schema repair additionally needs an available local Docker
+Unix socket; the schema helper allocates and cleans up its own disposable databases.
+The interface uses [Codex non-interactive execution](https://learn.chatgpt.com/docs/non-interactive-mode).
+No API key or production database access is required. Codex usage consumes your
+existing account allowance.
+
+After upgrading Codex, rerun the opt-in synthetic smoke test (uses one model turn,
+creates no live sync and publishes nothing):
+
+```bash
+python3 contrib/deploying/gcp-tailscale/smoke_sync_agent.py
+```
+
+It checks a real structured worker response and the sandbox's shared-Git write
+denial. The regular controller regression suite runs in fork CI without an LLM
+login. The smoke test was exercised with Codex CLI 0.144.1 on macOS.
+
+**Resume:** rerun `make sync`. Ctrl-C terminates the current process group and
+retains source edits, merge state and private diagnostics. One controller holds a
+repository-wide lock. State and logs live in the Git common directory under
+`carbon-sync-agent/`, outside tracked source and the worker's writable candidate.
+Use `--status` to locate them. Do not run another Git writer in the candidate.
+A changed original checkout blocks promotion and its edits remain untouched.
+
+The default budget is 12 total model turns (including independent review), 30
+minutes per turn and 90 minutes per CI wait. Restarts preserve the turn count.
+After inspecting a budget stop, explicitly raise it when needed:
+
+```bash
+make sync SYNC_ARGS='--max-turns 20 --ci-timeout 7200'
+```
+
+An existing candidate created manually or by an earlier tool is not silently taken
+over. Once it is idle, adopt the worktree for the current base/upstream pair:
+
+```bash
+python3 contrib/deploying/gcp-tailscale/sync_agent.py --adopt '/path/to/candidate'
+```
+
+The agent uses workspace-write sandboxing, a separate shell HOME and a sanitized
+environment. Writable temporary files stay inside the candidate; broad system
+temporary-directory write access is disabled. It requests explicit staging through a structured protocol; the
+controller owns commits, publication and verification. A fresh read-only model
+turn reviews the result before publication. Verification/control files are frozen
+against the reviewed baseline: an upstream change to those files stops automatic
+integration for separate review, rather than allowing the repair loop to weaken
+its own checks. Semantic ambiguity or missing account access may also require a
+specific decision; logs explain the stop and the candidate remains available.
+
+This is automation for trusted upstream source on a developer machine, **not** a
+hostile-code security boundary. Workspace-write does not prevent all host reads;
+normal hooks, installers and generators execute local code. Keep deployment
+credentials outside the candidate. For untrusted repositories, use a disposable
+host without deployment credentials. Neither model review nor passing checks
+proves the absence of every application bug.
+
+The deterministic fallback below remains available for another coding agent or
+manual diagnosis. `fork.sh sync` only prepares a candidate; `make sync` runs the
+complete bounded agent loop.
 
 ## Upstream sync command reference
 
-These are the agent's operating steps and the fallback for a manual sync.
+These are manual/external-agent operations. The managed worker follows its
+controller protocol and never executes the Git-write commands below.
 
 ### 1. Discover or create the candidate
 
@@ -113,13 +161,11 @@ For a new sync, from the clean original `saturn/main` checkout:
 sync_original_checkout="$PWD"
 sync_base_sha="$(git rev-parse HEAD)"
 python3 .fork/verify.py preflight --revision HEAD
-make sync
+bash contrib/deploying/gcp-tailscale/fork.sh sync
 ```
 
-`make sync` invokes `bash contrib/deploying/gcp-tailscale/fork.sh sync`. It
-creates the integration candidate; it does not launch a coding agent or promote
-the candidate. The agent continues conflict resolution, regeneration, CI, and
-verified promotion as described above.
+This low-level helper creates the candidate only. Use `make sync` above for the
+automated agent lifecycle.
 
 The helper requires a clean `saturn/main`, runs preflight, and fetches
 `upstream/main`. If there is nothing to merge, it creates nothing. Otherwise:
