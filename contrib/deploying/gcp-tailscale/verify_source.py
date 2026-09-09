@@ -16,6 +16,20 @@ WORKFLOW = ".github/workflows/fork-check.yml"
 INTEGRATION_BRANCH = "saturn/main"
 
 
+class VerificationPending(ValueError):
+    """The exact revision has no completed workflow result yet."""
+
+
+class VerificationFailed(ValueError):
+    """A validated workflow completed unsuccessfully and can be inspected."""
+
+    def __init__(self, message, *, run_id):
+        if not isinstance(run_id, int) or isinstance(run_id, bool) or run_id < 1:
+            raise ValueError("Fork verification requires a positive integer run ID")
+        super().__init__(message)
+        self.run_id = run_id
+
+
 def repository_slug(source):
     patterns = (
         r"https://github\.com/([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)",
@@ -102,7 +116,7 @@ def require_verified(source, revision, *, branch=None):
         f"/repos/{slug}/actions/workflows/fork-check.yml/runs", "workflow_runs", **query
     )
     if not runs:
-        raise ValueError(
+        raise VerificationPending(
             "Fork verification is missing for this revision; submit the candidate and wait for fork-verified"
         )
     for run in runs:
@@ -138,9 +152,14 @@ def require_verified(source, revision, *, branch=None):
                 )
     # A queued/failed newer run must not silently fall back to an older success.
     latest = max(runs, key=lambda run: (run["run_number"], run["run_attempt"]))
-    if latest.get("status") != "completed" or latest.get("conclusion") != "success":
-        raise ValueError(
+    if latest.get("status") != "completed":
+        raise VerificationPending(
             "Fork verification is pending or unsuccessful; fork-verified must pass for this revision"
+        )
+    if latest.get("conclusion") != "success":
+        raise VerificationFailed(
+            "Fork verification is pending or unsuccessful; fork-verified must pass for this revision",
+            run_id=latest["id"],
         )
     run_id, attempt = latest["id"], latest["run_attempt"]
     jobs = github_items(
