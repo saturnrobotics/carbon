@@ -39,23 +39,20 @@ function collectFiles(dir: string): string[] {
 }
 
 describe("Lingui React runtime", () => {
-  it("avoids the unactivated global translation runtime in React-facing app files", () => {
-    const offenders: string[] = [];
+  const files = collectFiles(appRoot).map((file) =>
+    path.relative(appRoot, file)
+  );
 
-    for (const filePath of collectFiles(appRoot)) {
-      const source = readFileSync(filePath, "utf8");
-      const relativePath = path.relative(
-        path.resolve(__dirname, ".."),
-        filePath
-      );
+  it("discovers React-facing application source files", () => {
+    expect(files.length).toBeGreaterThan(0);
+  });
 
-      offenders.push(
-        ...findUnsafeTranslations(source).map(
-          (issue) => `${relativePath}: ${issue}`
-        )
-      );
-    }
-
-    expect(offenders).toEqual([]);
+  // Give each source file the normal test deadline as the app corpus grows.
+  // Every selected file still runs through the complete AST-based check.
+  it.each(
+    files
+  )("%s avoids the unactivated global translation runtime", (relativePath) => {
+    const source = readFileSync(path.join(appRoot, relativePath), "utf8");
+    expect(findUnsafeTranslations(source)).toEqual([]);
   });
 });
