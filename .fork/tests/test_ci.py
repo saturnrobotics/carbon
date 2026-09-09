@@ -216,6 +216,85 @@ class LintTests(unittest.TestCase):
         self.assertEqual(command[-2:], ["--", "scripts/source.ts"])
 
 
+class ApplicationTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory(prefix="carbon-ci-application-")
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        for path, name, typegen in (
+            ("apps/erp", "erp", True),
+            ("apps/mes", "mes", True),
+            ("apps/academy", "academy", True),
+            ("packages/model", "@carbon/model", True),
+            ("packages/jobs", "@carbon/jobs", False),
+            ("packages/database", "@carbon/database", False),
+        ):
+            directory = self.root / path
+            directory.mkdir(parents=True)
+            scripts = {"typecheck": "tsc --noEmit", "test": "vitest run"}
+            if typegen:
+                scripts["typegen"] = "synthetic-type-generator"
+            (directory / "package.json").write_text(
+                json.dumps({"name": name, "scripts": scripts})
+            )
+        invoice = self.root / "contrib/deploying/gcp-tailscale/check_invoice.py"
+        invoice.parent.mkdir(parents=True)
+        invoice.write_text('JOBS_DATABASE_TESTS = ["synthetic.integration.test.ts"]\n')
+
+    def test_selected_manifests_generate_before_tests_and_types(self):
+        with patch.object(
+            ci,
+            "changed",
+            return_value=["apps/mes/app/root.tsx", "packages/model/src/index.ts"],
+        ), patch.object(ci.subprocess, "run") as run:
+            ci.application(self.root, "a" * 40)
+        commands = [call.args[0] for call in run.call_args_list]
+        generated = [command[3] for command in commands if command[-1] == "typegen"]
+        self.assertEqual(set(generated), {"erp", "mes", "@carbon/model"})
+        self.assertEqual(len(generated), 3)
+        self.assertEqual(
+            commands[0], ["corepack", "pnpm", "--filter", "@carbon/config", "build"]
+        )
+        tests = next(
+            index
+            for index, command in enumerate(commands)
+            if "turbo" in command and "test" in command
+        )
+        types = next(
+            index for index, command in enumerate(commands) if "typecheck" in command
+        )
+        self.assertIn("--filter=mes", commands[types])
+        self.assertIn("--filter=erp", commands[types])
+        for index, command in enumerate(commands):
+            if command[-1] == "typegen":
+                self.assertLess(index, tests)
+                self.assertLess(index, types)
+        self.assertNotIn("academy", generated)
+        self.assertNotIn("@carbon/jobs", generated)
+
+    def test_generation_failure_blocks_dependent_tests_and_typechecks(self):
+        commands = []
+
+        def execute(command, **kwargs):
+            commands.append(command)
+            self.assertTrue(kwargs["check"])
+            if command == ["corepack", "pnpm", "--filter", "mes", "typegen"]:
+                raise subprocess.CalledProcessError(1, command)
+
+        with patch.object(
+            ci, "changed", return_value=["apps/mes/app/root.tsx"]
+        ), patch.object(ci.subprocess, "run", side_effect=execute), self.assertRaises(
+            subprocess.CalledProcessError
+        ):
+            ci.application(self.root, "a" * 40)
+        self.assertFalse(
+            any(
+                "typecheck" in command or "test" in command or "vitest" in command
+                for command in commands
+            )
+        )
+
+
 class MandatoryUnittestTests(unittest.TestCase):
     def test_a_skipped_or_empty_successful_suite_fails_the_gate(self):
         for suite in (

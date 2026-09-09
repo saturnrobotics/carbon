@@ -18,11 +18,11 @@
   actual entry-point behavior, history protection, and malformed inputs.
 - [x] Place new candidates in predictable sibling worktrees; test real Git merges,
   collisions, original-checkout preservation, and promotion refusal without CI.
-- [ ] Review upstream authored changes and generate all four database artifacts in
+- [x] Review upstream authored changes and generate all four database artifacts in
   newly allocated infrastructure. Rebuild source contracts from reconciled inputs.
 - [ ] Run index preflight, repeated generation, applicable lint/tests/types, and
   strict fresh/upgrade schema verification for the committed candidate.
-- [ ] Verify policy installation and an independent agent cold-read.
+- [x] Verify policy installation and an independent agent cold-read.
 - [ ] Publish the reviewed candidate, require exact-SHA `fork-verified`, then
   fast-forward local `saturn/main`. Preserve normal protection and hooks.
 

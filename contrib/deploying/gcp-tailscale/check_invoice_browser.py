@@ -61,11 +61,19 @@ def run(environment, directory, start_app=False):
                 raise ValueError("Local ERP did not become ready; inspect the private browser log")
             time.sleep(1)
 
+        def command(label, args, command_environment):
+            # Labels come only from the fixed fixture/script phases below.
+            print("Browser acceptance phase: " + label, flush=True)
+            try:
+                subprocess.run(args, cwd=ROOT, env=command_environment, stdout=log, stderr=subprocess.STDOUT, check=True)
+            except (OSError, subprocess.SubprocessError):
+                raise ValueError("Browser acceptance failed during " + label + "; inspect the private browser log") from None
+
         def fixture(phase):
-            subprocess.run(["pnpm", "--dir", "apps/erp", "exec", "vitest", "run", "--config", "test/invoice-browser/vitest.config.ts"], cwd=ROOT, env={**environment, "INVOICE_BROWSER_PHASE": phase}, stdout=log, stderr=subprocess.STDOUT, check=True)
+            command("fixture/" + phase, ["pnpm", "--dir", "apps/erp", "exec", "vitest", "run", "--config", "test/invoice-browser/vitest.config.ts"], {**environment, "INVOICE_BROWSER_PHASE": phase})
 
         def browser(script, phase):
-            subprocess.run(["node", "apps/erp/test/invoice-browser/" + script + ".mjs", phase], cwd=ROOT, env=environment, stdout=log, stderr=subprocess.STDOUT, check=True)
+            command("browser/" + script + "/" + phase, ["node", "apps/erp/test/invoice-browser/" + script + ".mjs", phase], environment)
 
         fixture("bootstrap")
         fixture("seed")

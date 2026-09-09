@@ -184,6 +184,14 @@
       "inputs": ["apps/*/app/**", "apps/*/react-router.config.ts"],
       "untracked": ["apps/erp/.react-router/**"],
       "command": ["corepack", "pnpm", "--filter", "erp", "typegen"]
+    },
+    {
+      "id": "mes-route-types",
+      "kind": "build-output",
+      "group": "routes",
+      "inputs": ["apps/mes/app/**", "apps/mes/react-router.config.ts"],
+      "untracked": ["apps/mes/.react-router/**"],
+      "command": ["corepack", "pnpm", "--filter", "mes", "typegen"]
     }
   ],
   "public_environment_templates": [

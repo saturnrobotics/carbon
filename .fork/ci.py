@@ -348,10 +348,13 @@ def application(root, base):
     manifests = list((root / "apps").glob("*/package.json")) + list(
         (root / "packages").glob("*/package.json")
     )
+    scripts = {}
     for manifest in manifests:
+        package = json.loads(manifest.read_text())
+        scripts[package["name"]] = package.get("scripts", {})
         relative = manifest.parent.relative_to(root).as_posix() + "/"
         if any(path.startswith(relative) for path in paths):
-            packages.add(json.loads(manifest.read_text())["name"])
+            packages.add(package["name"])
     filters = [f"--filter={package}" for package in sorted(packages)]
     # This existing inventory is also the exact list executed by the mandatory
     # invoice workflow against its disposable database. Never drop that suite
@@ -373,7 +376,11 @@ def application(root, base):
         job_unit_command.extend(["--exclude", test])
     for command in (
         ["corepack", "pnpm", "--filter", "@carbon/config", "build"],
-        ["corepack", "pnpm", "--filter", "erp", "typegen"],
+        *[
+            ["corepack", "pnpm", "--filter", package, "typegen"]
+            for package in sorted(packages)
+            if "typegen" in scripts[package]
+        ],
         [
             "corepack",
             "pnpm",
