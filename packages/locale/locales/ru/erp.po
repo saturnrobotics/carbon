@@ -1243,8 +1243,14 @@ msgstr "Добавить пользовательскую строку цено�
 msgid "Add a domain"
 msgstr "Добавить домен"
 
+msgid "Add a line (in document explorers)"
+msgstr "Добавить строку (в обозревателях документов)"
+
 msgid "Add a materials section that lists each item on the bill of materials with its quantity."
 msgstr "Добавить раздел материалов, в котором указывается каждый элемент спецификации материалов с его количеством."
+
+msgid "Add a parameter (in the procedure explorer)"
+msgstr "Добавить параметр (в проводнике процедур)"
 
 msgid "Add a printer in the printing settings to print labels directly."
 msgstr "Добавьте принтер в настройки печати для прямой печати этикеток."
@@ -1257,6 +1263,9 @@ msgstr "Добавить строку"
 
 msgid "Add a step"
 msgstr "Добавить шаг"
+
+msgid "Add a step or question (in procedure and training explorers)"
+msgstr "Добавить шаг или вопрос (в проводниках процедур и обучения)"
 
 msgid "Add Ability"
 msgstr "Добавить способность"
@@ -3432,6 +3441,7 @@ msgstr "Чат"
 
 msgid "Check operations on the left to build the batch."
 msgstr "Отметьте операции слева, чтобы создать пакет."
+
 msgid "Check outgoing payments every hour. Proposed suppliers and invoice matches wait for your review."
 msgstr "Проверяйте исходящие платежи каждый час. Предложенные поставщики и совпадения счетов ждут проверки."
 
@@ -3847,6 +3857,9 @@ msgstr "Подтвердить {0}"
 
 msgid "Confirm & release"
 msgstr "Подтвердить и запустить в работу"
+
+msgid "Confirm a dialog"
+msgstr "Подтвердить диалоговое окно"
 
 msgid "Confirm all"
 msgstr "Подтвердить все"
@@ -5695,10 +5708,11 @@ msgstr "Разработчик"
 msgid "Diagram saved"
 msgstr "Диаграмма сохранена"
 
-msgid "Differs from the selection — allowed, but confirm they nest together"
-msgstr "Отличается от выбора — допустимо, но убедитесь в их совместимости"
 msgid "Difference"
 msgstr "Разница"
+
+msgid "Differs from the selection — allowed, but confirm they nest together"
+msgstr "Отличается от выбора — допустимо, но убедитесь в их совместимости"
 
 msgid "Digital Quote"
 msgstr "Цифровая котировка"
@@ -8062,6 +8076,9 @@ msgstr "Перейти к {0}"
 msgid "Go to implementation hub"
 msgstr "Перейти в центр внедрения"
 
+msgid "Go to module"
+msgstr "Перейти в модуль"
+
 msgid "Go to that week"
 msgstr "Перейти на эту неделю"
 
@@ -8469,6 +8486,7 @@ msgstr "Если вы хотите изменить номера деталей,
 
 msgid "Ignore"
 msgstr "Игнорировать"
+
 msgid "Ignore document"
 msgstr "Игнорировать документ"
 
@@ -9212,6 +9230,9 @@ msgstr "Строки журнала"
 msgid "Journals dated on or before this date are treated as locked. Merged with the provider-reported lock date when both exist."
 msgstr "Операции, датированные в эту дату или ранее, считаются заблокированными. Объединены с датой блокировки, указанной поставщиком, если обе существуют."
 
+msgid "Jump to a section on detail pages (same modifiers + the section's letter)"
+msgstr "Перейти к разделу на страницах подробной информации (те же клавиши-модификаторы + буква раздела)"
+
 msgid "Just one"
 msgstr "Только один"
 
@@ -9256,6 +9277,9 @@ msgstr "Требует дополнительную проверку для за
 
 msgid "Key"
 msgstr "Ключ"
+
+msgid "Keyboard shortcuts"
+msgstr "Сочетания клавиш"
 
 msgid "Kind of record"
 msgstr "Тип записи"
@@ -9488,6 +9512,9 @@ msgstr "Светлая"
 
 msgid "Light Mode"
 msgstr "Светлый режим"
+
+msgid "Light or dark mode"
+msgstr "Светлая или тёмная тема"
 
 msgid "Lights Out (24×7)"
 msgstr "Темное производство (24×7)"
@@ -10493,10 +10520,11 @@ msgstr "MRP (планирование)"
 msgid "MRP runs automatically every 3 hours, but you can run it manually here."
 msgstr "MRP запускается автоматически каждые 3 часа, но вы можете запустить его вручную здесь."
 
-msgid "Multiple jobs can run on this process at the same time — e.g. a laser table, furnace, or plating bath"
-msgstr "Несколько заданий могут выполняться на этом процессе одновременно — например, лазерный стол, печь или гальваническая ванна"
 msgid "Multiple invoices"
 msgstr "Несколько Счет-фактура-фактур-фактур"
+
+msgid "Multiple jobs can run on this process at the same time — e.g. a laser table, furnace, or plating bath"
+msgstr "Несколько заданий могут выполняться на этом процессе одновременно — например, лазерный стол, печь или гальваническая ванна"
 
 msgid "Must be in the same location"
 msgstr "Должно быть в одном месте"
@@ -10792,6 +10820,9 @@ msgstr "Новая строка предложения"
 msgid "New Receipt"
 msgstr "Новая квитанция"
 
+msgid "New record (on list pages)"
+msgstr "Новая запись (на страницах списков)"
+
 msgid "New record created"
 msgstr "Создана новая запись"
 
@@ -10923,6 +10954,9 @@ msgstr "Следующий Срок выполнения"
 
 msgid "Next page"
 msgstr "Следующая страница"
+
+msgid "Next page (in tables)"
+msgstr "Следующая страница (в таблицах)"
 
 msgid "Next Sequence"
 msgstr "Следующая Нумерация"
@@ -11086,6 +11120,7 @@ msgstr "Нет редактируемых свойств для этого эл�
 
 msgid "No eligible operations"
 msgstr "Нет подходящих операций"
+
 msgid "No eligible receipt or invoice is attached yet. Upload the original document or find its receipt in Mercury."
 msgstr "Подходящий чек или счет-фактура еще не приложены. Загрузите исходный документ или найдите чек в Mercury."
 
@@ -11358,6 +11393,9 @@ msgstr "Нет запланированной работы в этом окне"
 
 msgid "No shifts configured — assuming Mon–Fri, 8h days"
 msgstr "Смены не настроены — предполагается Пн–Пт, 8ч дни"
+
+msgid "No shortcuts available on this page."
+msgstr "На этой странице сочетания клавиш недоступны."
 
 msgid "No single, trusted number for inventory or job status"
 msgstr "Нет единого надежного показателя для инвентаря или статуса работы"
@@ -12846,6 +12884,9 @@ msgstr "Предыдущий день"
 
 msgid "Previous page"
 msgstr "Предыдущая страница"
+
+msgid "Previous page (in tables)"
+msgstr "Предыдущая страница (в таблицах)"
 
 msgid "Previous step"
 msgstr "Предыдущий шаг"
@@ -14393,6 +14434,7 @@ msgstr "Рассмотрение"
 
 msgid "Review & create"
 msgstr "Просмотр и создание"
+
 msgid "Review action"
 msgstr "Проверить действие"
 
@@ -14834,6 +14876,9 @@ msgstr "Сохранить настройки синхронизации"
 
 msgid "Save the edited invoice total or currency, then confirm the payment explanation against the updated amounts."
 msgstr "Сохраните изменённый итог или валюту счёта-фактуры, затем подтвердите пояснение платежа с учётом обновлённых сумм."
+
+msgid "Save the form you're editing"
+msgstr "Сохранить редактируемую форму"
 
 #. placeholder {0}: copy.moduleLabel
 msgid "Save this review, add the required definition in {0}, and reopen the proposal to select it."
@@ -15759,6 +15804,9 @@ msgstr "Показать ID поставщиков"
 msgid "Show sync options"
 msgstr "Показать параметры синхронизации"
 
+msgid "Show this overlay"
+msgstr "Показать это наложение"
+
 msgid "Show Trailing Zeros"
 msgstr "Показывать завершающие нули"
 
@@ -16392,6 +16440,7 @@ msgstr "Предложить сопоставления с помощью ИИ"
 
 msgid "Suggest Match"
 msgstr "Предложить совпадение"
+
 msgid "Suggest matches"
 msgstr "Предложить совпадения"
 
@@ -17093,10 +17142,11 @@ msgstr "Ожидаемый процент выпуска этой номенкл
 msgid "The expense account this indirect-spend line posts to; required because indirect lines don't have an item ledger entry to derive the account from."
 msgstr "Счет расходов, на который относится эта строка косвенных расходов; требуется, так как косвенные строки не имеют записи в книге товаров, из которой можно вывести счет."
 
-msgid "The file you uploaded and the mappings you've made will be lost."
-msgstr "Загруженный файл и созданные сопоставления будут потеряны."
 msgid "The extracted facts came from another document. Parse the selected invoice, or check every line and total manually and describe your review below."
 msgstr "Извлеченные данные получены из другого документа. Разберите выбранный счет-фактуру либо вручную проверьте каждую строку и сумму «Итого», а затем опишите рассмотрение ниже."
+
+msgid "The file you uploaded and the mappings you've made will be lost."
+msgstr "Загруженный файл и созданные сопоставления будут потеряны."
 
 msgid "the first 3 to 4 weeks"
 msgstr "первые 3–4 недели"
@@ -18179,6 +18229,9 @@ msgstr "Переключить уровень"
 
 msgid "Toggle Properties"
 msgstr "Переключить свойства"
+
+msgid "Toggle the sidebar"
+msgstr "Переключить боковую панель"
 
 msgid "Toggle views"
 msgstr "Переключить представления"

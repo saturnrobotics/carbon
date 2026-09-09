@@ -1243,8 +1243,14 @@ msgstr "Miktarı, fiyatı, nakliyeyi, tedarik süresini ve vergiyi geçersiz kı
 msgid "Add a domain"
 msgstr "Alan adı ekle"
 
+msgid "Add a line (in document explorers)"
+msgstr "Satır ekle (belge tarayıcılarında)"
+
 msgid "Add a materials section that lists each item on the bill of materials with its quantity."
 msgstr "Ürün ağacısındaki her stok kartını miktarı ile listeleyen bir bölüm ekleyin"
+
+msgid "Add a parameter (in the procedure explorer)"
+msgstr "Parametre ekle (prosedür gezgininde)"
 
 msgid "Add a printer in the printing settings to print labels directly."
 msgstr "Etiketleri doğrudan yazdırmak için yazdırma ayarlarında bir yazıcı ekleyin."
@@ -1257,6 +1263,9 @@ msgstr "Bir satır ekle"
 
 msgid "Add a step"
 msgstr "Bir adım ekle"
+
+msgid "Add a step or question (in procedure and training explorers)"
+msgstr "Adım veya soru ekle (prosedür ve eğitim gezginlerinde)"
 
 msgid "Add Ability"
 msgstr "Yetenek Ekle"
@@ -3432,6 +3441,7 @@ msgstr "Sohbet"
 
 msgid "Check operations on the left to build the batch."
 msgstr "Toplu işi oluşturmak için sol tarafta operasyonları kontrol edin."
+
 msgid "Check outgoing payments every hour. Proposed suppliers and invoice matches wait for your review."
 msgstr "Giden ödemeleri her saat kontrol edin. Önerilen tedarikçiler ve fatura eşleşmeleri incelemenizi bekliyor."
 
@@ -3847,6 +3857,9 @@ msgstr "Onayla {0}"
 
 msgid "Confirm & release"
 msgstr "Teyit et ve Serbest bırak"
+
+msgid "Confirm a dialog"
+msgstr "İletişim kutusunu onayla"
 
 msgid "Confirm all"
 msgstr "Tümünü onayla"
@@ -5695,10 +5708,11 @@ msgstr "Geliştirici"
 msgid "Diagram saved"
 msgstr "Şema kaydedildi"
 
-msgid "Differs from the selection — allowed, but confirm they nest together"
-msgstr "Seçimden farklı — izin verilir, ancak birlikte iç içe geçtiğini doğrulayın"
 msgid "Difference"
 msgstr "Fark"
+
+msgid "Differs from the selection — allowed, but confirm they nest together"
+msgstr "Seçimden farklı — izin verilir, ancak birlikte iç içe geçtiğini doğrulayın"
 
 msgid "Digital Quote"
 msgstr "Dijital Teklif"
@@ -8062,6 +8076,9 @@ msgstr "Şuraya git: {0}"
 msgid "Go to implementation hub"
 msgstr "Uygulama merkezine git"
 
+msgid "Go to module"
+msgstr "Modüle git"
+
 msgid "Go to that week"
 msgstr "O haftaya git"
 
@@ -8469,6 +8486,7 @@ msgstr "Parça numaralarını değiştirmek isterseniz, lütfen iptal'e tıklay�
 
 msgid "Ignore"
 msgstr "Yoksay"
+
 msgid "Ignore document"
 msgstr "Belgeyi yoksay"
 
@@ -9212,6 +9230,9 @@ msgstr "Yevmiye satırları"
 msgid "Journals dated on or before this date are treated as locked. Merged with the provider-reported lock date when both exist."
 msgstr "Bu tarihte veya öncesinde tarihlendirilen muhasebe fişleri kilitli olarak değerlendirilir. Her ikisi de mevcutsa sağlayıcı tarafından rapor edilen kilit tarihi ile birleştirilir."
 
+msgid "Jump to a section on detail pages (same modifiers + the section's letter)"
+msgstr "Ayrıntı sayfalarında bir bölüme git (aynı değiştirici tuşlar + bölümün harfi)"
+
 msgid "Just one"
 msgstr "Sadece bir"
 
@@ -9256,6 +9277,9 @@ msgstr "Siparişleri, teklifleri ve ayarları ikinci bir kontrolün arkasında t
 
 msgid "Key"
 msgstr "Anahtar"
+
+msgid "Keyboard shortcuts"
+msgstr "Klavye kısayolları"
 
 msgid "Kind of record"
 msgstr "Kayıt türü"
@@ -9488,6 +9512,9 @@ msgstr "Aydınlık"
 
 msgid "Light Mode"
 msgstr "Aydınlık Mod"
+
+msgid "Light or dark mode"
+msgstr "Açık veya koyu mod"
 
 msgid "Lights Out (24×7)"
 msgstr "Işıklar Kapalı (24×7)"
@@ -10493,10 +10520,11 @@ msgstr "MRP (planlama)"
 msgid "MRP runs automatically every 3 hours, but you can run it manually here."
 msgstr "MRP otomatik olarak her 3 saatte bir çalışır, ancak buradan manuel olarak çalıştırabilirsiniz."
 
-msgid "Multiple jobs can run on this process at the same time — e.g. a laser table, furnace, or plating bath"
-msgstr "Bu işlem üzerinde birden fazla iş aynı anda çalışabilir — örn. lazer masası, fırın veya kaplama banyosu"
 msgid "Multiple invoices"
 msgstr "Çoklu faturalar"
+
+msgid "Multiple jobs can run on this process at the same time — e.g. a laser table, furnace, or plating bath"
+msgstr "Bu işlem üzerinde birden fazla iş aynı anda çalışabilir — örn. lazer masası, fırın veya kaplama banyosu"
 
 msgid "Must be in the same location"
 msgstr "Aynı konumda olmalıdır"
@@ -10792,6 +10820,9 @@ msgstr "Yeni Teklif Satırı"
 msgid "New Receipt"
 msgstr "Yeni Alış"
 
+msgid "New record (on list pages)"
+msgstr "Yeni kayıt (liste sayfalarında)"
+
 msgid "New record created"
 msgstr "Yeni kayıt oluşturuldu"
 
@@ -10923,6 +10954,9 @@ msgstr "Sonraki Vade Tarihi"
 
 msgid "Next page"
 msgstr "Sonraki sayfa"
+
+msgid "Next page (in tables)"
+msgstr "Sonraki sayfa (tablolarda)"
 
 msgid "Next Sequence"
 msgstr "Sonraki numaralandırma"
@@ -11086,6 +11120,7 @@ msgstr "Bu öğe için düzenlenebilir özellik yok."
 
 msgid "No eligible operations"
 msgstr "Uygun operasyon yok"
+
 msgid "No eligible receipt or invoice is attached yet. Upload the original document or find its receipt in Mercury."
 msgstr "Henüz uygun bir makbuz veya fatura eklenmedi. Orijinal belgeyi yükleyin veya makbuzunu Mercury’de bulun."
 
@@ -11358,6 +11393,9 @@ msgstr "Bu zaman penceresinde planlanmış iş yok"
 
 msgid "No shifts configured — assuming Mon–Fri, 8h days"
 msgstr "Vardiya yapılandırılmadı — Pzt–Cum, 8s günler varsayılıyor"
+
+msgid "No shortcuts available on this page."
+msgstr "Bu sayfada kullanılabilir kısayol yok."
 
 msgid "No single, trusted number for inventory or job status"
 msgstr "Envanter veya iş durumu için tek bir güvenilir sayı yok"
@@ -12846,6 +12884,9 @@ msgstr "Önceki Gün"
 
 msgid "Previous page"
 msgstr "Önceki sayfa"
+
+msgid "Previous page (in tables)"
+msgstr "Önceki sayfa (tablolarda)"
 
 msgid "Previous step"
 msgstr "Önceki adım"
@@ -14393,6 +14434,7 @@ msgstr "İncele"
 
 msgid "Review & create"
 msgstr "İncele ve oluştur"
+
 msgid "Review action"
 msgstr "İşlemi inceleyin"
 
@@ -14834,6 +14876,9 @@ msgstr "Senkronizasyon ayarlarını kaydet"
 
 msgid "Save the edited invoice total or currency, then confirm the payment explanation against the updated amounts."
 msgstr "Düzenlenen fatura toplamını veya para birimini kaydedin, ardından ödeme açıklamasını güncellenen tutarlara göre doğrulayın."
+
+msgid "Save the form you're editing"
+msgstr "Düzenlemekte olduğunuz formu kaydet"
 
 #. placeholder {0}: copy.moduleLabel
 msgid "Save this review, add the required definition in {0}, and reopen the proposal to select it."
@@ -15759,6 +15804,9 @@ msgstr "Tedarikçi Kimliklerini Göster"
 msgid "Show sync options"
 msgstr "Senkronizasyon seçeneklerini göster"
 
+msgid "Show this overlay"
+msgstr "Bu katmanı göster"
+
 msgid "Show Trailing Zeros"
 msgstr "Sondaki Sıfırları Göster"
 
@@ -16392,6 +16440,7 @@ msgstr "Yapay Zeka ile Eşlemeleri Öner"
 
 msgid "Suggest Match"
 msgstr "Eşleştirme Öner"
+
 msgid "Suggest matches"
 msgstr "Eşleşme öner"
 
@@ -17093,10 +17142,11 @@ msgstr "Bu stok kartının üretim sırasında kaybettiği beklenen yüzde; plan
 msgid "The expense account this indirect-spend line posts to; required because indirect lines don't have an item ledger entry to derive the account from."
 msgstr "Bu dolaylı harcama satırının nakledildiği gider hesabı; dolaylı satırlar hesabı türetmek için bir envanter defter girişine sahip olmadığından gereklidir."
 
-msgid "The file you uploaded and the mappings you've made will be lost."
-msgstr "Yüklediğiniz dosya ve yaptığınız eşleştirmeler kaybolacak."
 msgid "The extracted facts came from another document. Parse the selected invoice, or check every line and total manually and describe your review below."
 msgstr "Çıkarılan bilgiler başka bir belgeden geldi. Seçilen faturayı ayrıştırın ya da her satırı ve toplamı elle kontrol edip incelemenizi aşağıda açıklayın."
+
+msgid "The file you uploaded and the mappings you've made will be lost."
+msgstr "Yüklediğiniz dosya ve yaptığınız eşleştirmeler kaybolacak."
 
 msgid "the first 3 to 4 weeks"
 msgstr "ilk 3 ila 4 hafta"
@@ -18180,6 +18230,9 @@ msgstr "Seviye değiştir"
 msgid "Toggle Properties"
 msgstr "Özellikleri Aç/Kapat"
 
+msgid "Toggle the sidebar"
+msgstr "Kenar çubuğunu aç/kapat"
+
 msgid "Toggle views"
 msgstr "Görünümleri değiştir"
 
@@ -18664,7 +18717,6 @@ msgid "Unsupported source document type: {sourceDocument}"
 msgstr "Desteklenmeyen kaynak belge türü: {sourceDocument}"
 
 msgid "Untitled"
-msgstr "Başlıksız"
 msgstr "İsimsiz"
 
 msgid "Untitled Diagram"

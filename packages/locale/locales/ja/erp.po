@@ -1243,8 +1243,14 @@ msgstr "数量、価格、配送、リードタイム、および税を上書き
 msgid "Add a domain"
 msgstr "ドメインを追加"
 
+msgid "Add a line (in document explorers)"
+msgstr "行を追加（文書エクスプローラーで）"
+
 msgid "Add a materials section that lists each item on the bill of materials with its quantity."
 msgstr "部品表の各項目とその数量をリストアップした材料セクションを追加します。"
+
+msgid "Add a parameter (in the procedure explorer)"
+msgstr "パラメーターを追加 (手順書エクスプローラー内)"
 
 msgid "Add a printer in the printing settings to print labels directly."
 msgstr "プリンター設定にプリンターを追加して、ラベルを直接印刷します。"
@@ -1257,6 +1263,9 @@ msgstr "行を追加"
 
 msgid "Add a step"
 msgstr "ステップを追加"
+
+msgid "Add a step or question (in procedure and training explorers)"
+msgstr "ステップまたは質問を追加 (手順書および教育訓練エクスプローラー内)"
 
 msgid "Add Ability"
 msgstr "能力を追加"
@@ -3432,6 +3441,7 @@ msgstr "チャット"
 
 msgid "Check operations on the left to build the batch."
 msgstr "左側の作業をチェックしてバッチを構築します。"
+
 msgid "Check outgoing payments every hour. Proposed suppliers and invoice matches wait for your review."
 msgstr "出金を毎時間確認します。候補の仕入先と請求書の一致は確認待ちです。"
 
@@ -3847,6 +3857,9 @@ msgstr "{0}を確認"
 
 msgid "Confirm & release"
 msgstr "確認してリリース"
+
+msgid "Confirm a dialog"
+msgstr "ダイアログを確認"
 
 msgid "Confirm all"
 msgstr "すべて確認"
@@ -5695,10 +5708,11 @@ msgstr "開発者"
 msgid "Diagram saved"
 msgstr "図が保存されました"
 
-msgid "Differs from the selection — allowed, but confirm they nest together"
-msgstr "選択と異なります — 許可されていますが、それらが一緒に実行できることを確認してください"
 msgid "Difference"
 msgstr "差額"
+
+msgid "Differs from the selection — allowed, but confirm they nest together"
+msgstr "選択と異なります — 許可されていますが、それらが一緒に実行できることを確認してください"
 
 msgid "Digital Quote"
 msgstr "デジタル見積"
@@ -8062,6 +8076,9 @@ msgstr "{0}に移動"
 msgid "Go to implementation hub"
 msgstr "実施ハブに移動"
 
+msgid "Go to module"
+msgstr "モジュールに移動"
+
 msgid "Go to that week"
 msgstr "その週に移動"
 
@@ -9213,6 +9230,9 @@ msgstr "仕訳明細"
 msgid "Journals dated on or before this date are treated as locked. Merged with the provider-reported lock date when both exist."
 msgstr "この日付以前の仕訳はロック中として扱われます。両方が存在する場合、プロバイダーが報告したロック日付とマージされます。"
 
+msgid "Jump to a section on detail pages (same modifiers + the section's letter)"
+msgstr "詳細ページのセクションに移動 (同じ修飾キー + セクションの文字)"
+
 msgid "Just one"
 msgstr "1つだけ"
 
@@ -9257,6 +9277,9 @@ msgstr "注文、見積、設定を2段階認証で保護します"
 
 msgid "Key"
 msgstr "キー"
+
+msgid "Keyboard shortcuts"
+msgstr "キーボードショートカット"
 
 msgid "Kind of record"
 msgstr "レコード種別"
@@ -9489,6 +9512,9 @@ msgstr "ライト"
 
 msgid "Light Mode"
 msgstr "ライトモード"
+
+msgid "Light or dark mode"
+msgstr "ライト/ダークモード"
 
 msgid "Lights Out (24×7)"
 msgstr "ライツアウト（24×7）"
@@ -10494,10 +10520,11 @@ msgstr "MRP (計画)"
 msgid "MRP runs automatically every 3 hours, but you can run it manually here."
 msgstr "MRPは3時間ごとに自動的に実行されますが、ここで手動で実行することもできます。"
 
-msgid "Multiple jobs can run on this process at the same time — e.g. a laser table, furnace, or plating bath"
-msgstr "複数のジョブがこのプロセスで同時に実行できます — 例：レーザーテーブル、炉、またはめっき槽"
 msgid "Multiple invoices"
 msgstr "複数の請求書"
+
+msgid "Multiple jobs can run on this process at the same time — e.g. a laser table, furnace, or plating bath"
+msgstr "複数のジョブがこのプロセスで同時に実行できます — 例：レーザーテーブル、炉、またはめっき槽"
 
 msgid "Must be in the same location"
 msgstr "同じ場所にある必要があります"
@@ -10793,6 +10820,9 @@ msgstr "新規見積明細"
 msgid "New Receipt"
 msgstr "新しい領収書"
 
+msgid "New record (on list pages)"
+msgstr "新規記録（リストページで）"
+
 msgid "New record created"
 msgstr "新しいレコードが作成されました"
 
@@ -10924,6 +10954,9 @@ msgstr "次の期日"
 
 msgid "Next page"
 msgstr "次のページ"
+
+msgid "Next page (in tables)"
+msgstr "次ページ（テーブルで）"
 
 msgid "Next Sequence"
 msgstr "次の採番"
@@ -11087,6 +11120,7 @@ msgstr "このアイテムの編集可能なプロパティはありません。
 
 msgid "No eligible operations"
 msgstr "対象となる作業がありません"
+
 msgid "No eligible receipt or invoice is attached yet. Upload the original document or find its receipt in Mercury."
 msgstr "対象となる領収書または請求書がまだ添付されていません。元の文書をアップロードするか、Mercuryで領収書を探してください。"
 
@@ -11359,6 +11393,9 @@ msgstr "このウィンドウにはスケジュール済みの作業がありま
 
 msgid "No shifts configured — assuming Mon–Fri, 8h days"
 msgstr "シフトが構成されていません — 月～金、8時間営業を想定"
+
+msgid "No shortcuts available on this page."
+msgstr "このページではショートカットはありません。"
 
 msgid "No single, trusted number for inventory or job status"
 msgstr "在庫またはジョブステータスの単一の信頼できる数値がない"
@@ -12847,6 +12884,9 @@ msgstr "前の日"
 
 msgid "Previous page"
 msgstr "前のページ"
+
+msgid "Previous page (in tables)"
+msgstr "前ページ（テーブルで）"
 
 msgid "Previous step"
 msgstr "前のステップ"
@@ -14394,6 +14434,7 @@ msgstr "レビュー"
 
 msgid "Review & create"
 msgstr "確認と作成"
+
 msgid "Review action"
 msgstr "レビューアクション"
 
@@ -14835,6 +14876,9 @@ msgstr "同期設定を保存"
 
 msgid "Save the edited invoice total or currency, then confirm the payment explanation against the updated amounts."
 msgstr "変更した請求書の合計または通貨を保存してから、更新後の金額に照らして支払の説明を確認してください。"
+
+msgid "Save the form you're editing"
+msgstr "編集中のフォームを保存"
 
 #. placeholder {0}: copy.moduleLabel
 msgid "Save this review, add the required definition in {0}, and reopen the proposal to select it."
@@ -15760,6 +15804,9 @@ msgstr "仕入先IDを表示"
 msgid "Show sync options"
 msgstr "同期オプションを表示"
 
+msgid "Show this overlay"
+msgstr "このオーバーレイを表示"
+
 msgid "Show Trailing Zeros"
 msgstr "末尾のゼロを表示"
 
@@ -16393,6 +16440,7 @@ msgstr "AIでマッピングを提案"
 
 msgid "Suggest Match"
 msgstr "照合を提案"
+
 msgid "Suggest matches"
 msgstr "一致を提案する"
 
@@ -17094,10 +17142,11 @@ msgstr "生産中にこの品目の出力の失われると予想される割合
 msgid "The expense account this indirect-spend line posts to; required because indirect lines don't have an item ledger entry to derive the account from."
 msgstr "この間接支出明細が転記される費用勘定。間接明細には品目台帳エントリがないため、勘定を導出できないため必須です。"
 
-msgid "The file you uploaded and the mappings you've made will be lost."
-msgstr "アップロードしたファイルと設定したマッピングは失われます。"
 msgid "The extracted facts came from another document. Parse the selected invoice, or check every line and total manually and describe your review below."
 msgstr "抽出された情報は別の文書に由来します。選択した請求書を解析するか、すべての明細と合計を手動で確認し、レビュー内容を以下に記入してください。"
+
+msgid "The file you uploaded and the mappings you've made will be lost."
+msgstr "アップロードしたファイルと設定したマッピングは失われます。"
 
 msgid "the first 3 to 4 weeks"
 msgstr "最初の3～4週間"
@@ -18180,6 +18229,9 @@ msgstr "レベルを切り替え"
 
 msgid "Toggle Properties"
 msgstr "プロパティを切り替え"
+
+msgid "Toggle the sidebar"
+msgstr "サイドバーの表示/非表示を切り替える"
 
 msgid "Toggle views"
 msgstr "ビューを切り替える"

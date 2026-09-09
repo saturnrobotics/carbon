@@ -1243,8 +1243,14 @@ msgstr "मात्रा, मूल्य, शिपिंग, लीड ट�
 msgid "Add a domain"
 msgstr "एक डोमेन जोड़ें"
 
+msgid "Add a line (in document explorers)"
+msgstr "दस्तावेज़ एक्सप्लोरर में पंक्ति जोड़ें"
+
 msgid "Add a materials section that lists each item on the bill of materials with its quantity."
 msgstr "बिल ऑफ मेटेरियल्स पर प्रत्येक आइटम और उसकी मात्रा को सूचीबद्ध करने वाली एक सामग्री अनुभाग जोड़ें।"
+
+msgid "Add a parameter (in the procedure explorer)"
+msgstr "पैरामीटर जोड़ें (कार्यविधि एक्सप्लोरर में)"
 
 msgid "Add a printer in the printing settings to print labels directly."
 msgstr "लेबल सीधे प्रिंट करने के लिए प्रिंटिंग सेटिंग्स में एक प्रिंटर जोड़ें।"
@@ -1257,6 +1263,9 @@ msgstr "एक पंक्ति जोड़ें"
 
 msgid "Add a step"
 msgstr "एक चरण जोड़ें"
+
+msgid "Add a step or question (in procedure and training explorers)"
+msgstr "चरण या प्रश्न जोड़ें (कार्यविधि और प्रशिक्षण एक्सप्लोरर में)"
 
 msgid "Add Ability"
 msgstr "क्षमता जोड़ें"
@@ -3432,6 +3441,7 @@ msgstr "चैट"
 
 msgid "Check operations on the left to build the batch."
 msgstr "बैच बनाने के लिए बाईं ओर ऑपरेशन की जांच करें।"
+
 msgid "Check outgoing payments every hour. Proposed suppliers and invoice matches wait for your review."
 msgstr "हर घंटे बाहरी भुगतानों की जाँच करें। सुझाए गए आपूर्तिकर्ता और चालान मिलान आपकी समीक्षा की प्रतीक्षा कर रहे हैं।"
 
@@ -3847,6 +3857,9 @@ msgstr "की पुष्टि करें {0}"
 
 msgid "Confirm & release"
 msgstr "पुष्टि करें और जारी करें"
+
+msgid "Confirm a dialog"
+msgstr "संवाद की पुष्टि करें"
 
 msgid "Confirm all"
 msgstr "सभी की पुष्टि करें"
@@ -5695,10 +5708,11 @@ msgstr "डेवलपर"
 msgid "Diagram saved"
 msgstr "आरेख सहेजा गया"
 
-msgid "Differs from the selection — allowed, but confirm they nest together"
-msgstr "चयन से अलग — अनुमत, लेकिन पुष्टि करें कि वे एक साथ नेस्ट करते हैं"
 msgid "Difference"
 msgstr "अंतर"
+
+msgid "Differs from the selection — allowed, but confirm they nest together"
+msgstr "चयन से अलग — अनुमत, लेकिन पुष्टि करें कि वे एक साथ नेस्ट करते हैं"
 
 msgid "Digital Quote"
 msgstr "डिजिटल उद्धरण"
@@ -8062,6 +8076,9 @@ msgstr "{0} पर जाएं"
 msgid "Go to implementation hub"
 msgstr "कार्यान्वयन हब पर जाएं"
 
+msgid "Go to module"
+msgstr "मॉड्यूल पर जाएं"
+
 msgid "Go to that week"
 msgstr "उस सप्ताह पर जाएं"
 
@@ -8469,6 +8486,7 @@ msgstr "यदि आप पार्ट नंबर बदलना चाह�
 
 msgid "Ignore"
 msgstr "अनदेखा करें"
+
 msgid "Ignore document"
 msgstr "दस्तावेज़ पर ध्यान न दें"
 
@@ -9212,6 +9230,9 @@ msgstr "जर्नल पंक्तियाँ"
 msgid "Journals dated on or before this date are treated as locked. Merged with the provider-reported lock date when both exist."
 msgstr "इस तारीख को या इससे पहले दिनांकित जर्नल को लॉक माना जाता है। दोनों मौजूद होने पर प्रदाता द्वारा रिपोर्ट की गई लॉक तारीख के साथ मर्ज किया जाता है।"
 
+msgid "Jump to a section on detail pages (same modifiers + the section's letter)"
+msgstr "विवरण पृष्ठों पर किसी अनुभाग पर जाएँ (वही मॉडिफ़ायर कुंजियाँ + अनुभाग का अक्षर)"
+
 msgid "Just one"
 msgstr "बस एक"
 
@@ -9256,6 +9277,9 @@ msgstr "ऑर्डर, कोट्स और सेटिंग्स को 
 
 msgid "Key"
 msgstr "कुंजी"
+
+msgid "Keyboard shortcuts"
+msgstr "कीबोर्ड शॉर्टकट"
 
 msgid "Kind of record"
 msgstr "रिकॉर्ड का प्रकार"
@@ -9488,6 +9512,9 @@ msgstr "हल्का"
 
 msgid "Light Mode"
 msgstr "लाइट मोड"
+
+msgid "Light or dark mode"
+msgstr "हल्का या गहरा थीम"
 
 msgid "Lights Out (24×7)"
 msgstr "लाइट्स आउट (24×7)"
@@ -10493,10 +10520,11 @@ msgstr "MRP (योजना)"
 msgid "MRP runs automatically every 3 hours, but you can run it manually here."
 msgstr "MRP हर 3 घंटे में स्वचालित रूप से चलता है, लेकिन आप इसे यहां मैन्युअल रूप से चला सकते हैं।"
 
-msgid "Multiple jobs can run on this process at the same time — e.g. a laser table, furnace, or plating bath"
-msgstr "इस प्रक्रिया पर एक ही समय में कई नौकरियाँ चल सकती हैं — उदाहरण के लिए, लेजर टेबल, भट्टी, या चढ़ाने का स्नान"
 msgid "Multiple invoices"
 msgstr "एकाधिक चालान"
+
+msgid "Multiple jobs can run on this process at the same time — e.g. a laser table, furnace, or plating bath"
+msgstr "इस प्रक्रिया पर एक ही समय में कई नौकरियाँ चल सकती हैं — उदाहरण के लिए, लेजर टेबल, भट्टी, या चढ़ाने का स्नान"
 
 msgid "Must be in the same location"
 msgstr "एक ही स्थान में होना चाहिए"
@@ -10792,6 +10820,9 @@ msgstr "नई कोटेशन पंक्ति"
 msgid "New Receipt"
 msgstr "नई रसीद"
 
+msgid "New record (on list pages)"
+msgstr "नया रिकॉर्ड (सूची पृष्ठों पर)"
+
 msgid "New record created"
 msgstr "नया रिकॉर्ड बनाया गया"
 
@@ -10923,6 +10954,9 @@ msgstr "अगली नियत तिथि"
 
 msgid "Next page"
 msgstr "अगला पृष्ठ"
+
+msgid "Next page (in tables)"
+msgstr "अगला पृष्ठ (तालिकाओं में)"
 
 msgid "Next Sequence"
 msgstr "अगला अनुक्रम"
@@ -11086,6 +11120,7 @@ msgstr "इस आइटम के लिए कोई संपादन यो
 
 msgid "No eligible operations"
 msgstr "कोई पात्र ऑपरेशन नहीं"
+
 msgid "No eligible receipt or invoice is attached yet. Upload the original document or find its receipt in Mercury."
 msgstr "अभी कोई योग्य रसीद या चालान संलग्न नहीं है। मूल दस्तावेज़ अपलोड करें या Mercury में उसकी रसीद खोजें।"
 
@@ -11358,6 +11393,9 @@ msgstr "इस विंडो में कोई शेड्यूल कि�
 
 msgid "No shifts configured — assuming Mon–Fri, 8h days"
 msgstr "कोई पारियाँ कॉन्फ़िगर नहीं — सोमवार–शुक्रवार, 8 घंटे की दिन मानी जा रही है"
+
+msgid "No shortcuts available on this page."
+msgstr "इस पृष्ठ पर कोई शॉर्टकट उपलब्ध नहीं है।"
 
 msgid "No single, trusted number for inventory or job status"
 msgstr "इन्वेंटरी या जॉब स्थिति के लिए कोई एकल, विश्वसनीय संख्या नहीं"
@@ -12846,6 +12884,9 @@ msgstr "पिछला दिन"
 
 msgid "Previous page"
 msgstr "पिछला पृष्ठ"
+
+msgid "Previous page (in tables)"
+msgstr "पिछला पृष्ठ (तालिकाओं में)"
 
 msgid "Previous step"
 msgstr "पिछला चरण"
@@ -14393,6 +14434,7 @@ msgstr "समीक्षा"
 
 msgid "Review & create"
 msgstr "समीक्षा और बनाएं"
+
 msgid "Review action"
 msgstr "कार्रवाई की समीक्षा करें"
 
@@ -14834,6 +14876,9 @@ msgstr "सिंक सेटिंग सहेजें"
 
 msgid "Save the edited invoice total or currency, then confirm the payment explanation against the updated amounts."
 msgstr "चालान का बदला हुआ कुल या मुद्रा सहेजें, फिर अद्यतन राशियों के अनुसार भुगतान के स्पष्टीकरण की पुष्टि करें।"
+
+msgid "Save the form you're editing"
+msgstr "जिस फॉर्म को आप संपादित कर रहे हैं उसे सहेजें"
 
 #. placeholder {0}: copy.moduleLabel
 msgid "Save this review, add the required definition in {0}, and reopen the proposal to select it."
@@ -15759,6 +15804,9 @@ msgstr "आपूर्तिकर्ता आईडी दिखाएं"
 msgid "Show sync options"
 msgstr "सिंक विकल्प दिखाएं"
 
+msgid "Show this overlay"
+msgstr "यह ओवरले दिखाएं"
+
 msgid "Show Trailing Zeros"
 msgstr "अनुगामी शून्य दिखाएं"
 
@@ -16392,6 +16440,7 @@ msgstr "एआई के साथ मैपिंग सुझाएं"
 
 msgid "Suggest Match"
 msgstr "मिलान सुझाएं"
+
 msgid "Suggest matches"
 msgstr "मिलान सुझाएं"
 
@@ -17093,10 +17142,11 @@ msgstr "इस आइटम के आउटपुट का अपेक्ष�
 msgid "The expense account this indirect-spend line posts to; required because indirect lines don't have an item ledger entry to derive the account from."
 msgstr "व्यय खाता जिस पर यह अप्रत्यक्ष-खर्च लाइन पोस्ट करता है; आवश्यक है क्योंकि अप्रत्यक्ष लाइनों के पास खाता प्राप्त करने के लिए कोई वस्तु बही प्रविष्टि नहीं है।"
 
-msgid "The file you uploaded and the mappings you've made will be lost."
-msgstr "आपके द्वारा अपलोड की गई फ़ाइल और की गई मैपिंग खो जाएँगी।"
 msgid "The extracted facts came from another document. Parse the selected invoice, or check every line and total manually and describe your review below."
 msgstr "निकाली गई जानकारी किसी दूसरे दस्तावेज़ से आई है। चुने हुए चालान को पार्स करें या हर पंक्ति और कुल राशि की मैन्युअल जाँच करके नीचे अपनी समीक्षा का विवरण दें।"
+
+msgid "The file you uploaded and the mappings you've made will be lost."
+msgstr "आपके द्वारा अपलोड की गई फ़ाइल और की गई मैपिंग खो जाएँगी।"
 
 msgid "the first 3 to 4 weeks"
 msgstr "पहले 3 से 4 सप्ताह"
@@ -18180,6 +18230,9 @@ msgstr "स्तर टॉगल करें"
 msgid "Toggle Properties"
 msgstr "गुण टॉगल करें"
 
+msgid "Toggle the sidebar"
+msgstr "साइडबार को टॉगल करें"
+
 msgid "Toggle views"
 msgstr "दृश्य टॉगल करें"
 
@@ -18664,7 +18717,6 @@ msgid "Unsupported source document type: {sourceDocument}"
 msgstr "असमर्थित स्रोत दस्तावेज़ प्रकार: {sourceDocument}"
 
 msgid "Untitled"
-msgstr "अनामित"
 msgstr "शीर्षकहीन"
 
 msgid "Untitled Diagram"

@@ -1243,8 +1243,14 @@ msgstr "Benutzerdefinierten Preiszeile hinzufügen, um Menge, Preis, Versand, Be
 msgid "Add a domain"
 msgstr "Domäne hinzufügen"
 
+msgid "Add a line (in document explorers)"
+msgstr "Eine Position hinzufügen (in Dokument-Explorern)"
+
 msgid "Add a materials section that lists each item on the bill of materials with its quantity."
 msgstr "Materialien-Abschnitt hinzufügen, der jeden Artikel auf der Stückliste mit seiner Menge auflistet."
+
+msgid "Add a parameter (in the procedure explorer)"
+msgstr "Einen Parameter hinzufügen (im Explorer für Verfahrensanweisungen)"
 
 msgid "Add a printer in the printing settings to print labels directly."
 msgstr "Drucker in den Druckeinstellungen hinzufügen, um Etiketten direkt zu drucken."
@@ -1257,6 +1263,9 @@ msgstr "Zeile hinzufügen"
 
 msgid "Add a step"
 msgstr "Einen Schritt hinzufügen"
+
+msgid "Add a step or question (in procedure and training explorers)"
+msgstr "Einen Schritt oder eine Frage hinzufügen (in den Explorern für Verfahrensanweisungen und Schulungen)"
 
 msgid "Add Ability"
 msgstr "Fähigkeit hinzufügen"
@@ -3432,6 +3441,7 @@ msgstr "Chat"
 
 msgid "Check operations on the left to build the batch."
 msgstr "Markieren Sie Operationen auf der linken Seite, um den Batch zu erstellen."
+
 msgid "Check outgoing payments every hour. Proposed suppliers and invoice matches wait for your review."
 msgstr "Ausgehende Zahlungen werden stündlich geprüft. Vorgeschlagene Lieferanten und Rechnungszuordnungen warten auf Ihre Prüfung."
 
@@ -3847,6 +3857,9 @@ msgstr "Bestätigen {0}"
 
 msgid "Confirm & release"
 msgstr "Bestätigen & Freigeben"
+
+msgid "Confirm a dialog"
+msgstr "Dialog bestätigen"
 
 msgid "Confirm all"
 msgstr "Alle bestätigen"
@@ -5695,10 +5708,11 @@ msgstr "Entwickler"
 msgid "Diagram saved"
 msgstr "Diagramm gespeichert"
 
-msgid "Differs from the selection — allowed, but confirm they nest together"
-msgstr "Unterscheidet sich von der Auswahl — zulässig, aber bestätigen Sie, dass sie zusammenpassen"
 msgid "Difference"
 msgstr "Differenz"
+
+msgid "Differs from the selection — allowed, but confirm they nest together"
+msgstr "Unterscheidet sich von der Auswahl — zulässig, aber bestätigen Sie, dass sie zusammenpassen"
 
 msgid "Digital Quote"
 msgstr "Digitales Angebot"
@@ -8062,6 +8076,9 @@ msgstr "Gehe zu {0}"
 msgid "Go to implementation hub"
 msgstr "Zum Umsetzungs-Hub gehen"
 
+msgid "Go to module"
+msgstr "Zum Modul wechseln"
+
 msgid "Go to that week"
 msgstr "Gehe zu dieser Woche"
 
@@ -8469,6 +8486,7 @@ msgstr "Wenn Sie die Teilenummern ändern möchten, klicken Sie bitte Abbrechen 
 
 msgid "Ignore"
 msgstr "Ignorieren"
+
 msgid "Ignore document"
 msgstr "Dokument ignorieren"
 
@@ -9212,6 +9230,9 @@ msgstr "Journalzeilen"
 msgid "Journals dated on or before this date are treated as locked. Merged with the provider-reported lock date when both exist."
 msgstr "Buchungssätze mit Datum an oder vor diesem Datum werden als gesperrt behandelt. Sie werden mit dem vom Anbieter gemeldeten Sperrdatum zusammengeführt, falls beide vorhanden sind."
 
+msgid "Jump to a section on detail pages (same modifiers + the section's letter)"
+msgstr "Zu einem Abschnitt auf Detailseiten springen (dieselben Modifikatortasten + Buchstabe des Abschnitts)"
+
 msgid "Just one"
 msgstr "Nur eine"
 
@@ -9256,6 +9277,9 @@ msgstr "Schützt Bestellungen, Angebote und Einstellungen durch eine zweite Übe
 
 msgid "Key"
 msgstr "Schlüssel"
+
+msgid "Keyboard shortcuts"
+msgstr "Tastenkombinationen"
 
 msgid "Kind of record"
 msgstr "Art des Datensatzes"
@@ -9488,6 +9512,9 @@ msgstr "Hell"
 
 msgid "Light Mode"
 msgstr "Hellmodus"
+
+msgid "Light or dark mode"
+msgstr "Helles oder dunkles Design"
 
 msgid "Lights Out (24×7)"
 msgstr "Lichter aus (24×7)"
@@ -10493,10 +10520,11 @@ msgstr "MRP (Planung)"
 msgid "MRP runs automatically every 3 hours, but you can run it manually here."
 msgstr "MRP wird automatisch alle 3 Stunden ausgeführt, aber Sie können es hier manuell ausführen."
 
-msgid "Multiple jobs can run on this process at the same time — e.g. a laser table, furnace, or plating bath"
-msgstr "Mehrere Aufträge können gleichzeitig auf diesem Prozess laufen – z. B. Lasertisch, Ofen oder Tauchbad"
 msgid "Multiple invoices"
 msgstr "Mehrere Rechnungen"
+
+msgid "Multiple jobs can run on this process at the same time — e.g. a laser table, furnace, or plating bath"
+msgstr "Mehrere Aufträge können gleichzeitig auf diesem Prozess laufen – z. B. Lasertisch, Ofen oder Tauchbad"
 
 msgid "Must be in the same location"
 msgstr "Muss sich am selben Ort befinden"
@@ -10792,6 +10820,9 @@ msgstr "Neue Angebotsposition"
 msgid "New Receipt"
 msgstr "Neue Quittung"
 
+msgid "New record (on list pages)"
+msgstr "Neuer Datensatz (auf Listenseiten)"
+
 msgid "New record created"
 msgstr "Neuer Datensatz erstellt"
 
@@ -10923,6 +10954,9 @@ msgstr "Nächstes Fälligkeitsdatum"
 
 msgid "Next page"
 msgstr "Nächste Seite"
+
+msgid "Next page (in tables)"
+msgstr "Nächste Seite (in Tabellen)"
 
 msgid "Next Sequence"
 msgstr "Nächster Nummernkreis"
@@ -11086,6 +11120,7 @@ msgstr "Keine bearbeitbaren Eigenschaften für dieses Element."
 
 msgid "No eligible operations"
 msgstr "Keine geeigneten Operationen"
+
 msgid "No eligible receipt or invoice is attached yet. Upload the original document or find its receipt in Mercury."
 msgstr "Es ist noch kein geeigneter Beleg und keine geeignete Rechnung angehängt. Laden Sie das Originaldokument hoch oder suchen Sie den Beleg in Mercury."
 
@@ -11358,6 +11393,9 @@ msgstr "Keine eingeplante Arbeit in diesem Zeitfenster"
 
 msgid "No shifts configured — assuming Mon–Fri, 8h days"
 msgstr "Keine Schichten konfiguriert — angenommen Mo–Fr, 8h Tage"
+
+msgid "No shortcuts available on this page."
+msgstr "Auf dieser Seite sind keine Tastenkombinationen verfügbar."
 
 msgid "No single, trusted number for inventory or job status"
 msgstr "Keine einzige, vertrauenswürdige Zahl für Bestand oder Auftragsstatus"
@@ -12846,6 +12884,9 @@ msgstr "Vorheriger Tag"
 
 msgid "Previous page"
 msgstr "Vorherige Seite"
+
+msgid "Previous page (in tables)"
+msgstr "Vorherige Seite (in Tabellen)"
 
 msgid "Previous step"
 msgstr "Vorheriger Schritt"
@@ -14393,6 +14434,7 @@ msgstr "Überprüfung"
 
 msgid "Review & create"
 msgstr "Überprüfen & erstellen"
+
 msgid "Review action"
 msgstr "Überprüfen Sie die Aktion"
 
@@ -14834,6 +14876,9 @@ msgstr "Synchronisierungseinstellungen speichern"
 
 msgid "Save the edited invoice total or currency, then confirm the payment explanation against the updated amounts."
 msgstr "Speichern Sie den geänderten Gesamtbetrag oder die Währung der Rechnung und bestätigen Sie dann die Zahlungserklärung anhand der aktualisierten Beträge."
+
+msgid "Save the form you're editing"
+msgstr "Das bearbeitete Formular speichern"
 
 #. placeholder {0}: copy.moduleLabel
 msgid "Save this review, add the required definition in {0}, and reopen the proposal to select it."
@@ -15759,6 +15804,9 @@ msgstr "Lieferanten-IDs anzeigen"
 msgid "Show sync options"
 msgstr "Synchronisierungsoptionen anzeigen"
 
+msgid "Show this overlay"
+msgstr "Dieses Overlay anzeigen"
+
 msgid "Show Trailing Zeros"
 msgstr "Nachgestellte Nullen anzeigen"
 
@@ -16392,6 +16440,7 @@ msgstr "Zuordnungen mit KI vorschlagen"
 
 msgid "Suggest Match"
 msgstr "Abgleich vorschlagen"
+
 msgid "Suggest matches"
 msgstr "Schlagen Sie Übereinstimmungen vor"
 
@@ -17093,10 +17142,11 @@ msgstr "Der erwartete Prozentsatz der Ausgabe dieses Artikels, der während der 
 msgid "The expense account this indirect-spend line posts to; required because indirect lines don't have an item ledger entry to derive the account from."
 msgstr "Das Aufwandskonto, auf das diese indirekte Ausgabenzeile gebucht wird; erforderlich, da indirekte Zeilen keinen Bestandsposten haben, von dem das Konto abgeleitet werden kann."
 
-msgid "The file you uploaded and the mappings you've made will be lost."
-msgstr "Die hochgeladene Datei und die vorgenommenen Zuordnungen gehen verloren."
 msgid "The extracted facts came from another document. Parse the selected invoice, or check every line and total manually and describe your review below."
 msgstr "Die extrahierten Angaben stammen aus einem anderen Dokument. Analysieren Sie die ausgewählte Rechnung oder prüfen Sie jede Position und den Gesamtbetrag manuell und beschreiben Sie Ihre Überprüfung unten."
+
+msgid "The file you uploaded and the mappings you've made will be lost."
+msgstr "Die hochgeladene Datei und die vorgenommenen Zuordnungen gehen verloren."
 
 msgid "the first 3 to 4 weeks"
 msgstr "die ersten 3 bis 4 Wochen"
@@ -18180,6 +18230,9 @@ msgstr "Ebene umschalten"
 msgid "Toggle Properties"
 msgstr "Eigenschaften umschalten"
 
+msgid "Toggle the sidebar"
+msgstr "Seitenleiste umschalten"
+
 msgid "Toggle views"
 msgstr "Ansichten umschalten"
 
@@ -18664,7 +18717,6 @@ msgid "Unsupported source document type: {sourceDocument}"
 msgstr "Ursprungsbeleg-Typ nicht unterstützt: {sourceDocument}"
 
 msgid "Untitled"
-msgstr "Unbenannt"
 msgstr "Ohne Titel"
 
 msgid "Untitled Diagram"

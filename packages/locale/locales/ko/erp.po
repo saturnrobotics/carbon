@@ -1243,8 +1243,14 @@ msgstr "수량, 가격, 배송, 리드타임 및 세금을 재정의하기 위�
 msgid "Add a domain"
 msgstr "도메인 추가"
 
+msgid "Add a line (in document explorers)"
+msgstr "라인 추가 (문서 탐색기에서)"
+
 msgid "Add a materials section that lists each item on the bill of materials with its quantity."
 msgstr "자재 섹션을 추가하여 자재 명세서의 각 항목과 수량을 나열합니다."
+
+msgid "Add a parameter (in the procedure explorer)"
+msgstr "매개변수 추가 (절차서 탐색기에서)"
 
 msgid "Add a printer in the printing settings to print labels directly."
 msgstr "라벨을 직접 출력하려면 인쇄 설정에서 프린터를 추가하세요."
@@ -1257,6 +1263,9 @@ msgstr "행 추가"
 
 msgid "Add a step"
 msgstr "단계 추가"
+
+msgid "Add a step or question (in procedure and training explorers)"
+msgstr "단계 또는 질문 추가 (절차서 및 교육 탐색기에서)"
 
 msgid "Add Ability"
 msgstr "능력 추가"
@@ -3432,6 +3441,7 @@ msgstr "채팅"
 
 msgid "Check operations on the left to build the batch."
 msgstr "배치를 구성하려면 왼쪽의 작업을 확인하세요."
+
 msgid "Check outgoing payments every hour. Proposed suppliers and invoice matches wait for your review."
 msgstr "출금 결제를 매시간 확인합니다. 제안된 공급업체와 송장 일치 항목은 검토를 기다립니다."
 
@@ -3847,6 +3857,9 @@ msgstr "{0} 확인"
 
 msgid "Confirm & release"
 msgstr "확인 및 릴리스"
+
+msgid "Confirm a dialog"
+msgstr "대화 상자 확인"
 
 msgid "Confirm all"
 msgstr "모두 확인"
@@ -5695,10 +5708,11 @@ msgstr "개발자"
 msgid "Diagram saved"
 msgstr "다이어그램이 저장됨"
 
-msgid "Differs from the selection — allowed, but confirm they nest together"
-msgstr "선택과 다릅니다 — 허용되지만 함께 중첩되는지 확인하세요"
 msgid "Difference"
 msgstr "차액"
+
+msgid "Differs from the selection — allowed, but confirm they nest together"
+msgstr "선택과 다릅니다 — 허용되지만 함께 중첩되는지 확인하세요"
 
 msgid "Digital Quote"
 msgstr "디지털 견적"
@@ -8062,6 +8076,9 @@ msgstr "{0}(으)로 이동"
 msgid "Go to implementation hub"
 msgstr "실행 허브로 이동"
 
+msgid "Go to module"
+msgstr "모듈로 이동"
+
 msgid "Go to that week"
 msgstr "해당 주로 이동"
 
@@ -8469,6 +8486,7 @@ msgstr "부품 번호를 변경하려면 취소를 클릭하고 변환 전에 �
 
 msgid "Ignore"
 msgstr "무시"
+
 msgid "Ignore document"
 msgstr "문서 무시"
 
@@ -9212,6 +9230,9 @@ msgstr "분개 라인"
 msgid "Journals dated on or before this date are treated as locked. Merged with the provider-reported lock date when both exist."
 msgstr "이 날짜 또는 이전 날짜의 전표는 잠김으로 처리됩니다. 둘 다 존재할 때 공급자 보고 잠금 날짜와 병합됩니다."
 
+msgid "Jump to a section on detail pages (same modifiers + the section's letter)"
+msgstr "상세 페이지의 섹션으로 이동 (동일한 보조 키 + 섹션의 문자)"
+
 msgid "Just one"
 msgstr "정확히 하나"
 
@@ -9256,6 +9277,9 @@ msgstr "주문, 견적 및 설정을 이중 확인으로 보호합니다"
 
 msgid "Key"
 msgstr "키"
+
+msgid "Keyboard shortcuts"
+msgstr "키보드 단축키"
 
 msgid "Kind of record"
 msgstr "기록 유형"
@@ -9488,6 +9512,9 @@ msgstr "라이트"
 
 msgid "Light Mode"
 msgstr "라이트 모드"
+
+msgid "Light or dark mode"
+msgstr "밝은 테마 또는 어두운 테마"
 
 msgid "Lights Out (24×7)"
 msgstr "조명 꺼짐 (24×7)"
@@ -10493,10 +10520,11 @@ msgstr "MRP(계획)"
 msgid "MRP runs automatically every 3 hours, but you can run it manually here."
 msgstr "MRP는 3시간마다 자동으로 실행되지만, 여기서 수동으로 실행할 수도 있습니다."
 
-msgid "Multiple jobs can run on this process at the same time — e.g. a laser table, furnace, or plating bath"
-msgstr "여러 작업이 이 프로세스에서 동시에 실행될 수 있습니다 — 예: 레이저 테이블, 용광로 또는 도금 욕조"
 msgid "Multiple invoices"
 msgstr "여러 송장"
+
+msgid "Multiple jobs can run on this process at the same time — e.g. a laser table, furnace, or plating bath"
+msgstr "여러 작업이 이 프로세스에서 동시에 실행될 수 있습니다 — 예: 레이저 테이블, 용광로 또는 도금 욕조"
 
 msgid "Must be in the same location"
 msgstr "동일한 위치에 있어야 합니다"
@@ -10792,6 +10820,9 @@ msgstr "새 견적 라인"
 msgid "New Receipt"
 msgstr "새 입고"
 
+msgid "New record (on list pages)"
+msgstr "새 레코드 (목록 페이지에서)"
+
 msgid "New record created"
 msgstr "새 레코드가 생성되었습니다"
 
@@ -10923,6 +10954,9 @@ msgstr "다음 마감일"
 
 msgid "Next page"
 msgstr "다음 페이지"
+
+msgid "Next page (in tables)"
+msgstr "다음 페이지 (표에서)"
 
 msgid "Next Sequence"
 msgstr "다음 채번 규칙"
@@ -11086,6 +11120,7 @@ msgstr "이 항목에 대한 편집 가능한 속성이 없습니다."
 
 msgid "No eligible operations"
 msgstr "적격 작업 없음"
+
 msgid "No eligible receipt or invoice is attached yet. Upload the original document or find its receipt in Mercury."
 msgstr "아직 적합한 영수증이나 송장이 첨부되지 않았습니다. 원본 문서를 업로드하거나 Mercury에서 영수증을 찾으세요."
 
@@ -11358,6 +11393,9 @@ msgstr "이 시간대에 스케줄된 작업이 없습니다"
 
 msgid "No shifts configured — assuming Mon–Fri, 8h days"
 msgstr "교대근무 구성 없음 — 월–금, 8시간 근무일 가정"
+
+msgid "No shortcuts available on this page."
+msgstr "이 페이지에서는 사용 가능한 단축키가 없습니다."
 
 msgid "No single, trusted number for inventory or job status"
 msgstr "재고나 작업 상태를 나타내는 신뢰할 수 있는 단일 수치가 없음"
@@ -12846,6 +12884,9 @@ msgstr "이전 날"
 
 msgid "Previous page"
 msgstr "이전 페이지"
+
+msgid "Previous page (in tables)"
+msgstr "이전 페이지 (표에서)"
 
 msgid "Previous step"
 msgstr "이전 단계"
@@ -14393,6 +14434,7 @@ msgstr "검토"
 
 msgid "Review & create"
 msgstr "검토 및 생성"
+
 msgid "Review action"
 msgstr "검토 조치"
 
@@ -14834,6 +14876,9 @@ msgstr "동기화 설정 저장"
 
 msgid "Save the edited invoice total or currency, then confirm the payment explanation against the updated amounts."
 msgstr "수정한 송장 총계 또는 통화를 저장한 다음, 갱신된 금액을 기준으로 지불 설명을 확인하세요."
+
+msgid "Save the form you're editing"
+msgstr "편집 중인 양식 저장"
 
 #. placeholder {0}: copy.moduleLabel
 msgid "Save this review, add the required definition in {0}, and reopen the proposal to select it."
@@ -15759,6 +15804,9 @@ msgstr "공급업체 ID 표시"
 msgid "Show sync options"
 msgstr "동기화 옵션 표시"
 
+msgid "Show this overlay"
+msgstr "이 오버레이 표시"
+
 msgid "Show Trailing Zeros"
 msgstr "후행 0 표시"
 
@@ -16392,6 +16440,7 @@ msgstr "AI로 매핑 제안"
 
 msgid "Suggest Match"
 msgstr "일치 제안"
+
 msgid "Suggest matches"
 msgstr "경기 제안"
 
@@ -17093,10 +17142,11 @@ msgstr "생산 중 이 품목의 출력량 손실의 예상 비율로, 계획에
 msgid "The expense account this indirect-spend line posts to; required because indirect lines don't have an item ledger entry to derive the account from."
 msgstr "이 간접비 지출 라인이 계상되는 비용 계정입니다. 간접비 라인은 계정을 도출할 품목 원장 항목이 없으므로 필수입니다."
 
-msgid "The file you uploaded and the mappings you've made will be lost."
-msgstr "업로드한 파일과 설정한 매핑이 손실됩니다."
 msgid "The extracted facts came from another document. Parse the selected invoice, or check every line and total manually and describe your review below."
 msgstr "추출된 정보는 다른 문서에서 가져온 것입니다. 선택한 송장을 구문 분석하거나 모든 라인과 총계를 수동으로 확인한 후 아래에 검토 내용을 설명하세요."
+
+msgid "The file you uploaded and the mappings you've made will be lost."
+msgstr "업로드한 파일과 설정한 매핑이 손실됩니다."
 
 msgid "the first 3 to 4 weeks"
 msgstr "처음 3~4주"
@@ -18179,6 +18229,9 @@ msgstr "레벨 전환"
 
 msgid "Toggle Properties"
 msgstr "속성 전환"
+
+msgid "Toggle the sidebar"
+msgstr "사이드바 토글"
 
 msgid "Toggle views"
 msgstr "보기 전환"

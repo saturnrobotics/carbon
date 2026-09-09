@@ -1243,8 +1243,14 @@ msgstr "添加自定义定价行以覆盖数量、价格、运费、提前期和
 msgid "Add a domain"
 msgstr "添加一个域"
 
+msgid "Add a line (in document explorers)"
+msgstr "添加一行（在文件浏览器中）"
+
 msgid "Add a materials section that lists each item on the bill of materials with its quantity."
 msgstr "添加一个列出物料清单上每个物料及其数量的物料部分。"
+
+msgid "Add a parameter (in the procedure explorer)"
+msgstr "添加参数 (在程序文件资源管理器中)"
 
 msgid "Add a printer in the printing settings to print labels directly."
 msgstr "在打印设置中添加打印机以直接打印标签。"
@@ -1257,6 +1263,9 @@ msgstr "添加一行"
 
 msgid "Add a step"
 msgstr "添加步骤"
+
+msgid "Add a step or question (in procedure and training explorers)"
+msgstr "添加步骤或问题 (在程序文件和培训资源管理器中)"
 
 msgid "Add Ability"
 msgstr "添加能力"
@@ -3432,6 +3441,7 @@ msgstr "聊天"
 
 msgid "Check operations on the left to build the batch."
 msgstr "勾选左侧的操作以构建批次。"
+
 msgid "Check outgoing payments every hour. Proposed suppliers and invoice matches wait for your review."
 msgstr "每小时检查出账付款。建议的供应商和发票匹配项等待审核。"
 
@@ -3847,6 +3857,9 @@ msgstr "确认 {0}"
 
 msgid "Confirm & release"
 msgstr "确认并下达"
+
+msgid "Confirm a dialog"
+msgstr "确认对话框"
 
 msgid "Confirm all"
 msgstr "全部确认"
@@ -5695,10 +5708,11 @@ msgstr "开发人员"
 msgid "Diagram saved"
 msgstr "图表已保存"
 
-msgid "Differs from the selection — allowed, but confirm they nest together"
-msgstr "与选择不同 — 允许，但请确认它们能够嵌套在一起"
 msgid "Difference"
 msgstr "差额"
+
+msgid "Differs from the selection — allowed, but confirm they nest together"
+msgstr "与选择不同 — 允许，但请确认它们能够嵌套在一起"
 
 msgid "Digital Quote"
 msgstr "数字报价"
@@ -8062,6 +8076,9 @@ msgstr "前往 {0}"
 msgid "Go to implementation hub"
 msgstr "前往实施中心"
 
+msgid "Go to module"
+msgstr "转到模块"
+
 msgid "Go to that week"
 msgstr "跳转到该周"
 
@@ -8469,6 +8486,7 @@ msgstr "如果您希望更改零件号，请点击\"取消\"并在转换前为�
 
 msgid "Ignore"
 msgstr "忽略"
+
 msgid "Ignore document"
 msgstr "忽略文件"
 
@@ -9212,6 +9230,9 @@ msgstr "日记账行"
 msgid "Journals dated on or before this date are treated as locked. Merged with the provider-reported lock date when both exist."
 msgstr "在此日期或之前日期的凭证被视为已锁定。当两者都存在时，与提供商报告的锁定日期合并。"
 
+msgid "Jump to a section on detail pages (same modifiers + the section's letter)"
+msgstr "跳转到详情页上的某个章节 (相同的修饰键 + 章节字母)"
+
 msgid "Just one"
 msgstr "仅一个"
 
@@ -9256,6 +9277,9 @@ msgstr "让订单、报价单和设置受到第二道检查的保护"
 
 msgid "Key"
 msgstr "钥匙"
+
+msgid "Keyboard shortcuts"
+msgstr "键盘快捷键"
 
 msgid "Kind of record"
 msgstr "记录类型"
@@ -9488,6 +9512,9 @@ msgstr "浅色"
 
 msgid "Light Mode"
 msgstr "浅色模式"
+
+msgid "Light or dark mode"
+msgstr "亮色或深色模式"
 
 msgid "Lights Out (24×7)"
 msgstr "熄灯（24×7）"
@@ -10493,10 +10520,11 @@ msgstr "MRP (计划)"
 msgid "MRP runs automatically every 3 hours, but you can run it manually here."
 msgstr "MRP 每 3 小时自动运行一次，但您也可以在此手动运行。"
 
-msgid "Multiple jobs can run on this process at the same time — e.g. a laser table, furnace, or plating bath"
-msgstr "多个作业可以同时在此工序上运行 — 例如激光切割机、炉子或电镀槽"
 msgid "Multiple invoices"
 msgstr "多张发票"
+
+msgid "Multiple jobs can run on this process at the same time — e.g. a laser table, furnace, or plating bath"
+msgstr "多个作业可以同时在此工序上运行 — 例如激光切割机、炉子或电镀槽"
 
 msgid "Must be in the same location"
 msgstr "必须在同一位置"
@@ -10792,6 +10820,9 @@ msgstr "新报价行"
 msgid "New Receipt"
 msgstr "新收据"
 
+msgid "New record (on list pages)"
+msgstr "新建记录（在列表页面）"
+
 msgid "New record created"
 msgstr "新记录已创建"
 
@@ -10923,6 +10954,9 @@ msgstr "下次到期日期"
 
 msgid "Next page"
 msgstr "下一页"
+
+msgid "Next page (in tables)"
+msgstr "下一页（在表格中）"
 
 msgid "Next Sequence"
 msgstr "下一个编号规则"
@@ -11086,6 +11120,7 @@ msgstr "此项目没有可编辑的属性。"
 
 msgid "No eligible operations"
 msgstr "没有符合条件的操作"
+
 msgid "No eligible receipt or invoice is attached yet. Upload the original document or find its receipt in Mercury."
 msgstr "尚未附加符合条件的收据或发票。请上传原始文件，或在Mercury中查找收据。"
 
@@ -11358,6 +11393,9 @@ msgstr "此时间窗内无排程工作"
 
 msgid "No shifts configured — assuming Mon–Fri, 8h days"
 msgstr "未配置班次——假定周一至周五，每天8小时"
+
+msgid "No shortcuts available on this page."
+msgstr "此页面没有可用的快捷键。"
 
 msgid "No single, trusted number for inventory or job status"
 msgstr "库存管理或工单状态没有单一的可信数字"
@@ -12846,6 +12884,9 @@ msgstr "前一天"
 
 msgid "Previous page"
 msgstr "上一页"
+
+msgid "Previous page (in tables)"
+msgstr "上一页（在表格中）"
 
 msgid "Previous step"
 msgstr "上一步骤"
@@ -14393,6 +14434,7 @@ msgstr "评审"
 
 msgid "Review & create"
 msgstr "查看和创建"
+
 msgid "Review action"
 msgstr "审查行动"
 
@@ -14834,6 +14876,9 @@ msgstr "保存同步设置"
 
 msgid "Save the edited invoice total or currency, then confirm the payment explanation against the updated amounts."
 msgstr "保存修改后的发票总计或货币，然后根据更新后的金额确认付款说明。"
+
+msgid "Save the form you're editing"
+msgstr "保存您正在编辑的表单"
 
 #. placeholder {0}: copy.moduleLabel
 msgid "Save this review, add the required definition in {0}, and reopen the proposal to select it."
@@ -15759,6 +15804,9 @@ msgstr "显示供应商ID"
 msgid "Show sync options"
 msgstr "显示同步选项"
 
+msgid "Show this overlay"
+msgstr "显示此覆盖层"
+
 msgid "Show Trailing Zeros"
 msgstr "显示尾随零"
 
@@ -16392,6 +16440,7 @@ msgstr "使用 AI 建议映射"
 
 msgid "Suggest Match"
 msgstr "建议匹配"
+
 msgid "Suggest matches"
 msgstr "建议匹配"
 
@@ -17093,10 +17142,11 @@ msgstr "此物料产出在生产期间预期丢失的百分比；计划将需求
 msgid "The expense account this indirect-spend line posts to; required because indirect lines don't have an item ledger entry to derive the account from."
 msgstr "此间接支出行过账至的费用科目；因为间接行没有物料分类账条目来推导科目，所以这是必需的。"
 
-msgid "The file you uploaded and the mappings you've made will be lost."
-msgstr "您上传的文件和已完成的映射将会丢失。"
 msgid "The extracted facts came from another document. Parse the selected invoice, or check every line and total manually and describe your review below."
 msgstr "提取的信息来自另一个文件。请解析所选发票，或手动核对每一行及总计，并在下方说明您的评审情况。"
+
+msgid "The file you uploaded and the mappings you've made will be lost."
+msgstr "您上传的文件和已完成的映射将会丢失。"
 
 msgid "the first 3 to 4 weeks"
 msgstr "前3到4周"
@@ -18180,6 +18230,9 @@ msgstr "切换级别"
 msgid "Toggle Properties"
 msgstr "切换属性"
 
+msgid "Toggle the sidebar"
+msgstr "切换侧边栏"
+
 msgid "Toggle views"
 msgstr "切换视图"
 
@@ -18664,7 +18717,6 @@ msgid "Unsupported source document type: {sourceDocument}"
 msgstr "不支持的源单据类型：{sourceDocument}"
 
 msgid "Untitled"
-msgstr "未命名"
 msgstr "无题"
 
 msgid "Untitled Diagram"

@@ -1243,8 +1243,14 @@ msgstr "Agregue una fila de fijación de precios personalizada para sobrescribir
 msgid "Add a domain"
 msgstr "Añadir un dominio"
 
+msgid "Add a line (in document explorers)"
+msgstr "Agregar una línea (en exploradores de documentos)"
+
 msgid "Add a materials section that lists each item on the bill of materials with its quantity."
 msgstr "Agregue una sección de materiales que enumere cada artículo en la lista de materiales con su cantidad."
+
+msgid "Add a parameter (in the procedure explorer)"
+msgstr "Agregar un parámetro (en el explorador de procedimientos)"
 
 msgid "Add a printer in the printing settings to print labels directly."
 msgstr "Agregue una impresora en la configuración de impresión para imprimir etiquetas directamente."
@@ -1257,6 +1263,9 @@ msgstr "Agregar una fila"
 
 msgid "Add a step"
 msgstr "Agregar un paso"
+
+msgid "Add a step or question (in procedure and training explorers)"
+msgstr "Agregar un paso o una pregunta (en los exploradores de procedimientos y capacitación)"
 
 msgid "Add Ability"
 msgstr "Agregar capacidad"
@@ -3432,6 +3441,7 @@ msgstr "Chat"
 
 msgid "Check operations on the left to build the batch."
 msgstr "Marque las operaciones a la izquierda para construir el lote."
+
 msgid "Check outgoing payments every hour. Proposed suppliers and invoice matches wait for your review."
 msgstr "Revisa los pagos salientes cada hora. Los proveedores propuestos y las coincidencias de facturas esperan tu revisión."
 
@@ -3847,6 +3857,9 @@ msgstr "Confirmar {0}"
 
 msgid "Confirm & release"
 msgstr "Confirmar y liberar"
+
+msgid "Confirm a dialog"
+msgstr "Confirmar un diálogo"
 
 msgid "Confirm all"
 msgstr "Confirmar todo"
@@ -5695,10 +5708,11 @@ msgstr "Desarrollador"
 msgid "Diagram saved"
 msgstr "Diagrama guardado"
 
-msgid "Differs from the selection — allowed, but confirm they nest together"
-msgstr "Difiere de la selección — permitido, pero confirme que se anidan juntos"
 msgid "Difference"
 msgstr "Diferencia"
+
+msgid "Differs from the selection — allowed, but confirm they nest together"
+msgstr "Difiere de la selección — permitido, pero confirme que se anidan juntos"
 
 msgid "Digital Quote"
 msgstr "Cotización Digital"
@@ -8062,6 +8076,9 @@ msgstr "Ir a {0}"
 msgid "Go to implementation hub"
 msgstr "Ir al centro de implementación"
 
+msgid "Go to module"
+msgstr "Ir al módulo"
+
 msgid "Go to that week"
 msgstr "Ir a esa semana"
 
@@ -8469,6 +8486,7 @@ msgstr "Si desea cambiar los números de pieza, haga clic en Cancelar y Asigne m
 
 msgid "Ignore"
 msgstr "Ignorar"
+
 msgid "Ignore document"
 msgstr "ignorar documento"
 
@@ -9212,6 +9230,9 @@ msgstr "Líneas de asiento"
 msgid "Journals dated on or before this date are treated as locked. Merged with the provider-reported lock date when both exist."
 msgstr "Los asientos fechados en o antes de esta fecha se tratan como bloqueados. Se combinan con la fecha de bloqueo reportada por el proveedor cuando ambas existen."
 
+msgid "Jump to a section on detail pages (same modifiers + the section's letter)"
+msgstr "Ir a una sección en las páginas de detalle (mismas teclas modificadoras + letra de la sección)"
+
 msgid "Just one"
 msgstr "Solo uno"
 
@@ -9256,6 +9277,9 @@ msgstr "Mantiene órdenes, cotizaciones y configuración tras una segunda verifi
 
 msgid "Key"
 msgstr "Clave"
+
+msgid "Keyboard shortcuts"
+msgstr "Atajos de teclado"
 
 msgid "Kind of record"
 msgstr "Tipo de registro"
@@ -9488,6 +9512,9 @@ msgstr "Claro"
 
 msgid "Light Mode"
 msgstr "Modo Claro"
+
+msgid "Light or dark mode"
+msgstr "Modo claro u oscuro"
 
 msgid "Lights Out (24×7)"
 msgstr "Sin luces (24×7)"
@@ -10493,10 +10520,11 @@ msgstr "MRP (planificación)"
 msgid "MRP runs automatically every 3 hours, but you can run it manually here."
 msgstr "MRP se ejecuta automáticamente cada 3 horas, pero puedes ejecutarlo manualmente aquí."
 
-msgid "Multiple jobs can run on this process at the same time — e.g. a laser table, furnace, or plating bath"
-msgstr "Varios trabajos pueden ejecutarse en este proceso al mismo tiempo — por ejemplo, una mesa láser, horno o baño de galvanizado"
 msgid "Multiple invoices"
 msgstr "Varias facturas"
+
+msgid "Multiple jobs can run on this process at the same time — e.g. a laser table, furnace, or plating bath"
+msgstr "Varios trabajos pueden ejecutarse en este proceso al mismo tiempo — por ejemplo, una mesa láser, horno o baño de galvanizado"
 
 msgid "Must be in the same location"
 msgstr "Debe estar en la misma ubicación"
@@ -10792,6 +10820,9 @@ msgstr "Nueva Línea de Cotización"
 msgid "New Receipt"
 msgstr "Nuevo Recibo"
 
+msgid "New record (on list pages)"
+msgstr "Nuevo registro (en páginas de lista)"
+
 msgid "New record created"
 msgstr "Nuevo registro creado"
 
@@ -10923,6 +10954,9 @@ msgstr "Próxima fecha de vencimiento"
 
 msgid "Next page"
 msgstr "Página siguiente"
+
+msgid "Next page (in tables)"
+msgstr "Página siguiente (en tablas)"
 
 msgid "Next Sequence"
 msgstr "Siguiente Secuencia"
@@ -11086,6 +11120,7 @@ msgstr "Sin propiedades editables para este elemento."
 
 msgid "No eligible operations"
 msgstr "Sin operaciones elegibles"
+
 msgid "No eligible receipt or invoice is attached yet. Upload the original document or find its receipt in Mercury."
 msgstr "Todavía no hay un recibo o factura aptos adjuntos. Suba el documento original o busque su recibo en Mercury."
 
@@ -11358,6 +11393,9 @@ msgstr "Sin trabajo programado en esta ventana"
 
 msgid "No shifts configured — assuming Mon–Fri, 8h days"
 msgstr "Sin turnos configurados — asumiendo lun–vie, días de 8h"
+
+msgid "No shortcuts available on this page."
+msgstr "No hay atajos disponibles en esta página."
 
 msgid "No single, trusted number for inventory or job status"
 msgstr "Sin un único número confiable para inventario o estado del trabajo"
@@ -12846,6 +12884,9 @@ msgstr "Día Anterior"
 
 msgid "Previous page"
 msgstr "Página anterior"
+
+msgid "Previous page (in tables)"
+msgstr "Página anterior (en tablas)"
 
 msgid "Previous step"
 msgstr "Paso anterior"
@@ -14393,6 +14434,7 @@ msgstr "Revisar"
 
 msgid "Review & create"
 msgstr "Revisar y crear"
+
 msgid "Review action"
 msgstr "Revisar la acción"
 
@@ -14834,6 +14876,9 @@ msgstr "Guardar configuración de sincronización"
 
 msgid "Save the edited invoice total or currency, then confirm the payment explanation against the updated amounts."
 msgstr "Guarde el total o la moneda modificados de la factura y después confirme la explicación del pago con los importes actualizados."
+
+msgid "Save the form you're editing"
+msgstr "Guardar el formulario que estás editando"
 
 #. placeholder {0}: copy.moduleLabel
 msgid "Save this review, add the required definition in {0}, and reopen the proposal to select it."
@@ -15759,6 +15804,9 @@ msgstr "Mostrar IDs de Proveedores"
 msgid "Show sync options"
 msgstr "Mostrar opciones de sincronización"
 
+msgid "Show this overlay"
+msgstr "Mostrar esta superposición"
+
 msgid "Show Trailing Zeros"
 msgstr "Mostrar Ceros Finales"
 
@@ -16392,6 +16440,7 @@ msgstr "Sugerir emparejamientos con IA"
 
 msgid "Suggest Match"
 msgstr "Sugerir Coincidencia"
+
 msgid "Suggest matches"
 msgstr "Sugerir coincidencias"
 
@@ -17093,10 +17142,11 @@ msgstr "El porcentaje esperado de la producción de este artículo perdido duran
 msgid "The expense account this indirect-spend line posts to; required because indirect lines don't have an item ledger entry to derive the account from."
 msgstr "La cuenta de gastos en la que se contabiliza esta línea de gasto indirecto; es obligatoria porque las líneas indirectas no tienen un asiento de mayor de inventario del cual derivar la cuenta."
 
-msgid "The file you uploaded and the mappings you've made will be lost."
-msgstr "Se perderán el archivo que subiste y las asignaciones que hiciste."
 msgid "The extracted facts came from another document. Parse the selected invoice, or check every line and total manually and describe your review below."
 msgstr "Los datos extraídos proceden de otro documento. Analice la factura seleccionada o compruebe manualmente cada línea y el total, y describa su revisión a continuación."
+
+msgid "The file you uploaded and the mappings you've made will be lost."
+msgstr "Se perderán el archivo que subiste y las asignaciones que hiciste."
 
 msgid "the first 3 to 4 weeks"
 msgstr "las primeras 3 a 4 semanas"
@@ -18179,6 +18229,9 @@ msgstr "Alternar nivel"
 
 msgid "Toggle Properties"
 msgstr "Alternar Propiedades"
+
+msgid "Toggle the sidebar"
+msgstr "Alternar la barra lateral"
 
 msgid "Toggle views"
 msgstr "Alternar vistas"

@@ -1243,8 +1243,14 @@ msgstr "Add a custom pricing row to override quantity, price, shipping, lead tim
 msgid "Add a domain"
 msgstr "Add a domain"
 
+msgid "Add a line (in document explorers)"
+msgstr "Add a line (in document explorers)"
+
 msgid "Add a materials section that lists each item on the bill of materials with its quantity."
 msgstr "Add a materials section that lists each item on the bill of materials with its quantity."
+
+msgid "Add a parameter (in the procedure explorer)"
+msgstr "Add a parameter (in the procedure explorer)"
 
 msgid "Add a printer in the printing settings to print labels directly."
 msgstr "Add a printer in the printing settings to print labels directly."
@@ -1257,6 +1263,9 @@ msgstr "Add a row"
 
 msgid "Add a step"
 msgstr "Add a step"
+
+msgid "Add a step or question (in procedure and training explorers)"
+msgstr "Add a step or question (in procedure and training explorers)"
 
 msgid "Add Ability"
 msgstr "Add Ability"
@@ -3432,6 +3441,7 @@ msgstr "Chat"
 
 msgid "Check operations on the left to build the batch."
 msgstr "Check operations on the left to build the batch."
+
 msgid "Check outgoing payments every hour. Proposed suppliers and invoice matches wait for your review."
 msgstr "Check outgoing payments every hour. Proposed suppliers and invoice matches wait for your review."
 
@@ -3847,6 +3857,9 @@ msgstr "Confirm {0}"
 
 msgid "Confirm & release"
 msgstr "Confirm & release"
+
+msgid "Confirm a dialog"
+msgstr "Confirm a dialog"
 
 msgid "Confirm all"
 msgstr "Confirm all"
@@ -5695,10 +5708,11 @@ msgstr "Developer"
 msgid "Diagram saved"
 msgstr "Diagram saved"
 
-msgid "Differs from the selection — allowed, but confirm they nest together"
-msgstr "Differs from the selection — allowed, but confirm they nest together"
 msgid "Difference"
 msgstr "Difference"
+
+msgid "Differs from the selection — allowed, but confirm they nest together"
+msgstr "Differs from the selection — allowed, but confirm they nest together"
 
 msgid "Digital Quote"
 msgstr "Digital Quote"
@@ -8062,6 +8076,9 @@ msgstr "Go to {0}"
 msgid "Go to implementation hub"
 msgstr "Go to implementation hub"
 
+msgid "Go to module"
+msgstr "Go to module"
+
 msgid "Go to that week"
 msgstr "Go to that week"
 
@@ -8469,6 +8486,7 @@ msgstr "If you wish to change the part numbers, please click Cancel and manually
 
 msgid "Ignore"
 msgstr "Ignore"
+
 msgid "Ignore document"
 msgstr "Ignore document"
 
@@ -9212,6 +9230,9 @@ msgstr "Journal lines"
 msgid "Journals dated on or before this date are treated as locked. Merged with the provider-reported lock date when both exist."
 msgstr "Journals dated on or before this date are treated as locked. Merged with the provider-reported lock date when both exist."
 
+msgid "Jump to a section on detail pages (same modifiers + the section's letter)"
+msgstr "Jump to a section on detail pages (same modifiers + the section's letter)"
+
 msgid "Just one"
 msgstr "Just one"
 
@@ -9256,6 +9277,9 @@ msgstr "Keeps orders, quotes, and settings behind a second check"
 
 msgid "Key"
 msgstr "Key"
+
+msgid "Keyboard shortcuts"
+msgstr "Keyboard shortcuts"
 
 msgid "Kind of record"
 msgstr "Kind of record"
@@ -9488,6 +9512,9 @@ msgstr "Light"
 
 msgid "Light Mode"
 msgstr "Light Mode"
+
+msgid "Light or dark mode"
+msgstr "Light or dark mode"
 
 msgid "Lights Out (24×7)"
 msgstr "Lights Out (24×7)"
@@ -10493,10 +10520,11 @@ msgstr "MRP (planning)"
 msgid "MRP runs automatically every 3 hours, but you can run it manually here."
 msgstr "MRP runs automatically every 3 hours, but you can run it manually here."
 
-msgid "Multiple jobs can run on this process at the same time — e.g. a laser table, furnace, or plating bath"
-msgstr "Multiple jobs can run on this process at the same time — e.g. a laser table, furnace, or plating bath"
 msgid "Multiple invoices"
 msgstr "Multiple invoices"
+
+msgid "Multiple jobs can run on this process at the same time — e.g. a laser table, furnace, or plating bath"
+msgstr "Multiple jobs can run on this process at the same time — e.g. a laser table, furnace, or plating bath"
 
 msgid "Must be in the same location"
 msgstr "Must be in the same location"
@@ -10792,6 +10820,9 @@ msgstr "New Quote Line"
 msgid "New Receipt"
 msgstr "New Receipt"
 
+msgid "New record (on list pages)"
+msgstr "New record (on list pages)"
+
 msgid "New record created"
 msgstr "New record created"
 
@@ -10923,6 +10954,9 @@ msgstr "Next Due Date"
 
 msgid "Next page"
 msgstr "Next page"
+
+msgid "Next page (in tables)"
+msgstr "Next page (in tables)"
 
 msgid "Next Sequence"
 msgstr "Next Sequence"
@@ -11086,6 +11120,7 @@ msgstr "No editable properties for this item."
 
 msgid "No eligible operations"
 msgstr "No eligible operations"
+
 msgid "No eligible receipt or invoice is attached yet. Upload the original document or find its receipt in Mercury."
 msgstr "No eligible receipt or invoice is attached yet. Upload the original document or find its receipt in Mercury."
 
@@ -11358,6 +11393,9 @@ msgstr "No scheduled work in this window"
 
 msgid "No shifts configured — assuming Mon–Fri, 8h days"
 msgstr "No shifts configured — assuming Mon–Fri, 8h days"
+
+msgid "No shortcuts available on this page."
+msgstr "No shortcuts available on this page."
 
 msgid "No single, trusted number for inventory or job status"
 msgstr "No single, trusted number for inventory or job status"
@@ -12846,6 +12884,9 @@ msgstr "Previous Day"
 
 msgid "Previous page"
 msgstr "Previous page"
+
+msgid "Previous page (in tables)"
+msgstr "Previous page (in tables)"
 
 msgid "Previous step"
 msgstr "Previous step"
@@ -14393,6 +14434,7 @@ msgstr "Review"
 
 msgid "Review & create"
 msgstr "Review & create"
+
 msgid "Review action"
 msgstr "Review action"
 
@@ -14834,6 +14876,9 @@ msgstr "Save sync settings"
 
 msgid "Save the edited invoice total or currency, then confirm the payment explanation against the updated amounts."
 msgstr "Save the edited invoice total or currency, then confirm the payment explanation against the updated amounts."
+
+msgid "Save the form you're editing"
+msgstr "Save the form you're editing"
 
 #. placeholder {0}: copy.moduleLabel
 msgid "Save this review, add the required definition in {0}, and reopen the proposal to select it."
@@ -15759,6 +15804,9 @@ msgstr "Show Supplier IDs"
 msgid "Show sync options"
 msgstr "Show sync options"
 
+msgid "Show this overlay"
+msgstr "Show this overlay"
+
 msgid "Show Trailing Zeros"
 msgstr "Show Trailing Zeros"
 
@@ -16392,6 +16440,7 @@ msgstr "Suggest mappings with AI"
 
 msgid "Suggest Match"
 msgstr "Suggest Match"
+
 msgid "Suggest matches"
 msgstr "Suggest matches"
 
@@ -17093,10 +17142,11 @@ msgstr "The expected percentage of this item's output lost during production; pl
 msgid "The expense account this indirect-spend line posts to; required because indirect lines don't have an item ledger entry to derive the account from."
 msgstr "The expense account this indirect-spend line posts to; required because indirect lines don't have an item ledger entry to derive the account from."
 
-msgid "The file you uploaded and the mappings you've made will be lost."
-msgstr "The file you uploaded and the mappings you've made will be lost."
 msgid "The extracted facts came from another document. Parse the selected invoice, or check every line and total manually and describe your review below."
 msgstr "The extracted facts came from another document. Parse the selected invoice, or check every line and total manually and describe your review below."
+
+msgid "The file you uploaded and the mappings you've made will be lost."
+msgstr "The file you uploaded and the mappings you've made will be lost."
 
 msgid "the first 3 to 4 weeks"
 msgstr "the first 3 to 4 weeks"
@@ -18179,6 +18229,9 @@ msgstr "Toggle level"
 
 msgid "Toggle Properties"
 msgstr "Toggle Properties"
+
+msgid "Toggle the sidebar"
+msgstr "Toggle the sidebar"
 
 msgid "Toggle views"
 msgstr "Toggle views"
