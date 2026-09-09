@@ -113,8 +113,13 @@ For a new sync, from the clean original `saturn/main` checkout:
 sync_original_checkout="$PWD"
 sync_base_sha="$(git rev-parse HEAD)"
 python3 .fork/verify.py preflight --revision HEAD
-bash contrib/deploying/gcp-tailscale/fork.sh sync
+make sync
 ```
+
+`make sync` invokes `bash contrib/deploying/gcp-tailscale/fork.sh sync`. It
+creates the integration candidate; it does not launch a coding agent or promote
+the candidate. The agent continues conflict resolution, regeneration, CI, and
+verified promotion as described above.
 
 The helper requires a clean `saturn/main`, runs preflight, and fetches
 `upstream/main`. If there is nothing to merge, it creates nothing. Otherwise:
