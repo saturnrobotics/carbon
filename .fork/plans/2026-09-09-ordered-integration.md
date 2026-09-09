@@ -23,3 +23,9 @@ Local evidence before promotion: all four non-schema generated artifact groups
 pass; 152 safeguard tests and 33 controller tests pass. Fresh and upgraded schemas
 agree with committed artifacts for the upstream candidate. Exact-revision CI and
 the two ordered promotions remain mandatory; candidate preparation may overlap.
+
+Upstream candidate for first promotion:
+`dd9c52d9701bff68fedb96bf990d0b4ed4b92257`. Its additional repairs separate a
+pure journal type from a runtime driver and initialize the real PDF runtime in
+bounded test setup. The combined candidate includes this exact revision and the
+feature history. All 204 operator tests pass with the required local toolchain.

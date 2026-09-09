@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 import {
   extractPdfText,
   GmailClient,
@@ -313,30 +313,46 @@ describe("Gmail invoice access", () => {
     expect(result.candidates).toHaveLength(12);
     expect(maximum).toBe(4);
   });
-  it("extracts actual PDF text locally without evaluating document instructions", async () => {
-    const stream =
-      "BT /F1 12 Tf 20 100 Td (Example Parts invoice total USD 1234.50) Tj ET";
-    const objects = [
-      "<< /Type /Catalog /Pages 2 0 R >>",
-      "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-      "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 300 200] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>",
-      "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
-      `<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`
-    ];
-    let pdf = "%PDF-1.4\n";
-    const offsets = [0];
-    for (const [index, object] of objects.entries()) {
-      offsets.push(Buffer.byteLength(pdf));
-      pdf += `${index + 1} 0 obj\n${object}\nendobj\n`;
-    }
-    const xref = Buffer.byteLength(pdf);
-    pdf += `xref\n0 6\n0000000000 65535 f \n${offsets
-      .slice(1)
-      .map((offset) => `${String(offset).padStart(10, "0")} 00000 n \n`)
-      .join("")}trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;
-    expect(await extractPdfText(new TextEncoder().encode(pdf))).toContain(
-      "Example Parts invoice total USD 1234.50"
-    );
+  describe("real PDF extraction", () => {
+    beforeAll(async () => {
+      // Cold PDF.js worker initialization belongs to bounded fixture
+      // setup. Keep the actual document extraction under the normal test limit.
+      await import("@carbon/lib/shims");
+      const { PDFWorker } = await import("pdfjs-dist/legacy/build/pdf.mjs");
+      const worker = new PDFWorker();
+      try {
+        await worker.promise;
+      } finally {
+        worker.destroy();
+      }
+    });
+    it("extracts actual PDF text locally without evaluating document instructions", async () => {
+      const stream =
+        "BT /F1 12 Tf 20 100 Td (Example Parts invoice total USD 1234.50) Tj ET";
+      const objects = [
+        "<< /Type /Catalog /Pages 2 0 R >>",
+        "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+        "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 300 200] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>",
+        "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+        `<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`
+      ];
+      let pdf = "%PDF-1.4\n";
+      const offsets = [0];
+      for (const [index, object] of objects.entries()) {
+        offsets.push(Buffer.byteLength(pdf));
+        pdf += `${index + 1} 0 obj\n${object}\nendobj\n`;
+      }
+      const xref = Buffer.byteLength(pdf);
+      pdf += `xref\n0 6\n0000000000 65535 f \n${offsets
+        .slice(1)
+        .map((offset) => `${String(offset).padStart(10, "0")} 00000 n \n`)
+        .join(
+          ""
+        )}trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;
+      expect(await extractPdfText(new TextEncoder().encode(pdf))).toContain(
+        "Example Parts invoice total USD 1234.50"
+      );
+    });
   });
   it("retains inline MIME invoice attachments for later private storage", async () => {
     const inline = {
