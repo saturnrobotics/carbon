@@ -41,4 +41,23 @@ sql("""DO $$ BEGIN IF NOT EXISTS(SELECT FROM pg_roles WHERE rolname='knowledge_t
 sql((root / "packages/database/supabase/migrations/20260908012959_knowledge-function-execution-boundary.sql").read_text())
 sql(Path(__file__).with_name("policy-fixtures.sql").read_text())
 sql('INSERT INTO knowledge_metering."requestPolicy" VALUES (\'company-a\',\'knowledge.query\',1000,10000),(\'company-b\',\'knowledge.query\',1000,10000) ON CONFLICT DO NOTHING;')
+# The jobs integration exercises canonical scheduler SQL against actual feature
+# migrations, with synthetic predecessor tables and a separate trusted worker.
+sql(Path(__file__).with_name("bootstrap-scheduler-test.sql").read_text())
+for table, migration in (
+    ("knowledgeCommandReceipt", "20260908004744_knowledge-command-receipts.sql"),
+    ("knowledgeProcurementSchedule", "20260908014030_knowledge-procurement-schedule.sql"),
+):
+    exists = sql(f"SELECT to_regclass('public.\"{table}\"') IS NOT NULL;")
+    if "t" not in exists.split():
+        body = (root / "packages/database/supabase/migrations" / migration).read_text()
+        sql("BEGIN;\n" + body + "\nCOMMIT;")
+sql('''
+GRANT USAGE ON SCHEMA public TO knowledge_test_scheduler;
+GRANT SELECT, INSERT, UPDATE, DELETE ON
+  public.company, public."user", public.employee, public."userToCompany",
+  public."userPermission", public."purchaseOrder", public."knowledgeCommandReceipt",
+  public."knowledgeProcurementSchedule" TO knowledge_test_scheduler;
+GRANT EXECUTE ON FUNCTION public.id(text) TO knowledge_test_scheduler;
+''')
 print("Synthetic knowledge fixture is ready; no database reset performed")

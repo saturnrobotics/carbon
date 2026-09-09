@@ -200,6 +200,10 @@ services:
       - postgres
       - -c
       - config_file=/etc/postgresql/postgresql.conf
+      # Keep permission checks and extensions; disable the crashing hint hook.
+      # https://github.com/supabase/supautils/issues/214
+      - -c
+      - supautils.hint_roles=
     networks:
       internal:
         aliases: [db]

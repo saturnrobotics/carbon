@@ -33,8 +33,13 @@ const payload = {
   lines: []
 };
 
-const pool = databaseUrl
-  ? new Pool({ connectionString: databaseUrl })
+// The jobs worker uses a separate synthetic backend login. The existing URL
+// guard still requires an explicitly disposable fixture; read-role proofs keep
+// their original restricted login and grants.
+const schedulerUrl = enabled && databaseUrl ? new URL(databaseUrl) : undefined;
+if (schedulerUrl) schedulerUrl.username = "knowledge_test_scheduler";
+const pool = schedulerUrl
+  ? new Pool({ connectionString: schedulerUrl.toString() })
   : undefined;
 const db = pool
   ? new Kysely({ dialect: new PostgresDialect({ pool }) })

@@ -62,15 +62,18 @@ jobs:
       - run: corepack pnpm --filter @carbon/config build
       - name: Start isolated synthetic PostgreSQL and Redis
         run: |
-          docker run -d --name knowledge-schema-test --label knowledge.disposable=true --tmpfs /var/lib/postgresql/data:rw,size=2147483648 -p 127.0.0.1:59910:5432 -e POSTGRES_USER=supabase_admin -e POSTGRES_PASSWORD=synthetic-test-only -e POSTGRES_DB=knowledge_test supabase/postgres:15.14.1.112 postgres -D /etc/postgresql -c max_wal_size=128MB -c min_wal_size=32MB -c checkpoint_timeout=30s
+          # Disable crashing permission hints, preserving actual denials and extensions.
+          # https://github.com/supabase/supautils/issues/214
+          docker run -d --name knowledge-schema-test --label knowledge.disposable=true --tmpfs /var/lib/postgresql/data:rw,size=2147483648 -p 127.0.0.1:59910:5432 -e POSTGRES_USER=supabase_admin -e POSTGRES_PASSWORD=synthetic-test-only -e POSTGRES_DB=knowledge_test supabase/postgres:15.14.1.112 postgres -D /etc/postgresql -c supautils.hint_roles= -c max_wal_size=128MB -c min_wal_size=32MB -c checkpoint_timeout=30s
           docker run -d --name knowledge-cache-test --label knowledge.disposable=true -p 127.0.0.1:59913:6379 redis:7-alpine redis-server --save '' --appendonly no --maxmemory 64mb --maxmemory-policy allkeys-lru
           for attempt in $(seq 1 30); do
             if docker exec -e PGPASSWORD=synthetic-test-only knowledge-schema-test psql -X -h 127.0.0.1 -U supabase_admin -d knowledge_test -At -c 'SELECT 1'; then break; fi
             sleep 1
           done
-          python3 packages/knowledge/scripts/setup-disposable.py
+          python3 packages/knowledge/scripts/test_fixture_setup.py
       - name: Runtime unit and integration tests
         run: |
+          python3 packages/knowledge/scripts/test_sql_runner.py
           corepack pnpm --filter @carbon/knowledge test
           corepack pnpm --filter knowledge test
           corepack pnpm --filter knowledge-query test
@@ -104,5 +107,7 @@ jobs:
       - name: Stop only this job's synthetic services
         if: always()
         run: |
+          # Keep crash evidence from synthetic fixtures before deleting them.
+          docker logs --tail 200 knowledge-schema-test 2>&1 || true
           contrib/deploying/knowledge/local-stack.sh stop || true
           docker rm -f knowledge-schema-test knowledge-cache-test 2>/dev/null || true

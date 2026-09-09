@@ -269,125 +269,131 @@ async function fixture(run: (value: Fixture) => Promise<void>) {
 }
 
 describe("synthetic invoice teaching", () => {
-  it("approves all five native item classes and learns held-out supplier/pack identities without stock or accounting writes", async () =>
-    fixture(async (f) => {
-      const fixtures = syntheticInvoiceFixtures();
-      await db
-        .insertInto("employeeJob")
-        .values({
-          id: f.actor.userId,
-          companyId: f.actor.companyId,
-          locationId: f.locationId
-        })
-        .onConflict((oc) =>
-          oc
-            .columns(["id", "companyId"])
-            .doUpdateSet({ locationId: f.locationId })
-        )
-        .execute();
-      const catalog = await prepareInvoiceEvaluationCatalog(
-        db,
-        f.actor,
-        fixtures
-      );
-      for (const source of fixtures.slice(0, 20)) {
-        const row = await db
-          .insertInto("invoiceIntake")
-          .values({
-            companyId: f.actor.companyId,
-            createdBy: f.actor.userId,
-            status: "NeedsReview"
-          })
-          .returningAll()
-          .executeTakeFirstOrThrow();
+  // This complete 20-document corpus exercises thousands of real SQL statements.
+  // Keep its bounded integration budget separate from the default unit-test limit.
+  it(
+    "approves all five native item classes and learns held-out supplier/pack identities without stock or accounting writes",
+    { timeout: 30_000 },
+    async () =>
+      fixture(async (f) => {
+        const fixtures = syntheticInvoiceFixtures();
         await db
-          .insertInto("invoiceIntakeSource")
+          .insertInto("employeeJob")
           .values({
+            id: f.actor.userId,
             companyId: f.actor.companyId,
-            intakeId: row.id,
-            createdBy: f.actor.userId,
-            kind: "upload",
-            sourceKey: source.id,
-            storageBucket: "private",
-            storagePath: `${f.actor.companyId}/invoice-intake/${row.id}/source.pdf`,
-            sha256: createHash("sha256")
-              .update(JSON.stringify(source.labels))
-              .digest("hex"),
-            mediaType: "application/pdf",
-            byteSize: 120,
-            fileName: "fixture.pdf"
+            locationId: f.locationId
           })
-          .execute();
-        await db
-          .insertInto("invoiceIntakeLine")
-          .values(
-            source.labels.lines.map((line, index) => ({
-              companyId: f.actor.companyId,
-              intakeId: row.id,
-              lineKey: line.lineKey,
-              sortOrder: index,
-              raw: line,
-              createdBy: f.actor.userId
-            }))
+          .onConflict((oc) =>
+            oc
+              .columns(["id", "companyId"])
+              .doUpdateSet({ locationId: f.locationId })
           )
           .execute();
-        await saveInvoiceIntakeReview(db, f.actor, {
-          id: row.id,
-          expectedRevision: row.revision,
-          review: extractionToInvoiceReview(source.labels)
-        });
-        await teachInvoiceEvaluationFixture(
+        const catalog = await prepareInvoiceEvaluationCatalog(
           db,
           f.actor,
-          row.id,
-          source,
-          catalog
+          fixtures
         );
-      }
-      expect(catalog.suppliers.size).toBe(3);
-      expect(catalog.items.size).toBe(5);
-      for (const source of fixtures.filter(
-        (fixture) => fixture.heldOutRepeat
-      )) {
-        const expected = expectedInvoiceRepeat(catalog, source);
-        const actual = await resolveInvoiceCandidates(db, f.actor.companyId, {
-          supplierName: source.labels.supplier.name.value,
-          lines: source.labels.lines.map((line) => ({
-            lineKey: line.lineKey,
-            description: line.description.value,
-            supplierSku: line.supplierSku.value,
-            manufacturerPartNumber: line.manufacturerPartNumber.value,
-            purchaseUnit: line.purchaseUnit.value,
-            packText: line.packText.value
-          }))
-        });
-        expect(actual.supplierId).toBe(expected.supplierId);
-        expect(
-          actual.lines.map((line) => ({
-            itemId: line.itemId,
-            purchaseUnit: line.purchaseUnit,
-            stockUnit: line.stockUnit,
-            conversionFactor:
-              line.conversionFactor === null
-                ? null
-                : String(line.conversionFactor)
-          }))
-        ).toEqual(expected.lines);
-      }
-      const invoices = await db
-        .selectFrom("purchaseInvoice")
-        .select("status")
-        .where("companyId", "=", f.actor.companyId)
-        .execute();
-      expect(invoices).toHaveLength(15);
-      expect(invoices.every((invoice) => invoice.status === "Draft")).toBe(
-        true
-      );
-      const counts = await sql<{
-        count: string;
-      }>`SELECT ((SELECT count(*) FROM "itemLedger" WHERE "companyId"=${f.actor.companyId})+(SELECT count(*) FROM "costLedger" WHERE "companyId"=${f.actor.companyId})+(SELECT count(*) FROM receipt WHERE "companyId"=${f.actor.companyId})+(SELECT count(*) FROM journal WHERE "companyId"=${f.actor.companyId})+(SELECT count(*) FROM payment WHERE "companyId"=${f.actor.companyId}))::text count`.execute(
-        db
-      );
-      expect(counts.rows[0].count).toBe("0");
-    }));
+        for (const source of fixtures.slice(0, 20)) {
+          const row = await db
+            .insertInto("invoiceIntake")
+            .values({
+              companyId: f.actor.companyId,
+              createdBy: f.actor.userId,
+              status: "NeedsReview"
+            })
+            .returningAll()
+            .executeTakeFirstOrThrow();
+          await db
+            .insertInto("invoiceIntakeSource")
+            .values({
+              companyId: f.actor.companyId,
+              intakeId: row.id,
+              createdBy: f.actor.userId,
+              kind: "upload",
+              sourceKey: source.id,
+              storageBucket: "private",
+              storagePath: `${f.actor.companyId}/invoice-intake/${row.id}/source.pdf`,
+              sha256: createHash("sha256")
+                .update(JSON.stringify(source.labels))
+                .digest("hex"),
+              mediaType: "application/pdf",
+              byteSize: 120,
+              fileName: "fixture.pdf"
+            })
+            .execute();
+          await db
+            .insertInto("invoiceIntakeLine")
+            .values(
+              source.labels.lines.map((line, index) => ({
+                companyId: f.actor.companyId,
+                intakeId: row.id,
+                lineKey: line.lineKey,
+                sortOrder: index,
+                raw: line,
+                createdBy: f.actor.userId
+              }))
+            )
+            .execute();
+          await saveInvoiceIntakeReview(db, f.actor, {
+            id: row.id,
+            expectedRevision: row.revision,
+            review: extractionToInvoiceReview(source.labels)
+          });
+          await teachInvoiceEvaluationFixture(
+            db,
+            f.actor,
+            row.id,
+            source,
+            catalog
+          );
+        }
+        expect(catalog.suppliers.size).toBe(3);
+        expect(catalog.items.size).toBe(5);
+        for (const source of fixtures.filter(
+          (fixture) => fixture.heldOutRepeat
+        )) {
+          const expected = expectedInvoiceRepeat(catalog, source);
+          const actual = await resolveInvoiceCandidates(db, f.actor.companyId, {
+            supplierName: source.labels.supplier.name.value,
+            lines: source.labels.lines.map((line) => ({
+              lineKey: line.lineKey,
+              description: line.description.value,
+              supplierSku: line.supplierSku.value,
+              manufacturerPartNumber: line.manufacturerPartNumber.value,
+              purchaseUnit: line.purchaseUnit.value,
+              packText: line.packText.value
+            }))
+          });
+          expect(actual.supplierId).toBe(expected.supplierId);
+          expect(
+            actual.lines.map((line) => ({
+              itemId: line.itemId,
+              purchaseUnit: line.purchaseUnit,
+              stockUnit: line.stockUnit,
+              conversionFactor:
+                line.conversionFactor === null
+                  ? null
+                  : String(line.conversionFactor)
+            }))
+          ).toEqual(expected.lines);
+        }
+        const invoices = await db
+          .selectFrom("purchaseInvoice")
+          .select("status")
+          .where("companyId", "=", f.actor.companyId)
+          .execute();
+        expect(invoices).toHaveLength(15);
+        expect(invoices.every((invoice) => invoice.status === "Draft")).toBe(
+          true
+        );
+        const counts = await sql<{
+          count: string;
+        }>`SELECT ((SELECT count(*) FROM "itemLedger" WHERE "companyId"=${f.actor.companyId})+(SELECT count(*) FROM "costLedger" WHERE "companyId"=${f.actor.companyId})+(SELECT count(*) FROM receipt WHERE "companyId"=${f.actor.companyId})+(SELECT count(*) FROM journal WHERE "companyId"=${f.actor.companyId})+(SELECT count(*) FROM payment WHERE "companyId"=${f.actor.companyId}))::text count`.execute(
+          db
+        );
+        expect(counts.rows[0].count).toBe("0");
+      })
+  );
 });

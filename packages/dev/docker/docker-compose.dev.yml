@@ -39,6 +39,10 @@ services:
       - postgres
       - -c
       - config_file=/etc/postgresql/postgresql.conf
+      # Disable only the permission-hint hook that crashes on denied EXECUTE.
+      # https://github.com/supabase/supautils/issues/214
+      - -c
+      - supautils.hint_roles=
       - -c
       - log_min_messages=fatal
       - -c

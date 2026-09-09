@@ -3,6 +3,7 @@
 import ipaddress
 import os
 from pathlib import Path
+import re
 import subprocess
 import tempfile
 
@@ -53,6 +54,14 @@ def openssl(*args, check=True):
 
 def certificates(directory, address):
     """Keep the CA stable; renew its server certificate on deploy before expiry."""
+    prerequisite = "Private PostgreSQL TLS requires OpenSSL 3 or later on PATH; check `openssl version`"
+    try:
+        toolchain = openssl("version", check=False)
+    except OSError:
+        raise ValueError(prerequisite) from None
+    version = re.match(r"OpenSSL ([0-9]+)\.[0-9]+\.[0-9]+(?:\s|$)", toolchain.stdout)
+    if toolchain.returncode or version is None or int(version.group(1)) < 3:
+        raise ValueError(prerequisite)
     directory = Path(directory)
     directory.mkdir(parents=True, exist_ok=True, mode=0o700)
     directory.chmod(0o700)
@@ -65,7 +74,10 @@ def certificates(directory, address):
             (directory / name).chmod(0o600)
     if all(present):
         openssl("verify", "-no_check_time", "-CAfile", directory / "ca.crt", directory / "server.crt")
-        if openssl("x509", "-in", directory / "server.crt", "-noout", "-checkip", address, check=False).returncode:
+        # OpenSSL 3.0 x509 -checkip can exit 0 even when the address differs.
+        # verify makes the subjectAltName match part of certificate validation.
+        if openssl("verify", "-no_check_time", "-CAfile", directory / "ca.crt",
+                   "-verify_ip", address, directory / "server.crt", check=False).returncode:
             raise ValueError("Private PostgreSQL IP differs from its persistent certificate; review the address change")
         if openssl("x509", "-in", directory / "server.crt", "-noout", "-checkend", str(30 * 86400), check=False).returncode == 0:
             return

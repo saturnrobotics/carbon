@@ -3,6 +3,9 @@ name: knowledge-manual-local
 services:
   postgres:
     image: supabase/postgres:15.14.1.112@sha256:241b86a756cb940f8a6c285c13b2f088a2590e2cfd1e024b4ba554dfc23e4393
+    # Preserve the image configuration and extensions, disabling only the
+    # crashing permission hints: https://github.com/supabase/supautils/issues/214
+    command: [postgres, -D, /etc/postgresql, -c, "supautils.hint_roles="]
     environment:
       POSTGRES_DB: knowledge_test
       POSTGRES_PASSWORD: synthetic-test-only

@@ -7,6 +7,9 @@ services:
       JWT_SECRET: synthetic-oauth-evaluation-jwt-secret
     command:
       - postgres
+      # https://github.com/supabase/supautils/issues/214 (diagnostic hints only)
+      - -c
+      - supautils.hint_roles=
       - -c
       - fsync=off
       - -c

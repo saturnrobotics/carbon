@@ -5,6 +5,7 @@ accepted, and this runner never removes or rebuilds a database.
 """
 import json
 import os
+import re
 import subprocess
 import unittest
 from pathlib import Path
@@ -13,7 +14,7 @@ from pathlib import Path
 CONTAINER = os.environ.get("KNOWLEDGE_TEST_CONTAINER", "knowledge-schema-test")
 
 
-def sql(statement, *, succeeds=True):
+def sql(statement, *, succeeds=True, sqlstate=None):
     inspected = subprocess.run(
         ["docker", "inspect", CONTAINER], check=True, capture_output=True, text=True
     )
@@ -21,16 +22,45 @@ def sql(statement, *, succeeds=True):
     if labels.get("knowledge.disposable") != "true":
         raise RuntimeError("Refusing an unlabelled database container")
     result = subprocess.run(
-        ["docker", "exec", "-i", "-e", "PGPASSWORD=synthetic-test-only", CONTAINER, "psql", "-X", "-v", "ON_ERROR_STOP=1",
-         "-U", "supabase_admin", "-d", "knowledge_test", "-At"],
-        input=statement, capture_output=True, text=True,
+        [
+            "docker",
+            "exec",
+            "-i",
+            "-e",
+            "PGPASSWORD=synthetic-test-only",
+            CONTAINER,
+            "psql",
+            "-X",
+            "-v",
+            "ON_ERROR_STOP=1",
+            "-v",
+            "VERBOSITY=verbose",
+            "-U",
+            "supabase_admin",
+            "-d",
+            "knowledge_test",
+            "-At",
+        ],
+        input=statement,
+        capture_output=True,
+        text=True,
     )
     if succeeds and result.returncode:
         raise AssertionError(result.stderr)
-    if not succeeds and result.returncode == 0:
-        raise AssertionError("Forbidden SQL unexpectedly succeeded")
+    if not succeeds:
+        if result.returncode == 0:
+            raise AssertionError("Forbidden SQL unexpectedly succeeded")
+        # ON_ERROR_STOP uses 3 for rejected SQL; a disconnect or crashed server
+        # must never count as evidence that a permission boundary held.
+        if result.returncode != 3:
+            raise AssertionError(
+                f"Expected SQL error (psql exit 3), got {result.returncode}: {result.stderr}"
+            )
+        if sqlstate and not re.search(
+            rf"^ERROR:\s+{re.escape(sqlstate)}:", result.stderr, re.MULTILINE
+        ):
+            raise AssertionError(f"Expected SQLSTATE {sqlstate}: {result.stderr}")
     return result.stdout.strip()
-
 
 TABLES = ["source", "identityBinding", "sourceUserBinding", "document",
           "documentVersion", "chunk", "entity", "entityLink", "grant",
@@ -50,7 +80,7 @@ class SchemaTests(unittest.TestCase):
     def test_read_role_has_no_mutation_or_owner_privileges(self):
         self.assertEqual(sql("SELECT count(*) FROM pg_roles WHERE rolname='knowledge_read' AND NOT rolsuper AND NOT rolbypassrls AND NOT rolcanlogin"), "1")
         self.assertEqual(sql("SELECT count(*) FROM information_schema.role_table_grants WHERE grantee='knowledge_read' AND privilege_type != 'SELECT'"), "0")
-        sql("BEGIN; SET LOCAL ROLE knowledge_read; INSERT INTO knowledge.source DEFAULT VALUES; ROLLBACK", succeeds=False)
+        sql("BEGIN; SET LOCAL ROLE knowledge_read; INSERT INTO knowledge.source DEFAULT VALUES; ROLLBACK", succeeds=False, sqlstate="42501")
 
     def test_browser_roles_cannot_enter_schema(self):
         self.assertEqual(sql("SELECT has_schema_privilege('anon','knowledge','USAGE') OR has_schema_privilege('authenticated','knowledge','USAGE')"), "f")
@@ -131,7 +161,7 @@ ROLLBACK;
         sql("BEGIN; INSERT INTO knowledge.chunk(id,\"companyId\",\"createdBy\",\"documentId\",\"documentVersionId\",ordinal,text,\"tokenCount\",\"embeddingProfile\",\"indexGeneration\") VALUES ('wrong','company-a','alice','doc-a','version-doc-hidden',0,'wrong',1,'synthetic',1); ROLLBACK", succeeds=False)
 
     def test_read_role_cannot_call_a_business_mutator(self):
-        sql('BEGIN; SET LOCAL ROLE knowledge_read; INSERT INTO knowledge.command DEFAULT VALUES; ROLLBACK', succeeds=False)
+        sql('BEGIN; SET LOCAL ROLE knowledge_read; INSERT INTO knowledge.command DEFAULT VALUES; ROLLBACK', succeeds=False, sqlstate="42501")
 
     def test_transaction_local_actor_does_not_leak_to_next_request(self):
         result = sql("BEGIN; SET LOCAL ROLE knowledge_read; SET LOCAL knowledge.actor_id='alice'; SET LOCAL knowledge.company_id='company-a'; SELECT count(*) FROM knowledge.document; COMMIT; BEGIN; SET LOCAL ROLE knowledge_read; SELECT count(*) FROM knowledge.document; ROLLBACK")
@@ -161,7 +191,14 @@ class IdentityResolverTests(unittest.TestCase):
         self.assertEqual(sql("SET ROLE knowledge_read; SELECT public.knowledge_resolve_workforce_identity('https://identity.example.com','subject-a','company-b') IS NULL").splitlines()[-1], 't')
 
     def test_browser_database_roles_cannot_enumerate_bindings(self):
-        sql("SET ROLE authenticated; SELECT public.knowledge_resolve_workforce_identity('https://identity.example.com','subject-a','company-a')", succeeds=False)
+        for role in ("anon", "authenticated"):
+            with self.subTest(role=role):
+                sql(
+                    f"SET ROLE {role}; SELECT public.knowledge_resolve_workforce_identity("
+                    "'https://identity.example.com','subject-a','company-a')",
+                    succeeds=False,
+                    sqlstate="42501",
+                )
 
 
 if __name__ == "__main__":

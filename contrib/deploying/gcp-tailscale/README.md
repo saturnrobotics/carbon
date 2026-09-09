@@ -38,6 +38,20 @@ GCP VPC. See [private database clients](#private-database-clients) below.
 
 ## One-time setup
 
+The optional private PostgreSQL listener requires **OpenSSL 3 or later** on the
+machine rendering its certificates (OpenSSL 3 is tested). Check `openssl version`
+before enabling it. macOS's bundled LibreSSL lacks the required certificate
+verification options. With Homebrew OpenSSL installed, select it for the current
+shell:
+
+```bash
+export PATH="$(brew --prefix openssl@3)/bin:$PATH"
+openssl version
+```
+
+An unsupported or unavailable TLS tool fails before certificate files or their
+permissions change. Use the same supported toolchain for local deployment tests.
+
 You need four values: a Cloudflare API token, a Tailscale auth key, and the Google
 OAuth client ID and secret. Save them in `.local/secrets.json`. Save the project,
 hostnames and certificate contact email in `.local/config.json`. Both files are
