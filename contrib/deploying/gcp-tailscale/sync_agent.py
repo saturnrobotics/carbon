@@ -596,16 +596,19 @@ class Controller:
 
     def gate(self, revision):
         command = [sys.executable, self.tools.parents[2] / ".fork/verify.py"]
+        preflight = [
+            "preflight",
+            "--revision",
+            revision,
+            "--base",
+            self.state["base"],
+        ]
+        # A pending merge's index has no ancestry yet. Check upstream ancestry
+        # and namespace ownership on the committed HEAD before publication.
+        if revision != "index":
+            preflight.extend(["--upstream", self.state["upstream"]])
         for args in (
-            [
-                "preflight",
-                "--revision",
-                revision,
-                "--base",
-                self.state["base"],
-                "--upstream",
-                self.state["upstream"],
-            ],
+            preflight,
             [
                 "generated",
                 "--revision",

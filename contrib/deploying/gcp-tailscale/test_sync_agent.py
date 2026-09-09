@@ -412,6 +412,74 @@ class ControllerGitTests(unittest.TestCase):
         self.controller.resume_preparing()
         self.assertTrue(self.git(self.candidate, "ls-files", "--unmerged"))
 
+    def prepare_real_preflight_candidate(self):
+        self.prepare_conflicted_candidate()
+        inputs = {
+            "shared.txt": "fork requirement\nupstream requirement\n",
+            "package.json": json.dumps({"packageManager": "pnpm@10.33.4"}),
+            "pnpm-lock.yaml": "lockfileVersion: '9.0'\n",
+            "AGENTS.md": "Read .fork/agent-policy.md before work.\n",
+            ".fork/agent-policy.md": "Use .fork/plans and .fork/lessons.\n",
+            ".fork/generated-artifacts.json": json.dumps(
+                {
+                    "version": 1,
+                    "artifacts": [],
+                    "forbidden_tracked": [".fork/local/**"],
+                    "allowed_ignored": [],
+                }
+            ),
+        }
+        for name, content in inputs.items():
+            self.write(self.candidate, name, content)
+        self.git(self.candidate, "add", "--", *inputs)
+        actual_run = self.controller.run
+
+        def run(command, **kwargs):
+            # This fixture has no application generators. Preflight runs the real
+            # trusted verify.py subprocess against its real Git index and history.
+            if kwargs.get("label") == "generated":
+                return 0, self.directory / "unused-generation-log"
+            return actual_run(command, **kwargs)
+
+        return run
+
+    def test_pending_merge_passes_index_gate_but_requires_committed_upstream(self):
+        run = self.prepare_real_preflight_candidate()
+        self.assertEqual(
+            self.git(self.candidate, "rev-parse", "MERGE_HEAD"), self.upstream
+        )
+        with patch.object(self.controller, "run", side_effect=run) as commands:
+            self.assertTrue(
+                self.controller.gate("index"), self.controller.state["feedback"]
+            )
+            index_command = commands.call_args_list[0].args[0]
+            self.assertNotIn("--upstream", index_command)
+            self.assertEqual(
+                index_command[index_command.index("--base") + 1], self.base
+            )
+            self.assertFalse(self.controller.gate("HEAD"))
+            self.assertIn("merge-base", self.controller.state["feedback"])
+            head_command = commands.call_args_list[-1].args[0]
+            self.assertEqual(
+                head_command[head_command.index("--upstream") + 1], self.upstream
+            )
+            self.git(self.candidate, "commit", "-m", "Resolved merge fixture")
+            self.assertTrue(
+                self.controller.gate("HEAD"), self.controller.state["feedback"]
+            )
+        self.assert_stable_unchanged()
+
+    def test_pending_merge_index_gate_still_rejects_private_inputs(self):
+        run = self.prepare_real_preflight_candidate()
+        self.write(self.candidate, ".env", "EXAMPLE_VALUE=synthetic\n")
+        self.git(self.candidate, "add", "--", ".env")
+        with patch.object(self.controller, "run", side_effect=run):
+            self.assertFalse(self.controller.gate("index"))
+        self.assertIn(
+            "tracked private environment input", self.controller.state["feedback"]
+        )
+        self.assert_stable_unchanged()
+
     def exercise_conflict_loop(self, *, fail_first_ci):
         self.prepare_conflicted_candidate()
         publications = []
