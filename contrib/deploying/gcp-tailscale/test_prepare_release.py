@@ -1,8 +1,11 @@
 """Offline preparation tests: no real credentials or cloud mutations."""
+from contextlib import redirect_stdout
 import copy
+import io
 import json
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 import unittest
 from unittest.mock import Mock, patch
@@ -19,7 +22,7 @@ CONFIG = {"SOURCE_REPO_URL": "https://github.com/example/carbon", "PROJECT_ID": 
           "AUTH_ALLOWED_GOOGLE_DOMAIN": "example.com", "GOOGLE_CLIENT_SECRET": "synthetic-private-value"}
 
 
-def materialize(value, repo):
+def materialize(value, repo, previous=None):
     result = copy.deepcopy(value)
     for name, service in result["services"].items():
         for key in release_plan.BUILD_INPUTS:
@@ -34,7 +37,8 @@ def observation():
 
 class PreparationTests(unittest.TestCase):
     def generate(self, config=None, observed=None):
-        with patch.object(release_plan, "materialize_repository_inputs", side_effect=materialize):
+        with patch.object(release_plan, "materialize_repository_inputs", side_effect=materialize), \
+             patch.object(release_plan, "classify_repository_changes", return_value={}):
             return prepare.desired_release(config or CONFIG, REPO, "c" * 40, observed or observation(), BASES)
 
     def test_complete_inventory_private_fingerprints_and_generation(self):
@@ -49,6 +53,8 @@ class PreparationTests(unittest.TestCase):
     def test_unchanged_release_is_noop_after_baseline(self):
         initial = self.generate()
         planned = prepare.plan_release(initial, observation()["manifest"])
+        for service in planned["services"].values():
+            service["image_digest"] = "sha256:" + "a" * 64
         observed = observation()
         observed["manifest"] = {"generation": 4, "services": planned["services"],
                                 "maintenance_fingerprint": initial["maintenance_fingerprint"]}
@@ -59,6 +65,59 @@ class PreparationTests(unittest.TestCase):
         changed = self.generate(config={**CONFIG, "PAYMENT_SYNC_COMPANY_ID": "synthetic-company"}, observed=observed)
         self.assertEqual(set(prepare.plan_release(changed, observed["manifest"])["deploy"]), {"erp"})
         self.assertFalse(changed["maintenance_required"])
+
+    def test_erp_renderer_change_selects_only_erp_without_maintenance(self):
+        initial = self.generate()
+        observed = observation()
+        observed["manifest"] = {"generation": 4, "services": prepare.plan_release(initial, observed["manifest"])["services"],
+                                "maintenance_fingerprint": initial["maintenance_fingerprint"]}
+        for service in observed["manifest"]["services"].values():
+            service["image_digest"] = "sha256:" + "a" * 64
+        import render
+        original = render.invoice_inference.configure
+
+        def changed(config, erp):
+            original(config, erp)
+            erp["environment"]["SYNTHETIC_RENDERER_SETTING"] = "enabled"
+
+        with patch.object(render.invoice_inference, "configure", side_effect=changed):
+            desired = self.generate(observed=observed)
+        result = prepare.plan_release(desired, observed["manifest"])
+        self.assertEqual(set(result["configure"]), {"erp"})
+        self.assertEqual(result["build"], {})
+        self.assertFalse(desired["maintenance_required"])
+
+    def test_maintenance_explains_changed_inputs_without_private_values(self):
+        initial = self.generate()
+        observed = observation()
+        self.assertIn("maintenance_inputs", initial)
+        observed["manifest"].update({key: initial[key] for key in ("maintenance_fingerprint", "maintenance_inputs")})
+        changed = self.generate(config={**CONFIG, "MACHINE_TYPE": "synthetic-private-machine"}, observed=observed)
+        self.assertTrue(changed["maintenance_required"])
+        self.assertTrue(any("MACHINE_TYPE" in reason for reason in changed["maintenance_reasons"]))
+        self.assertNotIn("synthetic-private-machine", json.dumps(changed))
+
+    def test_summary_explains_selected_services_with_bounded_output(self):
+        planned = {"build": {"erp": ["source/apps/erp/file" + str(index) + ".ts changed" for index in range(12)]},
+                   "configure": {"mes": ["runtime configuration/definition changed"]},
+                   "deploy": {"erp": [], "mes": []}, "unchanged": {}, "maintenance_required": False}
+        stream = io.StringIO()
+        with redirect_stdout(stream):
+            prepare.print_summary(planned)
+        output = stream.getvalue()
+        self.assertIn("source/apps/erp/file0.ts changed", output)
+        self.assertIn("runtime configuration/definition changed", output)
+        self.assertIn("4 more", output)
+        self.assertNotIn("source/apps/erp/file11.ts changed", output)
+
+    def test_unproven_bind_mounts_stop_runtime_selection(self):
+        import runtime_inputs
+        for mount in ("./new-runtime:/runtime", {"type": "bind", "source": "relative.conf", "target": "/runtime"},
+                      {"type": "bind", "source": "/unowned/synthetic.conf", "target": "/runtime"}):
+            stack = {"services": {"erp": {"volumes": [mount]}, "mes": {}}, "secrets": {}}
+            with self.subTest(mount=mount), patch.object(runtime_inputs.render, "render", return_value=(stack, {})):
+                with self.assertRaisesRegex(ValueError, "mount.*erp"):
+                    runtime_inputs.materialize(CONFIG, REPO, {})
 
     def test_unknown_existing_service_is_not_removed(self):
         observed = observation()
@@ -112,6 +171,33 @@ class PreparationTests(unittest.TestCase):
         right = self.generate(observed=observed)
         self.assertEqual(left["services"]["erp"]["secret_versions"]["resend_api_key"],
                          right["services"]["erp"]["secret_versions"]["resend_api_key"])
+
+    def test_observer_runs_as_a_standalone_host_program(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "runtime").mkdir()
+            (root / "secrets").mkdir()
+            manifest = {"generation": 4, "services": {}}
+            (root / "runtime/release-manifest.json").write_text(json.dumps(manifest))
+            (root / "runtime/compose.json").write_text("{}")
+            (root / "secrets/session_secret").write_text("synthetic-observed-secret")
+            script = prepare.OBSERVE_SCRIPT.replace("'/var/lib/carbon'", repr(str(root)))
+            result = subprocess.run([sys.executable, "-c", script], capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            observed = json.loads(result.stdout)
+            self.assertEqual(observed["manifest"], manifest)
+            self.assertTrue(observed["runtime_exists"])
+            self.assertEqual(observed["secret_versions"]["session_secret"], prepare.secret_digest("synthetic-observed-secret"))
+            self.assertNotIn("synthetic-observed-secret", result.stdout)
+
+    def test_supplied_secret_rotation_is_stable_after_host_materialization(self):
+        config = {**CONFIG, "GOOGLE_CLIENT_SECRET": "synthetic-replacement"}
+        before = observation()
+        before["secret_versions"]["google_client_secret"] = prepare.secret_digest("synthetic-original")
+        after = copy.deepcopy(before)
+        after["secret_versions"]["google_client_secret"] = prepare.secret_digest("synthetic-replacement")
+        self.assertEqual(self.generate(config=config, observed=before)["maintenance_fingerprint"],
+                         self.generate(config=config, observed=after)["maintenance_fingerprint"])
 
     def test_ssh_failure_is_not_first_install(self):
         cloud = Mock()

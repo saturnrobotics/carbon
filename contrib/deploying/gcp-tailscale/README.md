@@ -181,8 +181,13 @@ manifest-writing or baseline command to run. `make deploy-check` and
 `make deploy-plan` are optional diagnostic commands, not prerequisite steps.
 
 Preparation requires the workspace dependencies (including the repository's
-Turbo binary), Docker Buildx, registry access, and an authenticated `gcloud`
+Turbo binary), Python 3 with venv/pip support, and an authenticated `gcloud`
 session with permission to list the deployment VM and reach it through IAP/SSH.
+The `make deploy*` wrapper reuses Python with the pinned PyYAML version, or
+automatically installs PyYAML 6.0.2 into the ignored `.local/deploy-python/venv`.
+First setup needs package-registry access; later runs reuse that environment.
+Installation logs remain private in `.local/deploy-python/bootstrap.log`, and a
+failed setup stops before deployment. System Python packages are not modified.
 The preview can inspect a work in progress; it is not approval of uncommitted
 source. Apply still requires a clean, reviewed `saturn/main` checkout.
 
@@ -190,8 +195,10 @@ The generated `.local/release-plan.json` contains the complete desired ERP/MES
 inventory; `.local/release-preview.json` contains the comparison with the last
 successful deployment. Both are gitignored, atomically replaced with mode 600,
 and contain content fingerprints rather than credential values. The command
-prints only affected service names and maintenance reasons. It resolves the
-Node base image digests and passes those same pinned references to host builds.
+prints affected service names and the changed input components or paths, without
+printing configuration values or credentials. Node base images are pinned by
+digest in the root Dockerfile; preparation reads those reviewed references without
+consulting mutable registry tags. Actual builds still require registry access.
 Every apply regenerates inputs, so an old preview cannot silently authorize a
 different revision. The explicit `--release-plan PATH` option remains available
 for operators supplying a custom reviewed input.
@@ -209,13 +216,17 @@ compatible, but neither is required for normal use.
 A failed state read stops preparation instead of being treated as a first
 installation. New installations initially mark host-generated secret
 versions as unknown; the next preparation observes their actual hashes and may
-select one additional app reconfiguration. Existing persistent secrets are never
+select additional app reconfiguration or platform maintenance. The planner does
+not treat unobserved secret state as a verified baseline. Existing persistent secrets are never
 generated or rotated by the preview.
 
-Preparation fingerprints shared renderer files conservatively: a change to code
-that can configure infrastructure requires maintenance even if a particular edit
-only affects an app. It does not establish rollback safety for the host's existing
-shared secret-file writes; secret changes still need operational review.
+Preparation compares effective rendered service configuration and mounted input
+contents. An ERP-only renderer change therefore reconfigures ERP without changing
+MES or selecting platform maintenance. Rendering for comparison does not write
+private files or issue certificates. Platform, database and authentication inputs
+retain conservative maintenance checks. This does not establish rollback safety
+for the host's shared secret-file writes; secret changes still need operational
+review.
 
 The private release planner is the authority for a routine application release.
 It fingerprints each service's source closure, workspace dependencies, lockfile
@@ -234,14 +245,58 @@ manual `owned_paths` remain available for non-workspace release units. A release
 invoked through `deploy.py` materializes these inputs from the reviewed checkout
 before comparing the last successful manifest.
 
+The comparison uses the last successful per-service receipts, not `HEAD~1` or the
+latest merge's patch. Upstream changes, conflict resolutions, multiple skipped
+deployments, removed files and changed dependency edges are included. The service's
+source identity changes only when its actual build inputs change. Effective Turbo
+task configuration, installed dependencies, relevant catalog entries, generators,
+patches and assets are build inputs; unrelated root tasks and catalog entries do
+not by themselves select both apps. Unknown changed paths require explicit
+ownership or a reviewed classification as having no runtime effect.
+
+Build input tracking is versioned. An older receipt without detailed input
+evidence requires a conservative refresh; do not fabricate evidence from the
+current checkout to suppress that first build. Subsequent equivalent inputs are
+no-ops. The preview explains the distinction between build, configuration and
+maintenance work.
+
+Base-image security updates are ordinary reviewed source changes. Inspect the
+current multi-platform digests with `docker buildx imagetools inspect node:22`
+and `docker buildx imagetools inspect node:22-slim`, review the upstream image
+changes, then update both Dockerfile defaults as appropriate. Run the image-pin
+regressions and actual builds before merging. Keep these updates in regular
+dependency maintenance; pinned images do not update themselves.
+
+The Docker dependency layer installs the pruned manifests and lockfile before
+application source is copied. A BuildKit package cache retains downloaded packages
+when an installation really changes. CI exercises the actual Dockerfile with
+synthetic workspaces: app source and unrelated-app edits must reuse the dependency
+image; removing a workspace dependency must invalidate it. Run this proof locally
+with `python3 contrib/deploying/gcp-tailscale/verify-build-cache.py`.
+
 Routine releases build, reconfigure, and restart only the selected ERP or MES
 container. PostgreSQL, Redis, Inngest, GoTrue/auth hooks, edge runtime, proxy and
 network services are health-checked as dependencies and are never restarted by a
 routine app release. Before promotion, the controller compares the expected
 manifest generation and active service configuration digest. A stale plan or
-manual configuration drift stops instead of being overwritten. A failed app
+a changed configuration label stops promotion for review. These checks do not
+constitute a full audit of manually modified runtime files. A failed app
 health check restores only that changed app's previously compatible Compose
 definition; it never restores the shared database.
+
+Before rollout, the host inspects actual built/reused images and records their
+Docker image IDs (local configuration digests, not registry manifest digests).
+Prepared Compose refers to those immutable IDs. A missing or changed reused image
+stops before maintenance can interrupt services. Maintenance still prepares its
+migration/seed image, but it builds an application image only when selected by
+the plan. Startup or readiness failure rolls back selected apps and leaves the
+last successful manifest unchanged. The controller publishes the successful receipt
+only after its final cloud and service checks; finalization rechecks the live app
+images, health, configuration labels, and manifest generation. A late verification
+failure preserves the previous receipt, but may leave the candidate running for
+operator recovery; it does not promise to reverse infrastructure changes. Run one
+deployment at a time: the final receipt lock serializes publication, not the whole
+provisioning and rollout process.
 
 Database migrations, auth hooks, private-role isolation, edge runtime, proxy/
 network changes, base infrastructure, and first installation select maintenance

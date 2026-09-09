@@ -104,6 +104,8 @@ jobs:
           python3 .fork/ci.py unittest --directory contrib/deploying/gcp-tailscale
       - name: Prove Docker contexts exclude private artifacts and retain source
         run: python3 contrib/deploying/knowledge/verify-build-context.py
+      - name: Prove app source edits reuse Docker dependency layers
+        run: python3 contrib/deploying/gcp-tailscale/verify-build-cache.py
   schema:
     needs: prepare
     if: needs.prepare.outputs.schema == 'true'

@@ -413,6 +413,15 @@ tracking setup. No hand-written manifest or separate baseline command is needed.
 `make deploy-check` and `make deploy-plan` are optional diagnostics. See
 [the deployment guide](README.md#automatic-release-preparation) for rollout details.
 
+For a slow or unexpectedly broad release, inspect the freshly generated private
+preview and its changed-input explanations. An old preview is not current VM
+evidence. Keep unchanged services at their recorded image/source identity; never
+force a shared revision onto all services or replace the deployed baseline with
+the current checkout to suppress builds. Merged upstream changes are compared
+through their final content and dependency graph. Base-image updates require a
+reviewed Dockerfile digest change. Preserve the conservative maintenance path for
+database/authentication/platform changes whose rolling compatibility is unproven.
+
 The command archives the committed source on your laptop and uploads it to GCP
 for the build and deployment. Private `.local/` configuration is transferred
 separately. Uncommitted files are never included in the source archive. The

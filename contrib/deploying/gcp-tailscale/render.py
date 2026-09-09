@@ -85,9 +85,18 @@ def initialize_secrets(config, directory):
         secret_file(directory, name, config.get(key, ""))
 
 
-def render(config, repo, output, state=Path("/var/lib/carbon")):
+def render(config, repo, output, state=Path("/var/lib/carbon"), *, materialize=True):
     """Write concrete Compose JSON, gateway policy and proxy configuration."""
-    os.umask(0o077)
+    if materialize:
+        os.umask(0o077)
+    files = {}
+
+    def emit(path, content):
+        files[str(path)] = content
+        if materialize:
+            write_private(path, content)
+            path.chmod(0o444)
+
     private_postgres.validate(config)
     payment_sync.validate(config)
     repo, output = repo.resolve(), output.resolve()
@@ -166,9 +175,10 @@ def render(config, repo, output, state=Path("/var/lib/carbon")):
         service.pop("ports", None)
         service["restart"] = "unless-stopped"
         service["logging"] = {"driver": "json-file", "options": {"max-size": "10m", "max-file": "3"}}
-    private_postgres.configure(config, services["postgres"], output, state)
+    private_postgres.configure(config, services["postgres"], output, state, writer=emit, materialize=materialize)
     directory = state / "secrets"
-    initialize_secrets(config, directory)
+    if materialize:
+        initialize_secrets(config, directory)
     for app in ("erp", "mes"):
         env = services[app]["environment"]
         env.update({
@@ -190,7 +200,7 @@ def render(config, repo, output, state=Path("/var/lib/carbon")):
             "com.carbon.release.image-digest": app_releases[app]["image_digest"],
             "com.carbon.release.config-digest": app_releases[app]["config_digest"],
         })
-    payment_sync.configure(config, services["erp"], directory, write_private)
+    payment_sync.configure(config, services["erp"], directory, emit, materialize=materialize)
     invoice_inference.configure(config, services["erp"])
     # A 200 response alone is insufficient: ERP reports dependency failures in JSON.
     services["erp"]["healthcheck"]["test"] = ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/health').then(r=>r.json()).then(b=>process.exit(b.status==='healthy'?0:1)).catch(()=>process.exit(1))"]
@@ -238,8 +248,7 @@ def render(config, repo, output, state=Path("/var/lib/carbon")):
     }
     gateway = yaml.safe_load((repo / "packages/dev/docker/kong.yml").read_text())
     gateway["services"] = [service for service in gateway["services"] if service["name"] not in ("meta", "auth-v1-sso")]
-    write_private(output / "kong.yml", yaml.safe_dump(gateway, sort_keys=False))
-    (output / "kong.yml").chmod(0o444)
+    emit(output / "kong.yml", yaml.safe_dump(gateway, sort_keys=False))
     services["kong"]["volumes"][0]["source"] = str(output / "kong.yml")
     proxy = services["caddy"]
     proxy["ports"] = [{"target": 443, "published": "443", "host_ip": str(ip), "protocol": "tcp"}]
@@ -250,11 +259,12 @@ def render(config, repo, output, state=Path("/var/lib/carbon")):
     blocks = ["{\n  auto_https off\n  servers {\n    protocols h1 h2\n  }\n}\n"]
     for key, upstream in (("ERP_HOST", "erp:3000"), ("MES_HOST", "mes:3000"), ("SUPABASE_HOST", "kong:8000")):
         blocks.append(f"https://{config[key]} {{\n  tls /tls/live/carbon/fullchain.pem /tls/live/carbon/privkey.pem\n  reverse_proxy {upstream}\n}}\n")
-    write_private(output / "Caddyfile", "\n".join(blocks))
-    (output / "Caddyfile").chmod(0o444)
+    emit(output / "Caddyfile", "\n".join(blocks))
     used = {name for service in services.values() for name in service.get("secrets", [])}
     stack["secrets"] = {name: {"file": str(directory / name)} for name in sorted(used)}
-    write_private(output / "compose.json", json.dumps(stack, indent=2) + "\n")
+    if materialize:
+        write_private(output / "compose.json", json.dumps(stack, indent=2) + "\n")
+    return stack, files
 
 
 if __name__ == "__main__":

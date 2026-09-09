@@ -34,6 +34,22 @@ class PrivateStackTests(unittest.TestCase):
         module.render(self.config, REPO, self.output, self.state)
         self.stack = json.loads((self.output / "compose.json").read_text())
 
+    def test_preview_matches_real_render_without_writes_or_secret_generation(self):
+        config = {**self.config, "POSTGRES_PRIVATE_IP": "10.73.0.2", "POSTGRES_CLIENT_CIDRS": ["10.81.0.0/26"],
+                  "PAYMENT_SYNC_COMPANY_ID": "synthetic-company", "MERCURY_API_TOKEN": "synthetic-token"}
+        module.render(config, REPO, self.output, self.state)
+        expected = json.loads((self.output / "compose.json").read_text())
+        before = {str(path.relative_to(self.state)): path.read_bytes()
+                  for path in self.state.rglob("*") if path.is_file()}
+        with patch.object(module, "write_private", side_effect=AssertionError("preview wrote a file")), \
+             patch.object(module, "initialize_secrets", side_effect=AssertionError("preview initialized secrets")), \
+             patch.object(module.private_postgres, "certificates", side_effect=AssertionError("preview issued certificates")):
+            stack, files = module.render(config, REPO, self.output, self.state, materialize=False)
+        self.assertEqual(stack, expected)
+        self.assertEqual(files[str(self.output.resolve() / "Caddyfile")], (self.output / "Caddyfile").read_text())
+        self.assertEqual(before, {str(path.relative_to(self.state)): path.read_bytes()
+                                 for path in self.state.rglob("*") if path.is_file()})
+
     def test_invoice_inference_is_server_only_and_preserves_private_ingress(self):
         config = {**self.config, "PROJECT_ID": "example-project", "INVOICE_INTAKE_ENABLED": "true",
                   "INVOICE_AI_PROJECT": "example-project", "INVOICE_AI_LOCATION": "us",
@@ -43,7 +59,8 @@ class PrivateStackTests(unittest.TestCase):
         stack = json.loads((self.output / "compose.json").read_text())
         self.assertEqual(stack["services"]["erp"]["environment"]["INVOICE_AI_LOCATION"], "us")
         for name, service in stack["services"].items():
-            if name != "erp": self.assertNotIn("INVOICE_AI_PROJECT", service.get("environment", {}))
+            if name != "erp":
+                self.assertNotIn("INVOICE_AI_PROJECT", service.get("environment", {}))
         self.assertEqual([name for name, service in stack["services"].items() if "ports" in service], ["caddy"])
 
     def test_only_tailnet_https_is_published(self):

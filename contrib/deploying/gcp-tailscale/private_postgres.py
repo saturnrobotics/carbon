@@ -103,13 +103,14 @@ def certificates(directory, address):
                 os.replace(work / name, directory / name)
 
 
-def configure(config, postgres, output, state):
+def configure(config, postgres, output, state, *, writer=None, materialize=True):
     settings = validate(config)
     if settings is None:
         return
     address, cidrs = settings
     directory = state / "private-postgres"
-    certificates(directory, address)
+    if materialize:
+        certificates(directory, address)
     runtime = "/run/carbon-private-postgres"
     source = "/run/carbon-private-postgres-source"
     # Run as the image's initial root user, then preserve its normal entrypoint
@@ -133,12 +134,15 @@ chown postgres:postgres /run/carbon-private-postgres/pg_hba.conf
 chmod 600 /run/carbon-private-postgres/pg_hba.conf
 exec "$@"
 """
-    output.mkdir(parents=True, exist_ok=True, mode=0o700)
     wrapper = output / "private-postgres-entrypoint.sh"
-    if wrapper.exists():
-        wrapper.chmod(0o600)
-    wrapper.write_text(script)
-    wrapper.chmod(0o444)
+    if writer is not None:
+        writer(wrapper, script)
+    elif materialize:
+        output.mkdir(parents=True, exist_ok=True, mode=0o700)
+        if wrapper.exists():
+            wrapper.chmod(0o600)
+        wrapper.write_text(script)
+        wrapper.chmod(0o444)
     postgres["ports"] = [{"target": 5432, "published": "5432", "host_ip": address, "protocol": "tcp"}]
     postgres["tmpfs"] = [runtime + ":rw,noexec,nosuid,nodev,size=1m,mode=0700"]
     postgres["volumes"].append({"type": "bind", "source": str(wrapper), "target": source + "/entrypoint.sh", "read_only": True})

@@ -20,27 +20,124 @@ class InvoiceOperatorTest(unittest.TestCase):
         self.directory.mkdir(mode=0o700)
         self.revision = "a" * 40
         (self.runtime / "revision").write_text(self.revision)
-        private_write(self.directory / "operator.json", {"requiredRevision": self.revision})
-        self.stack = {"services": {
-            "erp": {"image": "carbon/erp:" + self.revision, "environment": {"EXAMPLE": "runtime"}, "secrets": ["example"]},
-            "ops": {"image": "carbon/ops:" + self.revision, "environment": {}, "secrets": [], "volumes": []},
-        }}
+        private_write(
+            self.directory / "operator.json", {"requiredRevision": self.revision}
+        )
+        self.stack = {
+            "services": {
+                "erp": {
+                    "image": "carbon/erp:" + self.revision,
+                    "environment": {"EXAMPLE": "runtime"},
+                    "secrets": ["example"],
+                },
+                "ops": {
+                    "image": "carbon/ops:" + self.revision,
+                    "environment": {},
+                    "secrets": [],
+                    "volumes": [],
+                },
+            }
+        }
         (self.runtime / "compose.json").write_text(json.dumps(self.stack))
 
     def prepare(self, mode="check"):
         return prepare(self.directory, mode, self.runtime, self.root)
+
+    def use_release_receipt(self):
+        self.image = "sha256:" + "1" * 64
+        self.config_digest = "sha256:" + "2" * 64
+        self.stack["services"]["erp"].update(
+            {
+                "image": self.image,
+                "labels": {"com.carbon.release.config-digest": self.config_digest},
+            }
+        )
+        (self.runtime / "compose.json").write_text(json.dumps(self.stack))
+        (self.runtime / "release-manifest.json").write_text(
+            json.dumps(
+                {
+                    "generation": 4,
+                    "prepared_source_commit": "b" * 40,
+                    "services": {
+                        "erp": {
+                            "source_commit": self.revision,
+                            "image_digest": self.image,
+                            "config_digest": self.config_digest,
+                        }
+                    },
+                }
+            )
+        )
+
+    def test_verified_per_service_receipt_works_without_legacy_marker(self):
+        self.use_release_receipt()
+        (self.runtime / "revision").unlink()
+        try:
+            stack = self.prepare()
+        except (ValueError, FileNotFoundError) as error:
+            self.fail(f"Verified selective release was rejected: {error}")
+        self.assertEqual(
+            stack["services"]["ops"]["environment"]["INVOICE_OPERATOR_REVISION"],
+            self.revision,
+        )
+        self.assertEqual(stack["services"]["erp"]["image"], self.image)
+
+    def test_receipt_erp_source_overrides_newer_repository_marker(self):
+        self.use_release_receipt()
+        (self.runtime / "revision").write_text("b" * 40)
+        try:
+            self.prepare()
+        except ValueError as error:
+            self.fail(
+                f"Unchanged ERP source was replaced by the repository revision: {error}"
+            )
+
+    def test_receipt_image_and_configuration_must_match_compose(self):
+        for field in ("image", "labels"):
+            with self.subTest(field=field):
+                self.use_release_receipt()
+                self.stack["services"]["erp"][field] = (
+                    "sha256:" + "9" * 64
+                    if field == "image"
+                    else {"com.carbon.release.config-digest": "sha256:" + "9" * 64}
+                )
+                (self.runtime / "compose.json").write_text(json.dumps(self.stack))
+                with self.assertRaisesRegex(ValueError, "receipt"):
+                    self.prepare()
+
+    def test_missing_receipt_fields_never_fall_back_to_legacy_marker(self):
+        self.use_release_receipt()
+        (self.runtime / "release-manifest.json").write_text(
+            '{"generation": 4, "services": {}}'
+        )
+        with self.assertRaisesRegex(ValueError, "receipt"):
+            self.prepare()
+
+    def test_selective_erp_release_requires_matching_ops_source(self):
+        self.use_release_receipt()
+        self.stack["services"]["ops"]["image"] = "carbon/ops:" + "c" * 40
+        (self.runtime / "compose.json").write_text(json.dumps(self.stack))
+        for mode in ("check", "apply", "recover"):
+            with self.subTest(mode=mode), self.assertRaisesRegex(
+                ValueError, "Ops.*ERP.*rebuild"
+            ):
+                self.prepare(mode)
 
     def test_prepare_uses_maintained_source_and_no_private_executable_mount(self):
         ops = self.prepare()["services"]["ops"]
         self.assertEqual(ops["command"], ["node", "--input-type=module", "-e", LOADER])
         self.assertNotIn("vitest", LOADER)
         self.assertIn("invoice-operator.server.ts", LOADER)
-        self.assertEqual(ops["environment"]["INVOICE_OPERATOR_SCHEDULER_PAUSED"], "false")
+        self.assertEqual(
+            ops["environment"]["INVOICE_OPERATOR_SCHEDULER_PAUSED"], "false"
+        )
         self.assertEqual(ops["secrets"], ["example"])
         self.assertEqual(len(ops["volumes"]), 1)
 
     def test_default_does_not_run_docker_or_any_operations(self):
-        with patch("run_invoice_operator.subprocess.run") as launched, patch("run_invoice_operator.captured") as queried:
+        with patch("run_invoice_operator.subprocess.run") as launched, patch(
+            "run_invoice_operator.captured"
+        ) as queried:
             run(self.directory, runtime=self.runtime, private_root=self.root)
         launched.assert_not_called()
         queried.assert_not_called()
@@ -49,7 +146,9 @@ class InvoiceOperatorTest(unittest.TestCase):
         private_write(self.directory / "operator.json", {"requiredRevision": "b" * 40})
         with self.assertRaisesRegex(ValueError, "revision"):
             self.prepare()
-        private_write(self.directory / "operator.json", {"requiredRevision": self.revision})
+        private_write(
+            self.directory / "operator.json", {"requiredRevision": self.revision}
+        )
         (self.directory / "operator.json").chmod(0o644)
         with self.assertRaisesRegex(ValueError, "0600"):
             self.prepare()
@@ -58,57 +157,99 @@ class InvoiceOperatorTest(unittest.TestCase):
         stack = self.prepare()
         image = "sha256:" + "1" * 64
         ops = "sha256:" + "2" * 64
-        with patch("run_invoice_operator.captured", side_effect=["container", image, image, ops]):
+        with patch(
+            "run_invoice_operator.captured",
+            side_effect=["container", image, image, ops],
+        ):
             pin_images(stack, ["docker", "compose"])
         self.assertEqual(stack["services"]["ops"]["image"], ops)
-        with patch("run_invoice_operator.captured", side_effect=["container", image, ops, ops]), self.assertRaises(ValueError):
+        with patch(
+            "run_invoice_operator.captured", side_effect=["container", image, ops, ops]
+        ), self.assertRaises(ValueError):
             pin_images(self.prepare(), ["docker", "compose"])
 
     def test_failed_setting_restore_keeps_scheduler_paused_until_recover(self):
         calls = []
+
         def command(command, **kwargs):
             calls.append(command)
             if "run" in command:
-                private_write(self.directory / "checkpoint.json", {"restoreRequired": True})
+                private_write(
+                    self.directory / "checkpoint.json", {"restoreRequired": True}
+                )
             return SimpleNamespace(returncode=1 if "run" in command else 0)
-        with patch("run_invoice_operator.pin_images"), patch("run_invoice_operator.captured", return_value="inngest"), patch("run_invoice_operator.subprocess.run", side_effect=command):
+
+        with patch("run_invoice_operator.pin_images"), patch(
+            "run_invoice_operator.captured", return_value="inngest"
+        ), patch("run_invoice_operator.subprocess.run", side_effect=command):
             with self.assertRaisesRegex(ValueError, "settings need recovery"):
                 run(self.directory, "apply", True, self.runtime, self.root)
         self.assertFalse(any("start" in call for call in calls))
-        self.assertTrue(json.loads((self.directory / "scheduler.json").read_text())["restoreRequired"])
+        self.assertTrue(
+            json.loads((self.directory / "scheduler.json").read_text())[
+                "restoreRequired"
+            ]
+        )
         calls.clear()
+
         def recovered(command, **kwargs):
             calls.append(command)
             if "run" in command:
-                private_write(self.directory / "checkpoint.json", {"restoreRequired": False})
+                private_write(
+                    self.directory / "checkpoint.json", {"restoreRequired": False}
+                )
             return SimpleNamespace(returncode=0)
-        with patch("run_invoice_operator.pin_images"), patch("run_invoice_operator.subprocess.run", side_effect=recovered):
+
+        with patch("run_invoice_operator.pin_images"), patch(
+            "run_invoice_operator.subprocess.run", side_effect=recovered
+        ):
             run(self.directory, "recover", True, self.runtime, self.root)
         self.assertTrue(any("start" in call for call in calls))
-        self.assertFalse(json.loads((self.directory / "scheduler.json").read_text())["restoreRequired"])
+        self.assertFalse(
+            json.loads((self.directory / "scheduler.json").read_text())[
+                "restoreRequired"
+            ]
+        )
 
     def test_does_not_start_a_previously_paused_scheduler(self):
-        with patch("run_invoice_operator.pin_images"), patch("run_invoice_operator.captured", return_value=""), patch("run_invoice_operator.subprocess.run", return_value=SimpleNamespace(returncode=0)) as launched:
+        with patch("run_invoice_operator.pin_images"), patch(
+            "run_invoice_operator.captured", return_value=""
+        ), patch(
+            "run_invoice_operator.subprocess.run",
+            return_value=SimpleNamespace(returncode=0),
+        ) as launched:
             run(self.directory, "apply", True, self.runtime, self.root)
-        self.assertFalse(any("start" in call.args[0] for call in launched.call_args_list))
+        self.assertFalse(
+            any("start" in call.args[0] for call in launched.call_args_list)
+        )
 
     def test_recover_keeps_original_manifest_after_a_new_deployment(self):
         original = (self.directory / "operator.json").read_bytes()
         revision = "b" * 40
         (self.runtime / "revision").write_text(revision)
         for application in ("erp", "ops"):
-            self.stack["services"][application]["image"] = "carbon/" + application + ":" + revision
+            self.stack["services"][application]["image"] = (
+                "carbon/" + application + ":" + revision
+            )
         (self.runtime / "compose.json").write_text(json.dumps(self.stack))
         with self.assertRaisesRegex(ValueError, "exact deployed revision"):
             self.prepare("apply")
         with self.assertRaisesRegex(ValueError, "exact deployed revision"):
             self.prepare("check")
         recovered = self.prepare("recover")
-        self.assertEqual(recovered["services"]["ops"]["environment"]["INVOICE_OPERATOR_REVISION"], revision)
+        self.assertEqual(
+            recovered["services"]["ops"]["environment"]["INVOICE_OPERATOR_REVISION"],
+            revision,
+        )
         self.assertEqual((self.directory / "operator.json").read_bytes(), original)
 
     def test_failed_stop_records_recovery_before_any_app_operation(self):
-        with patch("run_invoice_operator.pin_images"), patch("run_invoice_operator.captured", return_value="inngest"), patch("run_invoice_operator.subprocess.run", side_effect=subprocess.CalledProcessError(1, ["docker", "compose", "stop"])) as launched:
+        with patch("run_invoice_operator.pin_images"), patch(
+            "run_invoice_operator.captured", return_value="inngest"
+        ), patch(
+            "run_invoice_operator.subprocess.run",
+            side_effect=subprocess.CalledProcessError(1, ["docker", "compose", "stop"]),
+        ) as launched:
             with self.assertRaises(subprocess.CalledProcessError):
                 run(self.directory, "apply", True, self.runtime, self.root)
         self.assertEqual(launched.call_count, 1)
@@ -120,13 +261,26 @@ class InvoiceOperatorTest(unittest.TestCase):
     def test_failed_runner_with_restored_settings_restores_scheduler(self):
         def command(command, **kwargs):
             if "run" in command:
-                private_write(self.directory / "checkpoint.json", {"restoreRequired": False})
+                private_write(
+                    self.directory / "checkpoint.json", {"restoreRequired": False}
+                )
             return SimpleNamespace(returncode=1 if "run" in command else 0)
-        with patch("run_invoice_operator.pin_images"), patch("run_invoice_operator.captured", return_value="inngest"), patch("run_invoice_operator.subprocess.run", side_effect=command) as launched:
+
+        with patch("run_invoice_operator.pin_images"), patch(
+            "run_invoice_operator.captured", return_value="inngest"
+        ), patch(
+            "run_invoice_operator.subprocess.run", side_effect=command
+        ) as launched:
             with self.assertRaisesRegex(ValueError, "operation failed"):
                 run(self.directory, "apply", True, self.runtime, self.root)
-        self.assertTrue(any("start" in call.args[0] for call in launched.call_args_list))
-        self.assertFalse(json.loads((self.directory / "scheduler.json").read_text())["restoreRequired"])
+        self.assertTrue(
+            any("start" in call.args[0] for call in launched.call_args_list)
+        )
+        self.assertFalse(
+            json.loads((self.directory / "scheduler.json").read_text())[
+                "restoreRequired"
+            ]
+        )
 
 
 if __name__ == "__main__":

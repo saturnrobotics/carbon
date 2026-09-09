@@ -74,8 +74,22 @@ Provider/mailbox credentials are cleared for these commands.
 `run_invoice_operator.py` loads the source-controlled ERP
 `invoice-operator.server.ts` from the exact deployed Ops image using its existing
 Vite/Babel/Lingui transforms. It does not copy private TypeScript or invoke Vitest.
-It checks the manifest against `/var/lib/carbon/runtime/revision`, verifies the
-running ERP image, and pins Ops to its immutable image ID with `--pull never`.
+It checks `requiredRevision` against `services.erp.source_commit` in
+`/var/lib/carbon/runtime/release-manifest.json`, checks the active Compose image
+and configuration against that successful receipt, verifies the running ERP image,
+and pins Ops to its immutable image ID with `--pull never`. The repository's most
+recent deployed revision can differ from ERP's unchanged source revision.
+For `DEPLOYED_REVISION` in the helper paths below, use the receipt's
+`prepared_source_commit`; for `requiredRevision`, use `services.erp.source_commit`.
+Legacy deployments without a receipt retain the global revision marker and require
+matching ERP/Ops tags. An incomplete receipt never falls back to that marker.
+
+Ops must also be built from ERP's exact source revision. An ERP-only release can
+leave an older Ops image; the operator then stops before pausing the scheduler or
+running work. Prepare a reviewed Ops-only maintenance rebuild from the recorded
+ERP source and update its runtime reference before retrying. A newer global
+revision or a retagged image is not a substitute, and rebuilding unrelated apps is
+not required.
 
 Create a mode-0700 directory under `/var/lib/carbon/invoice-operations/` containing
 a mode-0600 `operator.json`. Replace this synthetic template with private values:
