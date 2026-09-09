@@ -1,6 +1,7 @@
 """Failure injection for immutable migration and disposable-resource boundaries."""
 
 import importlib.util
+import copy
 import json
 from pathlib import Path
 import subprocess
@@ -9,6 +10,8 @@ import threading
 import unittest
 import urllib.error
 import urllib.request
+from types import SimpleNamespace
+from unittest.mock import Mock, patch
 
 SPEC = importlib.util.spec_from_file_location(
     "fork_schema", Path(__file__).parents[1] / "schema.py"
@@ -16,6 +19,355 @@ SPEC = importlib.util.spec_from_file_location(
 schema = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(schema)
 PREFIX = schema.MIGRATIONS
+COMPOSE = "packages/dev/docker/docker-compose.dev.yml"
+INIT = "packages/dev/docker/init.sql"
+TRANSITION = "disable-supautils-permission-hints"
+
+
+def platform(command=None):
+    return {
+        COMPOSE: {
+            "services": {
+                "postgres": {
+                    "image": "supabase/postgres:15.14.1.112",
+                    "command": command
+                    or ["postgres", "-c", "config_file=/example.conf"],
+                },
+                "other": {
+                    "image": "example/service:1.0",
+                    "environment": {"SAFE": "fixture"},
+                },
+            }
+        },
+        INIT: b"-- immutable bootstrap\n",
+    }
+
+
+class PlatformTransitionTests(unittest.TestCase):
+    def test_equal_resolved_variables_cannot_hide_different_source_inputs(self):
+        with tempfile.TemporaryDirectory() as directory:
+            folder = Path(directory)
+            stack = schema.DisposableStack(folder, folder, folder / "base.yml")
+            classify = getattr(stack, "classify_platform", None)
+            self.assertTrue(
+                callable(classify),
+                "Source interpolation changes must be checked before recognizing a transition",
+            )
+            for hint in (False, True):
+                resolved_base = platform()[COMPOSE]
+                resolved_candidate = copy.deepcopy(resolved_base)
+                template_base = copy.deepcopy(resolved_base)
+                template_base["services"]["other"]["environment"]["SAFE"] = "${ERP_URL}"
+                template_candidate = copy.deepcopy(template_base)
+                template_candidate["services"]["other"]["environment"]["SAFE"] = (
+                    "${MES_URL}"
+                )
+                if hint:
+                    for config in (resolved_candidate, template_candidate):
+                        config["services"]["postgres"]["command"] += [
+                            "-c",
+                            "supautils.hint_roles=",
+                        ]
+                stack.resolved_compose = Mock(
+                    side_effect=[
+                        resolved_base,
+                        resolved_candidate,
+                        template_base,
+                        template_candidate,
+                    ]
+                )
+                with self.subTest(hint=hint), self.assertRaisesRegex(
+                    ValueError, "platform upgrade"
+                ):
+                    classify(
+                        folder / "base.yml", folder / "candidate.yml", b"same", b"same"
+                    )
+
+    def test_exact_additive_hint_argument_requires_a_real_transition(self):
+        base = platform()
+        candidate = copy.deepcopy(base)
+        candidate[COMPOSE]["services"]["postgres"]["command"] += [
+            "-c",
+            "supautils.hint_roles=",
+        ]
+        try:
+            result = schema.check_platform_inputs(base, candidate)
+        except ValueError:
+            result = "rejected"
+        self.assertEqual(result, TRANSITION)
+        self.assertIsNone(schema.check_platform_inputs(candidate, candidate))
+
+    def test_every_other_platform_change_remains_rejected(self):
+        base = platform()
+        candidate = copy.deepcopy(base)
+        candidate[COMPOSE]["services"]["postgres"]["command"] += [
+            "-c",
+            "supautils.hint_roles=",
+        ]
+        variants = []
+        for field, value in (
+            ("image", "supabase/postgres:16.0"),
+            ("entrypoint", ["another"]),
+            ("volumes", ["another:/data"]),
+            ("environment", {"EXTRA": "value"}),
+        ):
+            changed = copy.deepcopy(candidate)
+            changed[COMPOSE]["services"]["postgres"][field] = value
+            variants.append(changed)
+        changed = copy.deepcopy(candidate)
+        changed[COMPOSE]["services"]["other"]["environment"]["SAFE"] = "changed"
+        variants.append(changed)
+        changed = copy.deepcopy(candidate)
+        changed[INIT] = b"-- changed bootstrap\n"
+        variants.append(changed)
+        for suffix in (
+            ["supautils.hint_roles="],
+            ["-c", "supautils.hint_roles=authenticated"],
+            ["-c", "supautils.hint_roles=", "-c", "supautils.hint_roles="],
+            ["-c", "supautils.hint_roles=", "-c", "shared_preload_libraries="],
+        ):
+            changed = copy.deepcopy(base)
+            changed[COMPOSE]["services"]["postgres"]["command"] += suffix
+            variants.append(changed)
+        for changed in variants:
+            with self.subTest(changed=changed), self.assertRaisesRegex(
+                ValueError, "platform upgrade"
+            ):
+                schema.check_platform_inputs(base, changed)
+        with self.assertRaisesRegex(ValueError, "platform upgrade"):
+            schema.check_platform_inputs(candidate, base)
+
+    def test_restart_must_preserve_every_continuity_field(self):
+        check = getattr(schema, "check_transition_continuity", None)
+        self.assertTrue(
+            callable(check), "A same-volume transition must compare persisted state"
+        )
+        before = {
+            "owner": "fixture",
+            "data": "random",
+            "system": "1234",
+            "migrations": ["1"],
+            "schema": "hash",
+            "volumes": {"pgdata": "original"},
+        }
+        check(before, copy.deepcopy(before))
+        for key in before:
+            after = copy.deepcopy(before)
+            after[key] = "changed"
+            with self.subTest(key=key), self.assertRaisesRegex(
+                ValueError, "continuity"
+            ):
+                check(before, after)
+
+    def test_denial_requires_execute_privileges_sqlstate_and_normal_psql_failure(self):
+        check = getattr(schema, "check_denied_execute", None)
+        self.assertTrue(
+            callable(check), "A connection failure must not count as permission denial"
+        )
+        result = SimpleNamespace(
+            returncode=3,
+            stdout='{"usage":true,"execute":false}\n',
+            stderr="ERROR:  42501: permission denied for function fixture\n",
+        )
+        check(result)
+        for override in (
+            {"returncode": 0},
+            {"returncode": 2},
+            {"stderr": "server closed the connection unexpectedly"},
+            {"stderr": "ERROR:  42883: function does not exist"},
+            {"stdout": '{"usage":false,"execute":false}'},
+            {"stdout": '{"usage":true,"execute":true}'},
+            {"stdout": "null"},
+            {"stdout": "[]"},
+            {"stdout": "invalid"},
+        ):
+            with self.subTest(override=override), self.assertRaisesRegex(
+                ValueError, "permission"
+            ):
+                check(SimpleNamespace(**{**vars(result), **override}))
+
+    def test_upgrade_transitions_between_base_and_candidate_migrations(self):
+        execute = getattr(schema, "verify_stack", None)
+        self.assertTrue(
+            callable(execute),
+            "Upgrade must execute the platform transition between migration stages",
+        )
+        events = []
+        stack = Mock()
+        stack.start.side_effect = lambda: events.append("start")
+        stack.apply.side_effect = lambda files, cli: events.append(files)
+        stack.transition_platform.side_effect = lambda kind, source: events.append(
+            "transition"
+        ) or {"kind": kind}
+        stack.verify_permission_errors.side_effect = lambda: events.append(
+            "permissions"
+        )
+        stack.fingerprint.return_value = "schema"
+        stack.artifacts.return_value = {"types": "same"}
+        stack.close.side_effect = lambda: events.append("close")
+        result, evidence = execute(
+            stack,
+            "upgrade",
+            ["base", "candidate"],
+            "cli",
+            TRANSITION,
+            "candidate.yml",
+            True,
+        )
+        self.assertEqual(
+            events, ["start", "base", "transition", "candidate", "permissions", "close"]
+        )
+        self.assertEqual(result, {"schema": "schema", "artifacts": {"types": "same"}})
+        self.assertEqual(evidence, {"kind": TRANSITION})
+
+    def test_failed_transition_never_applies_candidate_or_generates_artifacts(self):
+        execute = getattr(schema, "verify_stack", None)
+        self.assertTrue(callable(execute), "A failed restart must stop the upgrade")
+        stack = Mock()
+        stack.transition_platform.side_effect = ValueError("transition failed")
+        with self.assertRaisesRegex(ValueError, "transition failed"):
+            execute(
+                stack,
+                "upgrade",
+                ["base", "candidate"],
+                "cli",
+                TRANSITION,
+                "candidate.yml",
+                True,
+            )
+        stack.apply.assert_called_once_with("base", "cli")
+        stack.artifacts.assert_not_called()
+        stack.close.assert_called_once_with()
+
+    def test_transition_recreates_only_postgres_and_never_reinserts_data(self):
+        with tempfile.TemporaryDirectory() as directory:
+            folder = Path(directory)
+            (folder / "init.sql").write_bytes(platform()[INIT])
+            stack = schema.DisposableStack(folder, folder, folder / "base.yml")
+            base = platform()[COMPOSE]
+            candidate = copy.deepcopy(base)
+            candidate["services"]["postgres"]["command"] += [
+                "-c",
+                "supautils.hint_roles=",
+            ]
+            stack.resolved_compose = Mock(return_value=candidate)
+            stack.classify_platform = Mock(return_value=TRANSITION)
+            stack.resources = Mock(return_value=[])
+            stack.sql = Mock()
+            snapshot = {
+                "owner": stack.project,
+                "data": "sentinel",
+                "system": "123",
+                "migrations": ["1"],
+                "schema": "hash",
+                "volumes": {"pgdata": "original"},
+            }
+            stack.continuity_snapshot = Mock(
+                side_effect=[snapshot, copy.deepcopy(snapshot)]
+            )
+            events = []
+            for name in (
+                "compose",
+                "wait_sql_ready",
+                "refresh_connection",
+                "verify_permission_errors",
+                "wait_api_ready",
+            ):
+                setattr(
+                    stack,
+                    name,
+                    Mock(
+                        side_effect=lambda *args, name=name, **kwargs: events.append(
+                            name
+                        )
+                    ),
+                )
+            with patch.object(
+                schema.uuid, "uuid4", return_value=SimpleNamespace(hex="sentinel")
+            ), patch.object(schema, "sanitize_compose", return_value={"safe": True}):
+                stack.transition_platform(TRANSITION, folder / "candidate.yml")
+            self.assertEqual(
+                events,
+                [
+                    "compose",
+                    "wait_sql_ready",
+                    "refresh_connection",
+                    "verify_permission_errors",
+                    "wait_api_ready",
+                ],
+            )
+            stack.compose.assert_called_once_with(
+                "up",
+                "-d",
+                "--no-deps",
+                "--force-recreate",
+                "postgres",
+                label="same-volume platform transition",
+            )
+            self.assertEqual(stack.sql.call_count, 1)
+
+    def test_transition_restart_or_data_loss_stops_before_api_and_artifacts(self):
+        for failure in ("restart", "data"):
+            with self.subTest(
+                failure=failure
+            ), tempfile.TemporaryDirectory() as directory:
+                folder = Path(directory)
+                (folder / "init.sql").write_bytes(platform()[INIT])
+                stack = schema.DisposableStack(folder, folder, folder / "base.yml")
+                base = platform()[COMPOSE]
+                candidate = copy.deepcopy(base)
+                candidate["services"]["postgres"]["command"] += [
+                    "-c",
+                    "supautils.hint_roles=",
+                ]
+                stack.resolved_compose = Mock(return_value=candidate)
+                stack.classify_platform = Mock(return_value=TRANSITION)
+                stack.resources = Mock(return_value=[])
+                stack.sql = Mock()
+                before = {
+                    "owner": stack.project,
+                    "data": "sentinel",
+                    "system": "123",
+                    "migrations": ["1"],
+                    "schema": "hash",
+                    "volumes": {"pgdata": "original"},
+                }
+                after = {**before, "data": ""}
+                stack.continuity_snapshot = Mock(side_effect=[before, after])
+                stack.compose = Mock(
+                    side_effect=ValueError("restart failed")
+                    if failure == "restart"
+                    else None
+                )
+                for name in (
+                    "wait_sql_ready",
+                    "refresh_connection",
+                    "verify_permission_errors",
+                    "wait_api_ready",
+                ):
+                    setattr(stack, name, Mock())
+                with patch.object(
+                    schema.uuid, "uuid4", return_value=SimpleNamespace(hex="sentinel")
+                ), patch.object(
+                    schema, "sanitize_compose", return_value={"safe": True}
+                ), self.assertRaisesRegex(ValueError, "restart failed|continuity"):
+                    stack.transition_platform(TRANSITION, folder / "candidate.yml")
+                stack.wait_api_ready.assert_not_called()
+                self.assertEqual(stack.sql.call_count, 1)
+                if failure == "restart":
+                    stack.verify_permission_errors.assert_not_called()
+
+    def test_permission_probe_timeout_has_a_controlled_failure(self):
+        with tempfile.TemporaryDirectory() as directory:
+            folder = Path(directory)
+            stack = schema.DisposableStack(folder, folder, folder / "source.yml")
+            stack.sql = Mock(return_value="")
+            with patch.object(
+                schema.subprocess,
+                "run",
+                side_effect=subprocess.TimeoutExpired("synthetic", 30),
+            ), self.assertRaisesRegex(ValueError, "permission probe.*timed out"):
+                stack.verify_permission_errors()
 
 
 class StudioAdapterTests(unittest.TestCase):

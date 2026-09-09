@@ -27,6 +27,10 @@ import uuid
 
 MIGRATIONS = "packages/database/supabase/migrations/"
 OWNER_LABEL = "carbon.fork.schema-run"
+COMPOSE_INPUT = "packages/dev/docker/docker-compose.dev.yml"
+BOOTSTRAP_INPUT = "packages/dev/docker/init.sql"
+HINT_TRANSITION = "disable-supautils-permission-hints"
+HINT_ARGUMENT = "supautils.hint_roles="
 SERVICES = ("postgres", "gotrue", "storage", "postgrest", "meta")
 ARTIFACTS = {
     "types": "packages/database/src/types.ts",
@@ -76,9 +80,70 @@ def check_artifact_inventory(registry):
 
 
 def check_platform_inputs(base, candidate):
-    if base != candidate:
+    """Compare full resolved Compose definitions and immutable bootstrap bytes."""
+    if base == candidate:
+        return None
+    try:
+        if (
+            set(base) != {COMPOSE_INPUT, BOOTSTRAP_INPUT}
+            or set(candidate) != set(base)
+            or base[BOOTSTRAP_INPUT] != candidate[BOOTSTRAP_INPUT]
+        ):
+            raise ValueError
+        original = base[COMPOSE_INPUT]
+        changed = copy.deepcopy(candidate[COMPOSE_INPUT])
+        old_command = original["services"]["postgres"]["command"]
+        command = changed["services"]["postgres"]["command"]
+        if (
+            not isinstance(old_command, list)
+            or not isinstance(command, list)
+            or any(not isinstance(arg, str) for arg in old_command + command)
+            or any("supautils.hint_roles" in arg for arg in old_command)
+            or sum("supautils.hint_roles" in arg for arg in command) != 1
+            or command.count(HINT_ARGUMENT) != 1
+        ):
+            raise ValueError
+        index = command.index(HINT_ARGUMENT)
+        if index == 0 or command[index - 1] != "-c":
+            raise ValueError
+        del command[index - 1 : index + 1]
+        if changed != original:
+            raise ValueError
+    except (KeyError, TypeError, ValueError):
         raise ValueError(
-            "platform upgrade requires a dedicated transition test; migration-only verification cannot prove it"
+            "platform upgrade requires a dedicated transition test; unsupported platform change"
+        ) from None
+    return HINT_TRANSITION
+
+
+def check_transition_continuity(before, after):
+    required = {"owner", "data", "system", "migrations", "schema", "volumes"}
+    if (
+        set(before) != required
+        or not before["owner"]
+        or not before["data"]
+        or before != after
+    ):
+        raise ValueError(
+            "platform transition continuity failed: persisted state changed"
+        )
+
+
+def check_denied_execute(result):
+    try:
+        privileges = json.loads(result.stdout)
+    except (ValueError, UnicodeError):
+        privileges = {}
+    if (
+        result.returncode != 3
+        or not isinstance(privileges, dict)
+        or set(privileges) != {"usage", "execute"}
+        or privileges.get("usage") is not True
+        or privileges.get("execute") is not False
+        or not re.search(r"^ERROR:\s+42501:", result.stderr, re.MULTILINE)
+    ):
+        raise ValueError(
+            "platform permission probe failed: expected denied EXECUTE with SQLSTATE 42501"
         )
 
 
@@ -442,8 +507,8 @@ class DisposableStack:
     def call(self, *args, **kwargs):
         return run(args, cwd=self.directory, env=self.env, **kwargs)
 
-    def compose(self, *args, **kwargs):
-        return self.call(
+    def compose_command(self, *args):
+        return [
             "docker",
             "compose",
             "--project-directory",
@@ -455,8 +520,10 @@ class DisposableStack:
             "-p",
             self.project,
             *args,
-            **kwargs,
-        )
+        ]
+
+    def compose(self, *args, **kwargs):
+        return self.call(*self.compose_command(*args), **kwargs)
 
     def resources(self):
         result = []
@@ -490,13 +557,7 @@ class DisposableStack:
                 )
         return result
 
-    def start(self):
-        if self.resources():
-            raise ValueError(
-                "disposable project collision; refusing existing resources"
-            )
-        # Resolve the candidate's real pinned definitions with synthetic values,
-        # then select only required services and remove host/shared attachments.
+    def resolved_compose(self, source=None, *, interpolate=True):
         raw = self.call(
             "docker",
             "compose",
@@ -505,16 +566,49 @@ class DisposableStack:
             "--env-file",
             "/dev/null",
             "-f",
-            self.source_compose,
+            source or self.source_compose,
             "--profile",
             "full",
             "config",
+            *([] if interpolate else ["--no-interpolate", "--no-env-resolution"]),
             "--format",
             "json",
             label="resolve pinned service definitions",
         )
+        return json.loads(raw)
+
+    def classify_platform(
+        self, base_source, candidate_source, base_bootstrap, candidate_bootstrap
+    ):
+        transitions = []
+        for interpolate in (True, False):
+            transitions.append(
+                check_platform_inputs(
+                    {
+                        COMPOSE_INPUT: self.resolved_compose(
+                            base_source, interpolate=interpolate
+                        ),
+                        BOOTSTRAP_INPUT: base_bootstrap,
+                    },
+                    {
+                        COMPOSE_INPUT: self.resolved_compose(
+                            candidate_source, interpolate=interpolate
+                        ),
+                        BOOTSTRAP_INPUT: candidate_bootstrap,
+                    },
+                )
+            )
+        if transitions[0] != transitions[1]:
+            raise ValueError("platform upgrade resolved and source transitions differ")
+        return transitions[0]
+
+    def start(self):
+        if self.resources():
+            raise ValueError(
+                "disposable project collision; refusing existing resources"
+            )
         config = sanitize_compose(
-            json.loads(raw), self.project, self.directory / "init.sql"
+            self.resolved_compose(), self.project, self.directory / "init.sql"
         )
         self.compose_file.write_text(json.dumps(config))
         print(
@@ -556,9 +650,182 @@ class DisposableStack:
         self.sql(
             f"CREATE SCHEMA fork_verification; CREATE TABLE fork_verification.owner (id text PRIMARY KEY); INSERT INTO fork_verification.owner VALUES ('{self.project}');"
         )
+        self.refresh_connection()
+
+    def refresh_connection(self):
         self.port = self.published_port("postgres", 5432)
         self.db_url = f"postgresql://supabase_admin:postgres@127.0.0.1:{self.port}/postgres?sslmode=disable"
         self.env["SUPABASE_DB_URL"] = self.db_url
+
+    def continuity_snapshot(self):
+        resources = self.resources()
+        assert_owned(self.project, resources)
+        volumes = {}
+        for resource in resources:
+            name = resource.get("Labels", {}).get("com.docker.compose.volume")
+            if name in {"pgdata", "pgconfig"}:
+                if (
+                    name in volumes
+                    or not resource.get("Name")
+                    or not resource.get("CreatedAt")
+                ):
+                    raise ValueError("platform continuity volume identity is ambiguous")
+                volumes[name] = {key: resource[key] for key in ("Name", "CreatedAt")}
+        if set(volumes) != {"pgdata", "pgconfig"}:
+            raise ValueError("platform continuity volumes missing")
+        owner = self.sql("SELECT id FROM fork_verification.owner ORDER BY id;").strip()
+        if owner != self.project:
+            raise ValueError("platform continuity owner mismatch")
+        return {
+            "owner": owner,
+            "data": self.sql(
+                "SELECT payload FROM fork_verification.transition_probe ORDER BY payload;"
+            ).strip(),
+            "system": self.sql(
+                "SELECT system_identifier FROM pg_control_system();"
+            ).strip(),
+            "migrations": self.sql(
+                "SELECT version FROM supabase_migrations.schema_migrations ORDER BY version;"
+            ).splitlines(),
+            "schema": self.fingerprint(),
+            "volumes": volumes,
+        }
+
+    def wait_sql_ready(self):
+        deadline = time.monotonic() + 120
+        while time.monotonic() < deadline:
+            try:
+                if self.sql("SELECT 1;").strip() == "1":
+                    return
+            except ValueError:
+                pass
+            time.sleep(1)
+        raise ValueError("platform transition database did not become ready")
+
+    def wait_api_ready(self):
+        meta = f"http://127.0.0.1:{self.published_port('meta', 8080)}/query"
+        rest = f"http://127.0.0.1:{self.published_port('postgrest', 3000)}/"
+        deadline = time.monotonic() + 90
+        while time.monotonic() < deadline:
+            try:
+                request = urllib.request.Request(
+                    meta,
+                    data=b'{"query":"SELECT 1 AS ready"}',
+                    headers={"Content-Type": "application/json"},
+                )
+                with urllib.request.urlopen(request, timeout=5) as response:
+                    ready = json.load(response) == [{"ready": 1}]
+                request = urllib.request.Request(
+                    rest, headers={"Authorization": f"Bearer {self.service_key}"}
+                )
+                with urllib.request.urlopen(request, timeout=5) as response:
+                    ready = ready and response.status == 200
+                if ready:
+                    return
+            except (OSError, ValueError):
+                pass
+            time.sleep(1)
+        raise ValueError("platform transition API services did not reconnect")
+
+    def verify_permission_errors(self):
+        if self.sql("SELECT current_setting('supautils.hint_roles');").strip() != "":
+            raise ValueError("platform transition hint setting was not applied")
+        for role in ("anon", "authenticated"):
+            # Closing the failed psql session rolls the complete probe back. A
+            # top-level denied call must reach PostgreSQL's real error-output hook.
+            source = f"""BEGIN;
+CREATE FUNCTION public.fork_verification_denied_probe() RETURNS int LANGUAGE sql AS 'SELECT 1';
+REVOKE ALL ON FUNCTION public.fork_verification_denied_probe() FROM PUBLIC, anon, authenticated;
+SET LOCAL ROLE {role};
+SELECT json_build_object('usage', has_schema_privilege(current_user, 'public', 'USAGE'), 'execute', has_function_privilege(current_user, 'public.fork_verification_denied_probe()', 'EXECUTE'));
+SELECT public.fork_verification_denied_probe();
+"""
+            try:
+                result = subprocess.run(
+                    self.compose_command(
+                        "exec",
+                        "-T",
+                        "postgres",
+                        "psql",
+                        "-X",
+                        "-U",
+                        "supabase_admin",
+                        "-d",
+                        "postgres",
+                        "-qAt",
+                        "-v",
+                        "ON_ERROR_STOP=1",
+                        "-v",
+                        "VERBOSITY=verbose",
+                    ),
+                    cwd=self.directory,
+                    env=self.env,
+                    input=source,
+                    text=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    timeout=30,
+                )
+            except (OSError, subprocess.TimeoutExpired) as error:
+                raise ValueError(
+                    "platform permission probe unavailable or timed out"
+                ) from error
+            check_denied_execute(result)
+            if self.sql("SELECT 1;").strip() != "1":
+                raise ValueError(
+                    "platform permission probe lost the database connection"
+                )
+            if (
+                self.sql(
+                    "SELECT to_regprocedure('public.fork_verification_denied_probe()') IS NULL;"
+                ).strip()
+                != "t"
+            ):
+                raise ValueError("platform permission probe did not roll back")
+
+    def transition_platform(self, transition, candidate_source):
+        if transition != HINT_TRANSITION:
+            raise ValueError("unsupported platform transition")
+        bootstrap = (self.directory / "init.sql").read_bytes()
+        candidate = self.resolved_compose(candidate_source)
+        actual = self.classify_platform(
+            self.source_compose, candidate_source, bootstrap, bootstrap
+        )
+        if actual != transition:
+            raise ValueError("platform transition no longer matches reviewed inputs")
+        assert_owned(self.project, self.resources())
+        sentinel = uuid.uuid4().hex
+        self.sql(
+            f"CREATE TABLE fork_verification.transition_probe (payload text PRIMARY KEY); INSERT INTO fork_verification.transition_probe VALUES ('{sentinel}');"
+        )
+        before = self.continuity_snapshot()
+        if before["data"] != sentinel:
+            raise ValueError("platform transition sentinel was not persisted")
+        self.compose_file.write_text(
+            json.dumps(
+                sanitize_compose(candidate, self.project, self.directory / "init.sql")
+            )
+        )
+        self.compose(
+            "up",
+            "-d",
+            "--no-deps",
+            "--force-recreate",
+            "postgres",
+            label="same-volume platform transition",
+        )
+        self.wait_sql_ready()
+        self.refresh_connection()
+        self.verify_permission_errors()
+        after = self.continuity_snapshot()
+        check_transition_continuity(before, after)
+        self.wait_api_ready()
+        self.source_compose = candidate_source
+        return {
+            "kind": transition,
+            "continuity": before,
+            "permission_sqlstates": ["42501", "42501"],
+        }
 
     def published_port(self, service, target):
         address = (
@@ -752,6 +1019,33 @@ def interrupted(signum, frame):
     raise SystemExit(128 + signum)
 
 
+def verify_stack(
+    stack, name, stages, cli, transition, candidate_source, check_permissions
+):
+    """Run the identical owned-stack path for strict checks and local diagnostics."""
+    evidence = None
+    try:
+        stack.start()
+        for index, files in enumerate(stages):
+            if index == 1 and transition:
+                evidence = stack.transition_platform(transition, candidate_source)
+            print(
+                f"schema verification: {name}, applying {len(files)} immutable migrations",
+                flush=True,
+            )
+            stack.apply(files, cli)
+        if check_permissions:
+            stack.verify_permission_errors()
+        fingerprint = stack.fingerprint()
+        generated = stack.artifacts()
+        repeated = stack.artifacts()
+        if generated != repeated:
+            raise ValueError(f"{name} schema artifacts are not repeatable")
+        return {"schema": fingerprint, "artifacts": generated}, evidence
+    finally:
+        stack.close()
+
+
 def main():
     signal.signal(signal.SIGTERM, interrupted)
     parser = argparse.ArgumentParser(description=__doc__)
@@ -771,10 +1065,6 @@ def main():
     check_artifact_inventory(
         json.loads((root / ".fork/generated-artifacts.json").read_text())
     )
-    platform_paths = (
-        "packages/dev/docker/docker-compose.dev.yml",
-        "packages/dev/docker/init.sql",
-    )
     base_revision = (
         git(root, "rev-parse", "--verify", args.base + "^{commit}").decode().strip()
     )
@@ -782,13 +1072,6 @@ def main():
     current_inputs = generation_inputs(root)
     if not args.regenerate:
         check_revision_inputs(root, revision)
-        check_platform_inputs(
-            {
-                path: git(root, "show", f"{base_revision}:{path}")
-                for path in platform_paths
-            },
-            {path: git(root, "show", f"{revision}:{path}") for path in platform_paths},
-        )
     candidate, base = migrations_at(root, revision), migrations_at(root, base_revision)
     if args.regenerate:
         candidate = {
@@ -838,10 +1121,18 @@ def main():
     location.mkdir(parents=True)
     source_compose = location / "source-compose.yml"
     source_compose.write_bytes(
-        (root / "packages/dev/docker/docker-compose.dev.yml").read_bytes()
+        (root / COMPOSE_INPUT).read_bytes()
         if args.regenerate
-        else git(root, "show", f"{revision}:packages/dev/docker/docker-compose.dev.yml")
+        else git(root, "show", f"{revision}:{COMPOSE_INPUT}")
     )
+    candidate_bootstrap = (
+        (root / BOOTSTRAP_INPUT).read_bytes()
+        if args.regenerate
+        else git(root, "show", f"{revision}:{BOOTSTRAP_INPUT}")
+    )
+    base_compose = location / "base-compose.yml"
+    base_compose.write_bytes(git(root, "show", f"{base_revision}:{COMPOSE_INPUT}"))
+    base_bootstrap = git(root, "show", f"{base_revision}:{BOOTSTRAP_INPUT}")
     report = {
         "candidate": revision,
         "base": base_revision,
@@ -854,6 +1145,19 @@ def main():
     }
     results = {}
     try:
+        # Resolve both definitions in one synthetic environment before stripping
+        # production bindings. Otherwise sanitization could hide platform changes.
+        resolver = DisposableStack(root, location, source_compose)
+        resolved_candidate = resolver.resolved_compose()
+        transition = None
+        if not args.regenerate:
+            transition = resolver.classify_platform(
+                base_compose, source_compose, base_bootstrap, candidate_bootstrap
+            )
+        check_permissions = HINT_ARGUMENT in resolved_candidate["services"][
+            "postgres"
+        ].get("command", [])
+        report["platform_transition"] = transition
         paths = [("fresh", [candidate])]
         if not args.regenerate:
             paths.append(("upgrade", [base, candidate]))
@@ -861,27 +1165,16 @@ def main():
             allocation = location / name
             allocation.mkdir()
             (allocation / "init.sql").write_bytes(
-                (root / "packages/dev/docker/init.sql").read_bytes()
-                if args.regenerate
-                else git(root, "show", f"{revision}:packages/dev/docker/init.sql")
+                base_bootstrap if name == "upgrade" else candidate_bootstrap
             )
-            stack = DisposableStack(root, allocation, source_compose)
-            try:
-                stack.start()
-                for files in stages:
-                    print(
-                        f"schema verification: {name}, applying {len(files)} immutable migrations",
-                        flush=True,
-                    )
-                    stack.apply(files, cli)
-                fingerprint = stack.fingerprint()
-                generated = stack.artifacts()
-                repeated = stack.artifacts()
-                if generated != repeated:
-                    raise ValueError(f"{name} schema artifacts are not repeatable")
-                results[name] = {"schema": fingerprint, "artifacts": generated}
-            finally:
-                stack.close()
+            stack = DisposableStack(
+                root, allocation, base_compose if name == "upgrade" else source_compose
+            )
+            results[name], evidence = verify_stack(
+                stack, name, stages, cli, transition, source_compose, check_permissions
+            )
+            if evidence:
+                report["platform_transition_evidence"] = evidence
         if args.regenerate:
             report["status"] = "generated-unverified"
             print(
