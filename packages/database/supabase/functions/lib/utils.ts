@@ -4,11 +4,12 @@
 import { CalendarDate, getDayOfWeek, now } from "@internationalized/date";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Kysely } from "kysely";
-// Type-only import from postgres/index.ts (not lib/database.ts) keeps the
-// Deno-only driver out of the graph — this file is reached from the node-side
-// @carbon/database build via shared/get-next-sequence.ts.
-import type { KyselyDatabase as DB } from "./postgres/index.ts";
+// Derive the shared shape without importing the runtime-specific pool adapter.
+// Both Node consumers and Deno journal tests type-check this module.
+import type { KyselifyDatabase } from "./postgres/kysely-supabase.types.ts";
 import type { Database } from "./types.ts";
+
+type DB = KyselifyDatabase<Database>;
 
 /**
  * Either data-access handle an edge function might hold: a Supabase client
