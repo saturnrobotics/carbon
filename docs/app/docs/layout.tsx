@@ -124,7 +124,7 @@ const REFERENCE_GROUPS: { label: string; slugs: string[] }[] = [
   },
   {
     label: "Automation & alerts",
-    slugs: ["workflows", "workflow-runs", "approvals", "notifications"]
+    slugs: ["workflows", "approvals", "notifications"]
   },
   {
     label: "Administration",

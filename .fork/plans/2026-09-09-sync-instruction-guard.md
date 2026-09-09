@@ -2,6 +2,8 @@
 
 Reviewed base: `6d5dfb8919b0b1bff6a04f117660812cffa9d306`.
 Paused upstream revision: `78239f8bf8a1f9c83efee1e7ce35cc35c6319009`.
+Reviewed documentation follow-up: `de5d7f203efdede4529368ed544a1fd81b0fa92c`.
+It consolidates workflow history into the workflows page and redirects the old URL.
 
 - [x] Reproduce ordinary upstream documentation being rejected and a renamed
   verification file escaping the guard, using real Git fixtures.

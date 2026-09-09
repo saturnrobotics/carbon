@@ -61,6 +61,12 @@ const config = {
         destination: "/docs/reference/single-sign-on",
         permanent: true
       },
+      // Workflow runs merged into the Workflows page as its "Runs and history" section.
+      {
+        source: "/docs/reference/workflow-runs",
+        destination: "/docs/reference/workflows#runs-and-history",
+        permanent: true
+      },
       // The Data API moved from its own root to a section inside /api, so the whole
       // surface lives under one header entry, one sidebar and one host/API-key
       // configurator. Paths below the root are unchanged, so :path* maps 1:1 —

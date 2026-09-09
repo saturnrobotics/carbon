@@ -1598,23 +1598,9 @@
       ]
     },
     {
-      "slug": "docs/reference/workflow-runs",
-      "title": "Workflow runs",
-      "description": "Every firing of a workflow, recorded step by step: the run list, run detail, statuses, repeating steps, and how long history is kept.",
-      "keywords": ["workflow", "runs", "docs", "reference"],
-      "headings": [
-        "The run list",
-        "Inside a run",
-        "Run statuses",
-        "Steps that repeat",
-        "Chains and loop protection",
-        "How long history is kept"
-      ]
-    },
-    {
       "slug": "docs/reference/workflows",
       "title": "Workflows",
-      "description": "Build an automation on a canvas: one trigger, conditions, and steps that notify people, update records, or call an outside service.",
+      "description": "Build an automation on a canvas: one trigger, conditions, and steps that act, with every firing recorded step by step in run history.",
       "keywords": ["workflows", "docs", "reference"],
       "headings": [
         "What starts a workflow",
@@ -1622,7 +1608,14 @@
         "Filling in a step",
         "Calling an outside URL",
         "Saving, publishing, and versions",
-        "Who can do what"
+        "Who can do what",
+        "Runs and history",
+        "Related",
+        "Internals, exact messages, and troubleshooting",
+        "A run is missing from the Runs page",
+        "Why did my workflow fire twice / react to itself?",
+        "The run shows Succeeded but nothing happened",
+        "Steps are gone from an old run"
       ]
     },
     {
