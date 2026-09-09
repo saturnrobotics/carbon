@@ -14,7 +14,7 @@ const config = {
   // compiles the macro down to plain `{ id, message }` literals so docs reads
   // `.message` directly without pulling the macro runtime.
   experimental: {
-    swcPlugins: [["@lingui/swc-plugin", {}]],
+    swcPlugins: [["@lingui/swc-plugin", {}]]
   },
   // The monorepo pins React 18 (catalog) while this app runs React 19, so two
   // @types/react versions coexist and `next build` trips on the ReactNode /
@@ -26,17 +26,17 @@ const config = {
   // internals (RSC navigation, HMR) unless the tunnel origin is whitelisted,
   // which otherwise breaks client-side navigation while SSR still renders.
   allowedDevOrigins: [
-    'protozoan-user-outline.ngrok-free.dev',
+    "protozoan-user-outline.ngrok-free.dev",
     "*.ngrok-free.app",
     "*.ngrok.app",
-    "*.ngrok.io",
+    "*.ngrok.io"
   ],
-  // Serve the Architecture reference at "/" without changing the URL — a server-side
+  // Serve the docs Overview at "/" without changing the URL — a server-side
   // rewrite, not a client/redirect bounce. `beforeFiles` runs ahead of the app router
   // so it takes precedence (app/page.tsx is removed).
   async rewrites() {
     return {
-      beforeFiles: [{ source: "/", destination: "/docs/platform/architecture" }],
+      beforeFiles: [{ source: "/", destination: "/docs" }]
     };
   },
   // Deployment moved under Self-hosting as the "AWS with SST" recipe; keep the old
@@ -46,7 +46,20 @@ const config = {
       {
         source: "/docs/platform/deployment",
         destination: "/docs/platform/self-hosting",
-        permanent: true,
+        permanent: true
+      },
+      // Architecture is developer content, so it moved under Building on Carbon;
+      // single sign-on is admin content, so it moved into the Product reference
+      // next to two-factor.
+      {
+        source: "/docs/platform/architecture",
+        destination: "/docs/building/architecture",
+        permanent: true
+      },
+      {
+        source: "/docs/platform/single-sign-on",
+        destination: "/docs/reference/single-sign-on",
+        permanent: true
       },
       // The Data API moved from its own root to a section inside /api, so the whole
       // surface lives under one header entry, one sidebar and one host/API-key
@@ -55,7 +68,7 @@ const config = {
       {
         source: "/api-reference/:path*",
         destination: "/api/data/:path*",
-        permanent: true,
+        permanent: true
       },
       { source: "/api-reference", destination: "/api/data", permanent: true },
       // MCP folded into the Carbon API surface: MCP is a transport, not a top-level
@@ -64,23 +77,23 @@ const config = {
       {
         source: "/mcp/tools/:tool",
         destination: "/api/operations/:tool",
-        permanent: true,
+        permanent: true
       },
       { source: "/mcp/tools", destination: "/api", permanent: true },
       {
         source: "/mcp/authentication",
         destination: "/api/authentication",
-        permanent: true,
+        permanent: true
       },
       { source: "/mcp", destination: "/api/mcp", permanent: true },
       // API keys moved from Reference into the Building section.
       {
         source: "/docs/reference/api-keys",
         destination: "/docs/building/api-keys",
-        permanent: true,
-      },
+        permanent: true
+      }
     ];
-  },
+  }
 };
 
 export default withMDX(config);

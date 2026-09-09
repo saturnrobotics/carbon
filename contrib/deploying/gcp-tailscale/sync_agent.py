@@ -13,6 +13,7 @@ import os
 from pathlib import Path, PurePosixPath
 import re
 import signal
+import stat
 import subprocess
 import sys
 import time
@@ -31,6 +32,8 @@ AUTHORITY = (
     ".fork/hooks/",
     "contrib/deploying/",
     "scripts/",
+    "docs/scripts/",
+    "docs/lib/markdown-corpus.ts",
     ".fork/",
     ".fork/tests/",
     ".fork/agent-policy.md",
@@ -335,7 +338,33 @@ class Controller:
 
     def guard_authority(self):
         names = git(
-            self.candidate, "diff", "--name-only", "-z", self.state["base"], "--"
+            self.candidate,
+            "diff",
+            "--no-renames",
+            "--name-only",
+            "-z",
+            self.state["base"],
+            "--",
+        ).split("\0")
+        names += git(
+            self.candidate,
+            "diff",
+            "--cached",
+            "--no-renames",
+            "--name-only",
+            "-z",
+            self.state["base"],
+            "--",
+        ).split("\0")
+        names += git(
+            self.candidate,
+            "diff",
+            "--no-renames",
+            "--name-only",
+            "-z",
+            self.state["base"],
+            "HEAD",
+            "--",
         ).split("\0")
         names += changed_paths(self.candidate)
         records = (
@@ -356,6 +385,7 @@ class Controller:
                     name == prefix or (prefix.endswith("/") and name.startswith(prefix))
                     for prefix in AUTHORITY
                 )
+                and not self.is_pinned_upstream_document(name)
             }
         )
         if protected:
@@ -363,6 +393,71 @@ class Controller:
                 "Verification/control inputs changed; integrate these under separate review: "
                 + ", ".join(protected[:12])
             )
+
+    def is_pinned_upstream_document(self, name):
+        """Accept upstream guidance as data, never a worker-editable control."""
+        if (
+            not name.endswith(".md")
+            or not name.startswith((".claude/rules/", ".claude/skills/"))
+            or name.startswith(".claude/skills/fork-maintenance/")
+        ):
+            return False
+
+        def entry(revision):
+            record = git(
+                self.candidate,
+                "--literal-pathspecs",
+                "ls-tree",
+                "-z",
+                revision,
+                "--",
+                name,
+            )
+            return record.split("\t", 1)[0] if record else None
+
+        ancestors = git(
+            self.candidate,
+            "merge-base",
+            "--all",
+            self.state["base"],
+            self.state["upstream"],
+        ).splitlines()
+        if len(ancestors) != 1:
+            return False
+        base = entry(self.state["base"])
+        upstream = entry(self.state["upstream"])
+        if (
+            base != entry(ancestors[0])
+            or not upstream
+            or not upstream.startswith("100644 blob ")
+            or entry("HEAD") not in (base, upstream)
+        ):
+            return False
+        oid = upstream.split()[2]
+        index = git(
+            self.candidate,
+            "--literal-pathspecs",
+            "ls-files",
+            "--stage",
+            "-z",
+            "--",
+            name,
+        ).split("\0")
+        if len(index) != 2 or index[0].split("\t", 1)[0] != f"100644 {oid} 0":
+            return False
+        path = self.candidate / name
+        try:
+            mode = path.lstat().st_mode
+            if not stat.S_ISREG(mode) or mode & 0o111:
+                return False
+            parent = path.parent
+            while parent != self.candidate:
+                if parent.is_symlink():
+                    return False
+                parent = parent.parent
+            return git(self.candidate, "hash-object", "--no-filters", "--", name) == oid
+        except OSError:
+            return False
 
     def prepare(self, adopt=None):
         if self.state_path.exists():

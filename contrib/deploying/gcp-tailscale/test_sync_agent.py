@@ -259,6 +259,158 @@ class ControllerGitTests(unittest.TestCase):
         self.write(self.candidate, "src/feature.py", "answer = 42\n")
         self.controller.guard_authority()
 
+    def merge_upstream_document(
+        self, name=".claude/rules/example.md", content="Pinned upstream documentation\n"
+    ):
+        self.git(self.root, "switch", "fixture-upstream")
+        self.write(self.root, name, content)
+        self.git(self.root, "add", "--", name)
+        self.git(self.root, "commit", "-m", "Upstream documentation")
+        self.upstream = self.git(self.root, "rev-parse", "HEAD")
+        self.git(self.root, "switch", "saturn/main")
+        self.controller.state["upstream"] = self.upstream
+        result = subprocess.run(
+            [
+                "git",
+                "-C",
+                str(self.candidate),
+                "merge",
+                "--no-ff",
+                "--no-commit",
+                self.upstream,
+            ],
+            capture_output=True,
+            check=False,
+        )
+        self.assertIn(result.returncode, (0, 1), result.stderr)
+        self.assertEqual(
+            self.git(self.candidate, "rev-parse", "MERGE_HEAD"), self.upstream
+        )
+        return name
+
+    def test_authority_guard_accepts_next_update_to_existing_upstream_skill(self):
+        name = self.merge_upstream_document(".claude/skills/example/SKILL.md")
+        self.git(self.candidate, "commit", "-m", "First documentation update")
+        self.git(
+            self.root,
+            "merge",
+            "--ff-only",
+            self.git(self.candidate, "rev-parse", "HEAD"),
+        )
+        self.controller.state["base"] = self.git(self.root, "rev-parse", "HEAD")
+        self.merge_upstream_document(name, "Next upstream revision\n")
+        self.controller.guard_authority()
+
+    def test_authority_guard_rejects_conflict_stages_with_pinned_worktree(self):
+        name = self.merge_upstream_document()
+        oid = self.git(self.candidate, "rev-parse", f"{self.upstream}:{name}")
+        subprocess.run(
+            ["git", "-C", str(self.candidate), "update-index", "--index-info"],
+            input=f"0 {'0' * 40}\t{name}\n100644 {oid} 2\t{name}\n100644 {oid} 3\t{name}\n",
+            text=True,
+            capture_output=True,
+            check=True,
+        )
+        with self.assertRaisesRegex(ValueError, "Verification/control"):
+            self.controller.guard_authority()
+
+    def test_authority_guard_rejects_upstream_script_disguised_as_guidance(self):
+        self.merge_upstream_document(".claude/skills/example/run.py")
+        with self.assertRaisesRegex(ValueError, "Verification/control"):
+            self.controller.guard_authority()
+
+    def test_authority_guard_rejects_symlink_parent_with_pinned_bytes(self):
+        self.merge_upstream_document()
+        directory = self.candidate / ".claude/rules"
+        target = self.candidate / "ordinary-rules"
+        directory.rename(target)
+        directory.symlink_to(target, target_is_directory=True)
+        with self.assertRaisesRegex(ValueError, "Verification/control"):
+            self.controller.guard_authority()
+
+    def test_authority_guard_accepts_exact_upstream_document_before_and_after_commit(
+        self,
+    ):
+        name = self.merge_upstream_document()
+        self.controller.guard_authority()
+        self.git(self.candidate, "commit", "-m", "Merge upstream documentation")
+        self.controller.guard_authority()
+        self.write(self.candidate, name, "Pinned upstream documentation\n\n")
+        with self.assertRaisesRegex(ValueError, "Verification/control"):
+            self.controller.guard_authority()
+
+    def test_authority_guard_rejects_staged_document_hidden_by_upstream_worktree(self):
+        name = self.merge_upstream_document(
+            ".claude/skills/example/references/guide.md"
+        )
+        self.controller.guard_authority()
+        self.write(self.candidate, name, "Worker changes\n")
+        self.git(self.candidate, "add", "--", name)
+        self.write(self.candidate, name, "Pinned upstream documentation\n")
+        with self.assertRaisesRegex(ValueError, "Verification/control"):
+            self.controller.guard_authority()
+
+    def test_authority_guard_rejects_committed_document_hidden_by_upstream_index(self):
+        name = self.merge_upstream_document()
+        self.controller.guard_authority()
+        self.write(self.candidate, name, "Worker changes\n")
+        self.git(self.candidate, "add", "--", name)
+        self.git(self.candidate, "commit", "-m", "Divergent documentation")
+        self.write(self.candidate, name, "Pinned upstream documentation\n")
+        self.git(self.candidate, "add", "--", name)
+        with self.assertRaisesRegex(ValueError, "Verification/control"):
+            self.controller.guard_authority()
+
+    def test_authority_guard_rejects_fork_document_overwritten_with_upstream(self):
+        name = ".claude/rules/example.md"
+        self.write(self.root, name, "Fork-specific guidance\n")
+        self.git(self.root, "add", "--", name)
+        self.git(self.root, "commit", "-m", "Fork documentation")
+        self.controller.state["base"] = self.git(self.root, "rev-parse", "HEAD")
+        self.git(self.candidate, "merge", "--no-edit", self.controller.state["base"])
+        self.merge_upstream_document(name)
+        self.write(self.candidate, name, "Pinned upstream documentation\n")
+        with self.assertRaisesRegex(ValueError, "Verification/control"):
+            self.controller.guard_authority()
+        self.git(self.candidate, "add", "--", name)
+        with self.assertRaisesRegex(ValueError, "Verification/control"):
+            self.controller.guard_authority()
+
+    def test_authority_guard_rejects_document_mode_and_symlink_changes(self):
+        name = self.merge_upstream_document()
+        self.controller.guard_authority()
+        path = self.candidate / name
+        path.chmod(0o755)
+        with self.assertRaisesRegex(ValueError, "Verification/control"):
+            self.controller.guard_authority()
+        path.unlink()
+        target = self.candidate / "ordinary.md"
+        target.write_text("Pinned upstream documentation\n")
+        path.symlink_to(target)
+        with self.assertRaisesRegex(ValueError, "Verification/control"):
+            self.controller.guard_authority()
+
+    def test_authority_guard_keeps_upstream_fork_policy_protected(self):
+        self.merge_upstream_document(".claude/skills/fork-maintenance/SKILL.md")
+        with self.assertRaisesRegex(ValueError, "Verification/control"):
+            self.controller.guard_authority()
+
+    def test_authority_guard_catches_control_renamed_outside_protected_directory(self):
+        self.git(self.candidate, "mv", ".fork/verify.py", "ordinary.py")
+        with self.assertRaisesRegex(ValueError, "Verification/control"):
+            self.controller.guard_authority()
+
+    def test_authority_guard_keeps_relocated_knowledge_generator_protected(self):
+        for name in (
+            "docs/scripts/generate-agent-kb.ts",
+            "docs/lib/markdown-corpus.ts",
+        ):
+            with self.subTest(name=name):
+                self.write(self.candidate, name, "// Synthetic generator change\n")
+                with self.assertRaisesRegex(ValueError, "Verification/control"):
+                    self.controller.guard_authority()
+                (self.candidate / name).unlink()
+
     def test_promotion_uses_exact_attestation_and_preserves_both_parent_histories(self):
         parents = self.git(
             self.candidate, "rev-list", "--parents", "-n", "1", self.head

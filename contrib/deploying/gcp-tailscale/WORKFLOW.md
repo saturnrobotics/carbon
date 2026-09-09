@@ -115,7 +115,13 @@ The agent uses workspace-write sandboxing, a separate shell HOME and a sanitized
 environment. Writable temporary files stay inside the candidate; broad system
 temporary-directory write access is disabled. It requests explicit staging through a structured protocol; the
 controller owns commits, publication and verification. A fresh read-only model
-turn reviews the result before publication. Verification/control files are frozen
+turn reviews the result before publication. Ordinary upstream Markdown under
+`.claude/rules/` and `.claude/skills/` can pass through only when its staged and
+working contents exactly match the pinned upstream revision, with no fork-specific
+changes since the common ancestor. Worker edits, unresolved conflicts, symlinks,
+executable files, and the fork-maintenance skill remain protected. Upstream
+guidance is repository data and cannot override the controller protocol.
+Verification/control files are frozen
 against the reviewed baseline: an upstream change to those files stops automatic
 integration for separate review, rather than allowing the repair loop to weaken
 its own checks. Semantic ambiguity or missing account access may also require a

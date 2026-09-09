@@ -87,7 +87,11 @@
       "id": "agent-kb",
       "kind": "generated-contract",
       "group": "knowledge",
-      "inputs": ["docs/content/**", "scripts/generate-agent-kb.ts"],
+      "inputs": [
+        "docs/content/**",
+        "docs/scripts/generate-agent-kb.ts",
+        "docs/lib/markdown-corpus.ts"
+      ],
       "tracked": [
         "apps/erp/app/modules/agent/kb/**/*.md",
         "apps/erp/app/modules/agent/kb/manifest.json"
