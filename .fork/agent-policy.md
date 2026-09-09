@@ -24,6 +24,30 @@ Continue reading upstream `.ai/lessons.md` and relevant package instructions.
   automatic stash/pop, `git add -A`, or force-add ignored files. Record exact
   revisions and verification results without copying private runtime values.
 
+## Own the integration lifecycle
+
+For an upstream sync request, the agent discovers or resumes the existing candidate,
+records the previous reviewed full SHA, resolves authored intent, bootstraps pinned
+isolated tools, regenerates outputs, verifies, and commits with normal hooks.
+Publication for exact-SHA CI and verified promotion are covered when they are part
+of the user's requested sync; honor any narrower scope without asking for the same
+authorization again. Deployment remains a separate action. This policy grants no
+credentials, destructive-action permission, or protection bypass.
+
+Follow `contrib/deploying/gcp-tailscale/WORKFLOW.md`. Find existing candidates with
+`git worktree list`; preserve their merge state and all unrelated original-checkout
+edits. New sync worktrees use the persistent sibling `<repo-name>-worktrees/`.
+Move a legacy temporary worktree only with Git, to an unused destination, after
+its users and processes are quiescent. One coordinator owns Git mutations.
+
+Resolve locally fixable failures: install missing pinned tools in the candidate,
+start or provision owned disposable infrastructure, and repair integration defects
+with regression evidence. Continue through CI failures to verified promotion within
+the authorized scope. Do not hand the user a checklist at the first missing package
+or stopped service. Ask only for unavailable access or an unresolved decision;
+never take over another task's services, credentials, or database. Preserve the
+candidate and report missing evidence when a real external blocker remains.
+
 ## Own records separately
 
 Use the following mapping whenever an inherited skill requests an artifact. This
@@ -84,7 +108,10 @@ To repair generated database conflicts, use the pinned installed toolchain and a
 local Unix-socket Docker service, then run
 `python3 .fork/schema.py --base <previous-reviewed-full-SHA> --regenerate`.
 This mode reads reconciled worktree migrations and generator inputs, preserves
-historical base migrations, and creates its own disposable project. It writes four
+historical base migrations, and creates its own disposable project. Repair accepts
+the reviewed baseline equal to `HEAD` during an unfinished merge and reads the
+reconciled worktree Supabase catalog pin; strict verification still requires a
+distinct ancestor baseline and committed inputs. It writes four
 proposed outputs below the printed `.fork/local/schema-runs/<nonce>/fresh/`:
 `packages/database/src/types.ts`,
 `packages/database/supabase/functions/lib/types.ts`,
@@ -94,8 +121,13 @@ same relative repository paths, then run applicable formatting/checks and
 explicitly stage the reconciled candidate. `GENERATED/UNVERIFIED` is a repair
 result, not approval. After committing, require
 `python3 .fork/schema.py --base <previous-reviewed-full-SHA>` and full CI for that
-SHA. If the pinned toolchain or owned disposable infrastructure is unavailable,
-keep the candidate unverified; never substitute an existing database.
+SHA. Bootstrap unresolved candidates with
+`corepack pnpm install --frozen-lockfile --ignore-scripts`, then
+`corepack pnpm rebuild supabase` and `corepack pnpm exec supabase --version`;
+require the reconciled catalog version. Resolve missing Python/PyYAML and local
+Unix-socket Docker/Compose prerequisites in the owned environment following
+`WORKFLOW.md`. If access remains unavailable, keep the candidate unverified;
+never substitute an existing database.
 
 ## Verification is a promotion requirement
 

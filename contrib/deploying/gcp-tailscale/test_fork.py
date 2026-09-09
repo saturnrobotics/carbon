@@ -142,6 +142,28 @@ class ForkWorkflowTests(unittest.TestCase):
         self.assertEqual(self.run_git("rev-parse", "saturn/main").stdout.strip(), self.base)
         self.assertIn(candidate, (self.root / "verification-args").read_text())
 
+    def test_sync_uses_a_predictable_sibling_folder_outside_temporary_directory(self):
+        upstream = self.upstream_change()
+        self.env["TMPDIR"] = str(self.root / "unused temporary directory")
+        result = self.helper("sync")
+        self.assert_success(result)
+        expected = self.repo.parent / f"{self.repo.name}-worktrees" / f"upstream-{upstream[:12]}-{self.base[:12]}"
+        self.assertEqual(self.candidate_worktree(), expected)
+        self.assertIn(f"Sync worktree: {expected}", result.stdout)
+        self.assertFalse(Path(self.env["TMPDIR"]).exists())
+
+    def test_sync_preserves_an_existing_destination_without_creating_a_branch(self):
+        upstream = self.upstream_change()
+        destination = self.repo.parent / f"{self.repo.name}-worktrees" / f"upstream-{upstream[:12]}-{self.base[:12]}"
+        destination.mkdir(parents=True)
+        (destination / "keep.txt").write_text("existing work\n")
+        result = self.helper("sync")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("destination already exists", result.stderr)
+        self.assertEqual((destination / "keep.txt").read_text(), "existing work\n")
+        self.assertEqual(self.run_git("branch", "--list", "sync/*").stdout, "")
+        self.assertEqual(self.run_git("status", "--porcelain").stdout, "")
+
     def test_promotion_rejects_a_candidate_missing_new_integration_commits(self):
         self.fake_verification(success=True)
         self.assert_success(self.helper("feature", "feature/outdated"))

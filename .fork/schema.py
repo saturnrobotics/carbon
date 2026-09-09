@@ -179,10 +179,36 @@ def check_revision_inputs(root, revision):
     )
 
 
-def check_upgrade_baseline(root, base, revision):
-    if base == revision:
+def check_upgrade_baseline(root, base, revision, *, regenerate=False):
+    if base == revision and not regenerate:
         raise ValueError("upgrade baseline must precede the candidate")
     git(root, "merge-base", "--is-ancestor", base, revision)
+
+
+def supabase_pin(catalog):
+    """Read the default catalog's exact pin; unsupported/ambiguous forms fail closed."""
+    sections = 0
+    active = False
+    pins = []
+    for line in catalog.splitlines():
+        if line and not line.startswith((b" ", b"\t", b"#")):
+            active = line.rstrip() == b"catalog:"
+            sections += bool(re.match(rb"^(['\"]?)catalog\1[ \t]*:", line))
+        key = re.match(rb"^  (['\"]?)supabase\1[ \t]*:", line)
+        if active and key:
+            pins.append(line[key.end() :].strip())
+    match = (
+        re.fullmatch(
+            rb"(['\"]?)([0-9]+\.[0-9]+\.[0-9]+)\1(?:[ \t]+#[^\r\n]*)?", pins[0]
+        )
+        if sections == 1 and len(pins) == 1
+        else None
+    )
+    if not match:
+        raise ValueError(
+            "Supabase CLI pin must be one exact version in pnpm-workspace.yaml catalog"
+        )
+    return match[2].decode()
 
 
 def studio_schema_adapter(payload, proof_sql, query):
@@ -1068,7 +1094,7 @@ def main():
     base_revision = (
         git(root, "rev-parse", "--verify", args.base + "^{commit}").decode().strip()
     )
-    check_upgrade_baseline(root, base_revision, revision)
+    check_upgrade_baseline(root, base_revision, revision, regenerate=args.regenerate)
     current_inputs = generation_inputs(root)
     if not args.regenerate:
         check_revision_inputs(root, revision)
@@ -1082,6 +1108,11 @@ def main():
     if not candidate:
         raise ValueError("candidate contains no migrations")
     check_history(base, candidate)
+    expected_cli = supabase_pin(
+        (root / "pnpm-workspace.yaml").read_bytes()
+        if args.regenerate
+        else git(root, "show", f"{revision}:pnpm-workspace.yaml")
+    )
     env = clean_environment()
     endpoint = (
         run(
@@ -1103,11 +1134,6 @@ def main():
         raise ValueError(
             "pinned local Supabase CLI is missing; install the frozen toolchain"
         )
-    expected_cli = re.search(
-        rb"^  supabase: ([0-9.]+)$",
-        git(root, "show", f"{revision}:pnpm-workspace.yaml"),
-        re.M,
-    )[1].decode()
     version = (
         run([cli, "--version"], cwd=root, env=env, label="pinned Supabase CLI")
         .decode()

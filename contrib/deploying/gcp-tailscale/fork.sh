@@ -13,7 +13,7 @@ Usage: bash contrib/deploying/gcp-tailscale/fork.sh <command>
   feature <branch>  Create and switch to a feature branch from clean saturn/main.
   finish <branch>   Promote a verified descendant to saturn/main (fast-forward only).
   promote <branch>  Same as finish; require successful fork verification for its SHA.
-  sync              Merge upstream/main in a new sync branch and separate worktree.
+  sync              Merge upstream/main in a new sync branch and sibling worktree.
 
 Sync preserves saturn/main, including when conflicts occur. Review and verify the
 candidate before promotion. Merges run normal Git hooks and stop on conflicts.
@@ -104,9 +104,12 @@ case "$command" in
     git merge-base "$stable" "$upstream" >/dev/null || fail "The branches have no common history; inspect them before merging."
     candidate_branch="sync/upstream-${upstream:0:12}-${stable:0:12}"
     if git show-ref --verify --quiet "refs/heads/$candidate_branch"; then
-      fail "Sync candidate $candidate_branch already exists; inspect its worktree instead of creating another integration."
+      fail "Sync candidate $candidate_branch already exists; use 'git worktree list' to find and resume its worktree."
     fi
-    candidate_worktree="$(mktemp -d "${TMPDIR:-/tmp}/carbon-upstream-sync.XXXXXXXX")"
+    worktree_parent="$(dirname -- "$repo_root")/$(basename -- "$repo_root")-worktrees"
+    candidate_worktree="$worktree_parent/upstream-${upstream:0:12}-${stable:0:12}"
+    [[ ! -e "$candidate_worktree" && ! -L "$candidate_worktree" ]] || fail "Sync destination already exists: $candidate_worktree. Inspect it before continuing."
+    mkdir -p -- "$worktree_parent"
     git worktree add -b "$candidate_branch" "$candidate_worktree" "$stable"
     printf '\nSync candidate: %s\nSync worktree: %s\n' "$candidate_branch" "$candidate_worktree"
     if ! git -C "$candidate_worktree" merge --no-ff --no-edit "$upstream"; then

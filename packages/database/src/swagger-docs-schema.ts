@@ -24817,6 +24817,9 @@ export default {
             $ref: "#/parameters/rowFilter.kanbans.jobId"
           },
           {
+            $ref: "#/parameters/rowFilter.kanbans.fromStorageUnitId"
+          },
+          {
             $ref: "#/parameters/rowFilter.kanbans.name"
           },
           {
@@ -24830,6 +24833,9 @@ export default {
           },
           {
             $ref: "#/parameters/rowFilter.kanbans.storageUnitName"
+          },
+          {
+            $ref: "#/parameters/rowFilter.kanbans.fromStorageUnitName"
           },
           {
             $ref: "#/parameters/rowFilter.kanbans.supplierName"
@@ -91714,6 +91720,9 @@ export default {
             $ref: "#/parameters/rowFilter.kanban.jobId"
           },
           {
+            $ref: "#/parameters/rowFilter.kanban.fromStorageUnitId"
+          },
+          {
             $ref: "#/parameters/select"
           },
           {
@@ -91827,6 +91836,9 @@ export default {
             $ref: "#/parameters/rowFilter.kanban.jobId"
           },
           {
+            $ref: "#/parameters/rowFilter.kanban.fromStorageUnitId"
+          },
+          {
             $ref: "#/parameters/preferReturn"
           }
         ],
@@ -91892,6 +91904,9 @@ export default {
           },
           {
             $ref: "#/parameters/rowFilter.kanban.jobId"
+          },
+          {
+            $ref: "#/parameters/rowFilter.kanban.fromStorageUnitId"
           },
           {
             $ref: "#/parameters/body.kanban"
@@ -115456,8 +115471,8 @@ export default {
           type: "string"
         },
         replenishmentSystem: {
-          enum: ["Buy", "Make", "Buy and Make"],
-          format: 'public."itemReplenishmentSystem"',
+          enum: ["Buy", "Make", "Transfer"],
+          format: 'public."kanbanReplenishmentSystem"',
           type: "string"
         },
         quantity: {
@@ -115532,6 +115547,12 @@ export default {
           format: "text",
           type: "string"
         },
+        fromStorageUnitId: {
+          description:
+            "Note:\nThis is a Foreign Key to `storageUnit.id`.<fk table='storageUnit' column='id'/>",
+          format: "text",
+          type: "string"
+        },
         name: {
           format: "text",
           type: "string"
@@ -115549,6 +115570,10 @@ export default {
           type: "string"
         },
         storageUnitName: {
+          format: "text",
+          type: "string"
+        },
+        fromStorageUnitName: {
           format: "text",
           type: "string"
         },
@@ -147178,8 +147203,8 @@ export default {
         },
         replenishmentSystem: {
           default: "Buy",
-          enum: ["Buy", "Make", "Buy and Make"],
-          format: 'public."itemReplenishmentSystem"',
+          enum: ["Buy", "Make", "Transfer"],
+          format: 'public."kanbanReplenishmentSystem"',
           type: "string"
         },
         quantity: {
@@ -147255,6 +147280,12 @@ export default {
         jobId: {
           description:
             "Note:\nThis is a Foreign Key to `job.id`.<fk table='job' column='id'/>",
+          format: "text",
+          type: "string"
+        },
+        fromStorageUnitId: {
+          description:
+            "Note:\nThis is a Foreign Key to `storageUnit.id`.<fk table='storageUnit' column='id'/>",
           format: "text",
           type: "string"
         }
@@ -160487,6 +160518,12 @@ export default {
       in: "query",
       type: "string"
     },
+    "rowFilter.kanbans.fromStorageUnitId": {
+      name: "fromStorageUnitId",
+      required: false,
+      in: "query",
+      type: "string"
+    },
     "rowFilter.kanbans.name": {
       name: "name",
       required: false,
@@ -160513,6 +160550,12 @@ export default {
     },
     "rowFilter.kanbans.storageUnitName": {
       name: "storageUnitName",
+      required: false,
+      in: "query",
+      type: "string"
+    },
+    "rowFilter.kanbans.fromStorageUnitName": {
+      name: "fromStorageUnitName",
       required: false,
       in: "query",
       type: "string"
@@ -195828,6 +195871,12 @@ export default {
     },
     "rowFilter.kanban.jobId": {
       name: "jobId",
+      required: false,
+      in: "query",
+      type: "string"
+    },
+    "rowFilter.kanban.fromStorageUnitId": {
+      name: "fromStorageUnitId",
       required: false,
       in: "query",
       type: "string"

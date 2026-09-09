@@ -6,8 +6,10 @@ description: Maintains the public fork through verified integration, source-firs
 # fork-maintenance — integrate and verify the public fork
 
 Input: a reviewed fork revision and the upstream or feature revision to integrate.
-Output: an isolated, reviewed candidate with verification evidence. This skill does
-not grant permission to publish or deploy.
+Output: a reviewed candidate with verification evidence and, when covered by the
+user's sync request, publication for exact-SHA CI and verified promotion. The agent
+owns that full lifecycle. Honor narrower requests; deployment remains separate.
+This skill grants no credentials, destructive-action permission, or check bypass.
 
 **Announce at start:** "Using the fork-maintenance skill — verify the fork integration."
 
@@ -44,9 +46,15 @@ substitute an arbitrary ancestor to make migration checks pass.
 
 ## Step 2: Integrate with preserved ancestry
 
-Use `bash contrib/deploying/gcp-tailscale/fork.sh sync` following `WORKFLOW.md`.
-It prepares an isolated upstream integration candidate. Only one coordinator may
-mutate Git state in a worktree. The stable integration branch is `saturn/main`.
+First use `git worktree list` and candidate `git status` to resume any existing
+integration without losing edits. Record its branch and previous reviewed full SHA
+in the plan; keep worktree/original-checkout paths in ignored `.fork/local/`.
+For a new integration, use
+`bash contrib/deploying/gcp-tailscale/fork.sh sync` following `WORKFLOW.md` from a
+clean `saturn/main`. It creates a persistent sibling worktree under
+`<repo-name>-worktrees/`; legacy temporary worktrees remain valid. The agent may
+move a quiescent legacy worktree with Git to an unused persistent destination.
+Only one coordinator may mutate Git state in a worktree. The stable integration branch is `saturn/main`.
 Never rebase that shared branch, squash upstream history, or force-push.
 
 If conflicts occur, inspect `git status --short` and apply this table. Preserve
@@ -70,15 +78,21 @@ After reviewing the reconciled dependency declarations, run
 repair the existing lockfile, inspect the resolved-version changes, then require
 the frozen install below. For generated database conflicts, run
 `python3 .fork/schema.py --base <reviewed-full-SHA> --regenerate` with the pinned
-installed toolchain and local Unix-socket Docker. Follow the four-output review
-and copy procedure in `.fork/agent-policy.md`. This allocates new disposable
+installed toolchain and local Unix-socket Docker. Before repair, bootstrap with
+`corepack pnpm install --frozen-lockfile --ignore-scripts`, run
+`corepack pnpm rebuild supabase`, then `corepack pnpm exec supabase --version`;
+require the reconciled worktree catalog version. Follow `WORKFLOW.md` to install
+missing Python/PyYAML and provision owned Docker/Compose. Repair accepts the
+starting reviewed SHA equal to `HEAD` during a pending merge; strict verification
+after committing still requires a distinct ancestor baseline. Follow the
+four-output review and copy procedure in `.fork/agent-policy.md`. This allocates new disposable
 infrastructure and reports `GENERATED/UNVERIFIED`; it never makes an existing
 database eligible for testing or approves a release. Commit the reviewed candidate
 and run the default strict schema check afterward.
 
 ## Step 3: Prove the candidate before promotion
 
-Before installers overwrite evidence, explicitly stage reviewed resolutions and
+Before normal installation or lifecycle scripts overwrite evidence, explicitly stage reviewed resolutions and
 run `python3 .fork/verify.py preflight --revision index --base <reviewed-full-SHA>`.
 Replace `<reviewed-full-SHA>` with the recorded value; expected exit status is 0.
 Stage every candidate source, manifest, config, and generator change before index
@@ -109,6 +123,13 @@ privacy. Stage explicit paths, keep normal hooks enabled, and recheck the commit
 SHA. Promotion/deployment requires `fork-verified` from
 `.github/workflows/fork-check.yml` for that exact SHA; a missing, pending, skipped,
 failed, or canceled job blocks promotion. Follow `WORKFLOW.md` for that final step.
+The agent publishes the candidate for CI and promotes the verified SHA when
+covered by the user's sync request. Monitor pending CI, diagnose failures, fix
+within scope, and obtain new exact-SHA evidence before retrying promotion. Do not
+stop at locally fixable missing tools or generator failures: repair them in the
+isolated environment, preserving failures as regression evidence. Ask only for
+unavailable access or a decision that cannot safely be inferred. Keep original
+edits intact and report any actual remaining blocker; never turn it into a pass.
 No local test result grants a remote-check bypass.
 The CI source job verifies `source`, `knowledge`, `build`, and `routes` artifact
 groups; the default local generation command checks only `source`. CI selects schema and
@@ -136,7 +157,8 @@ repository. Repair any ambiguity revealed by its answer, then repeat the checks.
 ## Output
 
 Report candidate SHA and base SHA; source/conflict decisions; exact checks and
-results; generated changes; and any failed or unavailable required verification.
+results; generated changes; publication/promotion status; and any failed or
+unavailable required verification with the specific external prerequisite.
 Keep private runtime details out of tracked records and user-visible logs.
 
 ## Done when

@@ -1,7 +1,7 @@
 {
   "kind": "carbon-company-backup",
   "version": 1,
-  "schemaVersion": "20260908014030",
+  "schemaVersion": "20260908143722",
   "sourceCompanyId": "schema-baseline",
   "sourceCompanyGroupId": null,
   "sourceCompanyName": null,
@@ -709,10 +709,10 @@
       "name": "employeeType",
       "rows": 0,
       "columns": [
-        "protected",
         "createdAt",
         "updatedAt",
         "systemType",
+        "protected",
         "id",
         "name",
         "companyId"
@@ -1872,12 +1872,12 @@
       "name": "ability",
       "rows": 0,
       "columns": [
-        "createdAt",
-        "updatedAt",
-        "recertifyEveryDays",
         "curve",
         "shadowWeeks",
         "active",
+        "createdAt",
+        "updatedAt",
+        "recertifyEveryDays",
         "id",
         "name",
         "companyId",
@@ -2291,10 +2291,10 @@
       "name": "supplierType",
       "rows": 0,
       "columns": [
+        "customFields",
         "protected",
         "createdAt",
         "updatedAt",
-        "customFields",
         "id",
         "name",
         "companyId",
@@ -2495,8 +2495,6 @@
       "name": "item",
       "rows": 0,
       "columns": [
-        "active",
-        "createdAt",
         "updatedAt",
         "notes",
         "embedding",
@@ -2506,6 +2504,8 @@
         "replenishmentSystem",
         "defaultMethodType",
         "itemTrackingType",
+        "active",
+        "createdAt",
         "id",
         "readableId",
         "name",
@@ -2606,12 +2606,12 @@
         "sortOrder",
         "createdAt",
         "updatedAt",
+        "id",
+        "stepId",
         "itemId",
         "companyId",
         "createdBy",
-        "updatedBy",
-        "id",
-        "stepId"
+        "updatedBy"
       ]
     },
     {
@@ -2655,15 +2655,15 @@
       "columns": [
         "createdAt",
         "updatedAt",
+        "createdBy",
+        "updatedBy",
+        "sourceGroupId",
         "id",
         "modelUploadId",
         "name",
         "componentNodeIds",
         "itemId",
-        "companyId",
-        "createdBy",
-        "updatedBy",
-        "sourceGroupId"
+        "companyId"
       ]
     },
     {
@@ -3255,11 +3255,11 @@
       "name": "userAttributeCategory",
       "rows": 0,
       "columns": [
-        "updatedAt",
         "public",
         "protected",
         "active",
         "createdAt",
+        "updatedAt",
         "id",
         "name",
         "companyId",
@@ -3272,12 +3272,12 @@
       "name": "userAttribute",
       "rows": 0,
       "columns": [
+        "sortOrder",
         "attributeDataTypeId",
         "canSelfManage",
         "active",
         "createdAt",
         "updatedAt",
-        "sortOrder",
         "id",
         "name",
         "userAttributeCategoryId",
@@ -4160,16 +4160,16 @@
       "name": "salesRfq",
       "rows": 0,
       "columns": [
-        "revisionId",
-        "status",
-        "rfqDate",
-        "expirationDate",
-        "customFields",
         "createdAt",
         "updatedAt",
         "externalNotes",
         "internalNotes",
         "completedDate",
+        "revisionId",
+        "status",
+        "rfqDate",
+        "expirationDate",
+        "customFields",
         "id",
         "rfqId",
         "employeeId",
@@ -4189,11 +4189,7 @@
         "customerEngineeringContactId"
       ]
     },
-    {
-      "name": "salesRfqFavorite",
-      "rows": 0,
-      "columns": ["rfqId", "userId"]
-    },
+    { "name": "salesRfqFavorite", "rows": 0, "columns": ["rfqId", "userId"] },
     {
       "name": "salesRfqLine",
       "rows": 0,
@@ -4371,16 +4367,8 @@
         "updatedBy"
       ]
     },
-    {
-      "name": "jobFavorite",
-      "rows": 0,
-      "columns": ["jobId", "userId"]
-    },
-    {
-      "name": "quoteFavorite",
-      "rows": 0,
-      "columns": ["quoteId", "userId"]
-    },
+    { "name": "jobFavorite", "rows": 0, "columns": ["jobId", "userId"] },
+    { "name": "quoteFavorite", "rows": 0, "columns": ["quoteId", "userId"] },
     {
       "name": "quoteLine",
       "rows": 0,
@@ -5096,7 +5084,8 @@
         "createdBy",
         "updatedBy",
         "completedBarcodeOverride",
-        "jobId"
+        "jobId",
+        "fromStorageUnitId"
       ]
     },
     {
@@ -5117,13 +5106,13 @@
       "name": "knowledgeProcurementSchedule",
       "rows": 0,
       "columns": [
-        "updatedAt",
-        "createdAt",
         "version",
         "payload",
         "executeAt",
         "claimedAt",
         "revocationCheckedAt",
+        "createdAt",
+        "updatedAt",
         "id",
         "companyId",
         "companyGroupId",

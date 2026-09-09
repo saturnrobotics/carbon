@@ -2,6 +2,8 @@
 
 import importlib.util
 import copy
+import contextlib
+import io
 import json
 from pathlib import Path
 import subprocess
@@ -471,6 +473,233 @@ class RevisionInputTests(unittest.TestCase):
         path = "scripts/lib/swagger-partner-alias.sql"
         (self.root / path).write_text("SELECT 1;\n")
         self.assertIn(path, schema.generation_inputs(self.root))
+
+
+class CommandModeTests(unittest.TestCase):
+    """Exercise argument parsing, real Git snapshots and tool pins before fake infrastructure."""
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory(prefix="carbon-schema-command-")
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        repository = Path(__file__).parents[2]
+        for name in ("schema.py", "verify.py", "generated-artifacts.json"):
+            self.write(f".fork/{name}", (repository / ".fork" / name).read_bytes())
+        self.write("pnpm-workspace.yaml", b"catalog:\n  supabase: 2.89.0\n")
+        self.write(COMPOSE, b"services: {}\n")
+        self.write(INIT, b"-- synthetic bootstrap\n")
+        self.old_migration = PREFIX + "20260908010101_original.sql"
+        self.write(self.old_migration, b"SELECT 1;\n")
+        for path in schema.ARTIFACTS.values():
+            self.write(path, b"synthetic committed artifact\n")
+        self.git("init", "-q")
+        self.git("config", "user.name", "Synthetic Test")
+        self.git("config", "user.email", "test@example.com")
+        self.git("add", ".fork", "pnpm-workspace.yaml", "packages")
+        self.git("commit", "-qm", "synthetic baseline")
+        self.base = self.git("rev-parse", "HEAD")
+        self.cli = self.root / "node_modules/.bin/supabase"
+        self.install_cli("2.89.0")
+        self.stacks = []
+        self.output = io.StringIO()
+
+    def write(self, path, content):
+        destination = self.root / path
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes(content)
+
+    def git(self, *args):
+        return subprocess.check_output(
+            ["git", "-C", str(self.root), *args], text=True
+        ).strip()
+
+    def install_cli(self, version):
+        self.write(
+            "node_modules/.bin/supabase",
+            f"#!/bin/sh\nprintf '%s\\n' '{version}'\n".encode(),
+        )
+        self.cli.chmod(0o755)
+
+    def commit_candidate(self):
+        self.write("candidate.txt", b"synthetic candidate\n")
+        self.git("add", "candidate.txt")
+        self.git("commit", "-qm", "synthetic candidate")
+
+    def invoke(self, *, regenerate=False, base=None):
+        real_run = schema.run
+
+        def run(args, **kwargs):
+            if args[0] == "docker":
+                return (
+                    b"unix:///synthetic/docker.sock\n"
+                    if args[1] == "context"
+                    else b"{}"
+                )
+            if "canonical" in args:
+                return b"same\n"
+            return real_run(args, **kwargs)
+
+        def allocate(*args):
+            stack = Mock()
+            stack.resolved_compose.return_value = {
+                "services": {"postgres": {"command": []}}
+            }
+            stack.classify_platform.return_value = None
+            stack.fingerprint.return_value = "same-schema"
+            stack.artifacts.return_value = {kind: "same" for kind in schema.ARTIFACTS}
+            self.stacks.append(stack)
+            return stack
+
+        arguments = ["schema.py", "--base", base or self.base]
+        if regenerate:
+            arguments.append("--regenerate")
+        with patch.object(
+            schema, "__file__", str(self.root / ".fork/schema.py")
+        ), patch.object(schema.sys, "argv", arguments), patch.object(
+            schema, "run", side_effect=run
+        ), patch.object(
+            schema, "DisposableStack", side_effect=allocate
+        ), contextlib.redirect_stdout(self.output):
+            schema.main()
+        reports = list((self.root / ".fork/local/schema-runs").glob("*/report.json"))
+        return json.loads(reports[-1].read_text())
+
+    def test_regenerate_at_reviewed_head_uses_worktree_and_remains_unverified(self):
+        added = PREFIX + "20260908020202_reconciled.sql"
+        self.write(added, b"SELECT 2;\n")
+        report = self.invoke(regenerate=True)
+        self.assertEqual(report["status"], "generated-unverified")
+        self.assertEqual(set(report["results"]), {"fresh"})
+        self.assertIn("GENERATED/UNVERIFIED", self.output.getvalue())
+        self.assertIn(added, self.stacks[-1].apply.call_args.args[0])
+        self.assertEqual(self.git("rev-parse", "HEAD"), self.base)
+
+    def test_strict_command_rejects_equal_base_before_infrastructure(self):
+        with self.assertRaisesRegex(ValueError, "precede"):
+            self.invoke()
+        self.assertEqual(self.stacks, [])
+
+    def test_regenerate_uses_reconciled_catalog_pin(self):
+        self.commit_candidate()
+        self.write("pnpm-workspace.yaml", b"catalog:\n  supabase: 2.90.0\n")
+        self.install_cli("2.90.0")
+        self.assertEqual(self.invoke(regenerate=True)["cli"], "2.90.0")
+
+    def test_regenerate_rejects_installed_head_pin_after_catalog_reconciliation(self):
+        self.commit_candidate()
+        self.write("pnpm-workspace.yaml", b"catalog:\n  supabase: 2.90.0\n")
+        with self.assertRaisesRegex(ValueError, "CLI version differs"):
+            self.invoke(regenerate=True)
+        self.assertEqual(self.stacks, [])
+
+    def test_strict_command_uses_committed_pin_and_both_migration_paths(self):
+        self.commit_candidate()
+        report = self.invoke()
+        self.assertEqual(report["status"], "passed")
+        self.assertEqual(set(report["results"]), {"fresh", "upgrade"})
+        self.assertEqual(report["cli"], "2.89.0")
+        self.assertEqual(self.stacks[-1].apply.call_count, 2)
+
+    def test_strict_command_rejects_uncommitted_catalog_even_with_matching_cli(self):
+        self.commit_candidate()
+        self.write("pnpm-workspace.yaml", b"catalog:\n  supabase: 2.90.0\n")
+        self.install_cli("2.90.0")
+        with self.assertRaisesRegex(ValueError, "uncommitted"):
+            self.invoke()
+        self.assertEqual(self.stacks, [])
+
+    def test_regenerate_rejects_missing_invalid_and_ambiguous_catalog_pins(self):
+        self.commit_candidate()
+        for catalog in (
+            b"catalog: {}\n",
+            b"catalog:\n  supabase: latest\n",
+            b"catalog:\n  supabase: ^2.89.0\n",
+            b"catalog:\n  supabase: 2.89.0\n  supabase: 2.90.0\n",
+            b"catalog:\n  supabase: 2..0\n",
+        ):
+            self.write("pnpm-workspace.yaml", catalog)
+            with self.subTest(catalog=catalog), self.assertRaisesRegex(
+                ValueError, "Supabase.*pin"
+            ):
+                self.invoke(regenerate=True)
+        self.assertEqual(self.stacks, [])
+
+    def test_regenerate_still_rejects_changed_or_deleted_historical_sql(self):
+        self.write(PREFIX + "20260908020202_reconciled.sql", b"SELECT 2;\n")
+        for content in (b"SELECT 9;\n", None):
+            if content is None:
+                (self.root / self.old_migration).unlink()
+            else:
+                self.write(self.old_migration, content)
+            with self.subTest(content=content), self.assertRaisesRegex(
+                ValueError, "historical migration"
+            ):
+                self.invoke(regenerate=True)
+        self.assertEqual(self.stacks, [])
+
+    def test_command_rejects_equivalent_duplicate_catalog_keys(self):
+        self.commit_candidate()
+        for key in (b"supabase ", b"'supabase'", b'"supabase"'):
+            self.write(
+                "pnpm-workspace.yaml",
+                b"catalog:\n  supabase: 2.89.0\n  " + key + b": 2.90.0\n",
+            )
+            with self.subTest(key=key), self.assertRaisesRegex(
+                ValueError, "Supabase.*pin"
+            ):
+                self.invoke(regenerate=True)
+
+    def test_command_rejects_nested_or_scalar_text_as_a_catalog_pin(self):
+        self.commit_candidate()
+        for catalog in (
+            b"catalog:\n  group:\n    supabase: 2.89.0\n",
+            b"catalog:\n  description: |\n    supabase: 2.89.0\n",
+        ):
+            self.write("pnpm-workspace.yaml", catalog)
+            with self.subTest(catalog=catalog), self.assertRaisesRegex(
+                ValueError, "Supabase.*pin"
+            ):
+                self.invoke(regenerate=True)
+        self.assertEqual(self.stacks, [])
+
+    def test_command_rejects_equivalent_duplicate_root_catalog_keys(self):
+        self.commit_candidate()
+        for key in (b"catalog ", b"'catalog'", b'"catalog"'):
+            self.write(
+                "pnpm-workspace.yaml",
+                b"catalog:\n  supabase: 2.89.0\n" + key + b":\n  supabase: 2.90.0\n",
+            )
+            with self.subTest(key=key), self.assertRaisesRegex(
+                ValueError, "Supabase.*pin"
+            ):
+                self.invoke(regenerate=True)
+        self.assertEqual(self.stacks, [])
+
+    def test_strict_command_rejects_invalid_committed_pin(self):
+        self.write("pnpm-workspace.yaml", b"catalog:\n  supabase: latest\n")
+        self.git("add", "pnpm-workspace.yaml")
+        self.git("commit", "-qm", "synthetic invalid catalog")
+        with self.assertRaisesRegex(ValueError, "Supabase.*pin"):
+            self.invoke()
+        self.assertEqual(self.stacks, [])
+
+    def test_command_rejects_missing_installed_cli_in_both_modes(self):
+        self.commit_candidate()
+        self.cli.unlink()
+        for regenerate in (False, True):
+            with self.subTest(regenerate=regenerate), self.assertRaisesRegex(
+                ValueError, "CLI is missing"
+            ):
+                self.invoke(regenerate=regenerate)
+        self.assertEqual(self.stacks, [])
+
+    def test_regenerate_still_rejects_a_nonancestor_base(self):
+        self.commit_candidate()
+        unrelated = self.git("rev-parse", "HEAD")
+        self.git("checkout", "-q", self.base)
+        with self.assertRaisesRegex(ValueError, "Git snapshot failed"):
+            self.invoke(regenerate=True, base=unrelated)
+        self.assertEqual(self.stacks, [])
 
 
 class ProvenanceTests(unittest.TestCase):
