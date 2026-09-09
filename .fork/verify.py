@@ -150,6 +150,15 @@ def artifact_policy(data):
 
     strings(registry.get("forbidden_tracked", []), paths=True)
     strings(registry.get("protected_local", []), paths=True)
+    templates = registry.get("public_environment_templates", [])
+    strings(templates, paths=True)
+    if any(
+        not re.fullmatch(
+            r"\.env(?:rc)?(?:\.[A-Za-z0-9_*-]+)*\.example", Path(pattern).name
+        )
+        for pattern in templates
+    ):
+        raise ValueError("environment exceptions must name example templates")
     seen = set()
     scripts = set()
     for artifact in registry["artifacts"]:
@@ -196,20 +205,47 @@ def artifact_policy(data):
     return registry
 
 
+def contains_private_key(value):
+    """Recognize complete PEM blocks, including JSON and escaped source strings.
+
+    Decode JSON with the existing strict parser; never evaluate source code.
+    Outside JSON, normalize only literal CRLF/LF escapes for the same PEM test.
+    """
+    pending = [value]
+    while pending:
+        current = pending.pop()
+        if isinstance(current, dict):
+            pending.extend(current)
+            pending.extend(current.values())
+        elif isinstance(current, list):
+            pending.extend(current)
+        elif isinstance(current, (bytes, str)):
+            data = (
+                current.encode("utf-8", "surrogatepass")
+                if isinstance(current, str)
+                else current
+            )
+            normalized = data.replace(b"\\r\\n", b"\n").replace(b"\\n", b"\n")
+            if PRIVATE_KEY.search(data) or PRIVATE_KEY.search(normalized):
+                return True
+    return False
+
+
 def inspect(files, base_files=None, upstream_files=None):
     errors = []
     for path, data in files.items():
         if b"\0" not in data and MARKER.search(data):
             errors.append(f"{path}: unresolved conflict marker")
-        if PRIVATE_KEY.search(data):
+        private_key = contains_private_key(data)
+        if path.endswith(".json"):
+            try:
+                private_key = contains_private_key(strict_json(data)) or private_key
+            except (ValueError, UnicodeError):
+                errors.append(f"{path}: invalid JSON (including duplicate keys)")
+        if private_key:
             errors.append(
                 f"{path}: tracked private key; remove from publication and review history"
             )
-        if path.endswith(".json"):
-            try:
-                strict_json(data)
-            except (ValueError, UnicodeError):
-                errors.append(f"{path}: invalid JSON (including duplicate keys)")
     try:
         registry = artifact_policy(files[REGISTRY])
     except (KeyError, TypeError, ValueError):
@@ -223,6 +259,14 @@ def inspect(files, base_files=None, upstream_files=None):
     for path in files:
         if matches(path, forbidden):
             errors.append(f"{path}: forbidden tracked runtime/generated artifact")
+        parts = Path(path).parts
+        if any(part.startswith(".env") for part in parts[:-1]) or (
+            parts[-1].startswith(".env")
+            and not matches(path, registry.get("public_environment_templates", []))
+        ):
+            errors.append(
+                f"{path}: tracked private environment input; publish a reviewed example template instead"
+            )
     if "pnpm-lock.yaml" not in files:
         errors.append("pnpm-lock.yaml: required tracked dependency resolution missing")
     try:

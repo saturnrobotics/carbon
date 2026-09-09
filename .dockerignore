@@ -1,5 +1,5 @@
-# Docker build-context excludes. Docker only reads the root .dockerignore (nested
-# ones are ignored), so everything that should stay out of the image lives here.
+# Excludes for builds whose context is the repository root. Other context roots
+# and Dockerfile-specific overrides carry their own tested private-input rules.
 # Merged + deduplicated from .gitignore plus Docker-specific entries.
 
 # VCS / CI / project meta
@@ -103,3 +103,48 @@ llm
 **/*.secret
 **/.terraform
 **/*.tfstate*
+
+# Final private-input filters must follow every source re-inclusion above.
+# Keep this block in each context root and Dockerfile-specific override: Docker
+# does not combine their rules. Context verification tests the actual builder.
+**/.fork/local
+**/.env*
+**/.local
+**/.secrets
+**/secrets
+**/*.secret
+**/.terraform
+**/*.tfstate
+**/*.tfstate.*
+**/.terraform.tfstate.lock.info
+**/*.tfplan
+**/*.tfplan.*
+**/tfplan
+**/tfplan.*
+**/*.tfvars
+**/*.tfvars.json
+**/.terraformrc
+**/terraform.rc
+**/credentials.tfrc.json
+**/crash.log
+**/crash.*.log
+**/.docker
+**/.buildx
+**/.buildkit
+**/.docker-build
+**/.docker-cache
+**/.docker-images
+**/.docker-data
+**/*.docker.tar
+**/*.docker.tar.gz
+**/*.docker.tar.zst
+**/*.oci.tar
+**/*.oci.tar.gz
+**/*.oci.tar.zst
+**/.cert
+**/__pycache__
+**/*.pyc
+**/test-results
+**/playwright-report
+**/.codex
+**/.mcp.json

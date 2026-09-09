@@ -81,6 +81,7 @@ jobs:
         run: |
           corepack pnpm exec tsx --test scripts/lib/generate-db-types.test.ts
           corepack pnpm exec tsx --test scripts/lib/swagger-schema.test.ts
+          corepack pnpm exec tsx --test scripts/lib/local-script-config.test.ts
           corepack pnpm exec tsx --test .fork/tests/*.test.ts
           corepack pnpm check:manifest
           corepack pnpm check:workflow-catalog
@@ -101,6 +102,8 @@ jobs:
           docker pull "$CARBON_ISOLATION_TEST_IMAGE"
           python3 .fork/ci.py unittest --directory .fork/tests
           python3 .fork/ci.py unittest --directory contrib/deploying/gcp-tailscale
+      - name: Prove Docker contexts exclude private artifacts and retain source
+        run: python3 contrib/deploying/knowledge/verify-build-context.py
   schema:
     needs: prepare
     if: needs.prepare.outputs.schema == 'true'

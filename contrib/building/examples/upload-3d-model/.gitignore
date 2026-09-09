@@ -8,5 +8,5 @@ build
 public/build
 api/index.js*
 api/_assets*
-!.env
+!.env.example
 .env.local

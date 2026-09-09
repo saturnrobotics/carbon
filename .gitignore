@@ -29,32 +29,58 @@ scripts/migrations/data
 scripts/paperless-test.ts
 scripts/test-get-stripe-customer.ts
 
-# local env files
-.env
-.envrc
-.env.local
-.env.dev
-.env.development.local
-.env.test.local
-.env.prod
-.env.production
-.env.production.local
-!packages/apps/**/.env
-packages/database/.env
+# Private environment inputs at every depth. Only reviewed example templates
+# belong in Git; an example suffix does not make real credentials public.
+.env*
+!.env.example
+!.env.*.example
+!.envrc.example
 packages/database/supabase/seed.sql
 
-.env*.local
+# Terraform runtime state, plans, provider downloads and private variable inputs.
+# Keep authored .tf/.tf.json, .terraform.lock.hcl and *.tfvars*.example visible.
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.tfstate.lock.info
+*.tfplan
+*.tfplan.*
+tfplan
+tfplan.*
+*.tfvars
+*.tfvars.json
+.terraformrc
+terraform.rc
+credentials.tfrc.json
+crash.log
+crash.*.log
+
+# Local Docker authentication, build caches, image exports and runtime volumes.
+# Use these directories (or .fork/local/) for arbitrarily named build outputs.
+# Dockerfiles, Compose source, ordinary JSON and authored tar fixtures stay visible.
+.docker/
+.buildx/
+.buildkit/
+.docker-build/
+.docker-cache/
+.docker-images/
+.docker-data/
+*.docker.tar
+*.docker.tar.gz
+*.docker.tar.zst
+*.oci.tar
+*.oci.tar.gz
+*.oci.tar.zst
+.local/
+.secrets/
+secrets/
+*.secret
 
 # Private self-host inputs, rendered configuration, credentials, state, and backups.
 # Tracked deployment templates must contain only generic examples.
 /contrib/deploying/gcp-tailscale/.local/
 /contrib/deploying/gcp-tailscale/**/__pycache__/
 /contrib/deploying/gcp-tailscale/**/*.py[cod]
-/contrib/deploying/gcp-tailscale/.terraform/
-/contrib/deploying/gcp-tailscale/*.tfstate*
-/contrib/deploying/gcp-tailscale/*.tfplan
-/contrib/deploying/gcp-tailscale/*.tfvars
-/contrib/deploying/gcp-tailscale/*.tfvars.json
 
 # Rust
 **/target/
@@ -113,9 +139,10 @@ llm/
 # the published contract is its small companion, tool-manifest.digest.json.
 apps/erp/app/routes/api+/mcp+/lib/tool-metadata.json
 
-apps/knowledge/tests/harness/.cert/
-apps/knowledge/test-results/
-apps/knowledge/playwright-report/
+# Runtime TLS certificates and browser reports can contain private data at any depth.
+.cert/
+test-results/
+playwright-report/
 
 **/__pycache__/
 **/*.pyc

@@ -1,22 +1,10 @@
-# Build context is the repo root (docker build -f apps/assembler/Dockerfile .).
-# The Dockerfile only COPYs Cargo.toml, Cargo.lock, crates/, apps/assembler/.
-# This keeps the context tarball small.
+# OCCT builds use apps/assembler as their context root. The repository root's
+# ignore file and the application Dockerfile override do not apply here.
+# Preserve occt-patches/, C++/Rust source, Dockerfiles and reviewed templates.
 **/target
 **/node_modules
-apps/erp
-apps/mes
-apps/academy
-apps/starter
-apps/docs
-packages
-docs
-services
-contrib
+**/build
 .git
-.github
-.ai
-.agents
-.claude
 
 # Final private-input filters must follow every source re-inclusion above.
 # Keep this block in each context root and Dockerfile-specific override: Docker

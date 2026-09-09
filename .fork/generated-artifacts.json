@@ -9,7 +9,39 @@
     ".fork/local/**",
     ".ai/scratch/**",
     ".ai/state.db",
-    ".codex/**"
+    ".codex/**",
+    "**/.terraform/**",
+    "**/*.tfstate",
+    "**/*.tfstate.*",
+    "**/.terraform.tfstate.lock.info",
+    "**/*.tfplan",
+    "**/*.tfplan.*",
+    "**/tfplan",
+    "**/tfplan.*",
+    "**/*.tfvars",
+    "**/*.tfvars.json",
+    "**/.terraformrc",
+    "**/terraform.rc",
+    "**/credentials.tfrc.json",
+    "**/crash.log",
+    "**/crash.*.log",
+    "**/.docker/**",
+    "**/.buildx/**",
+    "**/.buildkit/**",
+    "**/.docker-build/**",
+    "**/.docker-cache/**",
+    "**/.docker-images/**",
+    "**/.docker-data/**",
+    "**/*.docker.tar",
+    "**/*.docker.tar.gz",
+    "**/*.docker.tar.zst",
+    "**/*.oci.tar",
+    "**/*.oci.tar.gz",
+    "**/*.oci.tar.zst",
+    "**/.local/**",
+    "**/.secrets/**",
+    "**/secrets/**",
+    "**/*.secret"
   ],
   "identical_copies": [
     [
@@ -153,5 +185,10 @@
       "untracked": ["apps/erp/.react-router/**"],
       "command": ["corepack", "pnpm", "--filter", "erp", "typegen"]
     }
+  ],
+  "public_environment_templates": [
+    "**/.env.example",
+    "**/.env.*.example",
+    "**/.envrc.example"
   ]
 }

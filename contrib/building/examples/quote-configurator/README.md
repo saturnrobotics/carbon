@@ -4,10 +4,16 @@ This example demonstrates how to create a quote with a configurator. It requires
 
 ### Setup
 
-First run Carbon locally, and make sure your company ID and API key are set in your `.env` or `.env.local` file.
+First run Carbon locally. In this example directory, copy `.env.example` to
+`.env.local` and fill in your API key, public key, company ID, and local URLs.
+Keep the populated file local; only the empty example belongs in Git.
 
 ```bash
-npm run dev
+cp .env.example .env.local
+```
+
+```bash
+pnpm run dev
 ```
 
 1. Setup configured item with material, height, width, and length params.
@@ -16,7 +22,7 @@ npm run dev
 
 ```bash
 cd examples/quote-configurator
-npm run start
+pnpm run start
 ```
 
 ### Relevant Files

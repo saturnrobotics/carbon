@@ -27,21 +27,25 @@ const payloadSchema = z.object({
   url: z.string(),
 });
 
-// Remote browserless in prod; a local Chromium container (ws://chrome:3000) in
-// dev via BROWSERLESS_WS_URL, so the thumbnail flow is testable end-to-end locally.
-const browserWSEndpoint =
-  Deno.env.get("BROWSERLESS_WS_URL") ??
-  `ws://5.161.255.30?token=59ecf910-aaa8-4c7e-aedb-7c18b34e266e`;
-
 serve(async (req: Request) => {
   const preflight = corsPreflight(req);
   if (preflight) return preflight;
 
-  let browser;
+  const browserWSEndpoint = Deno.env.get("BROWSERLESS_WS_URL")?.trim();
+  if (!browserWSEndpoint) {
+    return errorResponse("BROWSERLESS_WS_URL is not configured", 500);
+  }
+
+  let url: string;
   try {
     const payload = await req.json();
-    const { url } = payloadSchema.parse(payload);
+    ({ url } = payloadSchema.parse(payload));
+  } catch (err) {
+    return errorResponse(err, 400);
+  }
 
+  let browser;
+  try {
     logger.info({ url });
 
     browser = await puppeteer.connect({
@@ -90,12 +94,17 @@ serve(async (req: Request) => {
       headers: { ...corsHeaders, "Content-Type": "image/png" },
       status: 200,
     });
-  } catch (err) {
-    return errorResponse(err, 400);
+  } catch {
+    // Browser transport errors can include credentials from its endpoint.
+    return errorResponse("Failed to generate thumbnail", 400);
   } finally {
     if (browser) {
-      await browser.close();
-      logger.debug("browser closed");
+      try {
+        await browser.close();
+        logger.debug("browser closed");
+      } catch {
+        logger.warn("Failed to close thumbnail browser");
+      }
     }
   }
 });

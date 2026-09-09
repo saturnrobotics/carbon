@@ -261,6 +261,46 @@ class SnapshotTests(unittest.TestCase):
         self.commit()
         self.assertTrue(any("private key" in e for e in verify.preflight(self.root)))
 
+    def test_private_key_escaped_in_json_service_account_is_rejected(self):
+        header = "-----BEGIN " + "PRIVATE KEY-----"
+        footer = "-----END " + "PRIVATE KEY-----"
+        key = header + "\nZmFrZXRlc3RrZXk=\n" + footer + "\n"
+        self.write("fixture.json", json.dumps({"nested": [{"private_key": key}]}))
+        self.commit()
+        errors = verify.preflight(self.root)
+        self.assertTrue(any("private key" in error for error in errors))
+        self.assertNotIn("ZmFrZXRlc3RrZXk", "\n".join(errors))
+
+    def test_private_key_with_json_unicode_newlines_is_rejected(self):
+        header = "-----BEGIN " + "PRIVATE KEY-----"
+        footer = "-----END " + "PRIVATE KEY-----"
+        key = header + "\nZmFrZXRlc3RrZXk=\n" + footer + "\n"
+        self.write(
+            "fixture.json", json.dumps({"private_key": key}).replace("\\n", "\\u000a")
+        )
+        self.commit()
+        self.assertTrue(
+            any("private key" in error for error in verify.preflight(self.root))
+        )
+
+    def test_complete_private_key_in_escaped_source_literal_is_rejected(self):
+        header = "-----BEGIN " + "PRIVATE KEY-----"
+        footer = "-----END " + "PRIVATE KEY-----"
+        key = header + "\r\nZmFrZXRlc3RrZXk=\r\n" + footer + "\r\n"
+        self.write("fixture.ts", "export const key = " + json.dumps(key) + ";\n")
+        self.commit()
+        self.assertTrue(
+            any("private key" in error for error in verify.preflight(self.root))
+        )
+
+    def test_private_key_name_and_incomplete_template_are_allowed(self):
+        self.write(
+            "fixture.json", json.dumps({"private_key": "Set outside tracked files"})
+        )
+        self.write("fixture.ts", 'const header = "-----BEGIN ' + 'PRIVATE KEY-----";\n')
+        self.commit()
+        self.assertEqual(verify.preflight(self.root), [])
+
     def test_fork_lesson_cannot_be_added_to_upstream_namespace(self):
         upstream = self.git("rev-parse", "HEAD")
         self.write(".ai/lessons.md", "Fork-only record")
