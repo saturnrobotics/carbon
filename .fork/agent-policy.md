@@ -163,6 +163,10 @@ Run applicable safe lint autofixes and strict lint, then scoped tests/typecheck 
 required build/runtime checks. Verify generated changes against the captured Git
 snapshot, not a postinstall-modified file. A successful installer, no conflict
 markers, a build, or a mocked test alone does not establish behavioral correctness.
+`.fork/ci.py lint --base <SHA>` checks changes committed at `HEAD`; it does not
+validate an uncommitted merge index. Before committing, pass the actual reviewed
+paths to `.fork/ci.py biome` (and Ruff for Python), then run the committed lint
+command after committing. An empty committed diff is not evidence for staged work.
 Review the actual diff and explicitly stage only intended public paths. After a
 commit or merge changes the SHA, obtain verification for the resulting SHA.
 

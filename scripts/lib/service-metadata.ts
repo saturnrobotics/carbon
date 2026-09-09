@@ -10,26 +10,25 @@
  * long-standing generator logic; the parsing helpers are moved verbatim.
  */
 
-import * as fs from "fs";
-import * as path from "path";
-
 import type {
   AuthField,
   Classification,
   ManifestEntry,
   PermissionAction,
-  ToolPermission,
+  ToolPermission
 } from "@carbon/api";
+import * as fs from "fs";
+import * as path from "path";
 import { MCP_BLOCKED_TOOL_NAMES } from "../../apps/erp/app/routes/api+/mcp+/lib/mcp-blocked-tools";
+import { getDbEnumValues, getDbTableTypeFields } from "./db-types";
 import {
   buildResponseSchemaIndex,
-  type ResponseSchemaIndex,
+  type ResponseSchemaIndex
 } from "./response-schema";
-import { getDbEnumValues, getDbTableTypeFields } from "./db-types";
 import {
   buildValidatorRegistry,
   CONTEXT_PARAMS,
-  type ValidatorRegistry,
+  type ValidatorRegistry
 } from "./validator-registry";
 
 const ROOT = path.resolve(__dirname, "../..");
@@ -51,7 +50,7 @@ export const MODULE_LIST = [
   "sales",
   "settings",
   "shared",
-  "users",
+  "users"
 ];
 
 const DESCRIPTION_OVERRIDES: Record<string, string> = {
@@ -80,7 +79,7 @@ const DESCRIPTION_OVERRIDES: Record<string, string> = {
   inventory_updateStockTransfer: "Update an existing stock transfer",
   inventory_insertWarehouseTransfer:
     "Create a warehouse transfer between locations. Generates sequence ID automatically.",
-  inventory_updateWarehouseTransfer: "Update an existing warehouse transfer",
+  inventory_updateWarehouseTransfer: "Update an existing warehouse transfer"
 };
 
 const CLASSIFICATION_OVERRIDES: Record<string, Classification> = {
@@ -107,7 +106,7 @@ const INJECT_AUTH_OVERRIDES: Record<string, AuthField[]> = {
   knowledge_createProcurementDraft: [],
   inventory_insertManualInventoryAdjustment: ["companyId", "createdBy"],
   accounting_upsertFixedAssetUsageLog: ["companyId", "createdBy"],
-  account_upsertNotificationPreference: ["companyId"],
+  account_upsertNotificationPreference: ["companyId"]
 };
 
 // service-module → permission-module. `items` operations are gated by the `parts`
@@ -116,7 +115,7 @@ const INJECT_AUTH_OVERRIDES: Record<string, AuthField[]> = {
 const PERMISSION_MODULE_MAP: Record<string, string | null> = {
   items: "parts",
   account: null,
-  shared: null,
+  shared: null
 };
 
 // Per-tool permission overrides, for operations whose route gates on a DIFFERENT
@@ -142,7 +141,7 @@ const PERMISSION_OVERRIDES: Record<string, ToolPermission> = {
   // Deriving "settings" would let a settings-scoped key mint new API keys.
   settings_getApiKeys: { module: "users", actions: ["update"] },
   settings_upsertApiKey: { module: "users", actions: ["update"] },
-  settings_deleteApiKey: { module: "users", actions: ["update"] },
+  settings_deleteApiKey: { module: "users", actions: ["update"] }
 };
 
 // ---------------------------------------------------------------------------
@@ -186,7 +185,8 @@ function skipComment(str: string, i: number): number {
 
 function findMatchingBrace(content: string, openPos: number): number {
   const open = content[openPos];
-  const close = open === "(" ? ")" : open === "{" ? "}" : open === "[" ? "]" : ">";
+  const close =
+    open === "(" ? ")" : open === "{" ? "}" : open === "[" ? "]" : ">";
   let depth = 1;
   let i = openPos + 1;
   while (i < content.length && depth > 0) {
@@ -407,10 +407,13 @@ function typeToJsonSchema(
   if (literalParts.length === 1 && literalParts[0] !== t) {
     return typeToJsonSchema(literalParts[0], ctx);
   }
-  if (literalParts.length > 1 && literalParts.every((p) => /^"[^"]*"$/.test(p))) {
+  if (
+    literalParts.length > 1 &&
+    literalParts.every((p) => /^"[^"]*"$/.test(p))
+  ) {
     return {
       type: "string",
-      enum: literalParts.map((p) => p.slice(1, -1)),
+      enum: literalParts.map((p) => p.slice(1, -1))
     };
   }
 
@@ -450,7 +453,8 @@ function typeToJsonSchema(
     const inner = typeToJsonSchema(t.slice(0, -2).trim(), ctx);
     return { type: "array", items: inner };
   }
-  const arrayGeneric = genericInner(t, "Array") ?? genericInner(t, "ReadonlyArray");
+  const arrayGeneric =
+    genericInner(t, "Array") ?? genericInner(t, "ReadonlyArray");
   if (arrayGeneric !== null) {
     return { type: "array", items: typeToJsonSchema(arrayGeneric, ctx) };
   }
@@ -602,8 +606,8 @@ function typeToJsonSchema(
       type: "object",
       properties: {
         limit: { type: "integer", default: 100 },
-        offset: { type: "integer", default: 0 },
-      },
+        offset: { type: "integer", default: 0 }
+      }
     };
     const intersectMatch = t.match(/&\s*(\{.+\})\s*$/s);
     if (intersectMatch) {
@@ -611,7 +615,7 @@ function typeToJsonSchema(
       if (extra.properties) {
         base.properties = {
           ...(base.properties as Record<string, unknown>),
-          ...(extra.properties as Record<string, unknown>),
+          ...(extra.properties as Record<string, unknown>)
         };
       }
     }
@@ -715,14 +719,18 @@ function resolveInferExpression(
 
   // PickPartial<z.infer<typeof V>, "a" | "b"> — the listed keys turn optional.
   // Omit<z.infer<typeof V>, "a" | "b"> — the listed keys are removed.
-  m = t.match(/^(PickPartial|Omit)<\s*z\.infer<typeof\s+(\w+)>\s*,\s*([\s\S]+)>$/);
+  m = t.match(
+    /^(PickPartial|Omit)<\s*z\.infer<typeof\s+(\w+)>\s*,\s*([\s\S]+)>$/
+  );
   if (m) {
     const schema = lookupValidatorSchema(m[2], ctx);
     if (!schema) return null;
     const keys = [...m[3].matchAll(/"(\w+)"/g)].map((k) => k[1]);
     if (m[1] === "Omit") {
       for (const key of keys) {
-        delete (schema.properties as Record<string, unknown> | undefined)?.[key];
+        delete (schema.properties as Record<string, unknown> | undefined)?.[
+          key
+        ];
       }
     }
     if (Array.isArray(schema.required)) {
@@ -809,11 +817,7 @@ function parseInlineObjectType(
     const optional = head[2] === "?";
     if (CONTEXT_PARAMS.has(fieldName)) continue;
 
-    const fieldType = f
-      .slice(head[0].length)
-      .trim()
-      .replace(/;$/, "")
-      .trim();
+    const fieldType = f.slice(head[0].length).trim().replace(/;$/, "").trim();
 
     const fieldSchema = typeToJsonSchema(fieldType, ctx);
     properties[fieldName] = description
@@ -938,15 +942,18 @@ function resolveTypeAlias(
           break;
         }
       }
-      const resolved = typeToJsonSchema(source.slice(start, end).trim(), nested);
+      const resolved = typeToJsonSchema(
+        source.slice(start, end).trim(),
+        nested
+      );
       return Object.keys(resolved).length > 0 ? resolved : null;
     }
 
     // A non-extending interface is an inline object by another name. One that
     // extends is skipped — its own block alone would misdocument the type.
-    const ifaceMatch = new RegExp(`(?:export\\s+)?interface\\s+${name}\\s*\\{`).exec(
-      source
-    );
+    const ifaceMatch = new RegExp(
+      `(?:export\\s+)?interface\\s+${name}\\s*\\{`
+    ).exec(source);
     if (ifaceMatch) {
       const braceStart = source.indexOf("{", ifaceMatch.index);
       const braceEnd = findMatchingBrace(source, braceStart);
@@ -1078,15 +1085,16 @@ function zodExprToJsonSchema(expr: string): Record<string, unknown> {
 // Classification, auth & permission
 // ---------------------------------------------------------------------------
 
-function classifyFunction(
-  name: string,
-  content?: string
-): Classification {
+function classifyFunction(name: string, content?: string): Classification {
   if (/^delete/.test(name)) return "DESTRUCTIVE";
   // Require a camelCase boundary after the read prefix so a mutating name that merely starts with
   // those letters is not misread as a reader — e.g. `issueMaterial` ("is"+lowercase) is a WRITE,
   // while `isBlocked`/`getJob` ("is"/"get"+uppercase) stay READ.
-  if (/^(get|list|fetch|search|find|count|check|is|has|compute)(?![a-z])/.test(name))
+  if (
+    /^(get|list|fetch|search|find|count|check|is|has|compute)(?![a-z])/.test(
+      name
+    )
+  )
     return "READ";
   // Destructive-by-omission: a write whose body deletes rows (e.g. the
   // delete-then-reinsert `upsert*Prices` rewrite) can silently drop data the
@@ -1136,9 +1144,7 @@ function computeInjectAuth(
   if (classification === "READ") {
     return ["companyId"];
   }
-  if (
-    /^(upsert|create|insert|add|new|copy|duplicate|generate)/.test(lower)
-  ) {
+  if (/^(upsert|create|insert|add|new|copy|duplicate|generate)/.test(lower)) {
     return ["companyId", "createdBy", "updatedBy"];
   }
   if (
@@ -1166,7 +1172,10 @@ function derivePermission(
   const permModule =
     mod in PERMISSION_MODULE_MAP ? PERMISSION_MODULE_MAP[mod] : mod;
 
-  return { module: permModule, actions: permissionActionsFor(funcName, classification) };
+  return {
+    module: permModule,
+    actions: permissionActionsFor(funcName, classification)
+  };
 }
 
 function permissionActionsFor(
@@ -1216,7 +1225,7 @@ function addOperationArg(schema: Record<string, unknown>): void {
     type: "string",
     enum: ["create", "update"],
     description:
-      "Required. 'create' inserts a new record, 'update' modifies the existing record with this id.",
+      "Required. 'create' inserts a new record, 'update' modifies the existing record with this id."
   };
   schema.properties = properties;
   const required = ((schema.required as string[] | undefined) ?? []).slice();
@@ -1261,7 +1270,8 @@ function buildToolSchema(
     // wrapper (`lines: (Omit<z.infer<…>> & {…})[]`) — returning the validator's
     // schema verbatim there publishes one line's fields flat and drops the array.
     // Array-suffixed or parenthesized types fall through to typeToJsonSchema.
-    const isWrappedType = trimmedType.endsWith("[]") || trimmedType.startsWith("(");
+    const isWrappedType =
+      trimmedType.endsWith("[]") || trimmedType.startsWith("(");
     const validatorMatch =
       isInlineObject || isWrappedType
         ? null
@@ -1312,9 +1322,9 @@ function buildToolSchema(
           schema: {
             type: "object",
             properties: { [param.name]: { type: "string", enum: values } },
-            required: param.optional ? undefined : [param.name],
+            required: param.optional ? undefined : [param.name]
           },
-          paramCount: 1,
+          paramCount: 1
         };
       }
     }
@@ -1328,7 +1338,7 @@ function buildToolSchema(
         const schema: Record<string, unknown> = {
           type: "object",
           properties: { [param.name]: resolved },
-          required: param.optional ? undefined : [param.name],
+          required: param.optional ? undefined : [param.name]
         };
         return { schema, paramCount: 1 };
       }
@@ -1343,7 +1353,7 @@ function buildToolSchema(
       const innerSchema = typeToJsonSchema(param.typeStr, resolveCtx);
       const schema: Record<string, unknown> = {
         type: "object",
-        properties: { [param.name]: innerSchema },
+        properties: { [param.name]: innerSchema }
       };
       const propCount = Object.keys(
         (innerSchema.properties as Record<string, unknown>) || {}
@@ -1358,9 +1368,9 @@ function buildToolSchema(
       properties: {
         [param.name]: param.description
           ? { ...propSchema, description: param.description }
-          : propSchema,
+          : propSchema
       },
-      required: param.optional ? undefined : [param.name],
+      required: param.optional ? undefined : [param.name]
     };
     return { schema, paramCount: 1 };
   }
@@ -1457,7 +1467,7 @@ export function buildAllToolMetadata(opts: BuildOptions = {}): ManifestEntry[] {
       // accounting.ee.service.ts).
       const eeServiceFile = path.join(MODULES_DIR, mod, `${mod}.ee.service.ts`);
       if (!fs.existsSync(eeServiceFile)) {
-        console.warn(`  ⚠ Service file not found: ${serviceFile}`);
+        process.stderr.write(`  ⚠ Service file not found: ${serviceFile}\n`);
         continue;
       }
       serviceFile = eeServiceFile;
@@ -1496,7 +1506,8 @@ export function buildAllToolMetadata(opts: BuildOptions = {}): ManifestEntry[] {
       if (MCP_BLOCKED_TOOL_NAMES.includes(toolName)) continue;
 
       const classification =
-        CLASSIFICATION_OVERRIDES[toolName] ?? classifyFunction(func.name, content);
+        CLASSIFICATION_OVERRIDES[toolName] ??
+        classifyFunction(func.name, content);
       const injectAuth =
         INJECT_AUTH_OVERRIDES[toolName] ||
         computeInjectAuth(func.name, classification);
@@ -1514,7 +1525,7 @@ export function buildAllToolMetadata(opts: BuildOptions = {}): ManifestEntry[] {
         validators: opts.validators,
         aliasSources,
         onResolved: (validatorName, how) =>
-          opts.onValidatorResolved?.(toolName, validatorName, how),
+          opts.onValidatorResolved?.(toolName, validatorName, how)
       });
       if (
         injectAuth.includes("createdBy") &&
@@ -1535,7 +1546,7 @@ export function buildAllToolMetadata(opts: BuildOptions = {}): ManifestEntry[] {
         injectAuth,
         permission,
         schema,
-        ...(responseSchema ? { responseSchema } : {}),
+        ...(responseSchema ? { responseSchema } : {})
       });
       toolCount++;
     }
@@ -1580,13 +1591,13 @@ export async function buildAllToolMetadataWithValidators(
     onValidatorResolved: (toolName, validatorName, how) => {
       resolutions.push({ toolName, validatorName, how });
       opts.onValidatorResolved?.(toolName, validatorName, how);
-    },
+    }
   });
 
   return {
     tools,
     registryStats: validators.stats,
     responseStats: responses.stats,
-    resolutions,
+    resolutions
   };
 }

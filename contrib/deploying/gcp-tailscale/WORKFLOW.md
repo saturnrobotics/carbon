@@ -278,6 +278,9 @@ Every command must pass; tests must report `OK`. If generation changes intended
 output, review and stage that specific path, then repeat both comparisons. Run
 applicable safe lint autofixes, strict lint, scoped tests/typechecks, and behavior
 checks. The default local generation check covers only `source`, not full CI.
+For pre-commit strict Biome checks, pass the reviewed file paths explicitly to
+`python3 .fork/ci.py biome <paths>`. The `lint --base` subcommand compares committed
+revisions; run it after committing, not as proof of an uncommitted merge.
 
 Inspect `git diff --cached` for correctness and privacy, then commit with normal
 hooks and a non-interactive message. `git commit -m '<reviewed merge message>'`
