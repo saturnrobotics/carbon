@@ -98,6 +98,9 @@ services:
       PGRST_JWT_SECRET: synthetic-oauth-evaluation-jwt-secret
       PGRST_DB_POOL: 5
 
+  # Storage listens only after its own migrations finish (a few seconds after the
+  # container starts). Without a healthcheck the evaluation reached the mapped
+  # port before anything listened and recorded "connection closed" as untested.
   storage:
     image: supabase/storage-api:v1.58.4
     depends_on:
@@ -122,12 +125,44 @@ services:
       ENABLE_IMAGE_TRANSFORMATION: "false"
     tmpfs:
       - /var/lib/storage:size=64m,mode=0700
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:5000/status"]
+      interval: 2s
+      timeout: 3s
+      retries: 45
+      start_period: 5s
 
+  # The storage schema and its tables are created by storage-api's own migrations,
+  # so the write-replay fixture can only be seeded once Storage is healthy. Two
+  # buckets: `evaluation` has no INSERT policy (measures the default deny) and
+  # `evaluation-granted` grants authenticated INSERT, mirroring the privileged-RPC
+  # fixture, to reveal whether a read client's token is distinguished from a
+  # first-party session at the Storage boundary.
+  storage-init:
+    image: supabase/postgres:15.14.1.112
+    depends_on:
+      storage:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-ec"]
+    command:
+      - |
+        PGPASSWORD=postgres psql -h postgres -U supabase_storage_admin -d postgres -v ON_ERROR_STOP=1 -c "INSERT INTO storage.buckets (id, name, public) VALUES ('evaluation', 'evaluation', false), ('evaluation-granted', 'evaluation-granted', false) ON CONFLICT (id) DO NOTHING;
+        DROP POLICY IF EXISTS oauth_evaluation_granted_insert ON storage.objects;
+        CREATE POLICY oauth_evaluation_granted_insert ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'evaluation-granted');"
+
+  # Realtime seeds the `realtime-dev` tenant (SEED_SELF_HOST) before it execs the
+  # server, so the port is mapped well before the endpoint answers. The tenant is
+  # resolved from the first Host label, hence the `realtime-dev` alias the dev
+  # stack also uses; the evaluation sends `Host: realtime-dev.localhost`.
   realtime:
     image: supabase/realtime:v2.89.0
     depends_on:
       db-init:
         condition: service_completed_successfully
+    networks:
+      default:
+        aliases:
+          - realtime-dev
     ports:
       - "127.0.0.1:${REALTIME_PORT:-18996}:4000"
     environment:
@@ -145,8 +180,16 @@ services:
       APP_NAME: realtime
       ERL_AFLAGS: -proto_dist inet_tcp
       DNS_NODES: "''"
+      RLIMIT_NOFILE: "10000"
       SEED_SELF_HOST: "true"
       RUN_JANITOR: "true"
+      DISABLE_HEALTHCHECK_LOGGING: "true"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sSf http://127.0.0.1:4000/healthcheck"]
+      interval: 2s
+      timeout: 3s
+      retries: 60
+      start_period: 10s
 
   edge-runtime:
     image: supabase/edge-runtime:v1.74.0
