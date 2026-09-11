@@ -3,6 +3,7 @@
 import json
 import os
 from pathlib import Path
+import shlex
 import shutil
 import subprocess
 import sys
@@ -29,11 +30,14 @@ class DeployWrapperTests(unittest.TestCase):
         )
         binaries = self.root / "bin"
         binaries.mkdir()
+        # A shell shim rather than a Python shebang: shebang lines cannot carry
+        # an interpreter path with spaces (a venv under such a checkout), which
+        # made these tests depend on where the test interpreter lives.
         shim = binaries / "python3"
         shim.write_text(
-            f"#!{sys.executable}\nimport os, sys\n"
-            "if len(sys.argv) > 1 and sys.argv[1] == '-c':\n    sys.exit(1)\n"
-            f"os.execv({sys.executable!r}, [{sys.executable!r}, *sys.argv[1:]])\n"
+            "#!/bin/sh\n"
+            'if [ "$1" = "-c" ]; then exit 1; fi\n'
+            f"exec {shlex.quote(sys.executable)} \"$@\"\n"
         )
         shim.chmod(0o755)
         self.wheels = self.root / "synthetic-private-index"
