@@ -13,6 +13,7 @@ deploy-check:
 	@bash ./contrib/deploying/gcp-tailscale/deploy.sh
 
 deploy:
+	@bash ./scripts/fork/drift.sh --pending || true
 	@bash ./contrib/deploying/gcp-tailscale/deploy.sh --apply
 
 deploy-plan:
