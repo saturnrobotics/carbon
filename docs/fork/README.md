@@ -67,6 +67,16 @@ every pull request and every push to `saturn/main` or `sync/**` it runs
 `regenerate.sh --fresh` and fails if `git diff` is not empty. A stale generated
 file cannot reach the trunk.
 
+Two generators are not pure functions of the schema, and the tooling compensates
+so the check can be byte-exact: `supabase gen types` lists a table's
+`Relationships` in catalog order (two foreign keys to the same table swap places
+between databases), so `scripts/lib/generate-db-types.ts` sorts each block; and
+the backup manifest records `exportedAt` and lists columns in catalog order, so
+`regenerate.sh` keeps the committed bytes whenever the regenerated manifest is
+semantically identical to `HEAD`'s. A local run against a reused development
+database is **not** authoritative: it reflects whatever other branches left in
+that database. Only `--fresh` (disposable volumes) or CI is.
+
 Lingui `.po` catalogs are *not* regen files: they hold authored translations.
 Upstream's own mechanism handles them (`merge=union` plus the post-merge hook that
 re-extracts and normalises). If a merge touches them, run

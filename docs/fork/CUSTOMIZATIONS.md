@@ -65,9 +65,9 @@ changes shape.
 
 | File | Generator | Merge behaviour |
 | --- | --- | --- |
-| `packages/database/src/types.ts`, `packages/database/supabase/functions/lib/types.ts` (identical copies) | `pnpm generate:types` (needs the migrated local DB) | `merge=regen` |
+| `packages/database/src/types.ts`, `packages/database/supabase/functions/lib/types.ts` (identical copies) | `pnpm generate:types` (needs the migrated local DB; `Relationships` blocks sorted for determinism) | `merge=regen` |
 | `packages/database/src/swagger-docs-schema.ts` | `pnpm generate:swagger` (needs Studio) | `merge=regen` |
-| `packages/jobs/manifests/schema.json` | `pnpm db:check:backups -- --stage` | `merge=regen` |
+| `packages/jobs/manifests/schema.json` | `pnpm db:check:backups -- --stage` (`regenerate.sh` compares semantically; `exportedAt` and column order are not stable) | `merge=regen` |
 | `apps/erp/app/routes/api+/mcp+/lib/tool-manifest.digest.json` | `pnpm generate:mcp` (also postinstall) | `merge=regen` |
 | `packages/workflows/src/catalog/*.generated.ts` | `pnpm generate:workflow-catalog` | `merge=regen` |
 | `apps/erp/app/modules/agent/kb/**` | `pnpm generate:agent-kb` | `merge=regen` |
