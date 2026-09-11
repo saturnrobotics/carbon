@@ -22,9 +22,11 @@ trunk_sha="$(git rev-parse HEAD)"
 
 unresolved="$(git diff --name-only --diff-filter=U)"
 [[ -z "$unresolved" ]] || { printf '%s\n' "$unresolved" | sed 's/^/    /' >&2; die "Unresolved files above: resolve and git add them first."; }
-if ! git diff --cached --check >/dev/null 2>&1; then
-  git diff --cached --check >&2 || true
-  die "Conflict markers or whitespace errors remain in the staged changes (git diff --cached --check)."
+# `git diff --check` also flags trailing whitespace, and upstream files carry
+# some; only leftover conflict markers are a reason to stop here.
+if git diff --cached --check 2>/dev/null | grep -q "leftover conflict marker"; then
+  git diff --cached --check 2>/dev/null | grep "leftover conflict marker" >&2
+  die "Conflict markers remain in the staged changes."
 fi
 markers="$(git grep -n -E '^(<<<<<<< |>>>>>>> |=======$|\|\|\|\|\|\|\| )' -- ':!*.po' ':!**/*.snap' 2>/dev/null | head -20 || true)"
 if [[ -n "$markers" ]]; then
