@@ -25,8 +25,11 @@ export function parseGithubSlug(remoteUrl: string | null): string | null {
   return match ? `${match[1]}/${match[2]}` : null;
 }
 
-export function baselineUrl(slug: string): string {
-  return `https://raw.githubusercontent.com/${slug}/${BASELINE_BRANCH}/${SCHEMA_REPO_PATH}`;
+export function baselineUrl(
+  slug: string,
+  branch: string = BASELINE_BRANCH
+): string {
+  return `https://raw.githubusercontent.com/${slug}/${branch}/${SCHEMA_REPO_PATH}`;
 }
 
 /**
@@ -51,6 +54,8 @@ const STALE_NOTE =
   "  An older baseline is a STRICTER check, never a blinder one — but it can flag a column a teammate already removed.";
 
 export type BaselineSources = {
+  /** Branch the baseline lives on; the repo's default branch. Defaults to `main`. */
+  branch?: string;
   /** `git remote get-url origin`, or null when it cannot be read. */
   remoteUrl: () => string | null;
   /** The file's text from GitHub. `null` = a 404. Throwing = a network problem. */
@@ -78,10 +83,11 @@ export async function resolveBaseline(
   sources: BaselineSources
 ): Promise<ResolvedBaseline> {
   const warnings: string[] = [];
+  const branch = sources.branch ?? BASELINE_BRANCH;
   const slug = parseGithubSlug(sources.remoteUrl());
 
   if (slug) {
-    const url = baselineUrl(slug);
+    const url = baselineUrl(slug, branch);
     // The parse stays OUTSIDE this try: a corrupt baseline is a refusal, and
     // catching it here would silently downgrade it to "fetch failed" and fall
     // through to the local copy.
@@ -90,12 +96,12 @@ export async function resolveBaseline(
       fetched = await sources.fetchText(url);
       if (fetched === null) {
         warnings.push(
-          `⚠ ${SCHEMA_REPO_PATH} is not on ${BASELINE_BRANCH} yet (404).\n${STALE_NOTE}`
+          `⚠ ${SCHEMA_REPO_PATH} is not on ${branch} yet (404).\n${STALE_NOTE}`
         );
       }
     } catch (err) {
       warnings.push(
-        `⚠ Could not fetch the schema baseline from ${BASELINE_BRANCH} — ${
+        `⚠ Could not fetch the schema baseline from ${branch} — ${
           err instanceof Error ? err.message : String(err)
         }\n${STALE_NOTE}`
       );
@@ -109,19 +115,19 @@ export async function resolveBaseline(
     );
   }
 
-  const ref = `origin/${BASELINE_BRANCH}:${SCHEMA_REPO_PATH}`;
+  const ref = `origin/${branch}:${SCHEMA_REPO_PATH}`;
   const local = sources.localText();
   if (local !== null) {
     return {
       manifest: parseBaseline(local, ref),
-      source: `origin/${BASELINE_BRANCH} (local copy)`,
+      source: `origin/${branch} (local copy)`,
       warnings
     };
   }
 
   throw new BaselineError(
     "The schema baseline could not be found.\n" +
-      `  Looked on ${BASELINE_BRANCH} at GitHub and in your local origin/${BASELINE_BRANCH}, for ${SCHEMA_REPO_PATH}.\n` +
+      `  Looked on ${branch} at GitHub and in your local origin/${branch}, for ${SCHEMA_REPO_PATH}.\n` +
       "  A missing baseline cannot be skipped quietly — it would look exactly like a passing check.\n" +
       "  If this is the first commit to introduce the baseline, commit it once with:\n" +
       "    CARBON_SKIP_BACKUP_CHECK=1 git commit ..."
