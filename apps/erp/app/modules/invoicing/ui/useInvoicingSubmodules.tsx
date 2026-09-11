@@ -31,7 +31,7 @@ export default function useInvoicingSubmodules() {
           permission: "invoicing"
         },
         {
-          name: t`Purchasing Invoices`,
+          name: t`Purchase Invoices`,
           to: path.to.invoicingPurchasing,
           icon: <LuReceiptText />,
           table: "purchaseInvoice",

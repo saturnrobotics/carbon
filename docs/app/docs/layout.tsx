@@ -31,8 +31,8 @@ function toNav(nodes: TreeNode[]): DocsNavNode[] {
         {
           label: label(n.name),
           url: n.index?.url,
-          children: toNav(n.children ?? [])
-        }
+          children: toNav(n.children ?? []),
+        },
       ];
     }
     return [{ label: label(n.name), url: n.url }];
@@ -47,7 +47,7 @@ const REFERENCE_GROUPS: { label: string; slugs: string[] }[] = [
   { label: "Getting started", slugs: ["onboarding"] },
   {
     label: "Sales",
-    slugs: ["quotes", "pricing", "sales-orders", "customer-portal"]
+    slugs: ["quotes", "pricing", "sales-orders", "rmas", "customer-portal"],
   },
   {
     label: "Items & engineering",
@@ -57,24 +57,30 @@ const REFERENCE_GROUPS: { label: string; slugs: string[] }[] = [
       "methods",
       "routings",
       "configurator",
-      "change-orders"
-    ]
+      "change-orders",
+    ],
   },
   { label: "Planning", slugs: ["planning", "forecast", "reordering"] },
   {
     label: "Purchasing",
-    slugs: ["purchase-orders", "supplier-quotes", "suppliers-and-customers"]
+    slugs: [
+      "purchase-orders",
+      "supplier-returns",
+      "supplier-quotes",
+      "suppliers-and-customers",
+    ],
   },
   {
     label: "Production",
     slugs: [
       "jobs",
       "scheduling",
+      "batching",
       "kanban",
       "work-centers",
       "maintenance",
-      "mes"
-    ]
+      "mes",
+    ],
   },
   {
     label: "Inventory",
@@ -84,8 +90,8 @@ const REFERENCE_GROUPS: { label: string; slugs: string[] }[] = [
       "storage-rules",
       "shelf-life",
       "scrap",
-      "traceability"
-    ]
+      "traceability",
+    ],
   },
   { label: "Fulfillment", slugs: ["picking", "shipments", "receipts"] },
   {
@@ -96,8 +102,8 @@ const REFERENCE_GROUPS: { label: string; slugs: string[] }[] = [
       "issues",
       "calibration",
       "quality-documents",
-      "risks"
-    ]
+      "risks",
+    ],
   },
   { label: "Invoicing & payments", slugs: ["invoices", "payments"] },
   {
@@ -108,8 +114,8 @@ const REFERENCE_GROUPS: { label: string; slugs: string[] }[] = [
       "period-close",
       "dimensions",
       "intercompany",
-      "fixed-assets"
-    ]
+      "fixed-assets",
+    ],
   },
   {
     label: "People & access",
@@ -119,12 +125,12 @@ const REFERENCE_GROUPS: { label: string; slugs: string[] }[] = [
       "permissions",
       "two-factor",
       "single-sign-on",
-      "account"
-    ]
+      "account",
+    ],
   },
   {
     label: "Automation & alerts",
-    slugs: ["workflows", "approvals", "notifications"]
+    slugs: ["workflows", "approvals", "notifications"],
   },
   {
     label: "Administration",
@@ -137,9 +143,9 @@ const REFERENCE_GROUPS: { label: string; slugs: string[] }[] = [
       "import-export",
       "audit-log",
       "sharing",
-      "agent"
-    ]
-  }
+      "agent",
+    ],
+  },
 ];
 
 const slugOf = (url?: string) => url?.split("/").filter(Boolean).pop() ?? "";

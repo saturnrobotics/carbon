@@ -271,6 +271,10 @@ asked. Cutting to budget beats compressing: drop whole asides, don't shorten eve
   colloquialisms or idioms; the catalogs are translated and idioms don't survive it.
 - **Never state the obvious.** "Click Save to save" documents nothing. A step earns its place by
   carrying something the button label doesn't already say.
+- **Short paragraphs — split at the idea boundary.** A paragraph is one idea in 2–4 sentences
+  (~70 words). When a draft paragraph carries two ideas ("what it is" AND "how time splits back"),
+  break it in two rather than chaining clauses; a wall of prose is skipped, not read. Callout bodies
+  obey the same cap. The gate below flags any prose paragraph over ~480 characters.
 - **Every page stands alone.** A reader (or an AI retriever) lands cold from search: state the context
   and prerequisites in place rather than leaning on the previous page. How-to/settings pages name their
   prerequisites explicitly before the steps ("needs `settings` update permission", "requires the Slack
@@ -415,6 +419,7 @@ awk '/<AgentContext>/{s=1} !s{print} /<\/AgentContext>/{s=0}' <page>.mdx | grep 
 grep -n '<StatusFlow>' <page>.mdx                         # bare = gray pills; must carry entity="…"
 grep -nE '^(title|description): [^"]*: ' <page>.mdx       # unquoted colon-space = YAML, 500s the site
 grep -m1 '^description:' <page>.mdx | wc -c               # ≤ ~170 raw (the SEO meta: 150–160 chars of text)
+awk '/<AgentContext>/{s=1} !s{print} /<\/AgentContext>/{s=0}' <page>.mdx | grep -vE '^\s*([<#|`-]|$)' | awk 'length>480 {print "long paragraph: " substr($0,1,60) "…"}'   # split any hit at its idea boundary
 ```
 
 Plus two eyeball checks no grep covers: a `## Troubleshooting` heading may exist only inside
