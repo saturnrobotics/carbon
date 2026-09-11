@@ -27,18 +27,12 @@ on:
       - "pnpm-lock.yaml"
       - ".github/workflows/saturn-invoice-check.yml"
   workflow_dispatch:
-  workflow_call:
-    inputs:
-      verified_revision:
-        description: Exact candidate already inspected by the fork preflight
-        required: true
-        type: string
 
 permissions:
   contents: read
 
 concurrency:
-  group: saturn-invoice-${{ github.ref }}-${{ inputs.verified_revision || github.workflow }}
+  group: saturn-invoice-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -64,7 +58,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.verified_revision || github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
