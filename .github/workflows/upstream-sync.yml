@@ -1,0 +1,209 @@
+name: upstream-sync
+
+# Scheduled upstream integration. Merges crbnos/carbon into a sync/upstream-<date>
+# branch and opens a PR against the fork trunk (saturn/main). It never pushes to
+# the trunk itself: upstream lands there only through that reviewed PR.
+#
+# Cron fires every Monday; the first step keeps only even ISO weeks, so the
+# effective cadence is biweekly. Dispatch it manually for an out-of-cycle sync
+# (security fix, wanted feature) or to target a tag via `upstream_ref`.
+#
+# Note: pushes and PRs made with the default GITHUB_TOKEN do not trigger other
+# workflows, so this job runs the standard checks itself and reports them in the
+# PR body. Set a `FORK_SYNC_TOKEN` repository secret (a fine-grained PAT with
+# contents + pull-requests write) to have the PR run the normal CI as well.
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+    inputs:
+      upstream_ref:
+        description: Upstream ref to merge (branch or tag)
+        required: false
+        default: main
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: upstream-sync
+  cancel-in-progress: false
+
+env:
+  FORK_TRUNK: saturn/main
+  UPSTREAM_REF: ${{ inputs.upstream_ref || 'main' }}
+  CARBON_PORTLESS: "0"
+  CARBON_EDITION: community
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Biweekly gate (even ISO weeks only for scheduled runs)
+        id: gate
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ] && [ $(( $(date -u +%V) % 2 )) -ne 0 ]; then
+            echo "odd ISO week $(date -u +%V): skipping scheduled sync"
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.gate.outputs.run == 'true'
+        with:
+          ref: ${{ env.FORK_TRUNK }}
+          fetch-depth: 0
+          token: ${{ secrets.FORK_SYNC_TOKEN || github.token }}
+      - uses: pnpm/action-setup@v4
+        if: steps.gate.outputs.run == 'true'
+      - uses: actions/setup-node@v4
+        if: steps.gate.outputs.run == 'true'
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: supabase/setup-cli@v1
+        if: steps.gate.outputs.run == 'true'
+        with:
+          version: 2.89.0
+
+      - name: Configure git and fetch upstream
+        if: steps.gate.outputs.run == 'true'
+        id: fetch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          bash scripts/fork/setup-git.sh
+          git fetch --no-tags upstream "$UPSTREAM_REF"
+          target="$(git rev-parse FETCH_HEAD)"
+          echo "target=$target" >> "$GITHUB_OUTPUT"
+          echo "short=$(git rev-parse --short=10 "$target")" >> "$GITHUB_OUTPUT"
+          echo "date=$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
+          if git merge-base --is-ancestor "$target" HEAD; then
+            echo "up to date: $FORK_TRUNK already contains upstream/$UPSTREAM_REF ($target)"
+            echo "pending=0" >> "$GITHUB_OUTPUT"
+          else
+            echo "pending=$(git rev-list --count "HEAD..$target")" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create the sync branch and attempt the merge
+        if: steps.gate.outputs.run == 'true' && steps.fetch.outputs.pending != '0'
+        id: merge
+        run: |
+          base="sync/upstream-${{ steps.fetch.outputs.date }}"
+          branch="$base"; n=1
+          while git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; do
+            n=$((n + 1)); branch="$base-$n"
+          done
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+          echo "trunk_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          git switch -c "$branch"
+          git log --oneline "HEAD..${{ steps.fetch.outputs.target }}" | head -50 > /tmp/upstream-log.txt
+          if git merge --no-ff --no-commit "${{ steps.fetch.outputs.target }}"; then
+            echo "conflicts=" >> "$GITHUB_OUTPUT"
+            echo "clean=true" >> "$GITHUB_OUTPUT"
+          else
+            git diff --name-only --diff-filter=U > /tmp/conflicts.txt
+            echo "clean=false" >> "$GITHUB_OUTPUT"
+            echo "conflicted files:"; cat /tmp/conflicts.txt
+          fi
+
+      # ---------------- clean merge path ----------------
+      - name: Prepare a disposable development environment
+        if: steps.merge.outputs.clean == 'true'
+        run: |
+          test ! -e .env && cp .env.example .env
+          mkdir -p "$HOME/.portless"
+          cp /etc/ssl/certs/ca-certificates.crt "$HOME/.portless/ca.pem"
+      - name: Regenerate generated files and check migration ordering
+        if: steps.merge.outputs.clean == 'true'
+        id: regen
+        run: |
+          bash scripts/fork/regenerate.sh --fresh
+          git diff --cached --name-only "${{ steps.merge.outputs.trunk_sha }}" -- \
+            | git check-attr --stdin merge | awk -F': merge: ' '$2=="regen"{print $1}' > /tmp/regenerated.txt
+          bash scripts/fork/check-migrations.sh "${{ steps.merge.outputs.trunk_sha }}" > /tmp/migrations.txt 2>&1 || true
+          rm -f .env
+          git commit -q -m "Merge upstream/$UPSTREAM_REF (${{ steps.fetch.outputs.short }}) into $FORK_TRUNK" \
+            -m "${{ steps.fetch.outputs.pending }} upstream commit(s). Generated files regenerated with scripts/fork/regenerate.sh."
+          git push -u origin "${{ steps.merge.outputs.branch }}"
+      - name: Standard checks (lint, types, tests, build)
+        if: steps.merge.outputs.clean == 'true'
+        id: checks
+        continue-on-error: true
+        run: |
+          set +e
+          : > /tmp/checks.txt
+          run_check() { local name="$1"; shift; if "$@" > "/tmp/check-$name.log" 2>&1; then echo "- ✅ $name" >> /tmp/checks.txt; else echo "- ❌ $name (see workflow log)" >> /tmp/checks.txt; tail -60 "/tmp/check-$name.log"; fi; }
+          run_check lint pnpm exec biome check
+          run_check typegen pnpm run typegen
+          run_check typecheck pnpm run typecheck
+          run_check test pnpm test
+          run_check build pnpm run build
+          run_check generated-files-drift git diff --exit-code
+          grep -q '❌' /tmp/checks.txt && exit 1 || exit 0
+
+      # ---------------- conflict path ----------------
+      - name: Commit the conflicted state and push the draft branch
+        if: steps.merge.outputs.clean == 'false'
+        run: |
+          # Conflict markers are committed on purpose: the draft PR is the signal,
+          # and CI failing on it is the desired outcome until a human (or the
+          # resolve-sync-conflicts workflow) finishes the merge.
+          git add -A
+          git commit -q -m "WIP: unresolved upstream conflicts (do not merge)" \
+            -m "Merge of upstream/$UPSTREAM_REF (${{ steps.fetch.outputs.short }}) into $FORK_TRUNK stopped on conflicts." \
+            -m "Conflicts:
+          $(sed 's/^/\t/' /tmp/conflicts.txt)"
+          git push -u origin "${{ steps.merge.outputs.branch }}"
+
+      # ---------------- pull request ----------------
+      - name: Ensure labels exist
+        if: steps.fetch.outputs.pending != '0'
+        env:
+          GH_TOKEN: ${{ secrets.FORK_SYNC_TOKEN || github.token }}
+        run: |
+          gh label create upstream-sync --color 0E8A16 --description "Merge of crbnos/carbon into the fork" --force
+          gh label create needs-conflict-resolution --color D93F0B --description "Upstream merge stopped on conflicts" --force
+      - name: Open the pull request
+        if: steps.fetch.outputs.pending != '0'
+        env:
+          GH_TOKEN: ${{ secrets.FORK_SYNC_TOKEN || github.token }}
+        run: |
+          branch="${{ steps.merge.outputs.branch }}"
+          title="Sync upstream ${{ steps.fetch.outputs.short }} (${{ steps.fetch.outputs.date }})"
+          {
+            echo "Merges \`upstream/$UPSTREAM_REF\` @ \`${{ steps.fetch.outputs.target }}\` into \`$FORK_TRUNK\`."
+            echo
+            echo "**Upstream commits:** ${{ steps.fetch.outputs.pending }} (\`${{ steps.merge.outputs.trunk_sha }}\`..\`${{ steps.fetch.outputs.target }}\`)"
+            echo
+            echo "<details><summary>git log --oneline (first 50)</summary>"; echo; echo '```'; cat /tmp/upstream-log.txt; echo '```'; echo "</details>"
+            echo
+            if [ "${{ steps.merge.outputs.clean }}" = "true" ]; then
+              echo "### Standard checks"; cat /tmp/checks.txt 2>/dev/null || echo "(not run)"
+              echo
+              echo "### Migration ordering"; echo '```'; cat /tmp/migrations.txt 2>/dev/null; echo '```'
+              echo
+              echo "### Regenerated files (taken from upstream by the regen driver, then rebuilt)"; echo '```'; cat /tmp/regenerated.txt 2>/dev/null; echo '```'
+            else
+              echo "### ⚠️ Unresolved conflicts — this PR is a draft"
+              echo
+              echo "The merge stopped on the files below. Conflict markers are committed on purpose."
+              echo "Resolve them on this branch (or apply the \`needs-conflict-resolution\` label to invoke the"
+              echo "assisted resolver), then run \`bash scripts/fork/finish-sync.sh\` and push."
+              echo
+              sed 's/^/- [ ] `/; s/$/`/' /tmp/conflicts.txt
+            fi
+            echo
+            echo "---"
+            echo "Opened by the \`upstream-sync\` workflow. See docs/fork/README.md."
+          } > /tmp/body.md
+          args=(--base "$FORK_TRUNK" --head "$branch" --title "$title" --body-file /tmp/body.md --label upstream-sync)
+          if [ "${{ steps.merge.outputs.clean }}" != "true" ]; then
+            args+=(--draft --label needs-conflict-resolution)
+          fi
+          gh pr create "${args[@]}"

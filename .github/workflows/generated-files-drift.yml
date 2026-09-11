@@ -1,0 +1,66 @@
+name: generated-files-drift
+
+# The invariant that makes the `regen` merge driver safe: every tracked generated
+# file must equal what scripts/fork/regenerate.sh produces from the committed
+# sources. A stale generated file can therefore never reach the fork trunk.
+#
+# Runs on every pull request, on pushes to the fork trunk (saturn/main) and on
+# sync/** branches. It is also the CI evidence `make deploy` requires for the
+# exact revision it deploys (contrib/deploying/gcp-tailscale/verify_source.py).
+
+on:
+  pull_request:
+  push:
+    branches: [saturn/main, "sync/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: generated-files-drift-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARBON_PORTLESS: "0"
+  CARBON_EDITION: community
+
+jobs:
+  generated-files-drift:
+    name: generated-files-drift
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # PR-authored code runs here; keep the token out of .git/config.
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: supabase/setup-cli@v1
+        with:
+          # Matches the `supabase` entry in pnpm-workspace.yaml's catalog.
+          version: 2.89.0
+      - name: Prepare a disposable development environment
+        run: |
+          test ! -e .env
+          cp .env.example .env
+          # The dev compose file mounts this CA file even with --no-portless.
+          mkdir -p "$HOME/.portless"
+          cp /etc/ssl/certs/ca-certificates.crt "$HOME/.portless/ca.pem"
+      - name: Regenerate every generated file from the committed sources
+        # --fresh: this runner is disposable, so migrations are applied from scratch
+        # on new volumes and the stack is torn down afterwards.
+        run: bash scripts/fork/regenerate.sh --fresh --no-stage
+      - name: Fail if any generated file differs from what is committed
+        run: |
+          git add -N .
+          if ! git diff --exit-code --stat; then
+            echo "::error::Generated files are stale. Run 'bash scripts/fork/regenerate.sh' locally and commit the result."
+            git diff | head -400
+            exit 1
+          fi
+          echo "All generated files match their sources."
