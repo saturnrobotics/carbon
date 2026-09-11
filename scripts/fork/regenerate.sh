@@ -7,7 +7,10 @@
 #   --fresh     Wipe this worktree's local database volumes first so migrations are
 #               applied from scratch. DESTROYS local dev data — meant for CI and
 #               disposable stacks. Without it, pending migrations are applied on top
-#               of the existing local database (the repo's normal `crbn migrate`).
+#               of the existing local database (the repo's normal `crbn migrate`),
+#               so the output also reflects whatever that database already holds
+#               (tables from other branches, seeded per-tenant objects). Only a
+#               --fresh run, or CI, is authoritative for "are the committed files stale".
 #   --skip-db   Skip the database-derived files (types, swagger, backup manifest).
 #               Only for environments without Docker; CI must not use it.
 #   --no-stage  Do not `git add` the regenerated files.
@@ -50,6 +53,13 @@ fi
 
 crbn="bash packages/dev/bin/crbn"
 
+# The dev runner refuses to start without a root .env. The example file carries
+# only placeholder values and is what a fresh clone (and CI) start from.
+if (( ! skip_db )) && [[ ! -f .env ]]; then
+  cp .env.example .env
+  warn "no .env found: copied .env.example to .env (placeholder values, ignored by git)"
+fi
+
 # --- 1. Dependencies and lockfile -------------------------------------------
 log "1/4 pnpm install (refreshes pnpm-lock.yaml; postinstall builds documents + MCP digest)"
 pnpm install --prefer-offline
@@ -86,6 +96,9 @@ log "3/4 source-derived generators (mcp digest, workflow catalog, agent knowledg
 pnpm run generate:mcp
 pnpm run generate:workflow-catalog
 pnpm run generate:agent-kb
+# The pre-commit hook (lint-staged) formats *.json with biome, so the committed
+# manifest is biome-formatted; match it or the drift check would always differ.
+pnpm exec biome format --write apps/erp/app/modules/agent/kb/manifest.json >/dev/null
 
 # --- 4. Rust lockfile --------------------------------------------------------
 if command -v cargo >/dev/null; then
