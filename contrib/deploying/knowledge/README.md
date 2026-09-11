@@ -21,23 +21,61 @@ Apply the public Carbon migrations first, followed by every private migration in
 `packages/knowledge/migrations` through the schema job. Use separate login roles
 whose only memberships are the matching NOLOGIN runtime roles:
 `knowledge_read`, `knowledge_ingest`, `knowledge_review` and
-`knowledge_maintenance`. The schema login is used only by the finite schema job.
-Do not give the web or parser service a database credential.
+`knowledge_maintenance`. The schema login is used only by the finite schema job
+and by the enrollment command below. Do not give the web or parser service a
+database credential.
 
 Before traffic, a human administrator must review and apply an enrollment change
 through the privileged source database administration path. Runtime roles cannot
-create identities, sources or initial grants. The change must atomically create:
+create identities, sources or initial grants. The change must create:
 
 1. one active `upload` source for the company;
-2. an active IAP subject binding to an existing active Carbon user and current
+2. an active IAP subject binding to an existing active Carbon user with current
    company membership;
 3. explicit source-level local grants for each user or managed group; and
 4. a bounded `knowledge.query` request policy.
 
-The following is a shape-only SQL template. Replace every angle-bracket value,
-review the exact subject, company, source, user and rate limits, and run it as the
-source database owner in one transaction. Never use email as the IAP subject and
+### Workforce identity binding
+
+`knowledge."identityBinding"` accepts no direct `INSERT`, `UPDATE` or `DELETE`
+from any role: the runtime policies are `false`, and the only writers are
+`knowledge.enroll_workforce_identity` and `knowledge.unbind_workforce_identity`,
+`SECURITY DEFINER` functions owned by the NOLOGIN `knowledge_enrollment_owner`
+role and executable only by `knowledge_migrate` and `service_role`. Enroll with
+the operator command, connected as the schema login:
+
+```bash
+KNOWLEDGE_MIGRATION_DATABASE_URL='postgresql://<schema-login>@127.0.0.1:<port>/<database>' \
+pnpm --filter @carbon/knowledge identity:enroll -- \
+  --company <company-id> \
+  --user-email <workspace-email> \
+  --iap-subject accounts.google.com:<numeric-iap-user-id> \
+  --capabilities knowledge.read,knowledge.intake.capture,knowledge.intake.review,knowledge.intake.publish,knowledge.document.download,knowledge.document.delete
+```
+
+The email is a lookup hint only: the command resolves it to the Carbon user id,
+prints that id, and binds the id. Pass `--user-id <carbon-user-id>` instead when
+the connection cannot read `public."user"`. The subject is printed once, on the
+confirmation line, and nowhere else. A non-local database URL is refused unless
+`--allow-remote` is given and the interactive confirmation is answered.
+
+The function refuses, and writes nothing, when the subject contains `@` or does
+not match `accounts.google.com:<numeric id>`; when the user does not exist, is
+inactive, or has no current membership in an active company; and when the
+subject is already bound to a different user for the issuer, in any company.
+Re-running with identical input is a no-op; a different capability list updates
+the ceiling in place and bumps the row version. `revocationVersion` is `1` on
+first insert and only advances: `knowledge.unbind_workforce_identity(issuer,
+subject, company)` deactivates a binding and increments it, and a later
+re-enrollment keeps the advanced value. Never use email as the IAP subject and
 never auto-enroll an assertion observed at runtime.
+
+### Source, grants and request policy
+
+The remaining rows are a shape-only SQL template. Replace every angle-bracket
+value, review the exact company, source, user and rate limits, and run it as the
+source database owner in one transaction. Run it before or after the enrollment
+command; the binding does not depend on the source.
 
 ```sql
 BEGIN;
@@ -54,22 +92,6 @@ INSERT INTO knowledge.source (
     'ingestDatabaseRoles', jsonb_build_array('<ingest-session-user>')
   ),
   'active'
-);
-
-INSERT INTO knowledge."identityBinding" (
-  id, "companyId", "createdBy", issuer, subject, "canonicalUserId", active,
-  capabilities
-) VALUES (
-  '<identity-binding-id>', '<company-id>', '<existing-user-id>',
-  'https://cloud.google.com/iap', '<iap-subject>', '<existing-user-id>', true,
-  ARRAY[
-    'knowledge.read',
-    'knowledge.intake.capture',
-    'knowledge.intake.review',
-    'knowledge.intake.publish',
-    'knowledge.document.download',
-    'knowledge.document.delete'
-  ]
 );
 
 INSERT INTO knowledge."grant" (
