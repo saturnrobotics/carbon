@@ -65,7 +65,12 @@ catalog, agent kb) → `Cargo.lock`.
 The invariant that makes this safe is the **`generated-files-drift`** workflow: on
 every pull request and every push to `saturn/main` or `sync/**` it runs
 `regenerate.sh --fresh` and fails if `git diff` is not empty. A stale generated
-file cannot reach the trunk.
+file cannot reach the trunk. On a pull request it first diffs the PR against its
+base and reports success in about a minute when no generator input changed
+(migrations, edge functions, service and model files, docs content, catalog
+sources, manifests, generator scripts, lockfiles); it stays a required check
+because it always reports. Pushes to the trunk and `sync/**` always rebuild. The
+dev-stack Docker images are cached between runs, keyed on the compose file.
 
 Two generators are not pure functions of the schema, and the tooling compensates
 so the check can be byte-exact: `supabase gen types` lists a table's
@@ -169,10 +174,12 @@ migration may have changed — read them. Duplicate version numbers fail the che
 
 Deploys come from `saturn/main` only (`make deploy` enforces the branch and a
 clean tree). `sync/**` branches are never deployed. `make deploy` additionally
-requires a successful `generated-files-drift` run for the exact revision it
-deploys (`contrib/deploying/gcp-tailscale/verify_source.py`). Sync cadence and
-deploy cadence are independent: the deploy script no longer checks whether
-upstream has been merged.
+requires, for the exact revision it deploys, a successful `generated-files-drift`
+run and successful `Lint`, `Typecheck`, `Lingui`, `Catalog` and `Test` jobs from
+`check.yml` (`contrib/deploying/gcp-tailscale/verify_source.py`). Sync cadence and
+deploy cadence are independent: the deploy script no longer blocks on unmerged
+upstream commits; `make deploy` prints one advisory line with the count
+(`scripts/fork/drift.sh --pending`) and continues.
 
 ## GitHub settings this process needs
 
@@ -206,16 +213,21 @@ Anything generic should be contributed upstream with
 `scripts/fork/upstream-pr.sh <branch> <commit>...`, which cherry-picks fork commits
 onto `upstream/main` so the contribution carries none of the fork's merge history.
 
-## Fork-owned checks without a CI runner
+## Checks for fork-owned code
 
-The retired `fork-check` workflow also ran a handful of checks for fork-owned code
-that have no other runner today. Until they get a fork-owned workflow, run them
-locally when you touch the relevant area:
+The **`fork-checks`** workflow runs what upstream's CI never sees: the hardened
+generator helpers under `scripts/lib`, the fork's node tests under `.fork/tests`,
+locale source coverage (`.fork/check-locales.ts` + `linguito check`), the
+deployment tooling's Python suite and lint (`ruff`), the Docker build-context
+privacy proof, and `shellcheck` / `actionlint` for the sync scripts and the
+fork-owned workflows. It is path-filtered on pull requests and unfiltered on
+pushes to the trunk. The same commands run locally:
 
 ```bash
 pnpm exec tsx --test scripts/lib/generate-db-types.test.ts scripts/lib/swagger-schema.test.ts scripts/lib/local-script-config.test.ts
 pnpm exec tsx --test .fork/tests/dispatcher.test.ts .fork/tests/locales.test.ts
 pnpm exec tsx .fork/check-locales.ts && pnpm exec linguito check
 python3 -m unittest discover -s contrib/deploying/gcp-tailscale -p 'test_*.py'   # needs PyYAML 6.0.2
-python3 contrib/deploying/knowledge/verify-build-context.py
+docker run --rm -v "$PWD:/mnt" -w /mnt koalaman/shellcheck:stable -x scripts/fork/*.sh
+docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:latest .github/workflows/<fork-owned>.yml
 ```
