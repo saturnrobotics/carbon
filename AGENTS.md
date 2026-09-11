@@ -154,6 +154,7 @@ IMPORTANT: Before any research or coding, match the task to this table. A single
 | Check existing specs before building | `.ai/specs/` + `.ai/specs/implemented/` |
 | Writing a new spec | `.claude/skills/spec-writing/SKILL.md` |
 | **Workflows** | |
+| Syncing this fork with upstream (`crbnos/carbon`) | `docs/fork/README.md` + `docs/fork/CONVENTIONS.md` |
 | Skills index — pipelines + all skills | `.claude/skills/README.md` |
 | Competitor research for a feature | `.claude/skills/research/SKILL.md` |
 | Feature pipeline (research→spec→plan→execute) | `.claude/skills/feature/SKILL.md` |
