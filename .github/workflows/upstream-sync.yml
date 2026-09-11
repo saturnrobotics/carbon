@@ -80,9 +80,11 @@ jobs:
           bash scripts/fork/setup-git.sh
           git fetch --no-tags upstream "$UPSTREAM_REF"
           target="$(git rev-parse FETCH_HEAD)"
-          echo "target=$target" >> "$GITHUB_OUTPUT"
-          echo "short=$(git rev-parse --short=10 "$target")" >> "$GITHUB_OUTPUT"
-          echo "date=$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
+          {
+            echo "target=$target"
+            echo "short=$(git rev-parse --short=10 "$target")"
+            echo "date=$(date -u +%Y-%m-%d)"
+          } >> "$GITHUB_OUTPUT"
           if git merge-base --is-ancestor "$target" HEAD; then
             echo "up to date: $FORK_TRUNK already contains upstream/$UPSTREAM_REF ($target)"
             echo "pending=0" >> "$GITHUB_OUTPUT"
@@ -196,6 +198,7 @@ jobs:
               echo "Resolve them on this branch (or apply the \`needs-conflict-resolution\` label to invoke the"
               echo "assisted resolver), then run \`bash scripts/fork/finish-sync.sh\` and push."
               echo
+              # shellcheck disable=SC2016 # literal backticks for the markdown checklist
               sed 's/^/- [ ] `/; s/$/`/' /tmp/conflicts.txt
             fi
             echo
