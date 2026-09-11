@@ -14,3 +14,6 @@ runtime output.
 Two application checks also live here because they have no upstream home:
 `check-locales.ts` (source message coverage across every locale) and the tests
 under `tests/`.
+
+Keeping the fork current with `crbnos/carbon` is documented in
+[`docs/fork/README.md`](../docs/fork/README.md).
