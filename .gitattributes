@@ -4,3 +4,19 @@
 # conflicting; run `pnpm lingui:extract && pnpm lingui:clean` afterward to
 # dedupe, re-sort, and prune the result.
 packages/locale/locales/**/*.po merge=union
+
+# --- Fork: generated files ---------------------------------------------------
+# These files are never hand-resolved. On merge the `regen` driver takes
+# upstream's version (it is registered by scripts/fork/setup-git.sh as
+# `cp %B %A`), and scripts/fork/regenerate.sh rebuilds every one of them from the
+# merged sources. CI (generated-files-drift) fails if a regenerated file differs
+# from what is committed. Keep this list in sync with regenerate.sh.
+/pnpm-lock.yaml                                             merge=regen
+/Cargo.lock                                                 merge=regen
+packages/database/src/types.ts                              merge=regen
+packages/database/supabase/functions/lib/types.ts           merge=regen
+packages/database/src/swagger-docs-schema.ts                merge=regen
+packages/jobs/manifests/schema.json                         merge=regen
+apps/erp/app/routes/api+/mcp+/lib/tool-manifest.digest.json merge=regen
+packages/workflows/src/catalog/*.generated.ts               merge=regen
+apps/erp/app/modules/agent/kb/**                            merge=regen
