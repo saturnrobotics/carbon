@@ -5,7 +5,7 @@ export default defineConfig({
     tsconfigPaths: true
   },
   test: {
-    include: ["app/**/*.test.ts", "app/**/*.test.tsx"],
+    include: ["app/**/*.test.ts", "app/**/*.test.tsx", "test/**/*.test.ts"],
     passWithNoTests: true,
     // @carbon/env throws at import time when these are unset; tests that
     // transitively import a module barrel hit it. Stub values that satisfy
