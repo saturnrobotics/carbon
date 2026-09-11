@@ -33,11 +33,11 @@ const bytes = new Uint8Array(
   )
 );
 let db: Kysely<KyselyDatabase>;
+// Like the sibling suites (ingestion, payment-sync, company-backup): skip when
+// no isolated test database is configured, refuse anything that is not local.
 beforeAll(() => {
-  if (
-    !url ||
-    !["localhost", "127.0.0.1", "[::1]"].includes(new URL(url).hostname)
-  )
+  if (!url) return;
+  if (!["localhost", "127.0.0.1", "[::1]"].includes(new URL(url).hostname))
     throw new Error(
       "Set INVOICE_INTAKE_TEST_DATABASE_URL to an isolated local test database"
     );
@@ -218,7 +218,7 @@ const review = (c: InvoiceWorkerContext) =>
     .executeTakeFirstOrThrow();
 
 // Real PostgreSQL admission/leases/transactions; HTTP is deliberately synthetic.
-describe("durable invoice worker", () => {
+describe.skipIf(!url)("durable invoice worker", () => {
   it("rejects signature-only images before token estimation or paid admission", async () =>
     fixture(async (c) => {
       const invalid = Uint8Array.from([
