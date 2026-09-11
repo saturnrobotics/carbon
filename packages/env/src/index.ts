@@ -11,6 +11,7 @@ declare global {
       STRIPE_CONNECT_ENABLED: string;
       CLOUDFLARE_TURNSTILE_SITE_KEY: string;
       CONTROLLED_ENVIRONMENT: string;
+      SOURCE_CODE_URL: string;
       ERP_URL: string;
       JIRA_CLIENT_ID: string;
       LOG_LEVEL: string;
@@ -484,6 +485,26 @@ export const LOG_LEVEL = getEnv("LOG_LEVEL", {
   isSecret: false
 });
 
+// Optional public link to the corresponding source for this deployed revision
+// (AGPL section 13: users interacting with a modified program over a network
+// must be offered its source). Rendered on the ERP and MES login pages when set.
+export const SOURCE_CODE_URL = (() => {
+  const value =
+    getEnv("SOURCE_CODE_URL", { isRequired: false, isSecret: false })?.trim() ??
+    "";
+  if (!value) return "";
+
+  try {
+    const url = new URL(value);
+    if (url.protocol === "https:" && !url.username && !url.password) {
+      return url.href;
+    }
+  } catch {
+    // Report the variable name without echoing configuration into logs.
+  }
+  throw new Error("SOURCE_CODE_URL must be an HTTPS URL without credentials");
+})();
+
 export const RATE_LIMIT = parseInt(
   getEnv("RATE_LIMIT", { isRequired: false, isSecret: false }) || "5",
   10
@@ -547,6 +568,7 @@ export function getBrowserEnv() {
     POSTHOG_API_HOST,
     POSTHOG_PROJECT_PUBLIC_KEY,
     QUICKBOOKS_CLIENT_ID,
+    SOURCE_CODE_URL,
     SUPABASE_ANON_KEY,
     SUPABASE_URL,
     VERCEL_ENV,

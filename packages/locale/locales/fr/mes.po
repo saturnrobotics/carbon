@@ -1368,6 +1368,9 @@ msgstr "Taille"
 msgid "Source"
 msgstr "Source"
 
+msgid "Source code"
+msgstr ""
+
 msgid "Spare Parts"
 msgstr "Pièces de rechange"
 

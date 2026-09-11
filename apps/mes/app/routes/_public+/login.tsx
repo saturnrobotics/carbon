@@ -6,7 +6,8 @@ import {
   error,
   isAuthProviderEnabled,
   magicLinkValidator,
-  RATE_LIMIT
+  RATE_LIMIT,
+  SOURCE_CODE_URL
 } from "@carbon/auth";
 import {
   getMagicLinkErrorMessage,
@@ -574,6 +575,16 @@ export default function LoginRoute() {
         )}
       </div>
       <div className="flex flex-col gap-4 text-sm text-center text-balance text-muted-foreground w-[380px]">
+        {SOURCE_CODE_URL && (
+          <a
+            href={SOURCE_CODE_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="underline"
+          >
+            <Trans>Source code</Trans>
+          </a>
+        )}
         {CONTROLLED_ENVIRONMENT && <ItarLoginDisclaimer />}
         {CarbonEdition !== Edition.Community && (
           <p>
