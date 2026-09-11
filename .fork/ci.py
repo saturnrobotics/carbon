@@ -330,10 +330,13 @@ def lint(root, base):
                 and "/tests/" not in path
                 else scripts
             ).append(path)
-    for paths, expanded in ((native, False), (scripts, True)):
+    # These are explicit authored paths, already filtered against the generated
+    # registry. Upstream discovery exclusions must not hide selected app files;
+    # the expanded config changes discovery only and inherits the lint rules.
+    for paths in (native, scripts):
         if not paths:
             continue
-        require_biome_result(biome(root, paths, expanded=expanded), paths)
+        require_biome_result(biome(root, paths, expanded=True), paths)
     if python:
         subprocess.run(["ruff", "check", "--", *python], cwd=root, check=True)
     if not native and not scripts and not python:

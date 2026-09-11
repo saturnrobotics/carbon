@@ -2,6 +2,8 @@
 
 import importlib.util
 import json
+import shutil
+import subprocess
 from pathlib import Path
 import tempfile
 import unittest
@@ -14,6 +16,59 @@ SPEC.loader.exec_module(ci)
 
 
 class BiomeLiveTests(unittest.TestCase):
+    def test_committed_authored_mcp_server_is_checked_despite_upstream_exclusion(self):
+        with tempfile.TemporaryDirectory(prefix="carbon-mcp-lint-") as directory:
+            root = Path(directory)
+            (root / ".fork").mkdir()
+            for name in ("biome.jsonc", ".fork/biome-check.json"):
+                shutil.copyfile(ROOT / name, root / name)
+            (root / ".fork/generated-artifacts.json").write_text('{"artifacts": []}')
+            package_manager = json.loads((ROOT / "package.json").read_text())[
+                "packageManager"
+            ]
+            (root / "package.json").write_text(
+                json.dumps({"name": "lint-fixture", "packageManager": package_manager})
+            )
+            (root / "node_modules").symlink_to(
+                ROOT / "node_modules", target_is_directory=True
+            )
+            (root / ".gitignore").write_text("node_modules/\n")
+            name = "apps/erp/app/routes/api+/mcp+/lib/server.ts"
+            path = root / name
+            path.parent.mkdir(parents=True)
+            path.write_text("export const fixture = 1;\n")
+
+            def git(*arguments):
+                return subprocess.check_output(
+                    [
+                        "git",
+                        "-c",
+                        "user.name=Fixture",
+                        "-c",
+                        "user.email=fixture@example.com",
+                        *arguments,
+                    ],
+                    cwd=root,
+                    text=True,
+                ).strip()
+
+            git("init", "-q")
+            git("add", ".")
+            git("commit", "-qm", "Baseline fixture")
+            base = git("rev-parse", "HEAD")
+            path.write_text("export const fixture = 2;\n")
+            git("add", name)
+            git("commit", "-qm", "Change authored MCP server")
+            try:
+                ci.lint(root, base)
+            except ValueError as error:
+                self.fail(f"A valid authored MCP server must be checked: {error}")
+            path.write_text("export const fixture = missingRuntimeValue;\n")
+            git("add", name)
+            git("commit", "-qm", "Invalid authored MCP server")
+            with self.assertRaisesRegex(ValueError, "Strict lint"):
+                ci.lint(root, base)
+
     def test_deno_globals_are_scoped_without_hiding_unknown_names(self):
         with tempfile.TemporaryDirectory(prefix="carbon-deno-lint-") as directory:
             path = (
@@ -42,6 +97,7 @@ class BiomeLiveTests(unittest.TestCase):
                 "scripts/source.ts",
                 ".fork/tests/source.test.ts",
                 "apps/erp/test/source.test.ts",
+                "apps/erp/app/routes/api+/mcp+/lib/server.ts",
             ):
                 path = Path(directory) / relative
                 path.parent.mkdir(parents=True, exist_ok=True)

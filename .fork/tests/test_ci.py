@@ -215,6 +215,21 @@ class LintTests(unittest.TestCase):
         self.assertIn("--error-on-warnings", command)
         self.assertEqual(command[-2:], ["--", "scripts/source.ts"])
 
+    def test_authored_app_files_override_upstream_discovery_exclusions(self):
+        name = "apps/erp/app/routes/api+/mcp+/lib/server.ts"
+        path = self.root / name
+        path.parent.mkdir(parents=True)
+        path.write_text("export const example = 1;\n")
+        with patch.object(ci, "changed", return_value=[name]), patch.object(
+            ci.subprocess, "run", return_value=self.result(1)
+        ) as run:
+            ci.lint(self.root, "a" * 40)
+        command = run.call_args.args[0]
+        self.assertTrue(
+            any(argument.startswith("--config-path=") for argument in command)
+        )
+        self.assertEqual(command[-2:], ["--", name])
+
 
 class ApplicationTests(unittest.TestCase):
     def setUp(self):
