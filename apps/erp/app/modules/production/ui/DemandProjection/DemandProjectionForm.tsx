@@ -17,10 +17,16 @@ import {
 import type { ChartConfig } from "@carbon/react/Chart";
 import { ChartContainer, ChartTooltip } from "@carbon/react/Chart";
 import { getLocalTimeZone, startOfWeek, today } from "@internationalized/date";
-import { msg } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react/macro";
 import { useNumberFormatter } from "@react-aria/i18n";
-import { memo, useDeferredValue, useEffect, useMemo, useState } from "react";
+import {
+  memo,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState
+} from "react";
 import { useFetcher, useLoaderData } from "react-router";
 import {
   Bar,
@@ -96,7 +102,7 @@ const DemandProjectionsForm = ({
       month: "numeric",
       day: "numeric"
     });
-    return i18n._(msg`Week ${i + 1} (${formattedDate})`);
+    return t`Week ${i + 1} (${formattedDate})`;
   });
 
   // Local mirror of the 52 week inputs, seeded from initialValues, that drives
@@ -110,14 +116,26 @@ const DemandProjectionsForm = ({
 
   // Re-seed the chart when the drawer is reused for a different projection
   // (same route, new item/location) — otherwise it keeps the prior values.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const chartProjection = useRef({
+    itemId: initialValues.itemId,
+    locationId: initialValues.locationId
+  });
   useEffect(() => {
+    if (
+      chartProjection.current.itemId === initialValues.itemId &&
+      chartProjection.current.locationId === initialValues.locationId
+    )
+      return;
+    chartProjection.current = {
+      itemId: initialValues.itemId,
+      locationId: initialValues.locationId
+    };
     setWeekValues(
       Array.from({ length: WEEK_COUNT }, (_, i) =>
         toFinite((initialValues as Record<string, unknown>)[`week${i}`])
       )
     );
-  }, [initialValues.itemId, initialValues.locationId]);
+  }, [initialValues]);
 
   const handleWeekChange = (index: number, value: number) => {
     setWeekValues((prev) => {

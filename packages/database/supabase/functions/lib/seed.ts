@@ -19,9 +19,10 @@ export {
   nonConformanceTypes,
   paymentTerms,
   periodCloseTaskDefinitions,
+  returnReasons,
   scrapReasons,
   sequences,
-  unitOfMeasures,
+  unitOfMeasures
 } from "./seed.data.ts";
 
 import { groups as _groups } from "./seed.data.ts";
@@ -30,5 +31,5 @@ export const groupCompanyTemplate = "XXXX-XXXX-XXXXXXXXXXXX";
 
 export const groups = _groups.map(({ idPrefix, ...g }) => ({
   ...g,
-  id: `${idPrefix}-${groupCompanyTemplate}`,
+  id: `${idPrefix}-${groupCompanyTemplate}`
 }));

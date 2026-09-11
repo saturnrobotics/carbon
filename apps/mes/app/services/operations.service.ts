@@ -84,7 +84,7 @@ export async function getJobOperationBatch(
 ) {
   const batch = await client
     .from("jobOperationBatch")
-    .select("*")
+    .select("*, process(batchType)")
     .eq("id", batchId)
     .eq("companyId", companyId)
     .single();
@@ -1231,10 +1231,9 @@ export async function getOperationEligibility(
     .maybeSingle();
 
   if (operation.error) {
-    console.error(
-      "getOperationEligibility: failed to fetch jobOperation",
-      operation.error
-    );
+    log.error("getOperationEligibility: failed to fetch jobOperation {error}", {
+      error: operation.error
+    });
     return { eligible: true, reason: null };
   }
 
@@ -1250,10 +1249,9 @@ export async function getOperationEligibility(
     .maybeSingle();
 
   if (process.error) {
-    console.error(
-      "getOperationEligibility: failed to fetch process",
-      process.error
-    );
+    log.error("getOperationEligibility: failed to fetch process {error}", {
+      error: process.error
+    });
     return { eligible: true, reason: null };
   }
 
@@ -1270,10 +1268,9 @@ export async function getOperationEligibility(
     .maybeSingle();
 
   if (ability.error) {
-    console.error(
-      "getOperationEligibility: failed to fetch ability",
-      ability.error
-    );
+    log.error("getOperationEligibility: failed to fetch ability {error}", {
+      error: ability.error
+    });
     return { eligible: true, reason: null };
   }
 
@@ -1294,9 +1291,11 @@ export async function getOperationEligibility(
     .maybeSingle();
 
   if (employeeAbility.error) {
-    console.error(
-      "getOperationEligibility: failed to fetch employeeAbility",
-      employeeAbility.error
+    log.error(
+      "getOperationEligibility: failed to fetch employeeAbility {error}",
+      {
+        error: employeeAbility.error
+      }
     );
     return { eligible: true, reason: null };
   }

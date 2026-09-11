@@ -32,6 +32,7 @@ import {
   type SyncContext
 } from "@carbon/ee/accounting";
 import { trigger } from "@carbon/lib/trigger";
+import { getLogger } from "@carbon/logger";
 import { NotificationEvent } from "@carbon/notifications";
 import { today } from "@internationalized/date";
 import { PostgresDriver } from "kysely";
@@ -48,6 +49,8 @@ import {
 } from "./accounting-sync-operations";
 import type { ReconcileRef } from "./reconcile";
 import { type ReconcileSummary, reconcileEntities } from "./reconcile-executor";
+
+const logger = getLogger("jobs", "accounting-outbound-sweep");
 
 const PAGE_SIZE = 200;
 const MAX_PAGES = 25;
@@ -170,7 +173,7 @@ async function sweepCompanyProvider(args: {
     providerId
   );
   if (converged.removed.length > 0) {
-    console.info(
+    logger.info(
       `[OUTBOUND SWEEP] ${companyId}/${providerId}: removed stale subscription(s): ${converged.removed.join(", ")}`
     );
   }
@@ -229,7 +232,10 @@ async function sweepCompanyProvider(args: {
     const billIds = await pageIds({
       ctx,
       table: "purchaseInvoice",
-      statuses: SWEPT_BILL_STATUSES,
+      statuses:
+        providerId === "rillet"
+          ? [...SWEPT_BILL_STATUSES, "Voided"]
+          : SWEPT_BILL_STATUSES,
       dateColumn: "postingDate",
       floor
     });
@@ -258,7 +264,10 @@ async function sweepCompanyProvider(args: {
     const invoiceIds = await pageIds({
       ctx,
       table: "salesInvoice",
-      statuses: SWEPT_INVOICE_STATUSES,
+      statuses:
+        providerId === "rillet"
+          ? [...SWEPT_INVOICE_STATUSES, "Voided"]
+          : SWEPT_INVOICE_STATUSES,
       dateColumn: "postingDate",
       floor
     });
@@ -281,9 +290,23 @@ async function sweepCompanyProvider(args: {
       dateColumn: "createdAt",
       floor
     });
-    scanned.payments = paymentIds.length;
+    // A void is a LATE state change, so `createdAt` cannot see it: a payment
+    // created before the lookback floor and voided today is invisible to the
+    // page above, and a lost void event would never recover. Page those by
+    // `voidedAt` as well — the column that actually moved.
+    const lateVoidedPaymentIds = await pageIds({
+      ctx,
+      table: "payment",
+      statuses: ["Voided"],
+      dateColumn: "voidedAt",
+      floor
+    });
+    const sweptPaymentIds = [
+      ...new Set([...paymentIds, ...lateVoidedPaymentIds])
+    ];
+    scanned.payments = sweptPaymentIds.length;
     refs.push(
-      ...paymentIds.map(
+      ...sweptPaymentIds.map(
         (id): ReconcileRef => ({ entityType: "payment", entityId: id })
       )
     );
@@ -349,9 +372,9 @@ async function sweepCompanyProvider(args: {
           recipient: { type: "user", userId: recipientId }
         });
       } catch (notifyError) {
-        console.error(
-          `[OUTBOUND SWEEP] ${companyId}/${providerId}: failed to send sync-failure notification`,
-          notifyError
+        logger.error(
+          `[OUTBOUND SWEEP] ${companyId}/${providerId}: failed to send sync-failure notification {error}`,
+          { error: notifyError }
         );
       }
     }

@@ -1,3 +1,4 @@
+import { getLogger } from "@carbon/logger";
 import type z from "zod";
 import {
   type JournalEntryLineDimensionSchema,
@@ -8,6 +9,8 @@ import {
   PostingSyncSettingsSchema
 } from "./models";
 import type { Accounting } from "./types";
+
+const logger = getLogger("ee", "accounting");
 
 export type JournalLineDimensionRef = z.infer<
   typeof JournalEntryLineDimensionSchema
@@ -55,10 +58,9 @@ export function resolvePostingSyncSettings(
 
   const parsed = PostingSyncSettingsSchema.safeParse(fragment);
   if (!parsed.success) {
-    console.warn(
-      "Ignoring invalid stored postingSync settings:",
-      parsed.error.issues
-    );
+    logger.warning("Ignoring invalid stored postingSync settings: {issues}", {
+      issues: parsed.error.issues
+    });
     return { ...DEFAULT_POSTING_SYNC_SETTINGS };
   }
 
@@ -196,6 +198,17 @@ export function getJournalPostingPolicyDecision(args: {
         reason: "MANUAL_DISABLED",
         message:
           "Manual journals are never synced — the external ledger owns manual journals; Carbon syncs only its automated postings"
+      };
+    }
+
+    // Types shipped default-off (the return journals) are strictly opt-in:
+    // an upgraded integration must not start pushing a new journal type to
+    // the customer's ledger unasked. Always-on types stay always-on.
+    if (policy.defaultEnabled === false && !config?.enabled) {
+      return {
+        kind: "exclude",
+        reason: "SOURCE_TYPE_DISABLED",
+        message: `Source type "${sourceType}" is disabled — enable it in the accounting sync settings to push these journals`
       };
     }
     return { kind: "push", granularity: config.granularity };
@@ -413,6 +426,7 @@ export function parseJournalEntrySyncEntityId(entityId: string): {
 
 export const JOURNAL_ENTRY_SYNC_ERROR_CODES = [
   "UNMAPPED_ACCOUNTS",
+  "UNMAPPED_TAX_CODES",
   // A slot-configured dimension value on a journal line has no provider
   // option mapping (and autoCreate did not resolve it) while the company's
   // onUnmappedDimensionValue policy is "warn" — user-fixable by mapping

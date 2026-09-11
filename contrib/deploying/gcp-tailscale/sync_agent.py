@@ -8,6 +8,7 @@ edits candidate files; this controller alone stages, commits, publishes and prom
 import argparse
 from contextlib import contextmanager
 import fcntl
+import fnmatch
 import json
 import os
 from pathlib import Path, PurePosixPath
@@ -16,6 +17,7 @@ import signal
 import stat
 import subprocess
 import sys
+import tempfile
 import time
 
 import verify_source
@@ -33,7 +35,7 @@ AUTHORITY = (
     "contrib/deploying/",
     "scripts/",
     "docs/scripts/",
-    "docs/lib/markdown-corpus.ts",
+    "docs/lib/",
     ".fork/",
     ".fork/tests/",
     ".fork/agent-policy.md",
@@ -381,11 +383,16 @@ class Controller:
                 name
                 for name in names
                 if not name.startswith(records)
-                and any(
-                    name == prefix or (prefix.endswith("/") and name.startswith(prefix))
-                    for prefix in AUTHORITY
+                and (
+                    any(
+                        name == prefix
+                        or (prefix.endswith("/") and name.startswith(prefix))
+                        for prefix in AUTHORITY
+                    )
+                    or self.is_registered_generator_helper(name)
                 )
                 and not self.is_pinned_upstream_document(name)
+                and not self.is_pinned_upstream_generator_helper(name)
             }
         )
         if protected:
@@ -434,6 +441,214 @@ class Controller:
         ):
             return False
         oid = upstream.split()[2]
+        index = git(
+            self.candidate,
+            "--literal-pathspecs",
+            "ls-files",
+            "--stage",
+            "-z",
+            "--",
+            name,
+        ).split("\0")
+        if len(index) != 2 or index[0].split("\t", 1)[0] != f"100644 {oid} 0":
+            return False
+        path = self.candidate / name
+        try:
+            mode = path.lstat().st_mode
+            if not stat.S_ISREG(mode) or mode & 0o111:
+                return False
+            parent = path.parent
+            while parent != self.candidate:
+                if parent.is_symlink():
+                    return False
+                parent = parent.parent
+            return git(self.candidate, "hash-object", "--no-filters", "--", name) == oid
+        except OSError:
+            return False
+
+    def tree_entry(self, revision, name):
+        record = git(
+            self.candidate, "--literal-pathspecs", "ls-tree", "-z", revision, "--", name
+        )
+        return record.split("\t", 1)[0] if record else None
+
+    def is_registered_generator_helper(self, name):
+        """Only baseline-owned implementation libraries, never acceptance controls."""
+        if not name.startswith(("scripts/lib/", "docs/lib/")) or PurePosixPath(
+            name
+        ).suffix not in {".ts", ".js", ".mjs"}:
+            return False
+        words = set(re.split(r"[./_-]+", name.lower()))
+        if words & {
+            "test",
+            "tests",
+            "spec",
+            "specs",
+            "fixture",
+            "fixtures",
+            "mocks",
+            "install",
+            "installer",
+            "postinstall",
+            "preinstall",
+            "setup",
+            "bootstrap",
+            "verify",
+            "verification",
+            "check",
+            "checks",
+            "controller",
+            "hooks",
+            "ci",
+            "generate",
+        }:
+            return False
+        base = self.state["base"]
+        if getattr(self, "_helper_registry_base", None) != base:
+            self._helper_registry_base = base
+            self._helper_artifacts = []
+            self._helper_scripts = {}
+            entry = self.tree_entry(base, ".fork/generated-artifacts.json")
+            if entry and entry.startswith("100644 blob "):
+                try:
+                    registry = json.loads(
+                        git(
+                            self.candidate,
+                            "show",
+                            base + ":.fork/generated-artifacts.json",
+                        )
+                    )
+                    artifacts = registry.get("artifacts", [])
+                    if isinstance(artifacts, list):
+                        self._helper_artifacts = [
+                            artifact
+                            for artifact in artifacts
+                            if isinstance(artifact, dict)
+                        ]
+                    package = git(
+                        self.candidate, "show", base + ":package.json", check=False
+                    )
+                    scripts = json.loads(package).get("scripts", {}) if package else {}
+                    if isinstance(scripts, dict):
+                        self._helper_scripts = scripts
+                except (ValueError, AttributeError):
+                    self._helper_artifacts = []
+        owned = False
+        for artifact in self._helper_artifacts:
+            inputs = artifact.get("inputs", [])
+            if isinstance(inputs, list):
+                owned |= any(
+                    isinstance(pattern, str) and fnmatch.fnmatchcase(name, pattern)
+                    for pattern in inputs
+                )
+            command = artifact.get("command", [])
+            if isinstance(command, list) and any(
+                isinstance(argument, str) and name in argument for argument in command
+            ):
+                return False
+        if any(
+            isinstance(command, str) and name in command
+            for command in self._helper_scripts.values()
+        ):
+            return False
+        return owned
+
+    def expected_generator_helper(self, name):
+        """Derive a frozen merge from immutable blobs, independent of candidate edits.
+
+        No custom merge drivers, candidate registry or candidate content authorize
+        this result. Conflicted, binary, deleted, executable and symlink inputs
+        remain protected. Cache only by immutable pins and path, in controller memory.
+        """
+        key = (self.state["base"], self.state["upstream"], name)
+        cache = getattr(self, "_helper_merges", None)
+        if cache is None:
+            cache = self._helper_merges = {}
+        if key in cache:
+            return cache[key]
+        cache[key] = None
+        base, upstream, _ = key
+        ancestors = git(
+            self.candidate, "merge-base", "--all", base, upstream
+        ).splitlines()
+        if len(ancestors) != 1:
+            return None
+        entries = [
+            self.tree_entry(revision, name)
+            for revision in (base, ancestors[0], upstream)
+        ]
+        if not entries[2] or any(
+            entry and not entry.startswith("100644 blob ") for entry in entries
+        ):
+            return None
+        # A tracked ancestor deleted on the fork is a delete/modify decision.
+        if entries[1] and not entries[0]:
+            return None
+        blobs = []
+        for entry in entries:
+            if entry is None:
+                blobs.append(b"")
+                continue
+            result = subprocess.run(
+                [
+                    "git",
+                    "-C",
+                    str(self.candidate),
+                    "cat-file",
+                    "blob",
+                    entry.split()[2],
+                ],
+                check=True,
+                capture_output=True,
+                env=clean_environment(),
+                timeout=120,
+            )
+            if b"\0" in result.stdout:
+                return None
+            blobs.append(result.stdout)
+        with tempfile.TemporaryDirectory(
+            prefix="generator-merge-", dir=self.local
+        ) as directory:
+            paths = [
+                Path(directory) / label for label in ("fork", "ancestor", "upstream")
+            ]
+            for path, content in zip(paths, blobs):
+                path.write_bytes(content)
+            result = subprocess.run(
+                ["git", "merge-file", "--stdout", *map(str, paths)],
+                cwd=directory,
+                capture_output=True,
+                env=clean_environment(),
+                timeout=120,
+            )
+            if result.returncode:
+                return None
+        oid = (
+            subprocess.run(
+                ["git", "-C", str(self.candidate), "hash-object", "--stdin"],
+                input=result.stdout,
+                check=True,
+                capture_output=True,
+                env=clean_environment(),
+                timeout=120,
+            )
+            .stdout.decode()
+            .strip()
+        )
+        expected = "100644 blob " + oid
+        cache[key] = (entries[0], expected)
+        return cache[key]
+
+    def is_pinned_upstream_generator_helper(self, name):
+        if not self.is_registered_generator_helper(name):
+            return False
+        merged = self.expected_generator_helper(name)
+        if merged is None:
+            return False
+        base, expected = merged
+        if self.tree_entry("HEAD", name) not in (base, expected):
+            return False
+        oid = expected.split()[2]
         index = git(
             self.candidate,
             "--literal-pathspecs",

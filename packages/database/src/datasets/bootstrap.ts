@@ -20,6 +20,7 @@ import {
   nonConformanceTypes,
   paymentTerms,
   periodCloseTaskDefinitions,
+  returnReasons,
   scrapReasons,
   sequences,
   unitOfMeasures
@@ -63,7 +64,9 @@ export async function bootstrap(
       password: DEV_PASSWORD
     });
     if (error) {
-      console.warn(`   Warning: could not update password: ${error.message}`);
+      process.stderr.write(
+        `   Warning: could not update password: ${error.message}\n`
+      );
     }
   } else {
     const { data: newUser, error } = await supabaseAdmin.auth.admin.createUser({
@@ -203,6 +206,13 @@ export async function seedCompanyReferenceData(
   for (const name of scrapReasons) {
     await client.query(
       `INSERT INTO "scrapReason" (name, "companyId", "createdBy") VALUES ($1, $2, 'system')`,
+      [name, companyId]
+    );
+  }
+
+  for (const name of returnReasons) {
+    await client.query(
+      `INSERT INTO "returnReason" (name, "inventoryValueZero", "companyId", "createdBy") VALUES ($1, false, $2, 'system')`,
       [name, companyId]
     );
   }

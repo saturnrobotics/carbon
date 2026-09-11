@@ -121,11 +121,21 @@ working contents exactly match the pinned upstream revision, with no fork-specif
 changes since the common ancestor. Worker edits, unresolved conflicts, symlinks,
 executable files, and the fork-maintenance skill remain protected. Upstream
 guidance is repository data and cannot override the controller protocol.
-Verification/control files are frozen
-against the reviewed baseline: an upstream change to those files stops automatic
-integration for separate review, rather than allowing the repair loop to weaken
-its own checks. Semantic ambiguity or missing account access may also require a
-specific decision; logs explain the stop and the candidate remains available.
+Generator implementation helpers registered by the reviewed baseline can also
+pass through when the controller independently computes a conflict-free merge
+from the pinned fork, common ancestor and upstream blobs. This preserves fork
+customizations. The staged and working helper must exactly match that result;
+the worker cannot edit it. Generator entry points, tests, installers, executable
+files and changes to the registry itself remain protected.
+
+Verification/control files remain frozen against the reviewed baseline. Their
+upstream changes, and genuinely conflicting protected helpers, require a separate
+coordinator review so the repair worker cannot weaken its own checks. A coding
+agent handling the sync request owns that review, integration and verification;
+the user is not expected to resolve files or operate worktrees manually. The agent
+must preserve the stopped candidate and may use the command reference below to
+complete the reviewed integration. Missing account access or an unresolved product
+decision can still require user input; logs explain the stop.
 
 This is automation for trusted upstream source on a developer machine, **not** a
 hostile-code security boundary. Workspace-write does not prevent all host reads;

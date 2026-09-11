@@ -1,5 +1,9 @@
 import { resolveBatchRules } from "@carbon/utils";
 import { describe, expect, it } from "vitest";
+import type {
+  BatchCandidate,
+  BatchMaterial
+} from "../app/modules/production/types";
 // Import the logic module directly — the ERP barrels drag lingui macros vitest
 // does not transform (see batching-migration-guards.test.ts).
 import {
@@ -7,17 +11,13 @@ import {
   candidateValueSets,
   computeGuideMismatches,
   computeLockedById,
+  computeMemberMismatches,
   computeSelectionDimSets,
   groupingKey,
   materialSignature,
-  computeMemberMismatches,
   rankSuggestions,
   splitByDueWindow
 } from "../app/modules/production/ui/Batches/batch-builder-logic";
-import type {
-  BatchCandidate,
-  BatchMaterial
-} from "../app/modules/production/types";
 
 const DEFAULT_RULES = resolveBatchRules(null);
 
@@ -78,8 +78,7 @@ const ANCHOR = new Date("2026-09-01T00:00:00Z").getTime();
 const daysUntil = (due: string) =>
   Math.round((new Date(`${due}T00:00:00Z`).getTime() - ANCHOR) / 86_400_000);
 
-const groupsOf = (...groups: [string, BatchCandidate[]][]) =>
-  new Map(groups);
+const groupsOf = (...groups: [string, BatchCandidate[]][]) => new Map(groups);
 
 describe("materialSignature vs groupingKey", () => {
   it("materialSignature is EMPTY for an op with no BOM materials", () => {
@@ -239,10 +238,7 @@ describe("rankSuggestions", () => {
   it("caps the result at 6 groups", () => {
     const entries: [string, BatchCandidate[]][] = Array.from(
       { length: 9 },
-      (_, i) => [
-        `g${i}`,
-        [makeCandidate(`${i}a`), makeCandidate(`${i}b`)]
-      ]
+      (_, i) => [`g${i}`, [makeCandidate(`${i}a`), makeCandidate(`${i}b`)]]
     );
     const out = rankSuggestions(
       groupsOf(...entries),
@@ -448,20 +444,46 @@ describe("batchPlanBreakdown (Sequential vs Simultaneous)", () => {
     }
   ];
 
-  it("Sequential: one shared setup (max), labor and machine summed", () => {
+  it("Sequential: one shared setup (max), labor and machine summed, total sums each member's run", () => {
     expect(batchPlanBreakdown(members, undefined, "Sequential")).toEqual({
       setup: 45 * 60_000,
       labor: (20 + 5) * 60_000,
-      machine: (30 + 8) * 60_000
+      machine: (30 + 8) * 60_000,
+      // total overlaps labor/machine per member: 45 + max(20,30) + max(5,8) =
+      // 45 + 30 + 8 = 83 min — NOT setup + labor + machine (which would
+      // double-count each member's overlap).
+      total: (45 + 30 + 8) * 60_000
     });
   });
 
-  it("Simultaneous: one shared setup (max), labor and machine each the largest member", () => {
+  it("Simultaneous: one shared setup (max), labor and machine each the largest member, total = setup + longest run", () => {
     expect(batchPlanBreakdown(members, undefined, "Simultaneous")).toEqual({
       setup: 45 * 60_000,
       labor: 20 * 60_000,
-      machine: 30 * 60_000
+      machine: 30 * 60_000,
+      // 45 + max(max(20,30), max(5,8)) = 45 + 30 = 75 min.
+      total: (45 + 30) * 60_000
     });
+  });
+
+  it("total does not double-count a member with BOTH labor and machine", () => {
+    // One member, labor 4 min/pc × 10 = 40 min, machine 6 min/pc × 10 = 60 min.
+    // The wall-clock run is max(40, 60) = 60 min, not 100 min.
+    const both = [
+      {
+        setupTime: 0,
+        setupUnit: "Total Minutes",
+        laborTime: 4,
+        laborUnit: "Minutes/Piece",
+        machineTime: 6,
+        machineUnit: "Minutes/Piece",
+        operationQuantity: 10
+      }
+    ];
+    const plan = batchPlanBreakdown(both, undefined, "Sequential");
+    expect(plan.labor).toBe(40 * 60_000);
+    expect(plan.machine).toBe(60 * 60_000);
+    expect(plan.total).toBe(60 * 60_000);
   });
 
   it("defaults to Sequential when no batchType is passed", () => {
@@ -620,7 +642,11 @@ describe("computeMemberMismatches", () => {
 
   it("flags the in-group op whose material shares nothing with the rest", () => {
     const out = computeMemberMismatches(
-      [entry("a36-1", "Steel"), entry("a36-2", "Steel"), entry("ss", "Stainless Steel")],
+      [
+        entry("a36-1", "Steel"),
+        entry("a36-2", "Steel"),
+        entry("ss", "Stainless Steel")
+      ],
       DEFAULT_RULES
     );
     // The stainless op mismatches the steel pair — and each steel op
@@ -657,6 +683,8 @@ describe("computeMemberMismatches", () => {
   });
 
   it("returns empty for fewer than two members", () => {
-    expect(computeMemberMismatches([entry("solo", "Steel")], DEFAULT_RULES).size).toBe(0);
+    expect(
+      computeMemberMismatches([entry("solo", "Steel")], DEFAULT_RULES).size
+    ).toBe(0);
   });
 });

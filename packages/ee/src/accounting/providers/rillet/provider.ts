@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { getLogger } from "@carbon/logger";
 import { ProviderID } from "../../core/models";
 import type {
   AccountingEntityType,
@@ -32,6 +33,8 @@ import type {
   RilletProductWrite,
   RilletVendorWrite
 } from "./models";
+
+const logger = getLogger("ee", "accounting");
 
 const RILLET_PRODUCTION_HOST = "https://api.rillet.com";
 const RILLET_SANDBOX_HOST = "https://sandbox.api.rillet.com";
@@ -160,13 +163,15 @@ export function throwRilletApiError(
 
   const error = new AccountingApiError("rillet", operation, details);
 
-  console.error(`[Rillet API Error] ${operation}`, {
-    statusCode: details.statusCode,
-    statusText: details.statusText,
-    providerErrorType: details.providerErrorType,
-    providerErrorCode: details.providerErrorCode,
-    providerMessage: details.providerMessage,
-    validationErrors: details.validationErrors
+  logger.error(`[Rillet API Error] ${operation} {error}`, {
+    error: {
+      statusCode: details.statusCode,
+      statusText: details.statusText,
+      providerErrorType: details.providerErrorType,
+      providerErrorCode: details.providerErrorCode,
+      providerMessage: details.providerMessage,
+      validationErrors: details.validationErrors
+    }
   });
 
   throw error;
@@ -509,7 +514,7 @@ export class RilletProvider extends BaseProvider {
       );
       return !response.error;
     } catch (error) {
-      console.error("Rillet validate error:", error);
+      logger.error("Rillet validate error: {error}", { error });
       return false;
     }
   }
@@ -547,7 +552,7 @@ export class RilletProvider extends BaseProvider {
           name: account.name ?? account.code!
         }));
     } catch (error) {
-      console.error("Failed to fetch Rillet accounts:", error);
+      logger.error("Failed to fetch Rillet accounts: {error}", { error });
       return [];
     }
   }
@@ -565,7 +570,7 @@ export class RilletProvider extends BaseProvider {
         (data) => data.subsidiaries as Rillet.Subsidiary[] | undefined
       );
     } catch (error) {
-      console.error("Failed to fetch Rillet subsidiaries:", error);
+      logger.error("Failed to fetch Rillet subsidiaries: {error}", { error });
       return [];
     }
   }
@@ -620,7 +625,7 @@ export class RilletProvider extends BaseProvider {
         capacity: 1
       }));
     } catch (error) {
-      console.error("Failed to fetch Rillet fields:", error);
+      logger.error("Failed to fetch Rillet fields: {error}", { error });
       return [];
     }
   }
@@ -749,6 +754,40 @@ export class RilletProvider extends BaseProvider {
     const response = await this.request<unknown>("GET", path);
     if (response.error) return null;
     return unwrapRilletEntity<T>(response.data, envelopeKey);
+  }
+
+  private async deleteEntity(path: string, operation: string): Promise<void> {
+    const response = await this.request<unknown>("DELETE", path);
+    // The mapping survives a delete. A retry after a successful remote delete
+    // but failed local transaction must converge when the resource is absent.
+    if (response.error && response.code !== 404) {
+      throwRilletApiError(operation, response);
+    }
+  }
+
+  async deleteInvoice(id: string): Promise<void> {
+    await this.deleteEntity(`/invoices/${id}`, "void invoice");
+  }
+
+  async deleteBill(id: string): Promise<void> {
+    await this.deleteEntity(`/bills/${id}`, "void bill");
+  }
+
+  async deleteInvoicePayment(
+    invoiceId: string,
+    paymentId: string
+  ): Promise<void> {
+    await this.deleteEntity(
+      `/invoices/${invoiceId}/payments/${paymentId}`,
+      "void invoice payment"
+    );
+  }
+
+  async deleteBillPayment(billId: string, paymentId: string): Promise<void> {
+    await this.deleteEntity(
+      `/bills/${billId}/payments/${paymentId}`,
+      "void bill payment"
+    );
   }
 
   private async writeEntity<T>(args: {
@@ -900,7 +939,7 @@ export class RilletProvider extends BaseProvider {
     return this.readEntity<Rillet.Invoice>(`/invoices/${id}`, "invoice");
   }
 
-  /** Create an AR_ONLY invoice (Carbon invoices; Rillet carries the receivable). */
+  /** Create a native invoice (Carbon issues it; Rillet recognizes the posting). */
   async createInvoice(
     invoice: RilletInvoiceCreate,
     idempotencyKey?: string
@@ -1110,7 +1149,7 @@ export class RilletProvider extends BaseProvider {
     );
     for (const payment of invoicePayments) {
       if (!payment.invoice_id) {
-        console.warn(
+        logger.warning(
           `[Rillet] ignoring invoice payment ${payment.id} with no invoice_id`
         );
         continue;
@@ -1132,7 +1171,7 @@ export class RilletProvider extends BaseProvider {
     const billPayments = await this.listBillPaymentsUpdatedSince(args.since);
     for (const payment of billPayments) {
       if (!payment.bill_id) {
-        console.warn(
+        logger.warning(
           `[Rillet] ignoring bill payment ${payment.id} with no bill_id`
         );
         continue;

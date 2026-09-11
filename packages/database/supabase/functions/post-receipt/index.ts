@@ -1,8 +1,13 @@
 import { serve } from "https://deno.land/std@0.175.0/http/server.ts";
 import { nanoid } from "https://deno.land/x/nanoid@v3.0.0/mod.ts";
 import { z } from "https://deno.land/x/zod@v3.21.4/mod.ts";
-import { DB, getConnectionPool, getDatabaseClient } from "../lib/database.ts";
+import {
+  type DB,
+  getConnectionPool,
+  getDatabaseClient
+} from "../lib/database.ts";
 import { datetime, getCompanyTimeZone } from "../lib/datetime.ts";
+import { getFunctionLogger } from "../lib/logging.ts";
 import { corsPreflight, errorResponse, jsonResponse } from "../lib/response.ts";
 import { requirePermissions } from "../lib/supabase.ts";
 import type { Database } from "../lib/types.ts";
@@ -10,21 +15,28 @@ import {
   credit,
   debit,
   journalReference,
-  TrackedEntityAttributes,
+  type TrackedEntityAttributes
 } from "../lib/utils.ts";
 import { calculateCOGS } from "../shared/calculate-cogs.ts";
 import { getCurrentAccountingPeriod } from "../shared/get-accounting-period.ts";
 import { getNextSequence } from "../shared/get-next-sequence.ts";
 import {
   getDefaultPostingGroup,
-  resolveInventoryAccount,
+  resolveInventoryAccount
 } from "../shared/get-posting-group.ts";
+import {
+  buildJournalLineDimensionInserts,
+  type JournalDimensionMeta
+} from "../shared/journal-dimensions.ts";
 import { round } from "../shared/precision.ts";
+import { resolveReturnUnitCost } from "../shared/resolve-return-cost.ts";
 import {
   resolveFeatureSamplingPlan,
   resolveSamplingPlan,
-  type SamplingStandard,
+  type SamplingStandard
 } from "../shared/sampling-engine.ts";
+
+const logger = getFunctionLogger("post-receipt");
 
 const pool = getConnectionPool(1);
 const db = getDatabaseClient<DB>(pool);
@@ -33,7 +45,7 @@ const payloadValidator = z.object({
   type: z.enum(["post", "void"]).default("post"),
   receiptId: z.string(),
   userId: z.string(),
-  companyId: z.string(),
+  companyId: z.string()
 });
 
 serve(async (req: Request) => {
@@ -46,16 +58,20 @@ serve(async (req: Request) => {
     const { type, receiptId, userId, companyId } =
       payloadValidator.parse(payload);
 
-    console.log({
+    logger.info({
       function: "post-receipt",
       type,
       receiptId,
       userId,
-      companyId,
+      companyId
     });
 
-    const client = await requirePermissions(req, companyId, userId, { update: "inventory" });
-    const today = datetime.today(await getCompanyTimeZone(client, companyId)).toString();
+    const client = await requirePermissions(req, companyId, userId, {
+      update: "inventory"
+    });
+    const today = datetime
+      .today(await getCompanyTimeZone(client, companyId))
+      .toString();
 
     const [companyRecord, accountingSettings] = await Promise.all([
       client
@@ -67,11 +83,12 @@ serve(async (req: Request) => {
         .from("companySettings")
         .select("accountingEnabled")
         .eq("id", companyId)
-        .single(),
+        .single()
     ]);
     if (companyRecord.error) throw new Error("Failed to fetch company");
     const companyGroupId = companyRecord.data.companyGroupId;
-    const accountingEnabled = accountingSettings.data?.accountingEnabled ?? false;
+    const accountingEnabled =
+      accountingSettings.data?.accountingEnabled ?? false;
 
     const [receipt, receiptLines, receiptLineTracking, dimensions] =
       await Promise.all([
@@ -86,13 +103,25 @@ serve(async (req: Request) => {
           .select("id, entityType")
           .eq("companyGroupId", companyGroupId)
           .eq("active", true)
-          .in("entityType", ["SupplierType", "Supplier", "ItemPostingGroup", "Item", "Location", "Process", "FixedAssetClass"]),
+          .in("entityType", [
+            "SupplierType",
+            "Supplier",
+            "CustomerType",
+            "Customer",
+            "ItemPostingGroup",
+            "Item",
+            "Location",
+            "Process",
+            "FixedAssetClass"
+          ])
       ]);
 
     if (receipt.error) throw new Error("Failed to fetch receipt");
     if (receiptLines.error) throw new Error("Failed to fetch receipt lines");
     if (dimensions.error) {
-      console.error("Failed to fetch dimensions", dimensions.error);
+      logger.error("Failed to fetch dimensions {error}", {
+        error: dimensions.error
+      });
     }
 
     const dimensionMap = new Map<string, string>();
@@ -120,7 +149,7 @@ serve(async (req: Request) => {
         .from("companySettings")
         .select("samplingStandard")
         .eq("id", companyId)
-        .single(),
+        .single()
     ]);
     if (items.error) {
       throw new Error("Failed to fetch items");
@@ -143,7 +172,7 @@ serve(async (req: Request) => {
     const assignmentByItemId = new Map<string, string>(
       ((inspectionDocumentAssignments.data as any[]) ?? []).map((a) => [
         a.itemId,
-        a.inspectionDocumentId,
+        a.inspectionDocumentId
       ])
     );
     const assignedDocumentIds = [...new Set(assignmentByItemId.values())];
@@ -188,7 +217,7 @@ serve(async (req: Request) => {
               : Number(doc.samplingPercentage),
           aql: doc.samplingAql == null ? null : Number(doc.samplingAql),
           inspectionLevel: doc.samplingInspectionLevel,
-          severity: doc.samplingSeverity,
+          severity: doc.samplingSeverity
         });
       }
     }
@@ -204,14 +233,289 @@ serve(async (req: Request) => {
         );
       }
 
-      if (receipt.data.sourceDocument !== "Purchase Order") {
+      if (
+        receipt.data.sourceDocument !== "Purchase Order" &&
+        receipt.data.sourceDocument !== "Sales Return Order"
+      ) {
         throw new Error(
-          `Void is only supported for receipts with source document "Purchase Order"`
+          `Void is only supported for receipts with source document "Purchase Order" or "Sales Return Order"`
         );
       }
 
       if (!receipt.data.sourceDocumentId) {
         throw new Error("Receipt has no sourceDocumentId");
+      }
+
+      if (receipt.data.sourceDocument === "Sales Return Order") {
+        // Reverse a posted sales-return receipt: sign-flip the ledger +
+        // journal, roll back the RMA quantities and status ladder, flip the
+        // reactivated entities back to Consumed (their pre-receipt state), and
+        // zero this receipt's own cost layers so FIFO can never consume voided
+        // return stock.
+        const salesReturnOrderId = receipt.data.sourceDocumentId;
+
+        // The PO void path blocks voiding an invoiced receipt; the analogous
+        // hazard here is a credit memo. Voiding after crediting would leave
+        // quantityCredited > quantityReceived with no path to reconcile.
+        const creditMemos = await client
+          .from("memo")
+          .select("id, status")
+          .eq("salesReturnOrderId", salesReturnOrderId)
+          .eq("companyId", companyId)
+          .neq("status", "Voided");
+        if (creditMemos.error)
+          throw new Error("Failed to check for credit memos");
+        if ((creditMemos.data ?? []).length > 0) {
+          throw new Error(
+            "Cannot void: a credit memo exists for this return order. Void it first."
+          );
+        }
+
+        const [originalItemLedger, originalJournalLines, returnLinesVoid] =
+          await Promise.all([
+            client
+              .from("itemLedger")
+              .select("*")
+              .eq("documentId", receiptId)
+              .eq("documentType", "Sales Return Receipt")
+              .eq("companyId", companyId),
+            client
+              .from("journalLine")
+              .select("*")
+              .eq("documentId", receiptId)
+              .eq("documentType", "Receipt")
+              .eq("companyId", companyId),
+            client
+              .from("salesReturnOrderLine")
+              .select("*")
+              .eq("salesReturnOrderId", salesReturnOrderId)
+              .eq("companyId", companyId)
+          ]);
+        if (originalItemLedger.error)
+          throw new Error("Failed to fetch original item ledger entries");
+        if (originalJournalLines.error)
+          throw new Error("Failed to fetch original journal lines");
+        if (returnLinesVoid.error)
+          throw new Error("Failed to fetch return order lines");
+
+        const reversingItemLedger = (originalItemLedger.data ?? []).map(
+          (entry) => ({
+            postingDate: today,
+            itemId: entry.itemId,
+            quantity: -entry.quantity,
+            locationId: entry.locationId,
+            storageUnitId: entry.storageUnitId,
+            entryType:
+              entry.entryType === "Positive Adjmt."
+                ? ("Negative Adjmt." as const)
+                : ("Positive Adjmt." as const),
+            documentType: "Sales Return Receipt" as const,
+            documentId: entry.documentId,
+            externalDocumentId: entry.externalDocumentId,
+            trackedEntityId: entry.trackedEntityId,
+            createdBy: userId,
+            companyId
+          })
+        );
+
+        const reversingJournalLines = (originalJournalLines.data ?? []).map(
+          (line) => ({
+            accountId: line.accountId,
+            description: `VOID: ${line.description ?? ""}`,
+            amount: -line.amount,
+            quantity: line.quantity == null ? undefined : -line.quantity,
+            documentType: line.documentType,
+            documentId: line.documentId,
+            externalDocumentId: line.externalDocumentId ?? undefined,
+            documentLineReference: line.documentLineReference ?? undefined,
+            journalLineReference: line.journalLineReference,
+            companyId
+          })
+        );
+
+        const receivedByLine = new Map<string, number>();
+        for (const receiptLine of receiptLines.data ?? []) {
+          if (!receiptLine.lineId) continue;
+          const qty = Number(receiptLine.receivedQuantity ?? 0);
+          receivedByLine.set(
+            receiptLine.lineId,
+            (receivedByLine.get(receiptLine.lineId) ?? 0) + qty
+          );
+        }
+
+        const accountingPeriodId =
+          accountingEnabled && reversingJournalLines.length > 0
+            ? await getCurrentAccountingPeriod(client, companyId, db, today)
+            : null;
+
+        await db.transaction().execute(async (trx) => {
+          // Refuse to void when this receipt's cost layers were already
+          // (partially) consumed — the returned stock moved on (dispositioned,
+          // sold, scrapped), so reversing the full receipt would drive stock
+          // negative and double-count COGS. The remainder is a manual
+          // inventory adjustment, not a void.
+          const receiptLayers = await trx
+            .selectFrom("costLedger")
+            .select(["quantity", "remainingQuantity"])
+            .where("documentId", "=", receiptId)
+            .where("documentType", "=", "Sales Return Receipt")
+            .where("companyId", "=", companyId)
+            .forUpdate()
+            .execute();
+          const consumed = receiptLayers.some(
+            (layer) =>
+              Number(layer.quantity) > 0 &&
+              Number(layer.remainingQuantity) < Number(layer.quantity)
+          );
+          if (consumed) {
+            throw new Error(
+              "Cannot void: stock received on this return was already consumed. Correct the remainder with an inventory adjustment instead."
+            );
+          }
+
+          if (reversingItemLedger.length > 0) {
+            await trx
+              .insertInto("itemLedger")
+              .values(reversingItemLedger)
+              .execute();
+          }
+
+          if (accountingEnabled && reversingJournalLines.length > 0) {
+            const journalEntryId = await getNextSequence(
+              trx,
+              "journalEntry",
+              companyId
+            );
+            const journalResult = await trx
+              .insertInto("journal")
+              .values({
+                journalEntryId,
+                accountingPeriodId,
+                description: `VOID Sales Return Receipt ${receipt.data?.receiptId}`,
+                postingDate: today,
+                companyId,
+                sourceType: "Sales Return Receipt",
+                status: "Posted",
+                postedAt: new Date().toISOString(),
+                postedBy: userId,
+                createdBy: userId
+              })
+              .returning(["id"])
+              .executeTakeFirstOrThrow();
+
+            await trx
+              .insertInto("journalLine")
+              .values(
+                reversingJournalLines.map((line) => ({
+                  ...line,
+                  journalId: journalResult.id
+                }))
+              )
+              .execute();
+          }
+
+          await trx
+            .updateTable("costLedger")
+            .set({ remainingQuantity: 0 })
+            .where("documentId", "=", receiptId)
+            .where("documentType", "=", "Sales Return Receipt")
+            .where("companyId", "=", companyId)
+            .execute();
+
+          for await (const [lineId, received] of receivedByLine) {
+            const line = returnLinesVoid.data?.find((l) => l.id === lineId);
+            if (!line) continue;
+            await trx
+              .updateTable("salesReturnOrderLine")
+              .set({
+                quantityReceived: Math.max(
+                  0,
+                  Number(line.quantityReceived ?? 0) - received
+                ),
+                updatedBy: userId
+              })
+              .where("id", "=", lineId)
+              .execute();
+          }
+
+          const remainingLines = await trx
+            .selectFrom("salesReturnOrderLine")
+            .select(["quantity", "quantityReceived", "closedComplete"])
+            .where("salesReturnOrderId", "=", salesReturnOrderId)
+            .execute();
+          // Derived status (mirrors getSalesReturnOrderStatus): a void that
+          // drops received quantity below the authorized total returns the RMA
+          // to To Receive; otherwise it stays Completed.
+          const allReceived =
+            remainingLines.length > 0 &&
+            remainingLines.every(
+              (l) =>
+                l.closedComplete ||
+                Number(l.quantityReceived) >= Number(l.quantity)
+            );
+          const returnStatus = allReceived
+            ? ("Completed" as const)
+            : ("To Receive" as const);
+          await trx
+            .updateTable("salesReturnOrder")
+            .set({ status: returnStatus, updatedBy: userId })
+            .where("id", "=", salesReturnOrderId)
+            .execute();
+
+          const voidActivity = await trx
+            .insertInto("trackedActivity")
+            .values({
+              type: "Void Receipt",
+              sourceDocument: "Receipt",
+              sourceDocumentId: receiptId,
+              sourceDocumentReadableId: receipt.data?.receiptId,
+              attributes: {
+                "Sales Return Order": salesReturnOrderId,
+                Receipt: receiptId,
+                Employee: userId
+              },
+              companyId,
+              createdBy: userId,
+              createdAt: today
+            })
+            .returning(["id"])
+            .execute();
+          const voidActivityId = voidActivity[0]?.id;
+
+          for await (const entity of receiptLineTracking.data ?? []) {
+            await trx
+              .updateTable("trackedEntity")
+              .set({ status: "Consumed" })
+              .where("id", "=", entity.id)
+              .execute();
+
+            if (voidActivityId) {
+              await trx
+                .insertInto("trackedActivityInput")
+                .values({
+                  trackedActivityId: voidActivityId,
+                  trackedEntityId: entity.id,
+                  quantity: entity.quantity ?? 0,
+                  companyId,
+                  createdBy: userId,
+                  createdAt: today
+                })
+                .execute();
+            }
+          }
+
+          await trx
+            .updateTable("receipt")
+            .set({
+              status: "Voided",
+              updatedAt: today,
+              updatedBy: userId
+            })
+            .where("id", "=", receiptId)
+            .execute();
+        });
+
+        return jsonResponse({ success: true });
       }
 
       const [originalItemLedger, originalJournalLines, purchaseOrderLinesVoid] =
@@ -231,7 +535,7 @@ serve(async (req: Request) => {
           client
             .from("purchaseOrderLine")
             .select("*")
-            .eq("purchaseOrderId", receipt.data.sourceDocumentId),
+            .eq("purchaseOrderId", receipt.data.sourceDocumentId)
         ]);
 
       if (originalItemLedger.error)
@@ -253,13 +557,13 @@ serve(async (req: Request) => {
             entry.entryType === "Positive Adjmt."
               ? "Negative Adjmt."
               : entry.entryType === "Negative Adjmt."
-              ? "Positive Adjmt."
-              : entry.entryType,
+                ? "Positive Adjmt."
+                : entry.entryType,
           documentType: entry.documentType,
           documentId: entry.documentId,
           externalDocumentId: entry.externalDocumentId,
           createdBy: userId,
-          companyId,
+          companyId
         }));
 
       const reversingJournalLines: Omit<
@@ -279,7 +583,7 @@ serve(async (req: Request) => {
             externalDocumentId: entry.externalDocumentId,
             documentLineReference: entry.documentLineReference,
             journalLineReference: entry.journalLineReference,
-            companyId,
+            companyId
           }))
         : [];
 
@@ -289,7 +593,7 @@ serve(async (req: Request) => {
         if (receiptLine.lineId) {
           acc[receiptLine.lineId] = [
             ...(acc[receiptLine.lineId] ?? []),
-            receiptLine,
+            receiptLine
           ];
         }
         return acc;
@@ -330,7 +634,7 @@ serve(async (req: Request) => {
 
           acc[purchaseOrderLine.id] = {
             quantityReceived: newQuantityReceived,
-            receivedComplete,
+            receivedComplete
           };
         }
         return acc;
@@ -354,7 +658,7 @@ serve(async (req: Request) => {
         if (hasReceiptEntries) {
           purchaseOrderLineUpdatesVoid[faPoLine.id] = {
             quantityReceived: 0,
-            receivedComplete: false,
+            receivedComplete: false
           };
 
           const receiptCost = originalJournalLines.data
@@ -379,7 +683,7 @@ serve(async (req: Request) => {
             );
             const faUpdate: Record<string, any> = {
               acquisitionCost: newAcquisitionCost,
-              updatedBy: userId,
+              updatedBy: userId
             };
             if (
               newAcquisitionCost === 0 &&
@@ -403,7 +707,7 @@ serve(async (req: Request) => {
           if (update && update.quantityReceived !== undefined) {
             return {
               ...line,
-              quantityReceived: update.quantityReceived,
+              quantityReceived: update.quantityReceived
             };
           }
           return line;
@@ -452,7 +756,7 @@ serve(async (req: Request) => {
         >((acc, trackedEntity) => {
           acc[trackedEntity.id] = {
             status: "Available",
-            quantity: trackedEntity.quantity,
+            quantity: trackedEntity.quantity
           };
           return acc;
         }, {}) ?? {};
@@ -500,7 +804,7 @@ serve(async (req: Request) => {
               status: "Posted",
               postedAt: new Date().toISOString(),
               postedBy: userId,
-              createdBy: userId,
+              createdBy: userId
             })
             .returning(["id"])
             .execute();
@@ -513,7 +817,7 @@ serve(async (req: Request) => {
             .values(
               reversingJournalLines.map((journalLine) => ({
                 ...journalLine,
-                journalId,
+                journalId
               }))
             )
             .execute();
@@ -537,11 +841,11 @@ serve(async (req: Request) => {
               attributes: {
                 "Purchase Order": receipt.data.sourceDocumentId,
                 Receipt: receiptId,
-                Employee: userId,
+                Employee: userId
               },
               companyId,
               createdBy: userId,
-              createdAt: today,
+              createdAt: today
             })
             .returning(["id"])
             .execute();
@@ -566,7 +870,7 @@ serve(async (req: Request) => {
                   quantity: update.quantity ?? 0,
                   companyId,
                   createdBy: userId,
-                  createdAt: today,
+                  createdAt: today
                 })
                 .execute();
             }
@@ -578,7 +882,7 @@ serve(async (req: Request) => {
           .set({
             status: "Voided",
             updatedAt: today,
-            updatedBy: userId,
+            updatedBy: userId
           })
           .where("id", "=", receiptId)
           .execute();
@@ -611,7 +915,7 @@ serve(async (req: Request) => {
               .from("purchaseOrderDelivery")
               .select("supplierShippingCost")
               .eq("id", receipt.data.sourceDocumentId)
-              .single(),
+              .single()
           ]);
         if (purchaseOrder.error)
           throw new Error("Failed to fetch purchase order");
@@ -699,7 +1003,8 @@ serve(async (req: Request) => {
               .select("id, processId")
               .in("id", jobOpIds);
             for (const op of jobOps.data ?? []) {
-              if (op.processId) processIdByJobOperationId.set(op.id, op.processId);
+              if (op.processId)
+                processIdByJobOperationId.set(op.id, op.processId);
             }
           }
         }
@@ -710,7 +1015,7 @@ serve(async (req: Request) => {
           if (receiptLine.lineId) {
             acc[receiptLine.lineId] = [
               ...(acc[receiptLine.lineId] ?? []),
-              receiptLine,
+              receiptLine
             ];
           }
           return acc;
@@ -763,7 +1068,7 @@ serve(async (req: Request) => {
             percentage: null,
             aql: null,
             inspectionLevel: "II",
-            severity: "Normal",
+            severity: "Normal"
           };
 
           const snapshot = resolveSamplingPlan(
@@ -782,7 +1087,7 @@ serve(async (req: Request) => {
               documentDefault,
               safeReceivedQuantity,
               samplingStandard
-            ),
+            )
           }));
           if (featurePlans.length > 0) {
             samplingPlanInsertsByReceiptLineId.set(
@@ -794,7 +1099,7 @@ serve(async (req: Request) => {
                 rejectionNumber: p.resolved.rejection,
                 codeLetter: p.resolved.codeLetter,
                 companyId,
-                createdBy: userId,
+                createdBy: userId
               }))
             );
           }
@@ -826,7 +1131,7 @@ serve(async (req: Request) => {
             inspectionDocumentId: assignedDocumentId,
             status: "Pending",
             companyId,
-            createdBy: userId,
+            createdBy: userId
           });
         }
 
@@ -865,7 +1170,7 @@ serve(async (req: Request) => {
 
             acc[itemTracking.id] = {
               status: requiresInspection ? "On Hold" : "Available",
-              quantity: quantity,
+              quantity: quantity
             };
 
             return acc;
@@ -906,8 +1211,8 @@ serve(async (req: Request) => {
                 return {
                   ...acc,
                   [purchaseOrderLine.jobOperationId]: {
-                    status: receivedComplete ? "Done" : "In Progress",
-                  },
+                    status: receivedComplete ? "Done" : "In Progress"
+                  }
                 };
               }
 
@@ -954,8 +1259,8 @@ serve(async (req: Request) => {
               [purchaseOrderLine.id]: {
                 quantityReceived: newQuantityReceived,
                 receivedComplete,
-                receivedDate: today,
-              },
+                receivedDate: today
+              }
             };
           }
 
@@ -966,7 +1271,10 @@ serve(async (req: Request) => {
         const accountDefaults = accountingEnabled
           ? await getDefaultPostingGroup(client, companyId)
           : null;
-        if (accountingEnabled && (accountDefaults?.error || !accountDefaults?.data)) {
+        if (
+          accountingEnabled &&
+          (accountDefaults?.error || !accountDefaults?.data)
+        ) {
           throw new Error("Error getting account defaults");
         }
 
@@ -987,7 +1295,10 @@ serve(async (req: Request) => {
             );
             if (invoiceFirstQty > 0) {
               invoiceFirstQtyByPoLine.set(pol.id, invoiceFirstQty);
-              receivedBeforeInvUnitsByPoLine.set(pol.id, receivedInInventoryUnit);
+              receivedBeforeInvUnitsByPoLine.set(
+                pol.id,
+                receivedInInventoryUnit
+              );
             }
           }
 
@@ -1022,13 +1333,13 @@ serve(async (req: Request) => {
                 jl.accountId ===
                   accountDefaults?.data?.goodsReceivedNotInvoicedAccount
               ) {
-                const [, poLineId] = (
-                  jl.documentLineReference ?? ""
-                ).split(":");
+                const [, poLineId] = (jl.documentLineReference ?? "").split(
+                  ":"
+                );
                 if (!accrualCostByPoLine[poLineId]) {
                   accrualCostByPoLine[poLineId] = {
                     totalCost: 0,
-                    totalQty: 0,
+                    totalQty: 0
                   };
                 }
                 accrualCostByPoLine[poLineId].totalCost += Math.abs(
@@ -1038,7 +1349,9 @@ serve(async (req: Request) => {
               }
             }
 
-            for (const [poLineId, info] of Object.entries(accrualCostByPoLine)) {
+            for (const [poLineId, info] of Object.entries(
+              accrualCostByPoLine
+            )) {
               if (info.totalQty > 0) {
                 accrualUnitCostByPoLine.set(
                   poLineId,
@@ -1119,7 +1432,11 @@ serve(async (req: Request) => {
           const normalPortionCost = normalQty * poUnitCost;
           const glCost = invoiceFirstPortionCost + normalPortionCost;
 
-          if (accountingEnabled && accountDefaults?.data && absReceivedQuantity > 0) {
+          if (
+            accountingEnabled &&
+            accountDefaults?.data &&
+            absReceivedQuantity > 0
+          ) {
             const journalLineReference = nanoid();
 
             // Determine the debit account based on item type
@@ -1159,7 +1476,7 @@ serve(async (req: Request) => {
                   receiptLine.lineId!
                 ),
                 journalLineReference,
-                companyId,
+                companyId
               });
 
               const inventoryLineIndex = journalLineInserts.length;
@@ -1176,7 +1493,7 @@ serve(async (req: Request) => {
                   receiptLine.lineId!
                 ),
                 journalLineReference,
-                companyId,
+                companyId
               });
 
               if (createsLayers) {
@@ -1185,7 +1502,7 @@ serve(async (req: Request) => {
                   quantity: absReceivedQuantity,
                   fallbackCost: cost,
                   grIrLineIndex,
-                  inventoryLineIndex,
+                  inventoryLineIndex
                 });
               }
             } else {
@@ -1204,7 +1521,7 @@ serve(async (req: Request) => {
                   receiptLine.lineId!
                 ),
                 journalLineReference,
-                companyId,
+                companyId
               });
 
               journalLineInserts.push({
@@ -1220,7 +1537,7 @@ serve(async (req: Request) => {
                   receiptLine.lineId!
                 ),
                 journalLineReference,
-                companyId,
+                companyId
               });
             }
           } else if (isNegativeReceipt && createsLayers) {
@@ -1230,7 +1547,7 @@ serve(async (req: Request) => {
               quantity: absReceivedQuantity,
               fallbackCost: cost,
               grIrLineIndex: null,
-              inventoryLineIndex: null,
+              inventoryLineIndex: null
             });
           }
 
@@ -1248,14 +1565,16 @@ serve(async (req: Request) => {
                   receipt.data?.externalDocumentId ?? undefined,
                 itemId: receiptLine.itemId,
                 quantity: round(invoiceFirstQty),
-                nominalCost: round(invoiceFirstQty * (receiptLine.unitPrice ?? 0)),
+                nominalCost: round(
+                  invoiceFirstQty * (receiptLine.unitPrice ?? 0)
+                ),
                 cost: round(invoiceFirstPortionCost),
                 remainingQuantity: round(invoiceFirstQty),
                 supplierId: purchaseOrder.data?.supplierId ?? undefined,
                 companyId,
                 postingDate: today,
                 isInvoiceFirst: true,
-                poLineId: poLineId ?? undefined,
+                poLineId: poLineId ?? undefined
               });
             }
             if (normalQty > 0) {
@@ -1274,7 +1593,7 @@ serve(async (req: Request) => {
                 remainingQuantity: round(normalQty),
                 supplierId: purchaseOrder.data?.supplierId ?? undefined,
                 companyId,
-                postingDate: today,
+                postingDate: today
               });
             }
           }
@@ -1295,7 +1614,7 @@ serve(async (req: Request) => {
               documentId: receipt.data?.id ?? undefined,
               externalDocumentId: receipt.data?.externalDocumentId ?? undefined,
               createdBy: userId,
-              companyId,
+              companyId
             });
           }
 
@@ -1320,7 +1639,7 @@ serve(async (req: Request) => {
               )?.id,
               externalDocumentId: receipt.data?.externalDocumentId ?? undefined,
               createdBy: userId,
-              companyId,
+              companyId
             });
           }
 
@@ -1363,7 +1682,7 @@ serve(async (req: Request) => {
                 externalDocumentId:
                   receipt.data?.externalDocumentId ?? undefined,
                 createdBy: userId,
-                companyId,
+                companyId
               });
             }
           }
@@ -1372,14 +1691,13 @@ serve(async (req: Request) => {
           if (accountingEnabled) {
             const jlCount = journalLineInserts.length - jlStartIdx;
             const lineItemPostingGroupId =
-              itemCosts.data.find(
-                (cost) => cost.itemId === receiptLine.itemId
-              )?.itemPostingGroupId ?? null;
+              itemCosts.data.find((cost) => cost.itemId === receiptLine.itemId)
+                ?.itemPostingGroupId ?? null;
             const poLine = purchaseOrderLines.data.find(
               (pol) => pol.id === receiptLine.lineId
             );
             const lineProcessId = poLine?.jobOperationId
-              ? processIdByJobOperationId.get(poLine.jobOperationId) ?? null
+              ? (processIdByJobOperationId.get(poLine.jobOperationId) ?? null)
               : null;
             for (let i = 0; i < jlCount; i++) {
               journalLineDimensionsMeta.push({
@@ -1388,7 +1706,7 @@ serve(async (req: Request) => {
                 itemId: receiptLine.itemId ?? null,
                 locationId: receiptLine.locationId ?? null,
                 processId: lineProcessId,
-                fixedAssetClassId: null,
+                fixedAssetClassId: null
               });
             }
           }
@@ -1404,7 +1722,10 @@ serve(async (req: Request) => {
           (receiptFaLines ?? []).map((r) => r.purchaseOrderLineId)
         );
         const faSerialNumbers = new Map(
-          (receiptFaLines ?? []).map((r) => [r.purchaseOrderLineId, r.serialNumber])
+          (receiptFaLines ?? []).map((r) => [
+            r.purchaseOrderLineId,
+            r.serialNumber
+          ])
         );
 
         const faPurchaseOrderLines = purchaseOrderLines.data.filter(
@@ -1448,7 +1769,7 @@ serve(async (req: Request) => {
                 purchaseOrder.data?.supplierReference ?? undefined,
               documentLineReference: journalReference.to.receipt(faPoLine.id!),
               journalLineReference: journalLineRef,
-              companyId,
+              companyId
             });
 
             journalLineInserts.push({
@@ -1462,7 +1783,7 @@ serve(async (req: Request) => {
                 purchaseOrder.data?.supplierReference ?? undefined,
               documentLineReference: journalReference.to.receipt(faPoLine.id!),
               journalLineReference: journalLineRef,
-              companyId,
+              companyId
             });
 
             for (let i = 0; i < 2; i++) {
@@ -1470,16 +1791,20 @@ serve(async (req: Request) => {
                 supplierTypeId: supplier.data.supplierTypeId ?? null,
                 itemPostingGroupId: null,
                 itemId: null,
-                locationId: faPoLine.locationId ?? receipt.data.locationId ?? assetRecord.data.locationId ?? null,
+                locationId:
+                  faPoLine.locationId ??
+                  receipt.data.locationId ??
+                  assetRecord.data.locationId ??
+                  null,
                 processId: null,
-                fixedAssetClassId: assetRecord.data.fixedAssetClassId ?? null,
+                fixedAssetClassId: assetRecord.data.fixedAssetClassId ?? null
               });
             }
 
             const updateData: Record<string, any> = {
               acquisitionCost:
                 (Number(assetRecord.data.acquisitionCost) ?? 0) + cost,
-              updatedBy: userId,
+              updatedBy: userId
             };
             if (!assetRecord.data.acquisitionDate) {
               updateData.acquisitionDate = today;
@@ -1496,7 +1821,8 @@ serve(async (req: Request) => {
               updateData.serialNumber = serialNumber;
             }
 
-            const faLineLocationId = faPoLine.locationId ?? receipt.data.locationId;
+            const faLineLocationId =
+              faPoLine.locationId ?? receipt.data.locationId;
             if (faLineLocationId) {
               updateData.locationId = faLineLocationId;
             }
@@ -1510,7 +1836,7 @@ serve(async (req: Request) => {
           purchaseOrderLineUpdates[faPoLine.id!] = {
             quantityReceived: faPoLine.purchaseQuantity,
             receivedComplete: true,
-            receivedDate: today,
+            receivedDate: today
           };
         }
 
@@ -1526,7 +1852,7 @@ serve(async (req: Request) => {
             const cogsResult = await calculateCOGS(trx, {
               itemId: consumption.itemId,
               quantity: consumption.quantity,
-              companyId,
+              companyId
             });
             // A consumed layer's total is authoritative even at zero or
             // negative (free goods, credit-adjusted layers): the GL credit
@@ -1543,8 +1869,9 @@ serve(async (req: Request) => {
               );
             }
             if (consumption.inventoryLineIndex !== null) {
-              journalLineInserts[consumption.inventoryLineIndex].amount =
-                round(credit("asset", consumedCost));
+              journalLineInserts[consumption.inventoryLineIndex].amount = round(
+                credit("asset", consumedCost)
+              );
             }
             costLedgerInserts.push({
               itemLedgerType: "Purchase",
@@ -1558,7 +1885,7 @@ serve(async (req: Request) => {
               remainingQuantity: 0,
               supplierId: purchaseOrder.data?.supplierId ?? undefined,
               companyId,
-              postingDate: today,
+              postingDate: today
             });
           }
 
@@ -1577,7 +1904,7 @@ serve(async (req: Request) => {
             const legacyCoverageByPoLine = new Map<string, number>();
             if (invoiceFirstRows.length > 0) {
               const invoiceFirstItemIds = [
-                ...new Set(invoiceFirstRows.map((row) => row.itemId!)),
+                ...new Set(invoiceFirstRows.map((row) => row.itemId!))
               ];
               const legacyLayers = await trx
                 .selectFrom("costLedger")
@@ -1596,15 +1923,19 @@ serve(async (req: Request) => {
                   legacyLayers
                     .map((layer) => layer.documentId)
                     .filter((id): id is string => !!id)
-                ),
+                )
               ];
               if (legacyInvoiceIds.length > 0) {
                 const invoiceFirstPoLineIds = [
-                  ...new Set(invoiceFirstRows.map((row) => row.poLineId!)),
+                  ...new Set(invoiceFirstRows.map((row) => row.poLineId!))
                 ];
                 const legacyInvoiceLines = await trx
                   .selectFrom("purchaseInvoiceLine")
-                  .select(["purchaseOrderLineId", "quantity", "conversionFactor"])
+                  .select([
+                    "purchaseOrderLineId",
+                    "quantity",
+                    "conversionFactor"
+                  ])
                   .where("invoiceId", "in", legacyInvoiceIds)
                   .where("purchaseOrderLineId", "in", invoiceFirstPoLineIds)
                   .where("companyId", "=", companyId)
@@ -1613,7 +1944,8 @@ serve(async (req: Request) => {
                   if (!line.purchaseOrderLineId) continue;
                   legacyCoverageByPoLine.set(
                     line.purchaseOrderLineId,
-                    (legacyCoverageByPoLine.get(line.purchaseOrderLineId) ?? 0) +
+                    (legacyCoverageByPoLine.get(line.purchaseOrderLineId) ??
+                      0) +
                       Number(line.quantity ?? 0) *
                         Number(line.conversionFactor ?? 1)
                   );
@@ -1649,28 +1981,32 @@ serve(async (req: Request) => {
                     rowPoLineId,
                     coverage - excludedQty
                   );
-                  console.log({
+                  logger.info({
                     function: "post-receipt",
                     message:
                       "excluding invoice-first quantity already represented by legacy invoice-created layers",
                     itemId: insertRow.itemId,
                     purchaseOrderLineId: rowPoLineId,
-                    excludedQty,
+                    excludedQty
                   });
                   const layerQty = rowQty - excludedQty;
                   if (layerQty <= 0) continue;
                   const scale = layerQty / rowQty;
                   insertRow.quantity = round(layerQty);
                   insertRow.cost = round(Number(insertRow.cost ?? 0) * scale);
-                  insertRow.nominalCost =
-                    round(Number(insertRow.nominalCost ?? 0) * scale);
+                  insertRow.nominalCost = round(
+                    Number(insertRow.nominalCost ?? 0) * scale
+                  );
                   insertRow.remainingQuantity = round(layerQty);
                 }
               }
               costLedgerRows.push(insertRow);
             }
             if (costLedgerRows.length > 0) {
-              await trx.insertInto("costLedger").values(costLedgerRows).execute();
+              await trx
+                .insertInto("costLedger")
+                .values(costLedgerRows)
+                .execute();
             }
           }
 
@@ -1700,7 +2036,7 @@ serve(async (req: Request) => {
               "id",
               "purchaseOrderLineType",
               "invoicedComplete",
-              "receivedComplete",
+              "receivedComplete"
             ])
             .where("purchaseOrderId", "=", purchaseOrder.data.id)
             .execute();
@@ -1731,7 +2067,7 @@ serve(async (req: Request) => {
           await trx
             .updateTable("purchaseOrder")
             .set({
-              status,
+              status
             })
             .where("id", "=", purchaseOrder.data.id)
             .execute();
@@ -1740,7 +2076,7 @@ serve(async (req: Request) => {
             .updateTable("purchaseOrderDelivery")
             .set({
               deliveryDate: today,
-              locationId: receipt.data.locationId,
+              locationId: receipt.data.locationId
             })
             .where("id", "=", receipt.data.sourceDocumentId)
             .execute();
@@ -1764,7 +2100,7 @@ serve(async (req: Request) => {
                 status: "Posted",
                 postedAt: new Date().toISOString(),
                 postedBy: userId,
-                createdBy: userId,
+                createdBy: userId
               })
               .returning(["id"])
               .executeTakeFirstOrThrow();
@@ -1774,7 +2110,7 @@ serve(async (req: Request) => {
               .values(
                 journalLineInserts.map((line) => ({
                   ...line,
-                  journalId: journalResult.id,
+                  journalId: journalResult.id
                 }))
               )
               .returning(["id"])
@@ -1793,15 +2129,12 @@ serve(async (req: Request) => {
                 const meta = journalLineDimensionsMeta[index];
                 if (!meta) return;
 
-                if (
-                  meta.supplierTypeId &&
-                  dimensionMap.has("SupplierType")
-                ) {
+                if (meta.supplierTypeId && dimensionMap.has("SupplierType")) {
                   journalLineDimensionInserts.push({
                     journalLineId: jl.id,
                     dimensionId: dimensionMap.get("SupplierType")!,
                     valueId: meta.supplierTypeId,
-                    companyId,
+                    companyId
                   });
                 }
                 if (
@@ -1812,7 +2145,7 @@ serve(async (req: Request) => {
                     journalLineId: jl.id,
                     dimensionId: dimensionMap.get("ItemPostingGroup")!,
                     valueId: meta.itemPostingGroupId,
-                    companyId,
+                    companyId
                   });
                 }
                 if (meta.itemId && dimensionMap.has("Item")) {
@@ -1820,7 +2153,7 @@ serve(async (req: Request) => {
                     journalLineId: jl.id,
                     dimensionId: dimensionMap.get("Item")!,
                     valueId: meta.itemId,
-                    companyId,
+                    companyId
                   });
                 }
                 if (
@@ -1831,7 +2164,7 @@ serve(async (req: Request) => {
                     journalLineId: jl.id,
                     dimensionId: dimensionMap.get("Supplier")!,
                     valueId: purchaseOrder.data.supplierId,
-                    companyId,
+                    companyId
                   });
                 }
                 if (meta.locationId && dimensionMap.has("Location")) {
@@ -1839,7 +2172,7 @@ serve(async (req: Request) => {
                     journalLineId: jl.id,
                     dimensionId: dimensionMap.get("Location")!,
                     valueId: meta.locationId,
-                    companyId,
+                    companyId
                   });
                 }
                 if (meta.processId && dimensionMap.has("Process")) {
@@ -1847,15 +2180,18 @@ serve(async (req: Request) => {
                     journalLineId: jl.id,
                     dimensionId: dimensionMap.get("Process")!,
                     valueId: meta.processId,
-                    companyId,
+                    companyId
                   });
                 }
-                if (meta.fixedAssetClassId && dimensionMap.has("FixedAssetClass")) {
+                if (
+                  meta.fixedAssetClassId &&
+                  dimensionMap.has("FixedAssetClass")
+                ) {
                   journalLineDimensionInserts.push({
                     journalLineId: jl.id,
                     dimensionId: dimensionMap.get("FixedAssetClass")!,
                     valueId: meta.fixedAssetClassId,
-                    companyId,
+                    companyId
                   });
                 }
               });
@@ -1882,7 +2218,7 @@ serve(async (req: Request) => {
             .set({
               status: "Posted",
               postingDate: today,
-              postedBy: userId,
+              postedBy: userId
             })
             .where("id", "=", receiptId)
             .execute();
@@ -1898,11 +2234,11 @@ serve(async (req: Request) => {
                 attributes: {
                   "Purchase Order": receipt.data.sourceDocumentId,
                   Receipt: receiptId,
-                  Employee: userId,
+                  Employee: userId
                 },
                 companyId,
                 createdBy: userId,
-                createdAt: today,
+                createdAt: today
               })
               .returning(["id"])
               .execute();
@@ -1927,7 +2263,7 @@ serve(async (req: Request) => {
                     quantity: update.quantity ?? 0,
                     companyId,
                     createdBy: userId,
-                    createdAt: today,
+                    createdAt: today
                   })
                   .execute();
               }
@@ -1961,7 +2297,7 @@ serve(async (req: Request) => {
               for (const featureRow of featureRows) {
                 samplingPlanInserts.push({
                   ...featureRow,
-                  inspectionId: inspection.id,
+                  inspectionId: inspection.id
                 });
               }
             }
@@ -1970,6 +2306,578 @@ serve(async (req: Request) => {
                 .insertInto("inspectionSamplingPlan")
                 .values(samplingPlanInserts)
                 .execute();
+            }
+          }
+        });
+        break;
+      }
+      case "Sales Return Order": {
+        // Customer RMA receipt: goods re-enter inventory at the ORIGINAL
+        // outbound cost when the line links a shipment (exact cost reversing),
+        // at current cost for blind returns, and at ZERO when the line's
+        // return reason flags inventoryValueZero. Entities re-enter On Hold —
+        // disposition is the only path to Available.
+        if (!receipt.data.sourceDocumentId)
+          throw new Error("Receipt has no sourceDocumentId");
+        const salesReturnOrderId = receipt.data.sourceDocumentId;
+
+        const [salesReturnOrder, salesReturnOrderLines, itemCostDetails] =
+          await Promise.all([
+            client
+              .from("salesReturnOrder")
+              .select("*")
+              .eq("id", salesReturnOrderId)
+              .eq("companyId", companyId)
+              .single(),
+            client
+              .from("salesReturnOrderLine")
+              .select("*, returnReason(inventoryValueZero)")
+              .eq("salesReturnOrderId", salesReturnOrderId)
+              .eq("companyId", companyId),
+            client
+              .from("itemCost")
+              .select("itemId, unitCost")
+              .in("itemId", itemIds)
+              .eq("companyId", companyId)
+          ]);
+        if (salesReturnOrder.error)
+          throw new Error("Failed to fetch sales return order");
+        if (salesReturnOrderLines.error)
+          throw new Error("Failed to fetch sales return order lines");
+        if (itemCostDetails.error)
+          throw new Error("Failed to fetch item costs for cost resolution");
+        // Allowlist, matching the create-side gate: a Draft RMA has never had
+        // its caps validated, so it must be confirmed (To Receive) before
+        // receiving.
+        if (salesReturnOrder.data.status !== "To Receive") {
+          throw new Error(
+            `Cannot post a receipt against a return order in ${salesReturnOrder.data.status} status`
+          );
+        }
+
+        const returnLineById = new Map(
+          (salesReturnOrderLines.data ?? []).map((l) => [l.id, l])
+        );
+        const currentCostByItem = new Map(
+          (itemCostDetails.data ?? []).map((c) => [
+            c.itemId,
+            Number(c.unitCost ?? 0)
+          ])
+        );
+
+        // Original-outbound-cost resolution: the shipment's consumption rows
+        // are per (shipment, item) — post-shipment aggregates across lines —
+        // so resolve the shipment ids behind the linked shipment lines, then
+        // average that shipment's consumption rows for the item.
+        const linkedShipmentLineIds = [
+          ...new Set(
+            (salesReturnOrderLines.data ?? [])
+              .map((l) => l.shipmentLineId)
+              .filter(Boolean) as string[]
+          )
+        ];
+        const shipmentIdByShipmentLine = new Map<string, string>();
+        if (linkedShipmentLineIds.length > 0) {
+          const shipmentLines = await client
+            .from("shipmentLine")
+            .select("id, shipmentId")
+            .in("id", linkedShipmentLineIds);
+          // A failed read must abort, not fall back: an empty map here would
+          // silently book every linked line at CURRENT cost instead of the
+          // original outbound cost, defeating exact-cost reversing unnoticed.
+          if (shipmentLines.error)
+            throw new Error(
+              "Failed to resolve shipments for original-cost lookup"
+            );
+          for (const line of shipmentLines.data ?? []) {
+            if (line.shipmentId)
+              shipmentIdByShipmentLine.set(line.id, line.shipmentId);
+          }
+        }
+        const shipmentIds = [...new Set(shipmentIdByShipmentLine.values())];
+        const consumptionRowsByShipmentItem = new Map<
+          string,
+          { quantity: number; cost: number }[]
+        >();
+        if (shipmentIds.length > 0) {
+          const consumptionRows = await client
+            .from("costLedger")
+            .select("documentId, itemId, quantity, cost")
+            .in("documentId", shipmentIds)
+            .eq("documentType", "Sales Shipment")
+            .eq("companyId", companyId)
+            .lt("quantity", 0);
+          if (consumptionRows.error)
+            throw new Error(
+              "Failed to fetch shipment cost layers for original-cost lookup"
+            );
+          for (const row of consumptionRows.data ?? []) {
+            const key = `${row.documentId}::${row.itemId}`;
+            const list = consumptionRowsByShipmentItem.get(key) ?? [];
+            list.push({
+              quantity: Number(row.quantity ?? 0),
+              cost: Number(row.cost ?? 0)
+            });
+            consumptionRowsByShipmentItem.set(key, list);
+          }
+        }
+
+        const accountDefaults = accountingEnabled
+          ? await getDefaultPostingGroup(client, companyId)
+          : null;
+
+        // Customer type for the return-receipt journal's GL dimensions.
+        const customer = accountingEnabled
+          ? await client
+              .from("customer")
+              .select("id, customerTypeId")
+              .eq("id", salesReturnOrder.data.customerId)
+              .eq("companyId", companyId)
+              .single()
+          : null;
+        const customerTypeId = customer?.data?.customerTypeId ?? null;
+
+        const itemLedgerInserts: Database["public"]["Tables"]["itemLedger"]["Insert"][] =
+          [];
+        const costLedgerInserts: Database["public"]["Tables"]["costLedger"]["Insert"][] =
+          [];
+        const journalLineInserts: Omit<
+          Database["public"]["Tables"]["journalLine"]["Insert"],
+          "journalId"
+        >[] = [];
+        // Index-parallel to journalLineInserts: dimension #i belongs to
+        // journal line #i.
+        const journalLineDimensionsMeta: JournalDimensionMeta[] = [];
+        const returnLineUpdates: Record<
+          string,
+          { quantityReceived: number; updatedBy: string }
+        > = {};
+        const trackedEntityUpdates: Record<
+          string,
+          {
+            status: Database["public"]["Tables"]["trackedEntity"]["Row"]["status"];
+            quantity: number;
+          }
+        > = {};
+
+        for (const receiptLine of receiptLines.data ?? []) {
+          if (!receiptLine.itemId || !receiptLine.lineId) continue;
+          const returnLine = returnLineById.get(receiptLine.lineId);
+          if (!returnLine) {
+            throw new Error(
+              `Receipt line ${receiptLine.id} does not map to a return order line`
+            );
+          }
+
+          const safeReceivedQuantity =
+            isNaN(receiptLine.receivedQuantity) ||
+            receiptLine.receivedQuantity == null
+              ? 0
+              : receiptLine.receivedQuantity;
+          if (safeReceivedQuantity <= 0) continue;
+          const receivedQuantity = safeReceivedQuantity;
+
+          const item = items.data.find((i) => i.id === receiptLine.itemId);
+          const itemTrackingType = item?.itemTrackingType ?? "Inventory";
+
+          // Cost resolution: zero-value reason -> 0; linked -> original
+          // outbound cost from the shipment's consumption rows; else current.
+          let unitCost: number;
+          if (
+            (returnLine.returnReason as { inventoryValueZero: boolean } | null)
+              ?.inventoryValueZero
+          ) {
+            unitCost = 0;
+          } else if (
+            returnLine.shipmentLineId &&
+            shipmentIdByShipmentLine.has(returnLine.shipmentLineId)
+          ) {
+            const shipmentId = shipmentIdByShipmentLine.get(
+              returnLine.shipmentLineId
+            )!;
+            const rows =
+              consumptionRowsByShipmentItem.get(
+                `${shipmentId}::${receiptLine.itemId}`
+              ) ?? [];
+            // Falls back to current cost only when the resolved shipment
+            // genuinely has no usable consumption rows for the item (empty,
+            // zero-quantity, or NaN — resolveReturnUnitCost returns null).
+            // Read failures throw above rather than reaching this fallback.
+            unitCost =
+              resolveReturnUnitCost(rows) ??
+              currentCostByItem.get(receiptLine.itemId) ??
+              0;
+          } else {
+            unitCost = currentCostByItem.get(receiptLine.itemId) ?? 0;
+          }
+
+          const cost = receivedQuantity * unitCost;
+          const createsLayers =
+            itemTrackingType !== "Non-Inventory" &&
+            !!receiptLine.itemId &&
+            receivedQuantity > 0;
+
+          // itemLedger — mirrors the Purchase Order branch's three sites,
+          // with the Sales Return Receipt document identity.
+          if (itemTrackingType === "Inventory") {
+            itemLedgerInserts.push({
+              postingDate: today,
+              itemId: receiptLine.itemId,
+              quantity: round(receivedQuantity),
+              locationId: receiptLine.locationId,
+              storageUnitId: receiptLine.storageUnitId,
+              entryType: "Positive Adjmt.",
+              documentType: "Sales Return Receipt",
+              documentId: receipt.data?.id ?? undefined,
+              externalDocumentId: receipt.data?.externalDocumentId ?? undefined,
+              createdBy: userId,
+              companyId
+            });
+          }
+
+          if (receiptLine.requiresBatchTracking) {
+            const entity = receiptLineTracking.data?.find(
+              (tracking) =>
+                (tracking.attributes as TrackedEntityAttributes | undefined)?.[
+                  "Receipt Line"
+                ] === receiptLine.id
+            );
+            itemLedgerInserts.push({
+              postingDate: today,
+              itemId: receiptLine.itemId,
+              quantity: round(receivedQuantity),
+              locationId: receiptLine.locationId,
+              storageUnitId: receiptLine.storageUnitId,
+              entryType: "Positive Adjmt.",
+              documentType: "Sales Return Receipt",
+              documentId: receipt.data?.id ?? undefined,
+              trackedEntityId: entity?.id,
+              externalDocumentId: receipt.data?.externalDocumentId ?? undefined,
+              createdBy: userId,
+              companyId
+            });
+            if (entity) {
+              trackedEntityUpdates[entity.id] = {
+                status: "On Hold",
+                quantity: receivedQuantity
+              };
+            }
+          }
+
+          if (receiptLine.requiresSerialTracking) {
+            const lineTracking = receiptLineTracking.data?.filter(
+              (tracking) =>
+                (tracking.attributes as TrackedEntityAttributes | undefined)?.[
+                  "Receipt Line"
+                ] === receiptLine.id
+            );
+            for (let i = 0; i < receivedQuantity; i++) {
+              const trackingWithIndex = lineTracking?.find(
+                (tracking) =>
+                  (
+                    tracking.attributes as TrackedEntityAttributes | undefined
+                  )?.["Receipt Line Index"] === i
+              );
+              itemLedgerInserts.push({
+                postingDate: today,
+                itemId: receiptLine.itemId,
+                quantity: 1,
+                locationId: receiptLine.locationId,
+                storageUnitId: receiptLine.storageUnitId,
+                entryType: "Positive Adjmt.",
+                documentType: "Sales Return Receipt",
+                documentId: receipt.data?.id ?? undefined,
+                trackedEntityId: trackingWithIndex?.id,
+                externalDocumentId:
+                  receipt.data?.externalDocumentId ?? undefined,
+                createdBy: userId,
+                companyId
+              });
+              if (trackingWithIndex) {
+                trackedEntityUpdates[trackingWithIndex.id] = {
+                  status: "On Hold",
+                  quantity: 1
+                };
+              }
+            }
+          }
+
+          // Cost layer: consumable re-entry at the resolved cost. A
+          // zero-value reason still creates the (0-cost) layer so FIFO
+          // consumption stays quantity-consistent.
+          if (createsLayers) {
+            costLedgerInserts.push({
+              itemLedgerType: "Sale",
+              costLedgerType: "Direct Cost",
+              adjustment: false,
+              documentType: "Sales Return Receipt",
+              documentId: receipt.data?.id ?? undefined,
+              externalDocumentId: receipt.data?.externalDocumentId ?? undefined,
+              itemId: receiptLine.itemId,
+              quantity: round(receivedQuantity),
+              nominalCost: round(cost),
+              cost: round(cost),
+              remainingQuantity: round(receivedQuantity),
+              companyId,
+              postingDate: today
+            });
+          }
+
+          // Journal: Dr Inventory / Cr COGS at the re-entry value. Zero-value
+          // re-entries post no journal.
+          if (accountingEnabled && accountDefaults?.data && cost > 0) {
+            const journalLineReference = nanoid();
+            const inventoryAccount = resolveInventoryAccount(
+              item?.replenishmentSystem ?? null,
+              accountDefaults.data
+            );
+
+            journalLineInserts.push({
+              accountId: inventoryAccount.account,
+              description: inventoryAccount.description,
+              amount: round(debit("asset", cost)),
+              quantity: round(receivedQuantity),
+              documentType: "Receipt",
+              documentId: receipt.data?.id ?? undefined,
+              externalDocumentId: receipt.data?.externalDocumentId ?? undefined,
+              documentLineReference: journalReference.to.receipt(
+                receiptLine.lineId
+              ),
+              journalLineReference,
+              companyId
+            });
+
+            journalLineInserts.push({
+              accountId: accountDefaults.data.costOfGoodsSoldAccount,
+              description: "Cost of Goods Sold",
+              amount: round(credit("expense", cost)),
+              quantity: round(receivedQuantity),
+              documentType: "Receipt",
+              documentId: receipt.data?.id ?? undefined,
+              externalDocumentId: receipt.data?.externalDocumentId ?? undefined,
+              documentLineReference: journalReference.to.receipt(
+                receiptLine.lineId
+              ),
+              journalLineReference,
+              companyId
+            });
+            // Two journal lines were pushed for this line — one dimension meta
+            // entry each, index-aligned.
+            const meta = {
+              itemId: receiptLine.itemId,
+              itemPostingGroupId:
+                itemCosts.data.find((c) => c.itemId === receiptLine.itemId)
+                  ?.itemPostingGroupId ?? null,
+              locationId: receiptLine.locationId,
+              customerId: salesReturnOrder.data.customerId,
+              customerTypeId
+            };
+            journalLineDimensionsMeta.push(meta, { ...meta });
+          }
+
+          const existingUpdate = returnLineUpdates[returnLine.id];
+          returnLineUpdates[returnLine.id] = {
+            quantityReceived:
+              (existingUpdate?.quantityReceived ??
+                Number(returnLine.quantityReceived ?? 0)) + receivedQuantity,
+            updatedBy: userId
+          };
+        }
+
+        const accountingPeriodId =
+          accountingEnabled && journalLineInserts.length > 0
+            ? await getCurrentAccountingPeriod(client, companyId, db, today)
+            : null;
+
+        await db.transaction().execute(async (trx) => {
+          // Double-post guard: serialize on the receipt row — a second
+          // concurrent post waits here, then sees Posted and aborts, so
+          // ledger rows, journals, and quantityReceived can never double.
+          const lockedReceipt = await trx
+            .selectFrom("receipt")
+            .select(["status"])
+            .where("id", "=", receiptId)
+            .forUpdate()
+            .executeTakeFirstOrThrow();
+          if (
+            lockedReceipt.status === "Posted" ||
+            lockedReceipt.status === "Voided"
+          ) {
+            throw new Error(`Receipt is already ${lockedReceipt.status}`);
+          }
+
+          // cancelSalesReturnOrder locks this same order row — re-check the
+          // status under the lock so a cancel committed after our
+          // pre-transaction read cannot be posted over (which would leave a
+          // Cancelled order with received stock and a freed cap).
+          const lockedOrder = await trx
+            .selectFrom("salesReturnOrder")
+            .select(["status"])
+            .where("id", "=", salesReturnOrderId)
+            .forUpdate()
+            .executeTakeFirstOrThrow();
+          if (lockedOrder.status !== "To Receive") {
+            throw new Error(
+              `Cannot post a receipt against a return order in ${lockedOrder.status} status`
+            );
+          }
+
+          if (costLedgerInserts.length > 0) {
+            await trx
+              .insertInto("costLedger")
+              .values(costLedgerInserts)
+              .execute();
+          }
+
+          for await (const [lineId, update] of Object.entries(
+            returnLineUpdates
+          )) {
+            await trx
+              .updateTable("salesReturnOrderLine")
+              .set(update)
+              .where("id", "=", lineId)
+              .execute();
+          }
+
+          // Derived status (mirrors getSalesReturnOrderStatus): the RMA is
+          // Completed once every line has received its authorized quantity or
+          // been short-closed, otherwise it stays To Receive.
+          const allLines = await trx
+            .selectFrom("salesReturnOrderLine")
+            .select(["quantity", "quantityReceived", "closedComplete"])
+            .where("salesReturnOrderId", "=", salesReturnOrderId)
+            .execute();
+          const allReceived =
+            allLines.length > 0 &&
+            allLines.every(
+              (l) =>
+                l.closedComplete ||
+                Number(l.quantityReceived) >= Number(l.quantity)
+            );
+          const returnStatus = allReceived
+            ? ("Completed" as const)
+            : ("To Receive" as const);
+          await trx
+            .updateTable("salesReturnOrder")
+            .set({ status: returnStatus, updatedBy: userId })
+            .where("id", "=", salesReturnOrderId)
+            .execute();
+
+          if (
+            accountingEnabled &&
+            journalLineInserts.length > 0 &&
+            accountingPeriodId
+          ) {
+            const journalEntryId = await getNextSequence(
+              trx,
+              "journalEntry",
+              companyId
+            );
+
+            const journalResult = await trx
+              .insertInto("journal")
+              .values({
+                journalEntryId,
+                accountingPeriodId,
+                description: `Sales Return Receipt ${receipt.data.receiptId}`,
+                postingDate: today,
+                companyId,
+                sourceType: "Sales Return Receipt",
+                status: "Posted",
+                postedAt: new Date().toISOString(),
+                postedBy: userId,
+                createdBy: userId
+              })
+              .returning(["id"])
+              .executeTakeFirstOrThrow();
+
+            const journalLineResults = await trx
+              .insertInto("journalLine")
+              .values(
+                journalLineInserts.map((line) => ({
+                  ...line,
+                  journalId: journalResult.id
+                }))
+              )
+              .returning(["id"])
+              .execute();
+
+            const journalLineDimensionInserts =
+              buildJournalLineDimensionInserts({
+                journalLineIds: journalLineResults.map((jl) => jl.id),
+                meta: journalLineDimensionsMeta,
+                dimensionMap,
+                companyId
+              });
+            if (journalLineDimensionInserts.length > 0) {
+              await trx
+                .insertInto("journalLineDimension")
+                .values(journalLineDimensionInserts)
+                .execute();
+            }
+          }
+
+          if (itemLedgerInserts.length > 0) {
+            await trx
+              .insertInto("itemLedger")
+              .values(itemLedgerInserts)
+              .execute();
+          }
+
+          await trx
+            .updateTable("receipt")
+            .set({
+              status: "Posted",
+              postingDate: today,
+              postedBy: userId
+            })
+            .where("id", "=", receiptId)
+            .execute();
+
+          if (Object.keys(trackedEntityUpdates).length > 0) {
+            const trackedActivity = await trx
+              .insertInto("trackedActivity")
+              .values({
+                type: "Return Receipt",
+                sourceDocument: "Receipt",
+                sourceDocumentId: receiptId,
+                sourceDocumentReadableId: receipt.data.receiptId,
+                attributes: {
+                  "Sales Return Order": salesReturnOrderId,
+                  Receipt: receiptId,
+                  Employee: userId
+                },
+                companyId,
+                createdBy: userId,
+                createdAt: today
+              })
+              .returning(["id"])
+              .execute();
+
+            const trackedActivityId = trackedActivity[0].id;
+
+            for await (const [id, update] of Object.entries(
+              trackedEntityUpdates
+            )) {
+              await trx
+                .updateTable("trackedEntity")
+                .set(update)
+                .where("id", "=", id)
+                .execute();
+
+              if (trackedActivityId) {
+                await trx
+                  .insertInto("trackedActivityOutput")
+                  .values({
+                    trackedActivityId,
+                    trackedEntityId: id,
+                    quantity: update.quantity ?? 0,
+                    companyId,
+                    createdBy: userId,
+                    createdAt: today
+                  })
+                  .execute();
+              }
             }
           }
         });
@@ -1988,7 +2896,7 @@ serve(async (req: Request) => {
           client
             .from("warehouseTransferLine")
             .select("*")
-            .eq("transferId", receipt.data.sourceDocumentId),
+            .eq("transferId", receipt.data.sourceDocumentId)
         ]);
 
         if (warehouseTransfer.error)
@@ -2009,7 +2917,7 @@ serve(async (req: Request) => {
             .from("item")
             .select("id, replenishmentSystem")
             .in("id", transferItemIds)
-            .eq("companyId", companyId),
+            .eq("companyId", companyId)
         ]);
 
         if (itemCosts.error) {
@@ -2040,7 +2948,10 @@ serve(async (req: Request) => {
         const accountDefaults = accountingEnabled
           ? await getDefaultPostingGroup(client, companyId)
           : null;
-        if (accountingEnabled && (accountDefaults?.error || !accountDefaults?.data)) {
+        if (
+          accountingEnabled &&
+          (accountDefaults?.error || !accountDefaults?.data)
+        ) {
           throw new Error("Error getting account defaults");
         }
 
@@ -2066,7 +2977,7 @@ serve(async (req: Request) => {
             (warehouseTransferLine.receivedQuantity ?? 0) + receivedQuantity;
 
           warehouseTransferLineUpdates[warehouseTransferLine.id] = {
-            receivedQuantity: newReceivedQuantity,
+            receivedQuantity: newReceivedQuantity
           };
 
           // Get item cost for this item
@@ -2088,7 +2999,7 @@ serve(async (req: Request) => {
             documentId: warehouseTransfer.data?.transferId,
             externalDocumentId: receipt.data?.externalDocumentId ?? undefined,
             createdBy: userId,
-            companyId,
+            companyId
           });
 
           // Create journal entries for inventory movement if there's value
@@ -2113,7 +3024,7 @@ serve(async (req: Request) => {
               externalDocumentId: warehouseTransfer.data?.transferId,
               documentLineReference: `transfer-receipt:${receiptLine.lineId}`,
               journalLineReference,
-              companyId,
+              companyId
             });
 
             journalLineInserts.push({
@@ -2126,7 +3037,7 @@ serve(async (req: Request) => {
               externalDocumentId: warehouseTransfer.data?.transferId,
               documentLineReference: `transfer-receipt:${receiptLine.lineId}`,
               journalLineReference,
-              companyId,
+              companyId
             });
           }
 
@@ -2138,7 +3049,7 @@ serve(async (req: Request) => {
                 itemPostingGroupId: itemCost?.itemPostingGroupId ?? null,
                 itemId: receiptLine.itemId ?? null,
                 locationId: receiptLine.locationId ?? null,
-                fixedAssetClassId: null,
+                fixedAssetClassId: null
               });
             }
           }
@@ -2195,7 +3106,7 @@ serve(async (req: Request) => {
             .updateTable("warehouseTransfer")
             .set({
               status: newStatus,
-              updatedBy: userId,
+              updatedBy: userId
             })
             .where("id", "=", warehouseTransfer.data.id)
             .execute();
@@ -2220,7 +3131,7 @@ serve(async (req: Request) => {
                 status: "Posted",
                 postedAt: new Date().toISOString(),
                 postedBy: userId,
-                createdBy: userId,
+                createdBy: userId
               })
               .returning(["id"])
               .executeTakeFirstOrThrow();
@@ -2230,7 +3141,7 @@ serve(async (req: Request) => {
               .values(
                 journalLineInserts.map((line) => ({
                   ...line,
-                  journalId: transferJournalResult.id,
+                  journalId: transferJournalResult.id
                 }))
               )
               .returning(["id"])
@@ -2257,7 +3168,7 @@ serve(async (req: Request) => {
                     journalLineId: jl.id,
                     dimensionId: dimensionMap.get("ItemPostingGroup")!,
                     valueId: meta.itemPostingGroupId,
-                    companyId,
+                    companyId
                   });
                 }
                 if (meta.itemId && dimensionMap.has("Item")) {
@@ -2265,7 +3176,7 @@ serve(async (req: Request) => {
                     journalLineId: jl.id,
                     dimensionId: dimensionMap.get("Item")!,
                     valueId: meta.itemId,
-                    companyId,
+                    companyId
                   });
                 }
                 if (meta.locationId && dimensionMap.has("Location")) {
@@ -2273,15 +3184,18 @@ serve(async (req: Request) => {
                     journalLineId: jl.id,
                     dimensionId: dimensionMap.get("Location")!,
                     valueId: meta.locationId,
-                    companyId,
+                    companyId
                   });
                 }
-                if (meta.fixedAssetClassId && dimensionMap.has("FixedAssetClass")) {
+                if (
+                  meta.fixedAssetClassId &&
+                  dimensionMap.has("FixedAssetClass")
+                ) {
                   journalLineDimensionInserts.push({
                     journalLineId: jl.id,
                     dimensionId: dimensionMap.get("FixedAssetClass")!,
                     valueId: meta.fixedAssetClassId,
-                    companyId,
+                    companyId
                   });
                 }
               });
@@ -2310,7 +3224,7 @@ serve(async (req: Request) => {
             .set({
               status: "Posted",
               postingDate: today,
-              postedBy: userId,
+              postedBy: userId
             })
             .where("id", "=", receiptId)
             .execute();
@@ -2325,9 +3239,14 @@ serve(async (req: Request) => {
 
     return jsonResponse({ success: true });
   } catch (err) {
-    console.error(err);
+    logger.error("Operation failed: {error}", { error: err });
     if (payload.type !== "void" && "receiptId" in payload) {
-      const client = await requirePermissions(req, payload.companyId, payload.userId, { update: "inventory" });
+      const client = await requirePermissions(
+        req,
+        payload.companyId,
+        payload.userId,
+        { update: "inventory" }
+      );
       await client
         .from("receipt")
         .update({ status: "Draft" })

@@ -1,3 +1,4 @@
+import { error, success } from "@carbon/auth";
 import { requirePermissions } from "@carbon/auth/auth.server";
 import { getCarbonServiceRole } from "@carbon/auth/client.server";
 import { runLocationSchedule } from "@carbon/ee/planning";
@@ -17,14 +18,17 @@ vi.mock("@carbon/auth/client.server", () => ({
 vi.mock("@carbon/auth/session.server", () => ({
   flash: vi.fn(async () => ({}))
 }));
+vi.mock("@carbon/logger", () => ({
+  getLogger: () => ({ error: vi.fn() })
+}));
+// Scheduling moved OUT of the `schedule` edge function and into Node in #1151:
+// the release path now regenerates the job's whole location in-process via
+// `runLocationSchedule` instead of `serviceRole.functions.invoke("schedule")`.
 vi.mock("@carbon/ee/planning", () => ({
   runLocationSchedule: vi.fn()
 }));
 vi.mock("~/services/database.server", () => ({
-  getDatabaseClient: vi.fn()
-}));
-vi.mock("@carbon/logger", () => ({
-  getLogger: () => ({ error: vi.fn() })
+  getDatabaseClient: vi.fn(() => ({}))
 }));
 vi.mock("~/utils/path", () => ({
   path: {
@@ -153,6 +157,12 @@ describe("Job release status action", () => {
   it("commits the Ready status before invoking the scheduler", async () => {
     // On success the action ends by throwing a redirect Response.
     await expect(runRelease()).rejects.toBeInstanceOf(Response);
+
+    // The redirect must be the SUCCESS one. Without this, a scheduler that
+    // throws still redirects (the catch flashes "Failed to schedule job"), and
+    // the ordering assertion below would pass on the failure path.
+    expect(success).toHaveBeenCalledWith("Updated job status");
+    expect(error).not.toHaveBeenCalled();
 
     expect(updateJobStatus).toHaveBeenCalledOnce();
     expect(events).toContain("updateJobStatus");

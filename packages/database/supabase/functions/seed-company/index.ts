@@ -1,18 +1,22 @@
 import { serve } from "https://deno.land/std@0.175.0/http/server.ts";
-import { DB, getConnectionPool, getDatabaseClient } from "../lib/database.ts";
-
+import {
+  type DB,
+  getConnectionPool,
+  getDatabaseClient
+} from "../lib/database.ts";
+import { getFunctionLogger } from "../lib/logging.ts";
 import { corsPreflight, errorResponse, jsonResponse } from "../lib/response.ts";
 import {
   accountDefaults,
   accounts,
+  changeOrderRequiredActions,
+  changeOrderTypes,
   currencies,
   customerStatuses,
   dimensions,
   failureModes,
   fiscalYearSettings,
   fixedAssetClasses,
-  changeOrderRequiredActions,
-  changeOrderTypes,
   gaugeTypes,
   groupCompanyTemplate,
   groups,
@@ -20,12 +24,16 @@ import {
   nonConformanceTypes,
   paymentTerms,
   periodCloseTaskDefinitions,
+  returnReasons,
   scrapReasons,
   sequences,
-  unitOfMeasures,
+  unitOfMeasures
 } from "../lib/seed.ts";
 import { getSupabaseServiceRole } from "../lib/supabase.ts";
-import { Database } from "../lib/types.ts";
+import type { Database } from "../lib/types.ts";
+import { resolveShippingDefault } from "./shipping-default.ts";
+
+const logger = getFunctionLogger("seed-company");
 
 const pool = getConnectionPool(1);
 const db = getDatabaseClient<DB>(pool);
@@ -33,15 +41,19 @@ const db = getDatabaseClient<DB>(pool);
 serve(async (req: Request) => {
   const preflight = corsPreflight(req);
   if (preflight) return preflight;
-  const { companyId: id, userId, parentCompanyId, identityOnly } =
-    await req.json();
+  const {
+    companyId: id,
+    userId,
+    parentCompanyId,
+    identityOnly
+  } = await req.json();
 
-  console.log({
+  logger.info({
     function: "seed-company",
     id,
     userId,
     parentCompanyId,
-    identityOnly: identityOnly === true,
+    identityOnly: identityOnly === true
   });
 
   try {
@@ -74,7 +86,7 @@ serve(async (req: Request) => {
       .select("userId", { count: "exact", head: true })
       .eq("userId", userId)
       .eq("companyId", companyId);
-      
+
     if ((existingLink.count ?? 0) > 0) {
       return jsonResponse({ success: true, alreadySeeded: true });
     }
@@ -104,14 +116,13 @@ serve(async (req: Request) => {
           .values({
             name: company.data.name,
             createdBy: userId,
-            ownerId: userId,
+            ownerId: userId
           })
           .returning(["id"])
           .execute();
 
         companyGroupId = companyGroupResult[0].id;
-        if (!companyGroupId)
-          throw new Error("Failed to create company group");
+        if (!companyGroupId) throw new Error("Failed to create company group");
 
         await trx
           .updateTable("company")
@@ -140,7 +151,7 @@ serve(async (req: Request) => {
         .values({
           id: companyId,
           name: companyId,
-          public: false,
+          public: false
         })
         .onConflict((oc) => oc.column("id").doNothing())
         .execute();
@@ -166,7 +177,7 @@ serve(async (req: Request) => {
                 8
               )}-${companyId.substring(8, 20)}`
             ),
-            companyId,
+            companyId
           }))
         )
         .execute();
@@ -178,8 +189,8 @@ serve(async (req: Request) => {
             name: "Admin",
             companyId,
             protected: true,
-            systemType: "Admin" as const,
-          },
+            systemType: "Admin" as const
+          }
         ])
         .returning(["id"])
         .execute();
@@ -189,7 +200,10 @@ serve(async (req: Request) => {
         throw new Error("Failed to insert admin employee type");
 
       // get the modules
-      const modules = await trx.selectFrom("modules").select("name").execute() as { name: string }[];
+      const modules = (await trx
+        .selectFrom("modules")
+        .select("name")
+        .execute()) as { name: string }[];
 
       // create employee type permissions for admin
       const employeeTypePermissions = modules.reduce<
@@ -203,7 +217,7 @@ serve(async (req: Request) => {
             create: [companyId],
             update: [companyId],
             delete: [companyId],
-            view: [companyId],
+            view: [companyId]
           });
         }
         return acc;
@@ -223,8 +237,8 @@ serve(async (req: Request) => {
             id: String(userId),
             employeeTypeId,
             companyId,
-            active: true,
-          },
+            active: true
+          }
         ])
         .execute();
 
@@ -233,222 +247,282 @@ serve(async (req: Request) => {
       // backup carries all of this, so onboarding-from-a-backup seeds only
       // the identity layer above and lets the import provide the rest.
       if (!identityOnly) {
-      // customer status
-      await trx
-        .insertInto("customerStatus")
-        .values(
-          customerStatuses.map((name) => ({
-            name,
-            companyId,
-            createdBy: "system",
-          }))
-        )
-        .execute();
-
-      // scrap reason codes
-      await trx
-        .insertInto("scrapReason")
-        .values(
-          scrapReasons.map((name) => ({
-            name,
-            companyId,
-            createdBy: "system",
-          }))
-        )
-        .execute();
-
-      // payment terms
-      await trx
-        .insertInto("paymentTerm")
-        .values(paymentTerms.map((pt) => ({ ...pt, companyId })))
-        .execute();
-
-      await trx
-        .insertInto("unitOfMeasure")
-        .values(unitOfMeasures.map((uom) => ({ ...uom, companyId })))
-        .execute();
-
-      await trx
-        .insertInto("gaugeType")
-        .values(
-          gaugeTypes.map((gt) => ({ name: gt, companyId, createdBy: "system" }))
-        )
-        .execute();
-
-      await trx
-        .insertInto("maintenanceFailureMode")
-        .values(failureModes.map((name) => ({ name, companyId, createdBy: "system" })))
-        .execute();
-
-      await trx
-        .insertInto("nonConformanceType")
-        .values(nonConformanceTypes.map((nc) => ({ ...nc, companyId })))
-        .execute();
-
-      await trx
-        .insertInto("nonConformanceRequiredAction")
-        .values(
-          nonConformanceRequiredActions.map((nc) => ({ ...nc, companyId }))
-        )
-        .execute();
-
-      // change-order default types (the changeOrderType lookup). New on this
-      // branch and not yet in the cloud-generated Kysely types, so the insert
-      // goes through a cast (mirrors changeOrderRequiredAction below).
-      await (trx as any)
-        .insertInto("changeOrderType")
-        .values(changeOrderTypes.map((ct) => ({ ...ct, companyId })))
-        .execute();
-
-      // change-order default actions (system template rows). New on this branch
-      // and not yet in the cloud-generated Kysely types, so the insert goes
-      // through a cast (mirrors periodCloseTaskDefinition below).
-      await (trx as any)
-        .insertInto("changeOrderRequiredAction")
-        .values(
-          changeOrderRequiredActions.map((ca) => ({ ...ca, companyId }))
-        )
-        .execute();
-
-      await trx
-        .insertInto("sequence")
-        .values(sequences.map((s) => ({ ...s, companyId })))
-        .execute();
-
-      // period-close checklist definitions (system template rows). The table is
-      // new on this branch and not yet in the cloud-generated Kysely types, so
-      // the insert goes through a cast (mirrors accounting.ee.service.ts).
-      await (trx as any)
-        .insertInto("periodCloseTaskDefinition")
-        .values(
-          periodCloseTaskDefinitions.map((d) => ({
-            ...d,
-            companyId,
-            createdBy: "system",
-          }))
-        )
-        .execute();
-
-      // Shared tables: only seed for new groups (existing groups already have these)
-      let accountIdByKey: Record<string, string> = {};
-      if (isNewGroup) {
+        // customer status
         await trx
-          .insertInto("currency")
-          .values(currencies.map((c) => ({ ...c, companyGroupId })))
-          .execute();
-
-        // Insert accounts in order, resolving parentKey to parentId
-        for (const { key, parentKey, ...acc } of accounts) {
-          const result = await trx
-            .insertInto("account")
-            .values({
-              ...acc,
-              companyGroupId,
-              parentId: parentKey ? accountIdByKey[parentKey] ?? null : null,
-            })
-            .returning(["id"])
-            .execute();
-          if (result[0]?.id) {
-            accountIdByKey[key] = result[0].id;
-          }
-        }
-
-        await trx
-          .insertInto("dimension")
+          .insertInto("customerStatus")
           .values(
-            dimensions.map((d) => ({
-              name: d.name,
-              entityType: d.entityType,
-              companyGroupId,
-              createdBy: userId,
+            customerStatuses.map((name) => ({
+              name,
+              companyId,
+              createdBy: "system"
             }))
           )
           .execute();
-      } else {
-        // For subsidiaries joining an existing group, look up account IDs by number
-        const existingAccounts = await trx
-          .selectFrom("account")
-          .select(["id", "number"])
-          .where("companyGroupId", "=", companyGroupId!)
-          .where("number", "is not", null)
+
+        // scrap reason codes
+        await trx
+          .insertInto("scrapReason")
+          .values(
+            scrapReasons.map((name) => ({
+              name,
+              companyId,
+              createdBy: "system"
+            }))
+          )
           .execute();
-        for (const acc of existingAccounts) {
-          if (acc.number) {
-            accountIdByKey[acc.number] = acc.id;
+
+        // return reason codes (shared by customer RMAs and supplier returns)
+        await trx
+          .insertInto("returnReason")
+          .values(
+            returnReasons.map((name) => ({
+              name,
+              inventoryValueZero: false,
+              companyId,
+              createdBy: "system"
+            }))
+          )
+          .execute();
+
+        // payment terms
+        await trx
+          .insertInto("paymentTerm")
+          .values(paymentTerms.map((pt) => ({ ...pt, companyId })))
+          .execute();
+
+        await trx
+          .insertInto("unitOfMeasure")
+          .values(unitOfMeasures.map((uom) => ({ ...uom, companyId })))
+          .execute();
+
+        await trx
+          .insertInto("gaugeType")
+          .values(
+            gaugeTypes.map((gt) => ({
+              name: gt,
+              companyId,
+              createdBy: "system"
+            }))
+          )
+          .execute();
+
+        await trx
+          .insertInto("maintenanceFailureMode")
+          .values(
+            failureModes.map((name) => ({
+              name,
+              companyId,
+              createdBy: "system"
+            }))
+          )
+          .execute();
+
+        await trx
+          .insertInto("nonConformanceType")
+          .values(nonConformanceTypes.map((nc) => ({ ...nc, companyId })))
+          .execute();
+
+        await trx
+          .insertInto("nonConformanceRequiredAction")
+          .values(
+            nonConformanceRequiredActions.map((nc) => ({ ...nc, companyId }))
+          )
+          .execute();
+
+        // change-order default types (the changeOrderType lookup). New on this
+        // branch and not yet in the cloud-generated Kysely types, so the insert
+        // goes through a cast (mirrors changeOrderRequiredAction below).
+        await (trx as any)
+          .insertInto("changeOrderType")
+          .values(changeOrderTypes.map((ct) => ({ ...ct, companyId })))
+          .execute();
+
+        // change-order default actions (system template rows). New on this branch
+        // and not yet in the cloud-generated Kysely types, so the insert goes
+        // through a cast (mirrors periodCloseTaskDefinition below).
+        await (trx as any)
+          .insertInto("changeOrderRequiredAction")
+          .values(
+            changeOrderRequiredActions.map((ca) => ({ ...ca, companyId }))
+          )
+          .execute();
+
+        await trx
+          .insertInto("sequence")
+          .values(sequences.map((s) => ({ ...s, companyId })))
+          .execute();
+
+        // period-close checklist definitions (system template rows). The table is
+        // new on this branch and not yet in the cloud-generated Kysely types, so
+        // the insert goes through a cast (mirrors accounting.ee.service.ts).
+        await (trx as any)
+          .insertInto("periodCloseTaskDefinition")
+          .values(
+            periodCloseTaskDefinitions.map((d) => ({
+              ...d,
+              companyId,
+              createdBy: "system"
+            }))
+          )
+          .execute();
+
+        // Shared tables: only seed for new groups (existing groups already have these)
+        let accountIdByKey: Record<string, string> = {};
+        if (isNewGroup) {
+          await trx
+            .insertInto("currency")
+            .values(currencies.map((c) => ({ ...c, companyGroupId })))
+            .execute();
+
+          // Insert accounts in order, resolving parentKey to parentId
+          for (const { key, parentKey, ...acc } of accounts) {
+            const result = await trx
+              .insertInto("account")
+              .values({
+                ...acc,
+                companyGroupId,
+                parentId: parentKey ? (accountIdByKey[parentKey] ?? null) : null
+              })
+              .returning(["id"])
+              .execute();
+            if (result[0]?.id) {
+              accountIdByKey[key] = result[0].id;
+            }
+          }
+
+          await trx
+            .insertInto("dimension")
+            .values(
+              dimensions.map((d) => ({
+                name: d.name,
+                entityType: d.entityType,
+                companyGroupId,
+                createdBy: userId
+              }))
+            )
+            .execute();
+        } else {
+          // For subsidiaries joining an existing group, look up account IDs by number
+          const existingAccounts = await trx
+            .selectFrom("account")
+            .select([
+              "id",
+              "number",
+              "name",
+              "companyGroupId",
+              "active",
+              "isGroup",
+              "class",
+              "incomeBalance",
+              "accountType",
+              "consolidatedRate",
+              "parentId"
+            ])
+            .where("companyGroupId", "=", companyGroupId!)
+            .execute();
+          for (const acc of existingAccounts) {
+            if (acc.number) {
+              accountIdByKey[acc.number] = acc.id;
+            }
+          }
+          const parentDefaults = parentCompanyId
+            ? await trx
+                .selectFrom("accountDefault")
+                .innerJoin("company", "company.id", "accountDefault.companyId")
+                .select([
+                  "accountDefault.salesShippingRevenueAccount",
+                  "accountDefault.salesAccount"
+                ])
+                .where("accountDefault.companyId", "=", parentCompanyId)
+                .where("company.companyGroupId", "=", companyGroupId!)
+                .executeTakeFirst()
+            : undefined;
+          const parentDefaultId = parentDefaults?.salesShippingRevenueAccount;
+          accountIdByKey["4050"] = resolveShippingDefault({
+            parentDefaultId:
+              parentDefaultId &&
+              parentDefaultId !== parentDefaults?.salesAccount
+                ? parentDefaultId
+                : null,
+            accounts: existingAccounts.filter(
+              (account) => account.id !== accountIdByKey["4010"]
+            ),
+            companyGroupId: companyGroupId!
+          });
+        }
+
+        // Resolve account numbers to IDs for account defaults
+        const resolvedDefaults: Record<string, string | null> = {};
+        for (const [key, number] of Object.entries(accountDefaults)) {
+          resolvedDefaults[key] = accountIdByKey[number] ?? null;
+        }
+
+        // These defaults are NOT NULL in the schema. If a customized COA
+        // on an existing group is missing one of their accounts
+        // (6050/4130/4120/7060/1150/1210/1220), the lookup yields null and the
+        // insert below would violate the not-null constraint. Fall back to an
+        // existing default of the same nature so the insert can't fail — mirrors
+        // the COALESCE backfills in 20260630093809_ar-ap-payments.sql,
+        // 20260711155312_supplier-prepayment-account.sql, and
+        // 20260713190909_raw-materials-finished-goods-accounts.sql.
+        // Order matters: rawMaterialsAccount resolves before finishedGoodsAccount
+        // chains onto it.
+        const arApDefaultFallbacks: Record<string, string> = {
+          customerWriteOffAccount: "salesDiscountAccount",
+          supplierWriteOffAccount: "salesAccount",
+          realizedExchangeGainAccount: "salesAccount",
+          realizedExchangeLossAccount: "interestAccount",
+          assetGainOnDisposalAccount: "assetLossOnDisposalAccount",
+          supplierPrepaymentAccount: "receivablesAccount",
+          rawMaterialsAccount: "workInProgressAccount",
+          finishedGoodsAccount: "rawMaterialsAccount"
+        };
+        for (const [key, fallbackKey] of Object.entries(arApDefaultFallbacks)) {
+          if (!resolvedDefaults[key]) {
+            resolvedDefaults[key] = resolvedDefaults[fallbackKey] ?? null;
           }
         }
-      }
 
-      // Resolve account numbers to IDs for account defaults
-      const resolvedDefaults: Record<string, string | null> = {};
-      for (const [key, number] of Object.entries(accountDefaults)) {
-        resolvedDefaults[key] = accountIdByKey[number] ?? null;
-      }
+        // Company-specific accounting defaults and posting groups
+        await trx
+          .insertInto("accountDefault")
+          .values([
+            {
+              ...resolvedDefaults,
+              companyId
+            }
+          ])
+          .execute();
 
-      // These defaults are NOT NULL in the schema. If a customized COA
-      // on an existing group is missing one of their accounts
-      // (6050/4130/4120/7060/1150/1210/1220), the lookup yields null and the
-      // insert below would violate the not-null constraint. Fall back to an
-      // existing default of the same nature so the insert can't fail — mirrors
-      // the COALESCE backfills in 20260630093809_ar-ap-payments.sql,
-      // 20260711155312_supplier-prepayment-account.sql, and
-      // 20260713190909_raw-materials-finished-goods-accounts.sql.
-      // Order matters: rawMaterialsAccount resolves before finishedGoodsAccount
-      // chains onto it.
-      const arApDefaultFallbacks: Record<string, string> = {
-        customerWriteOffAccount: "salesDiscountAccount",
-        supplierWriteOffAccount: "salesAccount",
-        realizedExchangeGainAccount: "salesAccount",
-        realizedExchangeLossAccount: "interestAccount",
-        assetGainOnDisposalAccount: "assetLossOnDisposalAccount",
-        supplierPrepaymentAccount: "receivablesAccount",
-        rawMaterialsAccount: "workInProgressAccount",
-        finishedGoodsAccount: "rawMaterialsAccount",
-      };
-      for (const [key, fallbackKey] of Object.entries(arApDefaultFallbacks)) {
-        if (!resolvedDefaults[key]) {
-          resolvedDefaults[key] = resolvedDefaults[fallbackKey] ?? null;
-        }
-      }
+        await trx
+          .insertInto("fiscalYearSettings")
+          .values([{ ...fiscalYearSettings, companyId }])
+          .execute();
 
-      // Company-specific accounting defaults and posting groups
-      await trx
-        .insertInto("accountDefault")
-        .values([
-          {
-            ...resolvedDefaults,
-            companyId,
-          },
-        ])
-        .execute();
-
-      await trx
-        .insertInto("fiscalYearSettings")
-        .values([{ ...fiscalYearSettings, companyId }])
-        .execute();
-
-      await trx
-        .insertInto("fixedAssetClass")
-        .values(
-          fixedAssetClasses.map((fac) => ({
-            name: fac.name,
-            depreciationMethod: fac.depreciationMethod,
-            usefulLifeMonths: fac.usefulLifeMonths,
-            residualValuePercent: fac.residualValuePercent,
-            assetAccountId: accountIdByKey[fac.assetAccount]!,
-            accumulatedDepreciationAccountId:
-              accountIdByKey[fac.accumulatedDepreciationAccount]!,
-            depreciationExpenseAccountId:
-              accountIdByKey[fac.depreciationExpenseAccount]!,
-            writeOffAccountId: accountIdByKey[fac.writeOffAccount]!,
-            writeDownAccountId: accountIdByKey[fac.writeDownAccount]!,
-            gainOnDisposalAccountId: accountIdByKey[fac.gainOnDisposalAccount]!,
-            lossOnDisposalAccountId: accountIdByKey[fac.lossOnDisposalAccount]!,
-            companyId,
-            createdBy: userId,
-          }))
-        )
-        .execute();
+        await trx
+          .insertInto("fixedAssetClass")
+          .values(
+            fixedAssetClasses.map((fac) => ({
+              name: fac.name,
+              depreciationMethod: fac.depreciationMethod,
+              usefulLifeMonths: fac.usefulLifeMonths,
+              residualValuePercent: fac.residualValuePercent,
+              assetAccountId: accountIdByKey[fac.assetAccount]!,
+              accumulatedDepreciationAccountId:
+                accountIdByKey[fac.accumulatedDepreciationAccount]!,
+              depreciationExpenseAccountId:
+                accountIdByKey[fac.depreciationExpenseAccount]!,
+              writeOffAccountId: accountIdByKey[fac.writeOffAccount]!,
+              writeDownAccountId: accountIdByKey[fac.writeDownAccount]!,
+              gainOnDisposalAccountId:
+                accountIdByKey[fac.gainOnDisposalAccount]!,
+              lossOnDisposalAccountId:
+                accountIdByKey[fac.lossOnDisposalAccount]!,
+              companyId,
+              createdBy: userId
+            }))
+          )
+          .execute();
       } // end if (!identityOnly)
 
       const user = await client
@@ -518,9 +592,7 @@ serve(async (req: Request) => {
           .where("parentCompanyId", "=", parentCompanyId)
           .execute();
 
-        const hasElimination = siblings.some(
-          (s) => s.isEliminationEntity
-        );
+        const hasElimination = siblings.some((s) => s.isEliminationEntity);
 
         if (!hasElimination) {
           const parent = await trx
@@ -538,13 +610,12 @@ serve(async (req: Request) => {
               stateProvince: "",
               postalCode: "",
               baseCurrencyCode:
-                parent?.baseCurrencyCode ??
-                company.data.baseCurrencyCode,
+                parent?.baseCurrencyCode ?? company.data.baseCurrencyCode,
               countryCode:
                 parent?.countryCode ?? company.data.countryCode ?? "",
               parentCompanyId,
               isEliminationEntity: true,
-              companyGroupId,
+              companyGroupId
             })
             .returning(["id"])
             .executeTakeFirst();
@@ -560,7 +631,7 @@ serve(async (req: Request) => {
               .values(
                 sequences.map((s) => ({
                   ...s,
-                  companyId: eliminationCompany.id,
+                  companyId: eliminationCompany.id
                 }))
               )
               .execute();

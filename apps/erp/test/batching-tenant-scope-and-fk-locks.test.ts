@@ -65,7 +65,8 @@ describe("batch membership is pinned to one company via composite FKs", () => {
     // referencing column, including the NOT NULL `companyId` — so deleting a
     // batch (or a `DELETE FROM company` cascade) would raise a not-null
     // violation. The PG15 column-list form nulls ONLY the batch pointer.
-    // The consolidated migration includes the fix for both member FKs.
+    // The standalone 20260904151137 fix was folded into the consolidated
+    // batching migration when #1550 was squashed, so assert against that.
     expect(migration).toMatch(
       /ADD CONSTRAINT "jobOperation_jobOperationBatchId_fkey"[\s\S]*?ON DELETE SET NULL \("jobOperationBatchId"\)/
     );

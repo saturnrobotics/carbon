@@ -390,6 +390,234 @@ class ControllerGitTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Verification/control"):
             self.controller.guard_authority()
 
+    def prepare_generator_helper(
+        self,
+        *,
+        fork=False,
+        conflict=False,
+        name="scripts/lib/metadata.ts",
+        patterns=None,
+        command=None,
+    ):
+        original = (
+            "export const local = 'base';\n"
+            + "// stable separator\n" * 12
+            + "export const upstream = 'base';\n"
+        )
+        self.git(self.root, "switch", "fixture-upstream")
+        self.write(self.root, name, original)
+        self.write(
+            self.root,
+            ".fork/generated-artifacts.json",
+            json.dumps(
+                {
+                    "artifacts": [
+                        {
+                            "inputs": patterns
+                            if patterns is not None
+                            else ["scripts/lib/**", "docs/lib/**"],
+                            "command": command
+                            if command is not None
+                            else ["node", "scripts/generate-fixture.mjs"],
+                        }
+                    ]
+                }
+            ),
+        )
+        self.git(self.root, "add", "--", name, ".fork/generated-artifacts.json")
+        self.git(self.root, "commit", "-m", "Register synthetic generator source")
+        seed = self.git(self.root, "rev-parse", "HEAD")
+        self.git(self.root, "switch", "saturn/main")
+        self.git(self.root, "merge", "--no-edit", seed)
+        if fork:
+            self.write(
+                self.root, name, original.replace("local = 'base'", "local = 'fork'")
+            )
+            self.git(self.root, "add", "--", name)
+            self.git(self.root, "commit", "-m", "Preserve fork generator behavior")
+        self.base = self.git(self.root, "rev-parse", "HEAD")
+        self.controller.state["base"] = self.base
+        self.git(self.candidate, "merge", "--no-edit", self.base)
+        incoming = original.replace(
+            "local = 'base'" if conflict else "upstream = 'base'",
+            "local = 'incoming'" if conflict else "upstream = 'incoming'",
+        )
+        self.merge_upstream_document(name, incoming)
+        return name
+
+    def test_registered_generator_helper_passes_exact_upstream_and_committed_merge(
+        self,
+    ):
+        name = self.prepare_generator_helper()
+        self.controller.guard_authority()
+        self.git(self.candidate, "commit", "-m", "Integrate generator source")
+        self.controller.guard_authority()
+        self.assertIn("upstream = 'incoming'", (self.candidate / name).read_text())
+
+    def test_registered_generator_clean_merge_preserves_fork_behavior(self):
+        name = self.prepare_generator_helper(fork=True)
+        self.controller.guard_authority()
+        content = (self.candidate / name).read_text()
+        self.assertIn("local = 'fork'", content)
+        self.assertIn("upstream = 'incoming'", content)
+        self.assertNotEqual(
+            self.git(self.candidate, "rev-parse", ":" + name),
+            self.git(self.candidate, "rev-parse", self.upstream + ":" + name),
+        )
+
+    def test_registered_generator_conflict_requires_separate_review_even_after_manual_resolution(
+        self,
+    ):
+        name = self.prepare_generator_helper(fork=True, conflict=True)
+        self.write(self.candidate, name, "export const arbitraryResolution = true;\n")
+        self.git(self.candidate, "add", "--", name)
+        with self.assertRaisesRegex(ValueError, "Verification/control"):
+            self.controller.guard_authority()
+
+    def test_registered_generator_cannot_hide_index_edits_behind_expected_worktree(
+        self,
+    ):
+        name = self.prepare_generator_helper(fork=True)
+        accepted = (self.candidate / name).read_bytes()
+        self.controller.guard_authority()
+        self.write(self.candidate, name, "export const worker = true;\n")
+        self.git(self.candidate, "add", "--", name)
+        (self.candidate / name).write_bytes(accepted)
+        with self.assertRaisesRegex(ValueError, "Verification/control"):
+            self.controller.guard_authority()
+
+    def test_registered_generator_cannot_hide_committed_edits_with_repaired_index(self):
+        name = self.prepare_generator_helper(fork=True)
+        accepted = (self.candidate / name).read_bytes()
+        self.controller.guard_authority()
+        self.write(self.candidate, name, "export const worker = true;\n")
+        self.git(self.candidate, "add", "--", name)
+        self.git(self.candidate, "commit", "-m", "Unreviewed generator change")
+        (self.candidate / name).write_bytes(accepted)
+        self.git(self.candidate, "add", "--", name)
+        with self.assertRaisesRegex(ValueError, "Verification/control"):
+            self.controller.guard_authority()
+
+    def test_registered_generator_rejects_worker_content_mode_and_symlink_changes(self):
+        name = self.prepare_generator_helper()
+        path = self.candidate / name
+        accepted = path.read_bytes()
+        self.controller.guard_authority()
+        path.write_bytes(accepted + b"\n")
+        with self.assertRaisesRegex(ValueError, "Verification/control"):
+            self.controller.guard_authority()
+        path.write_bytes(accepted)
+        path.chmod(0o755)
+        with self.assertRaisesRegex(ValueError, "Verification/control"):
+            self.controller.guard_authority()
+        path.unlink()
+        other = self.candidate / "replacement.ts"
+        other.write_bytes(accepted)
+        path.symlink_to(other)
+        with self.assertRaisesRegex(ValueError, "Verification/control"):
+            self.controller.guard_authority()
+
+    def test_generator_registration_cannot_be_added_by_candidate(self):
+        name = self.prepare_generator_helper(patterns=["scripts/lib/something-else.ts"])
+        registry = ".fork/generated-artifacts.json"
+        self.write(
+            self.candidate,
+            registry,
+            json.dumps({"artifacts": [{"inputs": ["scripts/lib/**"]}]}),
+        )
+        self.git(self.candidate, "add", "--", registry)
+        self.assertFalse(self.controller.is_pinned_upstream_generator_helper(name))
+        with self.assertRaisesRegex(ValueError, "Verification/control"):
+            self.controller.guard_authority()
+
+    def test_registered_generator_rejects_symlink_parent_even_with_pinned_bytes(self):
+        self.prepare_generator_helper()
+        self.controller.guard_authority()
+        directory = self.candidate / "scripts/lib"
+        target = self.candidate / "ordinary-helper-directory"
+        directory.rename(target)
+        directory.symlink_to(target, target_is_directory=True)
+        with self.assertRaisesRegex(ValueError, "Verification/control"):
+            self.controller.guard_authority()
+
+    def test_registered_docs_library_test_stays_protected(self):
+        self.prepare_generator_helper(
+            name="docs/lib/metadata.test.ts", patterns=["docs/lib/**"]
+        )
+        with self.assertRaisesRegex(ValueError, "Verification/control"):
+            self.controller.guard_authority()
+
+    def test_registered_docs_library_installer_stays_protected(self):
+        self.prepare_generator_helper(
+            name="docs/lib/install.mjs", patterns=["docs/lib/**"]
+        )
+        with self.assertRaisesRegex(ValueError, "Verification/control"):
+            self.controller.guard_authority()
+
+    def test_registered_docs_library_verifier_stays_protected(self):
+        self.prepare_generator_helper(
+            name="docs/lib/check-schema.ts", patterns=["docs/lib/**"]
+        )
+        with self.assertRaisesRegex(ValueError, "Verification/control"):
+            self.controller.guard_authority()
+
+    def test_registered_helper_scope_excludes_tests(self):
+        self.prepare_generator_helper(
+            name="scripts/lib/metadata.test.ts", patterns=["scripts/**"]
+        )
+        with self.assertRaisesRegex(ValueError, "Verification/control"):
+            self.controller.guard_authority()
+
+    def test_registered_helper_scope_excludes_installers(self):
+        self.prepare_generator_helper(
+            name="scripts/lib/install.mjs", patterns=["scripts/**"]
+        )
+        with self.assertRaisesRegex(ValueError, "Verification/control"):
+            self.controller.guard_authority()
+
+    def test_registered_helper_scope_excludes_entrypoints(self):
+        self.prepare_generator_helper(
+            name="scripts/generate-fixture.mjs", patterns=["scripts/**"]
+        )
+        with self.assertRaisesRegex(ValueError, "Verification/control"):
+            self.controller.guard_authority()
+
+    def test_registered_library_used_as_a_generator_entrypoint_stays_protected(self):
+        name = "scripts/lib/entrypoint.ts"
+        self.prepare_generator_helper(name=name, command=["node", name])
+        with self.assertRaisesRegex(ValueError, "Verification/control"):
+            self.controller.guard_authority()
+
+    def test_registered_docs_generator_helper_is_frozen_after_upstream_merge(self):
+        name = self.prepare_generator_helper(name="docs/lib/markdown-corpus.ts")
+        self.controller.guard_authority()
+        self.write(self.candidate, name, "export const worker = true;\n")
+        with self.assertRaisesRegex(ValueError, "Verification/control"):
+            self.controller.guard_authority()
+
+    def test_registered_generator_accepts_later_upstream_change_with_new_pins(self):
+        name = self.prepare_generator_helper(fork=True)
+        self.controller.guard_authority()
+        self.git(self.candidate, "commit", "-m", "First generator integration")
+        self.git(
+            self.root,
+            "merge",
+            "--ff-only",
+            self.git(self.candidate, "rev-parse", "HEAD"),
+        )
+        self.base = self.git(self.root, "rev-parse", "HEAD")
+        self.controller.state["base"] = self.base
+        incoming = (
+            self.git(self.root, "show", self.upstream + ":" + name).replace(
+                "'incoming'", "'next'"
+            )
+            + "\n"
+        )
+        self.merge_upstream_document(name, incoming)
+        self.controller.guard_authority()
+        self.assertIn("local = 'fork'", (self.candidate / name).read_text())
+        self.assertIn("upstream = 'next'", (self.candidate / name).read_text())
+
     def test_authority_guard_keeps_upstream_fork_policy_protected(self):
         self.merge_upstream_document(".claude/skills/fork-maintenance/SKILL.md")
         with self.assertRaisesRegex(ValueError, "Verification/control"):
