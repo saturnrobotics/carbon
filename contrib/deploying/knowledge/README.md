@@ -9,11 +9,137 @@ environment variables or secrets even if deferred implementation remains in the
 repository.
 
 Terraform creates the workload identities, private buckets, managed Redis,
-Direct VPC egress, Secret Manager containers and immutable Artifact Registry.
-It does not migrate a database, write a secret value, download a service-account
-key or deploy an application revision. `terraform apply` is an operator action
-after review of private `terraform.tfvars`. Keep endpoints, certificates, secret
-values, IAP evidence and staging results outside tracked files.
+Direct VPC egress, Secret Manager containers, immutable Artifact Registry, the
+IAP-protected `knowledge-web` service shell, the exact service-to-service invoker
+grants and the private path to Carbon's PostgreSQL listener. It does not migrate
+a database, write a secret value, download a service-account key or deploy an
+application revision. `terraform apply` is an operator action after review of
+private `terraform.tfvars`. Keep endpoints, certificates, secret values, IAP
+evidence and staging results outside tracked files.
+
+## Cloud foundation
+
+All identifiers below are synthetic. Real project IDs, bucket names, brand
+names and addresses belong in ignored `.local/` files.
+
+### State backend
+
+`main.tf` declares a partial `gcs` backend. The bucket and the per-environment
+prefix are supplied at `init`, so a tracked file never names a project and the
+two environments cannot share a state object:
+
+```bash
+terraform -chdir=contrib/deploying/knowledge init \
+  -backend-config="bucket=example-knowledge-terraform-state" \
+  -backend-config="prefix=knowledge/nonproduction"
+terraform -chdir=contrib/deploying/knowledge init -reconfigure \
+  -backend-config="bucket=example-knowledge-terraform-state" \
+  -backend-config="prefix=knowledge/production"
+```
+
+Keep the backend values in `contrib/deploying/knowledge/.local/backend.<environment>.hcl`
+and pass `-backend-config=.local/backend.production.hcl`. The state bucket must
+have object versioning and uniform bucket-level access, with write access limited
+to the operators who apply. Local state files (`*.tfstate`) are ignored by Git;
+never commit one. CI validates with `init -backend=false`, which needs no bucket.
+
+### IAP client and audiences
+
+`knowledge-web` is a Terraform-created Cloud Run service shell with
+`iap_enabled = true`, the IAP service agent as its only `run.invoker`, and
+`roles/iap.httpsResourceAccessor` for exactly `var.iap_workspace_group`. Its
+revision template is the synthetic probe image (`var.probe_image`) and is
+ignored by every later apply; the release controller owns it. The controller
+copies the service-level `run.googleapis.com/iap-enabled` and `ingress`
+annotations from the observed service onto each replacement, and refuses to
+promote `knowledge-web` when that shell is absent or IAP is off — a promotion
+cannot switch IAP off, and the foundation must be applied before the first
+release.
+
+IAP on Cloud Run uses a Google-managed OAuth client for users inside the
+Workspace organization, which is the only admission this deployment allows, so
+no OAuth brand or client exists in this configuration. The Terraform
+`google_iap_client` and `google_iap_brand` resources are deprecated and the
+provider reports that the IAP OAuth Admin API behind them stopped functioning
+after July 2025, so declaring them would produce a foundation that cannot
+apply; `test_infrastructure.py` fails if either reappears. A custom OAuth
+client is only relevant for admitting users outside the organization, which is
+not a supported configuration here. If that ever changes, the brand and client
+are created manually in the console and attached through IAP settings, and
+that manual step must be recorded privately with the deployment evidence.
+
+Audiences are outputs, never typed values:
+
+| Output key | Value | Consumed as |
+|---|---|---|
+| `service_audiences["knowledge-web"]` | `/projects/<number>/locations/<region>/services/knowledge-web` | `KNOWLEDGE_WEB_IAP_AUDIENCE` on web; `sourceIapAudience` in the caller registries |
+| `service_audiences["knowledge-query"]` | `https://knowledge-query-<number>.<region>.run.app` | `KNOWLEDGE_QUERY_AUDIENCE` on web, `KNOWLEDGE_IDENTITY_AUDIENCE` on ingest |
+| `service_audiences["knowledge-ingest"]` | `https://knowledge-ingest-<number>.<region>.run.app` | `KNOWLEDGE_WORKER_AUDIENCE` on web |
+| `service_audiences["knowledge-actions"]` | `https://knowledge-actions-<number>.<region>.run.app` | reserved; the actions unit is not part of manual-v1 |
+
+Export them privately and hand them to the controller:
+
+```bash
+terraform -chdir=contrib/deploying/knowledge output -json \
+  > contrib/deploying/knowledge/.local/foundation-outputs.json
+```
+
+`release.py --foundation-outputs <file>` fills every audience variable in
+`AUDIENCE_ENVIRONMENT` from `service_audiences` and rejects a plan whose own
+value differs. To keep a plan's audience values instead (for example a custom
+domain audience under test), pass `--override-audiences`; without either flag
+the controller refuses to run, so an audience cannot drift silently between the
+foundation and a release.
+
+### Invoker grants
+
+Cloud Run IAM is the entrance check for every internal hop; the receiver still
+verifies the service token and the forwarded IAP assertion. Grants are exactly
+the platform plan's §1.4 forwarding table plus the two job triggers. Each is a
+`roles/run.invoker` member bound by an exact `resource.name` condition — the
+receivers are controller-created, so a service-level binding cannot exist before
+the first release — and `test_infrastructure.py` fails on any grant outside this
+table, on any unconditioned `run.invoker`, and on `allUsers` or
+`allAuthenticatedUsers` anywhere.
+
+| Caller identity | Receiver |
+|---|---|
+| `knowledge-web` | `services/knowledge-query` |
+| `knowledge-web` | `services/knowledge-actions` |
+| `knowledge-ingest` | `services/knowledge-query` |
+| `knowledge-ingest` | `jobs/knowledge-parser` |
+| `knowledge-maintenance` (Cloud Scheduler) | `jobs/knowledge-retention` |
+| IAP service agent | `services/knowledge-web`, `services/knowledge-probe` (service-level) |
+
+### Private source path
+
+Carbon's PostgreSQL listener is reachable only over VPC peering plus Direct VPC
+egress, the same path Kanban uses (`../kanban/deploy/shared-database-setup.py`).
+There is no Cloud NAT and no public route. Set both variables together:
+
+```hcl
+private_source_network = "projects/example-carbon/global/networks/carbon-vpc"
+private_source_cidrs   = ["10.73.0.2/32"]
+```
+
+Terraform creates the peering in both directions (the second needs
+`compute.networks.addPeering` in the Carbon project), an egress allow for TCP
+5432 to `private_source_cidrs` for instances tagged
+`knowledge-source-database-client`, and an egress deny of that destination for
+everything else. `release.py` stamps that tag only on units holding a database
+credential (`DATABASE_UNITS`: query, ingest, schema, retention); web and parser
+can never open the listener. Carbon admits only the client subnets listed in its
+own `POSTGRES_CLIENT_CIDRS`, so `var.subnet_cidr` (default `10.82.0.0/24`) must
+be added there and Carbon redeployed before the first connection succeeds.
+
+Transport security is the listener's TLS certificate. Copy only Carbon's
+`ca.crt` into the `knowledge-source-database-ca` secret through an authenticated
+operator connection, and build every database URL with `sslmode=verify-full`
+and `sslrootcert` pointing at that CA. Every identity holding a database URL
+also holds the CA; web and parser hold neither. Mounting the CA file into the
+database units is controller work that is not yet wired: until it is, the
+database URL secrets are the only place the CA path is referenced, and no unit
+should be promoted with a URL that lacks `verify-full`.
 
 ## Database and library enrollment
 
@@ -106,10 +232,12 @@ The web service account must be registered as a trusted caller of query for
 capabilities above. The ingestion service account must also be registered as a
 query caller for `knowledge.identity`, because ingestion resolves the forwarded
 IAP subject through query without holding identity tables. Caller capability
-ceilings must contain only the capabilities each receiver uses. Configure the
-machine caller with `source.index.read`, the enrolled company and source only;
-its caller ID and database login must match the source `providerPolicy` values.
-Validate trusted-caller JSON against `callers.schema.json` before release.
+ceilings must contain only the capabilities each receiver uses. Every caller's
+`sourceIapAudience` is `service_audiences["knowledge-web"]` from the foundation
+outputs. Configure the machine caller with `source.index.read`, the enrolled
+company and source only; its caller ID and database login must match the source
+`providerPolicy` values. Validate trusted-caller JSON against
+`callers.schema.json` before release.
 
 ## Runtime requirements
 
@@ -144,6 +272,7 @@ python3 -m unittest discover -s contrib/deploying/knowledge -p 'test_*.py'
 python3 contrib/deploying/knowledge/release.py \
   --plan contrib/deploying/knowledge/.local/release-plan.json \
   --current contrib/deploying/knowledge/.local/release-manifest.json \
+  --foundation-outputs contrib/deploying/knowledge/.local/foundation-outputs.json \
   --project example-project --region us-central1
 ```
 
