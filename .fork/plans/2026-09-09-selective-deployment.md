@@ -26,7 +26,7 @@ the Docker dependency cache proof passed. A real first-run isolated Python
 bootstrap passed. Production observation was read-only.
 
 Promotion still requires successful applicable CI for the resulting commit. The
-GitHub `fork-verified` check on that exact SHA is the authoritative CI receipt;
+GitHub CI result on that exact SHA is the authoritative receipt;
 local checks alone do not authorize promotion or deployment.
 
 Raw logs, runtime state and private configuration remain in ignored local storage.

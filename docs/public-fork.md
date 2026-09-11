@@ -23,73 +23,32 @@ inputs. Ignore rules cannot remove a file already tracked or erase previous comm
 If private content is found, stop publication and address the exposure privately;
 revoke any exposed credentials and coordinate any necessary history cleanup.
 
-## Upstream updates and local deployment
+## Local deployment
 
-Keep `origin` pointed at your public fork. Configure the upstream repository once:
+Keep `origin` pointed at your public fork. `saturn/main` is the shared integration
+and deployment branch; changes reach it through reviewed pull requests, and its
+history is never rewritten.
 
-```bash
-git remote add upstream https://github.com/crbnos/carbon.git
-```
-
-If `upstream` already exists, inspect it with `git remote get-url upstream` before
-changing it. `saturn/main` is the shared deployment branch. Start feature branches
-there and merge upstream into an isolated candidate branch. After verification,
-fast-forward the shared branch to that exact candidate commit. Preserve ancestry;
-do not reset the fork to upstream, rebase shared history, or force-push away changes.
-
-```bash
-git switch saturn/main
-bash contrib/deploying/gcp-tailscale/fork.sh feature feature/example
-# Implement and commit; review before authorized candidate publication.
-# Open a PR to saturn/main and wait for Fork verification / fork-verified.
-bash contrib/deploying/gcp-tailscale/fork.sh finish feature/example
-bash contrib/deploying/gcp-tailscale/fork.sh sync
-# Sync prints a separate candidate worktree and branch when upstream changed.
-# Resolve and regenerate there, commit, submit for verification, then promote.
-make deploy
-```
-
-The helpers require a clean working tree, preserve normal Git hooks, and stop on
-conflicts. `sync` fetches and merges `upstream/main` in a separate worktree and
-`sync/upstream-*` branch, preserving the original checkout and `saturn/main`.
-`finish` and `promote` require a candidate that includes the current shared branch,
-Git-snapshot preflight, and successful `Fork verification` for the exact candidate
-SHA before fast-forwarding the shared branch;
-`bash scripts/sync-upstream.sh` is a compatibility entry point for that command.
-There is no unattended merge job. Run `sync` regularly and before deployments.
-The full [branch workflow](../contrib/deploying/gcp-tailscale/WORKFLOW.md) includes
-collaboration, conflict recovery, and step-by-step commands.
-
-`make deploy` runs from the laptop with a clean checkout of `saturn/main`. Before
-publication or cloud mutations, it requires a successful `fork-check.yml` workflow
-and its `fork-verified` job for that exact revision. A verified candidate run at
-the same SHA is sufficient; missing, pending, skipped, failed, or unrelated
-results block deployment. No-op releases perform no publication or cloud mutations.
-The command checks for unmerged upstream commits, publishes the reviewed deployment revision
-to `origin/saturn/main` without force-pushing, and verifies anonymous source access.
-It then uploads a Git archive of the local commit to the deployment host for
-building. Publication is part of this command; inspect committed changes for
-private content before running it. Private runtime configuration is transferred
-separately and must never be part of the Git archive.
+`make deploy` runs from the laptop with a clean checkout of `saturn/main`. It
+publishes the reviewed deployment revision to `origin/saturn/main` without
+force-pushing, verifies anonymous source access, and uploads a Git archive of the
+local commit to the deployment host for building. Publication is part of this
+command; inspect committed changes for private content before running it. Private
+runtime configuration is transferred separately and must never be part of the Git
+archive. No-op releases perform no publication or cloud mutations.
 
 Keep deployment-specific changes under `contrib/deploying/gcp-tailscale/` and
 prefer focused additions over edits to upstream root files such as `README.md`.
 The root `Makefile` is a small entry point; put deployment behavior in the
 contributed scripts to reduce recurring upstream merge conflicts.
-Keep fork-specific agent policy and records in [`.fork/`](../.fork/README.md);
-avoid appending fork-only lessons or task records to upstream's shared `.ai/` files.
-
-Review upstream release notes and changes to authentication, dependencies,
-migrations, licensing, and deployment configuration. Resolve conflicts while
-retaining privacy and access restrictions. Resolve schema conflicts before
-regenerating database types; never hand-edit generated types or reset a database
-to resolve a source conflict. Follow the relevant package's migration workflow.
+Keep fork-specific agent records in [`.fork/`](../.fork/README.md); avoid appending
+fork-only lessons or task records to upstream's shared `.ai/` files.
 
 Run the checks required by the touched packages' `AGENTS.md` files. Verify the
-Google/domain and VPN restrictions whenever upstream changes touch them. Review
-forward migrations and backups before deployment, and keep a private record of
-the deployed commit and backup. Application rollback may also require a
-compatible database restore.
+Google/domain and VPN restrictions whenever changes touch them. Review forward
+migrations and backups before deployment, and keep a private record of the
+deployed commit and backup. Application rollback may also require a compatible
+database restore.
 
 ## Source availability and licenses
 

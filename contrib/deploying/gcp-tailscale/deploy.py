@@ -298,11 +298,6 @@ def publish_source(config, rev):
     destinations = run(["git", "-C", str(REPO), "remote", "get-url", "--push", "--all", "origin"], capture=True).splitlines()
     if len(destinations) != 1 or destinations[0].removesuffix(".git") not in allowed:
         raise ValueError("origin must have one push URL matching SOURCE_REPO_URL; inspect git remote -v")
-    print("Checking that the latest upstream/main is included...", flush=True)
-    run(["git", "-C", str(REPO), "fetch", "--no-tags", "upstream", "refs/heads/main:refs/remotes/upstream/main"])
-    contains = subprocess.run(["git", "-C", str(REPO), "merge-base", "--is-ancestor", "refs/remotes/upstream/main", rev])
-    if contains.returncode != 0:
-        raise ValueError("Merge the latest upstream first: bash contrib/deploying/gcp-tailscale/fork.sh sync; verify and rerun make deploy")
     print(f"Publishing {DEPLOY_BRANCH} at {rev[:12]}...", flush=True)
     # Pin the source we upload and publish to the same commit. No force push,
     # implicit feature-branch publication, local secrets, or GitHub build runner.

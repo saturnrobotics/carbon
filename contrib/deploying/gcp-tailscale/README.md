@@ -20,10 +20,9 @@ make deploy
 ```
 
 The command publishes the exact `saturn/main` commit to the public fork, uploads
-its source directly from your laptop, and builds on the GCP server. It checks that
-the latest `upstream/main` has already been merged. It refuses other branches,
-uncommitted changes, and non-fast-forward pushes. See [the branch workflow](WORKFLOW.md)
-for feature branches and upstream updates. The existing root Makefile is only
+its source directly from your laptop, and builds on the GCP server. It refuses other
+branches, uncommitted changes, and non-fast-forward pushes. See
+[the deployment workflow](WORKFLOW.md) for the operator steps. The existing root Makefile is only
 the entry point; keep deployment changes and documentation in this directory.
 
 `make deploy-check` validates configuration offline and makes no cloud requests.
@@ -160,11 +159,9 @@ Bank and mailbox credentials are separate private deployment inputs.
 
 ## Updates, backup and recovery
 
-Use [the branch workflow](WORKFLOW.md) to create features from `saturn/main`, merge
-finished features back, and merge the latest `upstream/main`. Resolve conflicts,
-run the relevant verification, review privacy and licensing, then run `make deploy`.
-Deployment fetches upstream to check freshness and publishes `saturn/main`;
-it does not merge unreviewed upstream changes during a rollout.
+Land changes on `saturn/main` through reviewed pull requests, review privacy and
+licensing, then run `make deploy`. Deployment publishes `saturn/main`; it does not
+merge anything during a rollout.
 
 ### Automatic release preparation
 

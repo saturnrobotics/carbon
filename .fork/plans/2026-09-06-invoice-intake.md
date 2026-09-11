@@ -639,11 +639,11 @@ corepack pnpm --filter @carbon/jobs exec tsx src/scripts/evaluate-invoice-intake
 **Files:**
 - Update: nested operator guide, spec/plan checklists.
 - Runtime receipts: ignored deployment/evaluation directories only.
-- Copy from (precedent): `contrib/deploying/gcp-tailscale/WORKFLOW.md` and `fork.sh`.
+- Copy from (precedent): `contrib/deploying/gcp-tailscale/WORKFLOW.md`.
 
 **Steps:**
 1. Review source diff for real documents, credentials, organization-specific configuration, unwanted root changes, and unused abstraction. Run the repository pre-commit gates and retain validation evidence. Do not bypass a failed schema/backup gate to merge.
-2. Follow the existing fork workflow: finish the feature branch, merge into `saturn/main`, merge/rebase latest `upstream/main`, resolve conflicts, and rerun affected scoped checks. Deploy only clean `saturn/main`; do not deploy the feature branch or an unpublished arbitrary commit.
+2. Finish the feature branch, land it on `saturn/main` through a reviewed PR, and rerun affected scoped checks. Deploy only clean `saturn/main`; do not deploy the feature branch or an unpublished arbitrary commit.
 3. Run `make deploy`. Confirm ERP/MES/Supabase/event readiness and verify Kanban's existing health still passes. Verify database/storage backups remain enabled. Use a synthetic document to confirm deployed inference, review, draft creation and source viewing.
 4. Enable inference for the configured company, review a small real-document sample, and explicitly start historical document ingestion. Show counts/cursor/budget/failed rows. Maintain hourly Mercury sync independently; no laptop process must remain running.
 5. Verify a duplicate upload/source replay and one repeated supplier SKU after deployment. Capture private run receipts without printing document content or source URLs with credentials.

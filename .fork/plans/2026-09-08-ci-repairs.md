@@ -6,7 +6,7 @@ Base: `9d697fe6be9afbbaf7c25a5be8a761b7dea80bfa` (`saturn/main`).
 - [x] Diagnose the knowledge runtime database recovery failure using an owned synthetic test stack; fix the proven cause with regression evidence.
 - [x] Diagnose the invoice integration timeout; preserve all behavioral assertions and correct the measured cause.
 - [x] Run scoped tests, lint, typechecks, snapshot preflight, and generated comparisons. Review the public diff and commit only intended files.
-- [ ] Publish a candidate descended from the base and require real `fork-verified` success for that exact SHA. Preserve branch protections; no deployment or check bypass.
+- [ ] Publish a candidate descended from the base and require real CI success for that exact SHA. Preserve branch protections; no deployment or check bypass.
 
 Local logs and synthetic runtime evidence belong in ignored `.fork/local/ci-repairs/`.
 

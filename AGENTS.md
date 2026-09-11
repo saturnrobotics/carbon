@@ -2,14 +2,12 @@
 
 Carbon is a manufacturing ERP/MES/QMS. It contains apps for ERP, MES, academy, and starter.
 
-## Fork maintenance policy
+## Fork records policy
 
-Read [the fork policy](.fork/agent-policy.md) before every task. For work retained on
-this fork, its artifact paths and verification requirements override inherited
-`.ai/` writing and generated-file shortcuts in the guides below. Read upstream
-lessons as context; write new fork lessons, specs, plans, and records under `.fork/`.
-For upstream integration, conflict resolution, generated artifacts, or maintenance
-of these safeguards, use [.claude/skills/fork-maintenance/SKILL.md](.claude/skills/fork-maintenance/SKILL.md).
+Read [the fork records policy](.fork/agent-policy.md) before every task. For work
+retained on this fork, its artifact paths override the inherited `.ai/` write paths
+in the guides below. Read upstream lessons as context; write new fork lessons,
+specs, plans, and records under `.fork/`.
 
 ## Public Fork Privacy
 
@@ -156,7 +154,6 @@ IMPORTANT: Before any research or coding, match the task to this table. A single
 | Check existing specs before building | `.ai/specs/` + `.ai/specs/implemented/` |
 | Writing a new spec | `.claude/skills/spec-writing/SKILL.md` |
 | **Workflows** | |
-| Fork integration, generated conflicts, and agent safeguards | `.claude/skills/fork-maintenance/SKILL.md` + `.fork/agent-policy.md` |
 | Skills index — pipelines + all skills | `.claude/skills/README.md` |
 | Competitor research for a feature | `.claude/skills/research/SKILL.md` |
 | Feature pipeline (research→spec→plan→execute) | `.claude/skills/feature/SKILL.md` |

@@ -48,8 +48,8 @@ used as its own upgrade baseline and deleted committed generation inputs.
 Before promotion, require the final candidate's full ERP suite, standalone
 generator tests, browser locale regression, scoped typechecks, strict lint,
 generation comparison, and fresh/upgrade schema comparison. The root safeguards
-plan records progress; local raw evidence stays ignored. Remote `fork-verified`
-must still succeed for the exact promoted SHA.
+plan records progress; local raw evidence stays ignored. Remote CI must still
+succeed for the exact promoted SHA.
 
 Local verification of `67a0aed1c8` passed: 1,016 ERP unit tests, the real browser
 locale switch, 94 standalone generator/wiring tests, 111 safeguard tests, scoped
