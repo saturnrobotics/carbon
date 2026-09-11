@@ -43,7 +43,8 @@
     "./telemetry": "./src/telemetry.ts",
     "./query/deadline.server": "./src/query/deadline.server.ts",
     "./query/request-boundary.server": "./src/query/request-boundary.server.ts",
-    "./release-profile": "./src/release-profile.ts"
+    "./release-profile": "./src/release-profile.ts",
+    "./provider-policy": "./src/provider-policy.ts"
   },
   "scripts": {
     "clean": "rimraf .turbo node_modules dist",
