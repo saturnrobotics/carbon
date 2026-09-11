@@ -109,7 +109,23 @@ IAP subject through query without holding identity tables. Caller capability
 ceilings must contain only the capabilities each receiver uses. Configure the
 machine caller with `source.index.read`, the enrolled company and source only;
 its caller ID and database login must match the source `providerPolicy` values.
-Validate trusted-caller JSON against `callers.schema.json` before release.
+
+Validate every trusted-caller registry before release:
+
+```bash
+pnpm --filter @carbon/knowledge callers:validate contrib/deploying/knowledge/.local/callers.json
+```
+
+The validator parses the file with the runtime zod schema the receivers use,
+checks it against `callers.schema.json`, and applies the release rules the
+runtime leaves open for local fixtures: the receiver audience must be a bare
+https URL, service-account subjects must be Google's numeric unique IDs (never
+an email) and unique across callers, and IAP audiences must be `/projects/...`
+resource paths. It prints each caller's subject, operations and audiences and
+exits non-zero on any issue. `callers.example.json` is a synthetic shape
+reference that the `fork-checks` workflow validates on every change; a test pins
+the zod schema and the JSON Schema to the same verdicts. Real registries belong
+in `.local/` or the deployment secret store, never in a tracked file.
 
 ## Runtime requirements
 
@@ -169,6 +185,10 @@ allowed/denied browser access, alternate-origin and service-audience denial,
 parser execution, upload-to-search freshness, exact-version download, revocation,
 deletion, health-gated promotion and rollback before broader use. Follow
 `recovery.md` for retention and an isolated restore proof. Keep evidence private.
+
+Before any release, run `callers:validate` (see "Database and library
+enrollment") on each receiver's `KNOWLEDGE_TRUSTED_CALLERS_JSON` value and keep
+the output with the private release evidence.
 
 See the approved plan's “Revised release approach: local Docker validation” for
 execution order. No cloud environment has been provisioned for this release.

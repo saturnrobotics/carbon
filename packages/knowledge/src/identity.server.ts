@@ -1,5 +1,8 @@
 import { GoogleAuth, OAuth2Client } from "google-auth-library";
-import type { PublicKeys } from "google-auth-library/build/src/auth/oauth2client.js";
+import type {
+  OAuth2ClientEndpoints,
+  PublicKeys
+} from "google-auth-library/build/src/auth/oauth2client.js";
 import { z } from "zod";
 import type { Principal } from "./contracts";
 
@@ -181,13 +184,49 @@ function isIdentityBinding(value: unknown): value is IdentityBinding {
   );
 }
 
+export interface GoogleWorkforceTokenVerifierOptions {
+  /** A preconfigured client. When given, the URL options are not applied. */
+  oauthClient?: OAuth2Client;
+  /**
+   * Google's federated sign-on certificates as a JSON object of `kid` to PEM.
+   * Defaults to `https://www.googleapis.com/oauth2/v1/certs`.
+   */
+  serviceCertificatesUrl?: string | URL;
+  /**
+   * IAP public keys as a JSON object of `kid` to PEM.
+   * Defaults to `https://www.gstatic.com/iap/verify/public_key`.
+   */
+  iapPublicKeysUrl?: string | URL;
+  /** Epoch seconds driving the IAP key-cache lifetimes; defaults to the clock. */
+  nowEpochSeconds?: () => number;
+}
+
+function certificateEndpoints(
+  options: GoogleWorkforceTokenVerifierOptions
+): Partial<OAuth2ClientEndpoints> {
+  // The client spreads these over its defaults, so an explicit `undefined`
+  // would erase Google's URL rather than keep it.
+  const endpoints: Partial<OAuth2ClientEndpoints> = {};
+  if (options.serviceCertificatesUrl !== undefined) {
+    endpoints.oauth2FederatedSignonPemCertsUrl = options.serviceCertificatesUrl;
+  }
+  if (options.iapPublicKeysUrl !== undefined) {
+    endpoints.oauth2IapPublicKeyUrl = options.iapPublicKeysUrl;
+  }
+  return endpoints;
+}
+
 export class GoogleWorkforceTokenVerifier implements TrustedTokenVerifier {
   private readonly oauthClient: OAuth2Client;
+  private readonly now: () => number;
   private keys?: { value: PublicKeys; expiresAt: number; refreshedAt: number };
   private keyRefresh?: Promise<PublicKeys>;
 
-  constructor(oauthClient = new OAuth2Client()) {
-    this.oauthClient = oauthClient;
+  constructor(options: GoogleWorkforceTokenVerifierOptions = {}) {
+    this.oauthClient =
+      options.oauthClient ??
+      new OAuth2Client({ endpoints: certificateEndpoints(options) });
+    this.now = options.nowEpochSeconds ?? epochSeconds;
   }
 
   async verifyServiceToken(token: string, expectedAudience: string) {
@@ -219,7 +258,7 @@ export class GoogleWorkforceTokenVerifier implements TrustedTokenVerifier {
   }
 
   private async iapKeys(forceRefresh: boolean): Promise<PublicKeys> {
-    const now = epochSeconds();
+    const now = this.now();
     if (!forceRefresh && this.keys && this.keys.expiresAt > now) {
       return this.keys.value;
     }
@@ -449,27 +488,34 @@ export async function createWorkforceForwardingHeaders(options: {
   return headers;
 }
 
+/**
+ * A service audience is a bare https URL: no credentials, query or fragment,
+ * and no surrounding whitespace. Shared by the outbound token minting below and
+ * the release-time registry validator.
+ */
+export function isServiceAudience(value: string): boolean {
+  if (value !== value.trim()) return false;
+  let audience: URL;
+  try {
+    audience = new URL(value);
+  } catch {
+    return false;
+  }
+  return (
+    audience.protocol === "https:" &&
+    !audience.username &&
+    !audience.password &&
+    !audience.search &&
+    !audience.hash
+  );
+}
+
 /** Mint a fresh receiver-audience ID token for a machine-to-machine call. */
 export async function createServiceAuthorizationHeader(
   targetAudience: string,
   googleAuth: GoogleAuth = new GoogleAuth()
 ): Promise<string> {
-  let audience: URL;
-  try {
-    audience = new URL(targetAudience);
-  } catch {
-    throw new Error("Invalid service audience");
-  }
-  if (
-    audience.protocol !== "https:" ||
-    audience.username ||
-    audience.password ||
-    audience.search ||
-    audience.hash
-  ) {
-    throw new Error("Invalid service audience");
-  }
-  if (targetAudience !== targetAudience.trim()) {
+  if (!isServiceAudience(targetAudience)) {
     throw new Error("Invalid service audience");
   }
   const client = await googleAuth.getIdTokenClient(targetAudience);

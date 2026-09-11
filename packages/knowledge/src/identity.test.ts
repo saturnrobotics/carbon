@@ -233,9 +233,8 @@ describe("trusted workforce forwarding", () => {
       throw new Error("unknown key id");
     });
     const tokenVerifier = new GoogleWorkforceTokenVerifier({
-      getIapPublicKeys,
-      verifySignedJwtWithCertsAsync
-    } as never);
+      oauthClient: { getIapPublicKeys, verifySignedJwtWithCertsAsync } as never
+    });
 
     await Promise.allSettled([
       tokenVerifier.verifyIapToken("invalid-one", sourceAudience),
