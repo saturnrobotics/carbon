@@ -341,7 +341,7 @@ msgid "{scopeCount} permissions"
 msgstr "{scopeCount} permissões"
 
 msgid "{selectedCount} selected"
-msgstr ""
+msgstr "{selectedCount} selecionados"
 
 msgid "{total} phases to get your company live on Carbon. Each one ends at a checkpoint."
 msgstr "{total} fases para colocar sua empresa ao vivo no Carbon. Cada uma termina em um checkpoint."
@@ -350,7 +350,7 @@ msgid "{total} phases to go live"
 msgstr "{total} fases para entrar em produção"
 
 msgid "{totalCount} results"
-msgstr ""
+msgstr "{totalCount} resultados"
 
 msgid "{totalQuantity, plural, one {# unit} other {# units}}"
 msgstr "{totalQuantity, plural, one {# unidade} other {# unidades}}"
@@ -1360,10 +1360,10 @@ msgid "Add from library…"
 msgstr "Adicionar da biblioteca…"
 
 msgid "Add from receipt"
-msgstr ""
+msgstr "Adicionar do recebimento"
 
 msgid "Add from shipment"
-msgstr ""
+msgstr "Adicionar da remessa"
 
 msgid "Add Group"
 msgstr "Adicionar Grupo"
@@ -1390,7 +1390,7 @@ msgid "Add lines from document"
 msgstr "Adicionar linhas do documento"
 
 msgid "Add manually"
-msgstr ""
+msgstr "Adicionar manualmente"
 
 msgid "Add match"
 msgstr "Adicionar correspondência"
@@ -1655,7 +1655,7 @@ msgid "All members of selected groups and selected individuals will be able to a
 msgstr "Todos os membros dos grupos selecionados e indivíduos selecionados poderão aprovar solicitações"
 
 msgid "All returnable lines"
-msgstr ""
+msgstr "Todas as linhas retornáveis"
 
 msgid "All rows imported — {inserted} inserted, {updated} updated."
 msgstr "Todas as linhas importadas — {inserted} inseridas, {updated} atualizadas."
@@ -2946,7 +2946,7 @@ msgid "Batches"
 msgstr "Lotes"
 
 msgid "Batches to return"
-msgstr ""
+msgstr "Lotes de produção para devolver"
 
 msgid "Batching"
 msgstr "Lotes de Produção"
@@ -3578,7 +3578,7 @@ msgid "Choose another file"
 msgstr "Escolher outro arquivo"
 
 msgid "Choose how to add lines to this return."
-msgstr ""
+msgstr "Escolha como adicionar linhas a esta devolução."
 
 msgid "Choose the invoice document to parse"
 msgstr "Escolha o documento da fatura a analisar"
@@ -6836,7 +6836,7 @@ msgid "Enter a review reason for every unreadable attachment"
 msgstr "Insira um motivo de revisão para cada anexo ilegível"
 
 msgid "Enter an item and quantity yourself."
-msgstr ""
+msgstr "Insira um item e quantidade manualmente."
 
 msgid "Enter and approve vendor bills against a PO (three-way match)"
 msgstr "Insira e aprove faturas de fornecedores em relação a um pedido de compra (conciliação de três vias)"
@@ -9739,10 +9739,10 @@ msgid "Lines"
 msgstr "Linhas"
 
 msgid "Lines appear here once a purchase order receipt has been posted, and only for quantities not already authorized on another supplier return. Use Add Line Item for a blind return."
-msgstr ""
+msgstr "As linhas aparecem aqui assim que um recebimento de pedido de compra for contabilizado, e apenas para quantidades ainda não autorizadas em outra devolução de fornecedor. Use Adicionar Item de Linha para uma devolução cega."
 
 msgid "Lines appear here once a sales order shipment has been posted, and only for quantities not already authorized on another RMA. Use Add Line Item for a blind return."
-msgstr ""
+msgstr "As linhas aparecem aqui assim que uma remessa de pedido de venda for contabilizada, e apenas para quantidades ainda não autorizadas em outra RMA. Use Adicionar Item de Linha para uma devolução cega."
 
 msgid "Lines need internal part numbers"
 msgstr "As linhas precisam de números de peça internos"
@@ -10659,7 +10659,7 @@ msgid "Morning, {name}."
 msgstr "Bom dia, {name}."
 
 msgid "Most recent — search to find more"
-msgstr ""
+msgstr "Mais recente — pesquise para encontrar mais"
 
 msgid "Most things get caught and resolved here. Name it plainly."
 msgstr "A maioria das coisas é detectada e resolvida aqui. Nomeie-a claramente."
@@ -11253,7 +11253,7 @@ msgid "No batches"
 msgstr "Nenhum lote de produção"
 
 msgid "No batches selected yet."
-msgstr ""
+msgstr "Nenhum lote de produção selecionado ainda."
 
 msgid "No BOM input has a shelf-life policy"
 msgstr "Nenhuma entrada de BOM tem uma política de vida útil"
@@ -11604,13 +11604,13 @@ msgid "No results found"
 msgstr "Nenhum resultado encontrado"
 
 msgid "No returnable lines for this customer"
-msgstr ""
+msgstr "Nenhuma linha retornável para este cliente"
 
 msgid "No returnable lines for this supplier"
-msgstr ""
+msgstr "Nenhuma linha retornável para este fornecedor"
 
 msgid "No returnable lines match your search"
-msgstr ""
+msgstr "Nenhuma linha retornável corresponde à sua pesquisa"
 
 msgid "No rows here."
 msgstr "Nenhuma linha aqui."
@@ -11625,7 +11625,7 @@ msgid "No scheduled work in this window"
 msgstr "Nenhum trabalho programado nesta janela"
 
 msgid "No serial numbers selected yet."
-msgstr ""
+msgstr "Nenhum número de série selecionado ainda."
 
 msgid "No shifts configured — assuming Mon–Fri, 8h days"
 msgstr "Nenhum turno configurado — assumindo segunda–sexta, dias de 8h"
@@ -12856,13 +12856,13 @@ msgid "Pick serials/batches to return"
 msgstr "Selecione números de série/lotes para devolver"
 
 msgid "Pick the batches on hand that were received from this supplier."
-msgstr ""
+msgstr "Separe os lotes de produção em estoque que foram recebidos deste fornecedor."
 
 msgid "Pick the bin that needs stock, then pick the bins to pull it from."
 msgstr "Separe o compartimento que precisa de estoque, depois separe os compartimentos para puxar o estoque deles."
 
 msgid "Pick the serial numbers on hand that were received from this supplier."
-msgstr ""
+msgstr "Separe os números de série em estoque que foram recebidos deste fornecedor."
 
 msgid "Pick tracked item"
 msgstr "Selecionar item rastreado"
@@ -13556,7 +13556,7 @@ msgid "Purchase Qty"
 msgstr "Qtd. de Compra"
 
 msgid "Purchase Return"
-msgstr ""
+msgstr "Devolução de compra"
 
 msgid "Purchase Tax Payable"
 msgstr "Imposto de Compra a Pagar (padrão)"
@@ -15150,7 +15150,7 @@ msgid "Sales Person"
 msgstr "Pessoa de Vendas"
 
 msgid "Sales Return"
-msgstr ""
+msgstr "Devolução de venda"
 
 msgid "Sales Revenue"
 msgstr "Receita de Vendas"
@@ -15422,10 +15422,10 @@ msgid "Search by linear issue title..."
 msgstr "Pesquisar por título do problema Linear..."
 
 msgid "Search by receipt, PO, or item"
-msgstr ""
+msgstr "Pesquise por recebimento, pedido de compra ou item"
 
 msgid "Search by shipment, sales order, or item"
-msgstr ""
+msgstr "Pesquise por remessa, pedido de venda ou item"
 
 msgid "Search connected mailboxes for invoice evidence and supplier suggestions."
 msgstr "Pesquise evidências de faturas e sugestões de fornecedores nas caixas conectadas."
@@ -15681,10 +15681,10 @@ msgid "Select operations"
 msgstr "Selecionar operações"
 
 msgid "Select posted receipt lines from this supplier to return."
-msgstr ""
+msgstr "Selecione linhas de recebimento contabilizadas deste fornecedor para devolver."
 
 msgid "Select posted shipment lines to this customer to return."
-msgstr ""
+msgstr "Selecione linhas de remessa contabilizadas para este cliente para devolver."
 
 msgid "Select Printer"
 msgstr "Selecionar Impressora"
@@ -15823,7 +15823,7 @@ msgid "Serial numbers are only generated for serial- or batch-tracked items."
 msgstr "Números de série são gerados apenas para itens rastreados por série ou lote."
 
 msgid "Serial numbers to return"
-msgstr ""
+msgstr "Números de série para devolver"
 
 msgid "Serial or Batch Tracking Required"
 msgstr "Rastreamento Serial ou em Lote Obrigatório"
@@ -15877,10 +15877,10 @@ msgid "Session locked"
 msgstr "Sessão bloqueada"
 
 msgid "Set a customer on this return to add from a shipment."
-msgstr ""
+msgstr "Defina um cliente nesta devolução para adicionar de uma remessa."
 
 msgid "Set a supplier on this return to add from a receipt."
-msgstr ""
+msgstr "Defina um fornecedor nesta devolução para adicionar de um recebimento."
 
 msgid "Set a target"
 msgstr "Defina uma meta"
@@ -16177,10 +16177,10 @@ msgid "Show a readable Supplier ID column on the supplier list, supplier forms, 
 msgstr "Mostrar uma coluna de ID de Fornecedor legível na lista de fornecedores, formulários de fornecedor e menus suspensos. Os fornecedores ainda são identificados internamente de qualquer forma."
 
 msgid "Show available batch numbers"
-msgstr ""
+msgstr "Mostrar números de lotes de produção disponíveis"
 
 msgid "Show available tracking numbers"
-msgstr ""
+msgstr "Mostrar números de rastreamento disponíveis"
 
 msgid "Show Customer IDs"
 msgstr "Mostrar IDs de Cliente"
@@ -16189,7 +16189,7 @@ msgid "Show Durations"
 msgstr "Mostrar Durações"
 
 msgid "Show more"
-msgstr ""
+msgstr "Mostrar mais"
 
 msgid "Show one inventory number the floor and office both trust"
 msgstr "Mostrar um número de inventário que o chão de fábrica e o escritório confiam"
