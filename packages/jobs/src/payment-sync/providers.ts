@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { EPSILON, round } from "@carbon/utils";
 import { fromAbsolute } from "@internationalized/date";
 import { fetch as undiciFetch } from "undici";
 import {
@@ -203,15 +204,26 @@ class HttpClient {
   }
 }
 
+/** Mercury reports USD amounts with cent precision, and `PaymentSource.amount`
+ *  is that provider contract as a two-decimal string ("-1234.50"): an external
+ *  boundary with its own named scale, like the Xero serializer's. */
+const MERCURY_AMOUNT_DECIMALS = 2;
+
 function bankAmount(value: unknown): string {
   if (
     typeof value !== "number" ||
     !Number.isFinite(value) ||
     Math.abs(value) > Number.MAX_SAFE_INTEGER / 100 ||
-    Math.abs(value * 100 - Math.round(value * 100)) > 0.0001
+    Math.abs(round(value, MERCURY_AMOUNT_DECIMALS) - value) > EPSILON
   )
     throw new ProviderError("Mercury", "invalid_amount");
-  return value.toFixed(2);
+  // Format from exact integer cents rather than float string arithmetic.
+  const cents = BigInt(round(value * 100, 0));
+  const negative = cents < BigInt(0);
+  const magnitude = negative ? -cents : cents;
+  const whole = magnitude / BigInt(100);
+  const fraction = (magnitude % BigInt(100)).toString().padStart(2, "0");
+  return `${negative ? "-" : ""}${whole}.${fraction}`;
 }
 
 function payment(raw: unknown): PaymentSource {
