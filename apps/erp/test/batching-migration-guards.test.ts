@@ -39,9 +39,11 @@ describe("started operations are excluded from batch candidates", () => {
     );
   });
 
-  test("the lane branch renders Planned, Active and Completing batches", () => {
-    // Planned and Active batches are drag targets; Completing batches remain
-    // visible read-only while awaiting a retry in MES.
+  test("the lane branch renders Active AND Completing batches (read-only Completing)", () => {
+    // The board shows Active batches (drag targets) and Completing batches
+    // (read-only, awaiting a retry in MES). Both must appear as lanes. The
+    // consolidated migration also renders the pre-floor 'Planned' state, which
+    // this assertion allows without letting Active/Completing drop out.
     expect(migration).toMatch(
       /OR b\."status"\s+IN\s*\('Planned',\s*'Active',\s*'Completing'\)/
     );
@@ -49,7 +51,10 @@ describe("started operations are excluded from batch candidates", () => {
 });
 
 describe("batch status enum", () => {
-  test("includes the complete Planned/Active/Completing/Completed lifecycle", () => {
+  test("is Planned/Active/Completing/Completed with Completing from day one", () => {
+    // 'Planned' (pre-floor planning) joined the enum in the consolidated
+    // migration; 'Completing' still ships in the same CREATE TYPE rather than
+    // being bolted on by a later ALTER, which is what this pins.
     expect(migration).toMatch(
       /CREATE TYPE "jobOperationBatchStatus" AS ENUM \('Planned', 'Active', 'Completing', 'Completed'\)/
     );

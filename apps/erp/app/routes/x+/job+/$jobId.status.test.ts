@@ -1,3 +1,4 @@
+import { error, success } from "@carbon/auth";
 import { requirePermissions } from "@carbon/auth/auth.server";
 import { getCarbonServiceRole } from "@carbon/auth/client.server";
 import { runLocationSchedule } from "@carbon/ee/planning";
@@ -17,14 +18,17 @@ vi.mock("@carbon/auth/client.server", () => ({
 vi.mock("@carbon/auth/session.server", () => ({
   flash: vi.fn(async () => ({}))
 }));
+vi.mock("@carbon/logger", () => ({
+  getLogger: () => ({ error: vi.fn() })
+}));
+// Scheduling moved OUT of the `schedule` edge function and into Node in #1151:
+// the release path now regenerates the job's whole location in-process via
+// `runLocationSchedule` instead of `serviceRole.functions.invoke("schedule")`.
 vi.mock("@carbon/ee/planning", () => ({
   runLocationSchedule: vi.fn()
 }));
 vi.mock("~/services/database.server", () => ({
-  getDatabaseClient: vi.fn()
-}));
-vi.mock("@carbon/logger", () => ({
-  getLogger: () => ({ error: vi.fn() })
+  getDatabaseClient: vi.fn(() => ({}))
 }));
 vi.mock("~/utils/path", () => ({
   path: {
@@ -52,7 +56,6 @@ vi.mock("~/modules/production", () => ({
 }));
 
 import { updateJobStatus } from "~/modules/production";
-import { getDatabaseClient } from "~/services/database.server";
 import { action } from "./$jobId.status";
 
 type QueryResult = { data: unknown; error: unknown };
@@ -105,21 +108,13 @@ function setup() {
     userId: "user-1"
   } as any);
   vi.mocked(getCarbonServiceRole).mockReturnValue(serviceRole as any);
-  const db = {} as ReturnType<typeof getDatabaseClient>;
-  vi.mocked(getDatabaseClient).mockReturnValue(db);
-  vi.mocked(runLocationSchedule).mockImplementation(async () => {
-    events.push("runLocationSchedule");
-    return {
-      locationId: "location-1",
-      jobsScheduled: 1,
-      jobsFailed: 0,
-      conflictsDetected: 0,
-      newlyLate: []
-    };
-  });
   vi.mocked(updateJobStatus).mockImplementation(async () => {
     events.push("updateJobStatus");
     return { data: { id: "job-1" }, error: null } as any;
+  });
+  vi.mocked(runLocationSchedule).mockImplementation(async () => {
+    events.push("runLocationSchedule");
+    return {} as any;
   });
 
   return { client, serviceRole };
@@ -154,19 +149,19 @@ describe("Job release status action", () => {
     // On success the action ends by throwing a redirect Response.
     await expect(runRelease()).rejects.toBeInstanceOf(Response);
 
+    // The redirect must be the SUCCESS one. Without this, a scheduler that
+    // throws still redirects (the catch flashes "Failed to schedule job"), and
+    // the ordering assertion below would pass on the failure path.
+    expect(success).toHaveBeenCalledWith("Updated job status");
+    expect(error).not.toHaveBeenCalled();
+
     expect(updateJobStatus).toHaveBeenCalledOnce();
     expect(events).toContain("updateJobStatus");
-    expect(runLocationSchedule).toHaveBeenCalledExactlyOnceWith({
-      db: getDatabaseClient(),
-      client: getCarbonServiceRole(),
-      locationId: "location-1",
-      companyId: "company-1",
-      userId: "user-1"
-    });
-    // Regression guard: the in-process scheduler only batches jobs already
-    // Ready/In Progress/Paused. If the status is committed AFTER the scheduler
-    // runs, the freshly released job is filtered out of its own schedule run and
-    // never lands in capacityReservation / the forecast.
+    expect(events).toContain("runLocationSchedule");
+    // Regression guard: the scheduler only batches jobs already Ready/In
+    // Progress/Paused. If the status is committed AFTER the scheduler runs, the
+    // freshly released job is filtered out of its own schedule run and never
+    // lands in capacityReservation / the forecast.
     expect(events.indexOf("updateJobStatus")).toBeLessThan(
       events.indexOf("runLocationSchedule")
     );
