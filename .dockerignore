@@ -77,3 +77,26 @@ llm
 # OS / logs
 .DS_Store
 *.log
+
+# Private inputs at every depth — never in a build context, whatever the
+# context root. Keep this block last: Docker applies the last matching rule.
+**/.env
+**/.env.*
+!**/.env.example
+**/.envrc
+**/.local
+**/.secrets
+**/secrets
+**/*.secret
+**/.cert
+**/.terraform
+**/*.tfstate
+**/*.tfstate.*
+**/*.tfvars
+**/*.tfvars.json
+**/.docker
+**/.buildx
+**/test-results
+**/playwright-report
+**/__pycache__
+**/*.py[cod]

@@ -101,3 +101,49 @@ llm/
 # Produced by `pnpm generate:mcp` (postinstall + turbo). The committed record of
 # the published contract is its small companion, tool-manifest.digest.json.
 apps/erp/app/routes/api+/mcp+/lib/tool-metadata.json
+
+# --- Private inputs at every depth -------------------------------------------
+# Environment files anywhere in the tree; only reviewed example templates are
+# tracked (an "example" suffix does not make real credentials public).
+**/.env
+**/.env.*
+!**/.env.example
+!**/.env.*.example
+**/.envrc
+**/.envrc.*
+!**/.envrc.example
+
+# Terraform runtime state, plans, provider downloads and private variable inputs.
+# Authored .tf files, .terraform.lock.hcl and *.tfvars.example stay visible.
+**/.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.tfstate.lock.info
+*.tfplan
+*.tfvars
+*.tfvars.json
+!*.tfvars.example
+.terraformrc
+terraform.rc
+credentials.tfrc.json
+
+# Docker authentication, build caches, image exports and local runtime data.
+**/.docker/
+**/.buildx/
+**/.docker-build/
+**/.docker-cache/
+*.docker.tar
+*.docker.tar.gz
+*.oci.tar
+*.oci.tar.gz
+
+# Local-only directories, secret stores, TLS material and test artifacts.
+**/.local/
+**/.secrets/
+**/secrets/
+*.secret
+**/.cert/
+**/test-results/
+**/playwright-report/
+**/__pycache__/
+*.py[cod]
