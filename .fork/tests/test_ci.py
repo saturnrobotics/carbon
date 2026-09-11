@@ -243,6 +243,7 @@ class ApplicationTests(unittest.TestCase):
             ("packages/model", "@carbon/model", True),
             ("packages/jobs", "@carbon/jobs", False),
             ("packages/database", "@carbon/database", False),
+            ("packages/checks", "@carbon/checks", False),
         ):
             directory = self.root / path
             directory.mkdir(parents=True)
@@ -255,6 +256,60 @@ class ApplicationTests(unittest.TestCase):
         invoice = self.root / "contrib/deploying/gcp-tailscale/check_invoice.py"
         invoice.parent.mkdir(parents=True)
         invoice.write_text('JOBS_DATABASE_TESTS = ["synthetic.integration.test.ts"]\n')
+
+    def test_application_always_runs_cross_repository_conformance(self):
+        for path in (
+            "apps/erp/app/root.tsx",
+            "packages/jobs/src/example.ts",
+            "packages/database/src/types.ts",
+            ".fork/ci.py",
+        ):
+            with self.subTest(path=path), patch.object(
+                ci, "changed", return_value=[path]
+            ), patch.object(ci.subprocess, "run") as run:
+                ci.application(self.root, "a" * 40)
+                commands = [call.args[0] for call in run.call_args_list]
+                tests = next(
+                    command
+                    for command in commands
+                    if "turbo" in command and "test" in command
+                )
+                self.assertIn("--filter=@carbon/checks", tests)
+                self.assertIn("--filter=erp", tests)
+                self.assertIn("--filter=@carbon/database", tests)
+                self.assertIn("--filter=!@carbon/jobs", tests)
+                self.assertNotIn("--filter=academy", tests)
+                job_tests = next(
+                    command for command in commands if "@carbon/jobs" in command
+                )
+                self.assertEqual(
+                    job_tests[-2:], ["--exclude", "synthetic.integration.test.ts"]
+                )
+                self.assertTrue(
+                    all(call.kwargs["check"] for call in run.call_args_list)
+                )
+
+    def test_conformance_failure_blocks_later_application_gates(self):
+        commands = []
+
+        def execute(command, **kwargs):
+            commands.append(command)
+            self.assertTrue(kwargs["check"])
+            if "test" in command and "--filter=@carbon/checks" in command:
+                raise subprocess.CalledProcessError(1, command)
+
+        with patch.object(
+            ci, "changed", return_value=["apps/erp/app/root.tsx"]
+        ), patch.object(ci.subprocess, "run", side_effect=execute), self.assertRaises(
+            subprocess.CalledProcessError
+        ):
+            ci.application(self.root, "a" * 40)
+        self.assertFalse(
+            any("typecheck" in command or "vitest" in command for command in commands)
+        )
+        self.assertFalse(
+            any("turbo" in command and "build" in command for command in commands)
+        )
 
     def test_selected_manifests_generate_before_tests_and_types(self):
         with patch.object(

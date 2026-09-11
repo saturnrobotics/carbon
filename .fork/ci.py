@@ -347,7 +347,9 @@ def lint(root, base):
 
 def application(root, base):
     paths = changed(root, base)
-    packages = {"erp", "@carbon/jobs", "@carbon/database"}
+    # Conformance scans application source across the repository; its own
+    # package need not change for an ERP or jobs edit to violate a rule.
+    packages = {"erp", "@carbon/jobs", "@carbon/database", "@carbon/checks"}
     manifests = list((root / "apps").glob("*/package.json")) + list(
         (root / "packages").glob("*/package.json")
     )

@@ -128,7 +128,8 @@ customizations. The staged and working helper must exactly match that result;
 the worker cannot edit it. Generator entry points, tests, installers, executable
 files and changes to the registry itself remain protected.
 
-Verification/control files remain frozen against the reviewed baseline. Their
+Verification/control files, including the conformance rules and baseline under
+`packages/checks/`, remain frozen against the reviewed baseline. Their
 upstream changes, and genuinely conflicting protected helpers, require a separate
 coordinator review so the repair worker cannot weaken its own checks. A coding
 agent handling the sync request owns that review, integration and verification;

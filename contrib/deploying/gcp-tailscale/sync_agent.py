@@ -33,6 +33,7 @@ AUTHORITY = (
     ".husky/",
     ".fork/hooks/",
     "contrib/deploying/",
+    "packages/checks/",
     "scripts/",
     "docs/scripts/",
     "docs/lib/",

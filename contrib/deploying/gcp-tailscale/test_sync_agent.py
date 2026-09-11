@@ -114,6 +114,15 @@ class ControllerGitTests(unittest.TestCase):
         self.write(self.root, ".gitignore", ".fork/local/\n")
         self.write(self.root, ".fork/verify.py", "# trusted verification fixture\n")
         self.git(self.root, "add", "--", "shared.txt", ".gitignore", ".fork/verify.py")
+        for name, content in (
+            (
+                "packages/checks/src/conformance/rules/example.ts",
+                "export const enabled = true;\n",
+            ),
+            ("packages/checks/src/conformance/baseline.json", '{"violations": []}\n'),
+        ):
+            self.write(self.root, name, content)
+            self.git(self.root, "add", "--", name)
         self.git(self.root, "commit", "-m", "Initial fixture")
         self.git(
             self.root, "remote", "add", "origin", "git@github.com:example/fork.git"
@@ -254,6 +263,45 @@ class ControllerGitTests(unittest.TestCase):
         self.write(self.candidate, ".github/workflows/accept.yml", "name: synthetic\n")
         with self.assertRaisesRegex(ValueError, "Verification/control"):
             self.controller.guard_authority()
+
+    def test_authority_guard_rejects_worker_conformance_changes_in_every_git_state(
+        self,
+    ):
+        for name in (
+            "packages/checks/src/conformance/rules/example.ts",
+            "packages/checks/src/conformance/baseline.json",
+        ):
+            with self.subTest(name=name):
+                self.write(self.candidate, name, "Changed acceptance fixture\n")
+                with self.assertRaisesRegex(ValueError, name):
+                    self.controller.guard_authority()
+                self.git(self.candidate, "add", "--", name)
+                with self.assertRaisesRegex(ValueError, name):
+                    self.controller.guard_authority()
+                self.git(self.candidate, "commit", "-m", "Changed conformance fixture")
+                with self.assertRaisesRegex(ValueError, name):
+                    self.controller.guard_authority()
+        self.assert_stable_unchanged()
+
+    def test_authority_guard_requires_review_for_pinned_upstream_conformance_rule(self):
+        name = self.merge_upstream_document(
+            "packages/checks/src/conformance/rules/example.ts",
+            "export const enabled = false;\n",
+        )
+        with self.assertRaisesRegex(ValueError, name):
+            self.controller.guard_authority()
+        self.assert_stable_unchanged()
+
+    def test_authority_guard_requires_review_for_pinned_upstream_conformance_baseline(
+        self,
+    ):
+        name = self.merge_upstream_document(
+            "packages/checks/src/conformance/baseline.json",
+            '{"violations": ["accepted violation"]}\n',
+        )
+        with self.assertRaisesRegex(ValueError, name):
+            self.controller.guard_authority()
+        self.assert_stable_unchanged()
 
     def test_authority_guard_allows_ordinary_authored_changes(self):
         self.write(self.candidate, "src/feature.py", "answer = 42\n")
