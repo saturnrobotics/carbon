@@ -45,10 +45,9 @@ jobs:
           # Matches the `supabase` entry in pnpm-workspace.yaml's catalog.
           version: 2.89.0
       - name: Prepare a disposable development environment
+        # regenerate.sh copies .env.example to .env itself. The dev compose file
+        # mounts this CA file even with --no-portless.
         run: |
-          test ! -e .env
-          cp .env.example .env
-          # The dev compose file mounts this CA file even with --no-portless.
           mkdir -p "$HOME/.portless"
           cp /etc/ssl/certs/ca-certificates.crt "$HOME/.portless/ca.pem"
       - name: Regenerate every generated file from the committed sources

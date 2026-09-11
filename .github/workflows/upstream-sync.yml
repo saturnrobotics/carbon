@@ -116,7 +116,6 @@ jobs:
       - name: Prepare a disposable development environment
         if: steps.merge.outputs.clean == 'true'
         run: |
-          test ! -e .env && cp .env.example .env
           mkdir -p "$HOME/.portless"
           cp /etc/ssl/certs/ca-certificates.crt "$HOME/.portless/ca.pem"
       - name: Regenerate generated files and check migration ordering
@@ -158,7 +157,8 @@ jobs:
           git commit -q -m "WIP: unresolved upstream conflicts (do not merge)" \
             -m "Merge of upstream/$UPSTREAM_REF (${{ steps.fetch.outputs.short }}) into $FORK_TRUNK stopped on conflicts." \
             -m "Conflicts:
-          $(sed 's/^/\t/' /tmp/conflicts.txt)"
+          $(sed 's/^/\t/' /tmp/conflicts.txt)" \
+            -m "Upstream-Target: ${{ steps.fetch.outputs.target }}"
           git push -u origin "${{ steps.merge.outputs.branch }}"
 
       # ---------------- pull request ----------------

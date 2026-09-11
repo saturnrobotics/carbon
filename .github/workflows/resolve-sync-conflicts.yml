@@ -19,7 +19,6 @@ permissions:
   contents: write
   pull-requests: write
   issues: write
-  id-token: write
 
 concurrency:
   group: resolve-sync-conflicts-${{ github.event.pull_request.number || github.event.issue.number }}
@@ -81,7 +80,7 @@ jobs:
           # instead of the committed "WIP" tree.
           if git log -1 --format=%s | grep -q '^WIP: unresolved upstream conflicts'; then
             trunk="$(git merge-base HEAD origin/saturn/main)"
-            upstream_sha="$(git log -1 --format=%B | sed -n 's/.*@ `\{0,1\}\([0-9a-f]\{40\}\).*/\1/p' | head -1)"
+            upstream_sha="$(git log -1 --format=%B | sed -n 's/^Upstream-Target: \([0-9a-f]\{40\}\)$/\1/p' | head -1)"
             git reset -q --hard "$trunk"
             git merge --no-ff --no-commit "${upstream_sha:-upstream/main}" || true
           fi
