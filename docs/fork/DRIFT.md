@@ -146,3 +146,47 @@ are merge debris to re-resolve toward upstream. Three incoming upstream migratio
 are timestamped before the fork's newest migration; they touch accounting and the
 returns module, not the fork's tables, so the ordering warning is informational.
 
+
+## Snapshot 4 — after the first sync with the new tooling (`sync/upstream-2026-09-11`, 2026-09-11)
+
+```
+727 files changed, 119602 insertions(+), 12607 deletions(-)
+fork-added files: 581 · shared files modified: 143 · upstream files deleted: 3
+upstream commits not yet merged: 0
+```
+
+Upstream `85d9006e11` merged: 24 commits, 16 hand-resolved conflicts, all six
+generated files taken by the `regen` driver and rebuilt from scratch. The
+accounting functions and the seven upstream-adjusted test files were re-resolved
+toward upstream, which is why the shared-file count dropped.
+
+Top 20 shared upstream files by lines changed (added+deleted):
+
+```
+lines    added    deleted  path
+9206     5691     3515     packages/database/supabase/functions/lib/types.ts
+9206     5691     3515     packages/database/src/types.ts
+6492     3378     3114     packages/jobs/manifests/schema.json
+6153     5646     507      packages/database/src/swagger-docs-schema.ts
+1096     956      140      docs/components/editorial/architecture-diagrams.tsx
+861      634      227      pnpm-lock.yaml
+840      834      6        packages/locale/locales/zh/erp.po
+840      834      6        packages/locale/locales/tr/erp.po
+840      834      6        packages/locale/locales/hi/erp.po
+840      834      6        packages/locale/locales/de/erp.po
+838      833      5        packages/locale/locales/ru/erp.po
+838      833      5        packages/locale/locales/pt/erp.po
+838      833      5        packages/locale/locales/pl/erp.po
+838      833      5        packages/locale/locales/ko/erp.po
+838      833      5        packages/locale/locales/ja/erp.po
+838      833      5        packages/locale/locales/it/erp.po
+838      833      5        packages/locale/locales/fr/erp.po
+838      833      5        packages/locale/locales/es/erp.po
+838      833      5        packages/locale/locales/en/erp.po
+555      553      2        apps/erp/app/modules/purchasing/purchasing.service.ts
+```
+
+## Files that conflicted in the last 5 upstream merges
+(none of the last 5 merges recorded conflicts)
+
+## rerere cache: 16 recorded resolution(s)
