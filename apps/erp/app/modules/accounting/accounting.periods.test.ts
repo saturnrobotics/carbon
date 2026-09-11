@@ -223,8 +223,8 @@ describe("closeAccountingPeriod — sequential close", () => {
       },
       { data: [] }, // active definitions (none configured)
       { data: [] }, // existing tasks (none)
-      { data: { timezone: "UTC" }, error: null }, // company business calendar
-      { data: [] }, // external sync readiness starts its integration lookup first
+      { data: { timezone: "America/New_York" } }, // company business calendar
+      { data: [] }, // external GL readiness: no active integrations
       { count: 0 }, // readiness: draft journals
       { data: [] }, // readiness: posted journals in period
       { count: 0 }, // readiness: draft depreciation
@@ -300,8 +300,8 @@ describe("closePeriodWithChecklist — Blocker gate + Auto-task persistence", ()
           }
         ]
       }, // existing tasks — no instantiation needed
-      { data: { timezone: "UTC" }, error: null }, // company business calendar
-      { data: [] }, // external sync readiness starts its integration lookup first
+      { data: { timezone: "America/New_York" } }, // company business calendar
+      { data: [] }, // external GL readiness: no active integrations
       { count: 2 }, // readiness: draft journals present -> Blocker failing
       { data: [] }, // readiness: posted journals in period
       { count: 0 }, // readiness: draft depreciation
@@ -358,8 +358,8 @@ describe("closePeriodWithChecklist — Blocker gate + Auto-task persistence", ()
           }
         ]
       },
-      { data: { timezone: "UTC" }, error: null }, // company business calendar
-      { data: [] }, // external sync readiness starts its integration lookup first
+      { data: { timezone: "America/New_York" } }, // company business calendar
+      { data: [] }, // external GL readiness: no active integrations
       { count: 0 }, // readiness: no draft journals -> Blocker passing
       { data: [] }, // readiness: posted journals in period
       { count: 0 }, // readiness: draft depreciation

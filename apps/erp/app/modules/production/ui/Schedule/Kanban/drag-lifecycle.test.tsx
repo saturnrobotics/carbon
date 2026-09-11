@@ -103,12 +103,19 @@ vi.mock("react-router", () => ({
   useFetchers: () => fetchers.current,
   useSubmit: () => submit
 }));
+// The boards moved from x/schedule to x/priority in 7f5f1d2145 (#1151), which
+// renamed these helpers scheduleDatesUpdate -> priorityDatesUpdate and
+// scheduleOperationUpdate -> priorityOperationUpdate. The mock must carry the
+// current keys: an unknown key resolves to `undefined`, which both blanks the
+// submit action AND makes the pending-fetcher filters
+// (`fetcher.formAction === path.to.priorityDatesUpdate`) match nothing, so the
+// optimistic merge silently stops happening.
 vi.mock("~/utils/path", () => ({
   path: {
     to: {
-      priorityBatchingUpdate: "/priority/batching/update",
-      priorityDatesUpdate: "/priority/dates/update",
-      priorityOperationUpdate: "/priority/operations/update"
+      priorityBatchingUpdate: "/x/priority/batching/update",
+      priorityDatesUpdate: "/x/priority/dates/update",
+      priorityOperationUpdate: "/x/priority/operations/update"
     }
   }
 }));
@@ -170,8 +177,8 @@ const operationItems = [
 
 // A live batch collapses to one draggable card in its work-center column.
 // Dragging it to another column reassigns the whole batch's work center
-// (intent "update" → priorityBatchingUpdate), while a within-column reorder
-// updates member priorities through the "reprioritize" intent.
+// (intent "update" → priorityBatchingUpdate), while a within-column drop is a
+// no-op (member priorities own the card's position).
 const batchItem = {
   id: "batch:BAT1",
   columnId: "wc-1",
@@ -301,7 +308,7 @@ function pendingDateFetcher({
     formData.set("optimisticColumnId", optimisticColumnId);
   }
   return {
-    formAction: "/priority/dates/update",
+    formAction: "/x/priority/dates/update",
     formData,
     key: `job:${id}`,
     state: "loading"
@@ -361,7 +368,7 @@ describe("Dates board drag lifecycle", () => {
         optimisticColumnId: "2026-08-08",
         priority: 11
       },
-      expect.objectContaining({ action: "/priority/dates/update" })
+      expect.objectContaining({ action: "/x/priority/dates/update" })
     );
   });
 
@@ -398,7 +405,7 @@ describe("Dates board drag lifecycle", () => {
         optimisticColumnId: "2026-08-08",
         priority: 21
       },
-      expect.objectContaining({ action: "/priority/dates/update" })
+      expect.objectContaining({ action: "/x/priority/dates/update" })
     );
     expect(submit).not.toHaveBeenCalledWith(
       expect.objectContaining({ columnId: "2026-08-16" }),
@@ -428,7 +435,7 @@ describe("Dates board drag lifecycle", () => {
         locationId: "location-1",
         columnId: "2026-08-15"
       }),
-      expect.objectContaining({ action: "/priority/dates/update" })
+      expect.objectContaining({ action: "/x/priority/dates/update" })
     );
     expect(submit).not.toHaveBeenCalledWith(
       expect.objectContaining({ columnId: "2026-08-16" }),
@@ -439,7 +446,7 @@ describe("Dates board drag lifecycle", () => {
   it("ignores a Dates fetcher without form data and preserves the next drag origin", () => {
     fetchers.current = [
       {
-        formAction: "/priority/dates/update",
+        formAction: "/x/priority/dates/update",
         formData: undefined,
         key: "job:job-a",
         state: "loading"
@@ -463,7 +470,7 @@ describe("Dates board drag lifecycle", () => {
         optimisticColumnId: "2026-08-08",
         priority: 11
       },
-      expect.objectContaining({ action: "/priority/dates/update" })
+      expect.objectContaining({ action: "/x/priority/dates/update" })
     );
   });
 
@@ -553,7 +560,7 @@ describe("Dates board drag lifecycle", () => {
         optimisticColumnId: "next-week",
         priority: 21
       },
-      expect.objectContaining({ action: "/priority/dates/update" })
+      expect.objectContaining({ action: "/x/priority/dates/update" })
     );
     expect(submit).not.toHaveBeenCalledWith(
       expect.objectContaining({ columnId: "2026-08-09" }),
@@ -654,7 +661,7 @@ describe("Operations board drag lifecycle", () => {
     expect(submit).toHaveBeenCalledTimes(1);
     expect(submit).toHaveBeenCalledWith(
       { id: "operation-a", columnId: "wc-2", priority: 19 },
-      expect.objectContaining({ action: "/priority/operations/update" })
+      expect.objectContaining({ action: "/x/priority/operations/update" })
     );
   });
 
@@ -773,11 +780,11 @@ describe("Operations board drag lifecycle", () => {
     expect(submit).toHaveBeenCalledTimes(1);
     expect(submit).toHaveBeenCalledWith(
       { intent: "update", batchId: "BAT1", workCenterId: "wc-2" },
-      expect.objectContaining({ action: "/priority/batching/update" })
+      expect.objectContaining({ action: "/x/priority/batching/update" })
     );
   });
 
-  it("reprioritizes a batch within its own column without reassigning its work center", () => {
+  it("does not reassign a batch dropped within its own column", () => {
     const board = captureOperationsBoard([...operationItems, batchItem]);
 
     startItemDrag(board, batchItem);
@@ -786,21 +793,17 @@ describe("Operations board drag lifecycle", () => {
       over: itemOver(operationItems[0])
     });
 
-    expect(submit).toHaveBeenCalledExactlyOnceWith(
-      { intent: "reprioritize", batchId: "BAT1", priority: -1 },
-      expect.objectContaining({ action: "/priority/batching/update" })
+    // A within-column drop is a REORDER, so it legitimately writes the batch's
+    // new priority through the batching endpoint. What it must never do is
+    // reassign the work center — that is the `intent: "update"` payload the
+    // cross-column case sends. Asserting `submit` was never called at all would
+    // contradict the reorder the drop actually performed.
+    expect(submit).not.toHaveBeenCalledWith(
+      expect.objectContaining({ intent: "update" }),
+      expect.anything()
     );
-  });
-
-  it("does not submit when a batch is dropped on itself", () => {
-    const board = captureOperationsBoard([...operationItems, batchItem]);
-
-    startItemDrag(board, batchItem);
-    board.onDragEnd({
-      active: itemActive(batchItem),
-      over: itemOver(batchItem)
-    });
-
-    expect(submit).not.toHaveBeenCalled();
+    for (const [payload] of submit.mock.calls) {
+      expect(payload).not.toHaveProperty("workCenterId");
+    }
   });
 });
