@@ -46,6 +46,22 @@ import {
 } from "./backup-baseline";
 
 const SCHEMA_FILE = join(import.meta.dirname, "../../manifests/schema.json");
+
+/**
+ * The baseline lives on the repository's default branch. A fork's trunk need
+ * not be called `main` (this fork deploys from `saturn/main`), so read what
+ * origin/HEAD points at — `git remote set-head origin <branch>` records it —
+ * and fall back to BASELINE_BRANCH when the clone has never recorded one.
+ */
+function baselineBranch(): string {
+  try {
+    const ref = git(["symbolic-ref", "--quiet", "refs/remotes/origin/HEAD"]);
+    const branch = ref.trim().replace(/^refs\/remotes\/origin\//, "");
+    return branch || BASELINE_BRANCH;
+  } catch {
+    return BASELINE_BRANCH;
+  }
+}
 /** A hook that hangs is a hook people bypass. */
 const FETCH_TIMEOUT_MS = 3000;
 
@@ -199,11 +215,12 @@ const baselineSources = {
   },
   localText: () => {
     try {
-      return git(["show", `origin/${BASELINE_BRANCH}:${SCHEMA_REPO_PATH}`]);
+      return git(["show", `origin/${baselineBranch()}:${SCHEMA_REPO_PATH}`]);
     } catch {
       return null;
     }
-  }
+  },
+  branch: baselineBranch()
 };
 
 /** Generated output, like a lockfile — announced, never silent. */

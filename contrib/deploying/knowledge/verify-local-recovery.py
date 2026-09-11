@@ -457,7 +457,6 @@ def main():
     with tempfile.TemporaryDirectory() as backup_directory_name:
         backup_directory = Path(backup_directory_name)
         database_archive = backup_directory / "knowledge.dump"
-        storage_archive = backup_directory / "storage.tar"
         try:
             expected_objects = object_inventory(source_origin)
             if not expected_objects:

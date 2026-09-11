@@ -13,6 +13,7 @@
 # Exit status: 1 only for a hard problem (two migrations sharing a version
 # number); otherwise 0, with warnings on stderr.
 set -euo pipefail
+# shellcheck source=scripts/fork/lib.sh
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib.sh"
 cd "$(fork_repo_root)"
 

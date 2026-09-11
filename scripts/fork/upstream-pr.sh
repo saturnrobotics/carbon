@@ -7,6 +7,7 @@
 # onto it, and prints the `gh pr create --repo crbnos/carbon` command. It does not
 # push; review the branch first. Requires a clean working tree.
 set -euo pipefail
+# shellcheck source=scripts/fork/lib.sh
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib.sh"
 cd "$(fork_repo_root)"
 

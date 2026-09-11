@@ -179,7 +179,9 @@ def evaluate_disposable() -> dict[str, Any]:
         authorization = request(auth, "/oauth/authorize?" + query, follow=False)
         location = authorization.get("location", "")
         authorization_id = parse_qs(urlparse(location).query).get("authorization_id", [None])[0]
-        details = request(auth, f"/oauth/authorizations/{authorization_id}", token=user_token) if authorization_id else {"status": None}
+        if authorization_id:
+            # Probe the authorization record before consenting; the evaluation only needs the request to succeed.
+            request(auth, f"/oauth/authorizations/{authorization_id}", token=user_token)
         consent = request(auth, f"/oauth/authorizations/{authorization_id}/consent", "POST", token=user_token, data=json_data({"action": "approve"})) if authorization_id else {"status": None}
         callback = consent.get("body") or {}
         callback_url = callback.get("redirect_url", "")

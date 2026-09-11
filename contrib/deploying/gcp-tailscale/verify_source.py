@@ -15,6 +15,13 @@ import urllib.request
 WORKFLOW = ".github/workflows/generated-files-drift.yml"
 GATE_JOB = "generated-files-drift"
 INTEGRATION_BRANCH = "saturn/main"
+# Every workflow/job pair a deployed revision must have passed. The first entry
+# is the generated-files invariant; the rest are upstream's lint/type/test gates,
+# which run on the trunk too. A revision missing any of them is not deployable.
+REQUIRED_CHECKS = (
+    (WORKFLOW, (GATE_JOB,)),
+    (".github/workflows/check.yml", ("Lint", "Typecheck", "Lingui", "Catalog", "Test")),
+)
 
 
 class VerificationPending(ValueError):
@@ -98,8 +105,26 @@ def github_items(path, key, **query):
     )
 
 
-def require_verified(source, revision, *, branch=None):
+def require_verified(source, revision, *, branch=None, required=REQUIRED_CHECKS):
+    """Require every workflow in `required` to have passed for `revision`.
+
+    Returns the receipt of the first (generated-files-drift) run plus the run
+    ids of the others, so callers keep the single-receipt contract."""
+    receipt = None
+    runs = []
+    for workflow, gate_jobs in required:
+        result = require_workflow(source, revision, workflow, gate_jobs, branch=branch)
+        runs.append({"workflow": workflow, "run_id": result["run_id"], "run_attempt": result["run_attempt"]})
+        if receipt is None:
+            receipt = result
+    if receipt is None:
+        raise ValueError("Fork verification requires at least one workflow")
+    return {**receipt, "runs": runs}
+
+
+def require_workflow(source, revision, workflow, gate_jobs, *, branch=None):
     slug = repository_slug(source)
+    workflow_file = workflow.rsplit("/", 1)[-1]
 
     def same_repository(value):
         return (
@@ -114,16 +139,16 @@ def require_verified(source, revision, *, branch=None):
     if branch is not None:
         query["branch"] = branch
     runs = github_items(
-        f"/repos/{slug}/actions/workflows/generated-files-drift.yml/runs", "workflow_runs", **query
+        f"/repos/{slug}/actions/workflows/{workflow_file}/runs", "workflow_runs", **query
     )
     if not runs:
         raise VerificationPending(
-            "Fork verification is missing for this revision; submit the candidate and wait for the generated-files-drift check"
+            f"Fork verification is missing for this revision; push the candidate and wait for {workflow_file}"
         )
     for run in runs:
         if (
             run.get("head_sha") != revision
-            or run.get("path") != WORKFLOW
+            or run.get("path") != workflow
             or (branch is not None and run.get("head_branch") != branch)
             or not same_repository(run.get("repository"))
             or not same_repository(run.get("head_repository"))
@@ -155,28 +180,29 @@ def require_verified(source, revision, *, branch=None):
     latest = max(runs, key=lambda run: (run["run_number"], run["run_attempt"]))
     if latest.get("status") != "completed":
         raise VerificationPending(
-            "Fork verification is pending or unsuccessful; generated-files-drift must pass for this revision"
+            f"Fork verification is pending or unsuccessful; {workflow_file} must pass for this revision"
         )
     if latest.get("conclusion") != "success":
         raise VerificationFailed(
-            "Fork verification is pending or unsuccessful; generated-files-drift must pass for this revision",
+            f"Fork verification is pending or unsuccessful; {workflow_file} must pass for this revision",
             run_id=latest["id"],
         )
     run_id, attempt = latest["id"], latest["run_attempt"]
     jobs = github_items(
         f"/repos/{slug}/actions/runs/{run_id}/attempts/{attempt}/jobs", "jobs"
     )
-    gates = [job for job in jobs if job.get("name") == GATE_JOB]
-    if (
-        len(gates) != 1
-        or gates[0].get("head_sha") != revision
-        or gates[0].get("run_id") != run_id
-        or gates[0].get("status") != "completed"
-        or gates[0].get("conclusion") != "success"
-    ):
-        raise ValueError(
-            "Fork verification final job is missing, skipped, unsuccessful, or belongs to another revision"
-        )
+    for gate_job in gate_jobs:
+        gates = [job for job in jobs if job.get("name") == gate_job]
+        if (
+            len(gates) != 1
+            or gates[0].get("head_sha") != revision
+            or gates[0].get("run_id") != run_id
+            or gates[0].get("status") != "completed"
+            or gates[0].get("conclusion") != "success"
+        ):
+            raise ValueError(
+                f"Fork verification job '{gate_job}' in {workflow_file} is missing, skipped, unsuccessful, or belongs to another revision"
+            )
     return {
         "revision": revision,
         "run_id": run_id,

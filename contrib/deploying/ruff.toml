@@ -1,0 +1,8 @@
+# Lint configuration for the fork's deployment tooling (fork-checks workflow).
+# Correctness rules stay on; E701/E702 (several statements on one line) are a
+# layout preference these compact operator tests deliberately do not follow.
+line-length = 120
+
+[lint]
+select = ["E", "F", "W"]
+ignore = ["E501", "E701", "E702"]

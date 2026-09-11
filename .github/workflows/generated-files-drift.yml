@@ -35,26 +35,88 @@ jobs:
         with:
           # PR-authored code runs here; keep the token out of .git/config.
           persist-credentials: false
+          fetch-depth: 0
+      - name: Decide whether any generator input changed
+        # On a pull request, skip the ten-minute rebuild when nothing that feeds a
+        # generated file changed. The job still reports success, so it can stay a
+        # required check (a `paths:` filter would leave unrelated PRs pending).
+        # Pushes to the trunk and sync/** always rebuild: they are the deploy gate.
+        id: inputs
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          changed="$(git diff --name-only "$BASE" "$HEAD" -- \
+            'packages/database/supabase/migrations/**' \
+            'packages/database/supabase/functions/**' \
+            'packages/jobs/src/backups/**' \
+            'packages/jobs/manifests/**' \
+            'apps/erp/app/modules/**/*.service.ts' \
+            'apps/erp/app/modules/**/*.models.ts' \
+            'apps/erp/app/modules/**/*.mcp.server.ts' \
+            'apps/erp/app/routes/api+/mcp+/**' \
+            'packages/workflows/src/catalog/**' \
+            'docs/content/**' 'docs/lib/**' 'docs/scripts/**' \
+            'apps/erp/app/modules/agent/kb/**' \
+            'packages/database/src/types.ts' 'packages/database/src/swagger-docs-schema.ts' \
+            'scripts/**' '.gitattributes' \
+            'package.json' '**/package.json' 'pnpm-workspace.yaml' 'pnpm-lock.yaml' '.npmrc' 'patches/**' \
+            'Cargo.toml' 'Cargo.lock' 'crates/**' 'apps/assembler/**' \
+            'packages/dev/**' '.github/workflows/generated-files-drift.yml')"
+          if [ -z "$changed" ]; then
+            echo "No generator input changed between $BASE and $HEAD; generated files cannot have drifted."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            printf 'Generator inputs changed:\n%s\n' "$changed"
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
       - uses: pnpm/action-setup@v4
+        if: steps.inputs.outputs.changed == 'true'
       - uses: actions/setup-node@v4
+        if: steps.inputs.outputs.changed == 'true'
         with:
           node-version: 22
           cache: pnpm
       - uses: supabase/setup-cli@v1
+        if: steps.inputs.outputs.changed == 'true'
         with:
           # Matches the `supabase` entry in pnpm-workspace.yaml's catalog.
           version: 2.89.0
       - name: Prepare a disposable development environment
+        if: steps.inputs.outputs.changed == 'true'
         # regenerate.sh copies .env.example to .env itself. The dev compose file
         # mounts this CA file even with --no-portless.
         run: |
           mkdir -p "$HOME/.portless"
           cp /etc/ssl/certs/ca-certificates.crt "$HOME/.portless/ca.pem"
+      - name: Restore cached dev-stack images
+        if: steps.inputs.outputs.changed == 'true'
+        id: image-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/carbon-dev-images.tar
+          key: dev-images-${{ hashFiles('packages/dev/docker/docker-compose.dev.yml') }}
+      - name: Load or pull the dev-stack images
+        if: steps.inputs.outputs.changed == 'true'
+        run: |
+          if [ -f ~/.cache/carbon-dev-images.tar ]; then
+            docker load -i ~/.cache/carbon-dev-images.tar
+          else
+            grep -E '^\s+image:' packages/dev/docker/docker-compose.dev.yml | awk '{print $NF}' | sort -u > /tmp/images.txt
+            xargs -n1 docker pull -q < /tmp/images.txt
+            mkdir -p ~/.cache
+            xargs docker save -o ~/.cache/carbon-dev-images.tar < /tmp/images.txt
+          fi
       - name: Regenerate every generated file from the committed sources
+        if: steps.inputs.outputs.changed == 'true'
         # --fresh: this runner is disposable, so migrations are applied from scratch
         # on new volumes and the stack is torn down afterwards.
         run: bash scripts/fork/regenerate.sh --fresh --no-stage
       - name: Fail if any generated file differs from what is committed
+        if: steps.inputs.outputs.changed == 'true'
         run: |
           git add -N .
           if ! git diff --exit-code --stat; then

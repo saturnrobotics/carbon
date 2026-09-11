@@ -3,13 +3,29 @@
 # conflicting. This is the number to keep small.
 #
 #   bash scripts/fork/drift.sh [ref]     (default: the fork trunk; use HEAD for a branch)
+#   bash scripts/fork/drift.sh --pending  (one advisory line: upstream commits not yet merged)
 #
 # Prints: total files/lines changed vs upstream/<branch>, the 20 shared upstream
 # files with the most changed lines, and the files that conflicted in the last 5
 # upstream merge commits (from merge messages and the rerere cache when present).
 set -euo pipefail
+# shellcheck source=scripts/fork/lib.sh
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib.sh"
 cd "$(fork_repo_root)"
+
+# --pending: one advisory line for `make deploy` — how far the trunk is behind
+# upstream. Never fails (deploy cadence is independent of sync cadence) and
+# tolerates being offline.
+if [[ "${1:-}" == "--pending" ]]; then
+  git fetch --quiet --no-tags "$UPSTREAM_REMOTE" "$UPSTREAM_BRANCH" 2>/dev/null || true
+  if git rev-parse --verify --quiet "$UPSTREAM_REMOTE/$UPSTREAM_BRANCH" >/dev/null; then
+    n="$(git rev-list --count "HEAD..$UPSTREAM_REMOTE/$UPSTREAM_BRANCH" 2>/dev/null || echo "?")"
+    printf 'Advisory: %s upstream commit(s) not yet merged into %s (see docs/fork/README.md; this does not block deployment).\n' "$n" "$FORK_TRUNK"
+  else
+    printf 'Advisory: upstream not fetched; cannot report pending upstream commits.\n'
+  fi
+  exit 0
+fi
 
 ref="${1:-$FORK_TRUNK}"
 up="$UPSTREAM_REMOTE/$UPSTREAM_BRANCH"
@@ -42,7 +58,7 @@ else
     conflicts="$(git log -1 --format=%B "$m" | awk '/^Conflicts:/{f=1;next} f&&/^\s+\S/{print $1} f&&!/^\s+\S/{f=0}')"
     if [[ -n "$conflicts" ]]; then
       found=1
-      echo "$(git log -1 --format='%h %ad %s' --date=short "$m")"
+      git log -1 --format='%h %ad %s' --date=short "$m"
       printf '%s\n' "$conflicts" | sed 's/^/    /'
     fi
   done
@@ -50,6 +66,6 @@ else
 fi
 if [[ -d "$(git rev-parse --git-path rr-cache)" ]] && [[ -n "$(ls -A "$(git rev-parse --git-path rr-cache)" 2>/dev/null)" ]]; then
   echo
-  echo "## rerere cache: $(ls -1 "$(git rev-parse --git-path rr-cache)" | wc -l | tr -d ' ') recorded resolution(s)"
+  echo "## rerere cache: $(find "$(git rev-parse --git-path rr-cache)" -mindepth 1 -maxdepth 1 | wc -l | tr -d ' ') recorded resolution(s)"
   git rerere status 2>/dev/null | sed 's/^/    /' || true
 fi

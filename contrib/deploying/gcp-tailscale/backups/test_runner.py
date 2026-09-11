@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 from runner import (
     Api, ApiError, BackupError, Config, MANAGED, Runner, UTC,
-    blob_key, crc32c, json_bytes, select_versions, stamp,
+    blob_key, crc32c, select_versions, stamp,
 )
 
 

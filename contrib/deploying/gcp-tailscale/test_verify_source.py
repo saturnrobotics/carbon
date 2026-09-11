@@ -55,8 +55,40 @@ class VerificationTests(unittest.TestCase):
                 {"total_count": len(jobs), "jobs": jobs},
             ],
         ) as api:
-            receipt = verify_source.require_verified(SOURCE, REVISION, branch=branch)
+            receipt = verify_source.require_verified(
+                SOURCE, REVISION, branch=branch, required=verify_source.REQUIRED_CHECKS[:1]
+            )
         return receipt, api
+
+    def test_every_required_workflow_and_job_must_pass(self):
+        check_run = workflow_run(id=32, path=".github/workflows/check.yml")
+        check_jobs = [gate_job(name=n, run_id=32) for n in ("Lint", "Typecheck", "Lingui", "Catalog", "Test")]
+        with patch.object(
+            verify_source,
+            "github_json",
+            side_effect=[
+                {"total_count": 1, "workflow_runs": [workflow_run()]},
+                {"total_count": 1, "jobs": [gate_job()]},
+                {"total_count": 1, "workflow_runs": [check_run]},
+                {"total_count": len(check_jobs), "jobs": check_jobs},
+            ],
+        ) as api:
+            receipt = verify_source.require_verified(SOURCE, REVISION, branch=BRANCH)
+        self.assertEqual([r["run_id"] for r in receipt["runs"]], [31, 32])
+        self.assertIn("/workflows/check.yml/runs?", api.call_args_list[2].args[0])
+        # One missing lint job fails the whole revision.
+        with patch.object(
+            verify_source,
+            "github_json",
+            side_effect=[
+                {"total_count": 1, "workflow_runs": [workflow_run()]},
+                {"total_count": 1, "jobs": [gate_job()]},
+                {"total_count": 1, "workflow_runs": [check_run]},
+                {"total_count": len(check_jobs) - 1, "jobs": check_jobs[1:]},
+            ],
+        ):
+            with self.assertRaisesRegex(ValueError, "'Lint' in check.yml"):
+                verify_source.require_verified(SOURCE, REVISION, branch=BRANCH)
 
     def test_accepts_successful_exact_revision_and_specific_attempt_gate(self):
         receipt, api = self.check()

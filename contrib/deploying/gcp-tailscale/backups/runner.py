@@ -104,9 +104,9 @@ class Config:
                     raise ValueError
             if config.bucket in config.source_buckets or len(config.source_buckets) > 20:
                 raise ValueError
-            if type(config.daily_days) is not int or not 90 <= config.daily_days <= 3650:
+            if isinstance(config.daily_days, bool) or not isinstance(config.daily_days, int) or not 90 <= config.daily_days <= 3650:
                 raise ValueError
-            if type(config.monthly_days) is not int or not 366 <= config.monthly_days <= 3650:
+            if isinstance(config.monthly_days, bool) or not isinstance(config.monthly_days, int) or not 366 <= config.monthly_days <= 3650:
                 raise ValueError
             if config.monthly_days < config.daily_days:
                 raise ValueError
@@ -459,7 +459,7 @@ class Runner:
                     or len(set(manifest["sourceBuckets"])) != len(manifest["sourceBuckets"])
                     or (current_sources and manifest["sourceBuckets"] != list(config.source_buckets))
                     or manifest["snapshot"] != self.snapshot_record(snapshot)
-                    or type(manifest["objects"]) is not list
+                    or not isinstance(manifest["objects"], list)
                     or len(manifest["objects"]) != manifest["objectCount"]):
                 raise ValueError
             if instant(manifest["completedAt"]) < instant(manifest["startedAt"]):
