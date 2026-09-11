@@ -571,6 +571,19 @@ The seven-step local goal is complete. See
 The broader roadmap below remains deferred; its checkboxes require each entire
 task acceptance boundary, not merely implemented code.
 
+### Authorization program (2026-09-11)
+
+Tasks 05, 07, 08 and 09 and the provider-eligibility invariant (§1.9.1) were
+re-planned against a code audit of `saturn/main` in
+[`2026-09-11-knowledge-authorization.md`](2026-09-11-knowledge-authorization.md).
+Much of their step lists is already implemented (two-assertion verification,
+canonical resolution, the Carbon workforce read gate, Kanban's authorization
+code); what remains is binding enrollment, revocation, required assurance,
+deployment wiring, the Kanban cutover, the cloud foundation and the live
+production check. Execute that plan's eleven tasks in place of the four tasks'
+step lists; keep the four checkboxes below and tick each only when the
+corresponding tasks there are done (05 ← 09 + 11; 07 ← 01–06; 08 ← 07; 09 ← 08).
+
 - [ ] Task 01: Add contracts, isolated test tooling, and package boundaries.
 - [ ] Task 02: Build a dependency-aware release planner.
 - [ ] Task 03: Remove Carbon's routine full-stack rollout coupling.
