@@ -23,7 +23,7 @@ def workflow_run(**changes):
         "head_branch": BRANCH,
         "head_repository": {"full_name": "example/carbon"},
         "repository": {"full_name": "example/carbon"},
-        "path": ".github/workflows/fork-check.yml",
+        "path": ".github/workflows/generated-files-drift.yml",
         "event": "push",
         "status": "completed",
         "conclusion": "success",
@@ -36,7 +36,7 @@ def gate_job(**changes):
         "id": 51,
         "run_id": 31,
         "head_sha": REVISION,
-        "name": "fork-verified",
+        "name": "generated-files-drift",
         "status": "completed",
         "conclusion": "success",
         **changes,
@@ -62,7 +62,7 @@ class VerificationTests(unittest.TestCase):
         receipt, api = self.check()
         self.assertEqual(receipt["revision"], REVISION)
         self.assertEqual(receipt["run_id"], 31)
-        self.assertIn("/workflows/fork-check.yml/runs?", api.call_args_list[0].args[0])
+        self.assertIn("/workflows/generated-files-drift.yml/runs?", api.call_args_list[0].args[0])
         self.assertIn("head_sha=" + REVISION, api.call_args_list[0].args[0])
         self.assertIn("branch=sync%2Fupstream-example", api.call_args_list[0].args[0])
         self.assertIn("/runs/31/attempts/1/jobs?", api.call_args_list[1].args[0])

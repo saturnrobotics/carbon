@@ -93,6 +93,48 @@ function stripPerTenantTables(source: string): string {
   return lines.join("\n");
 }
 
+// `supabase gen types` emits a table's `Relationships` entries in catalog order,
+// which is not stable across databases built from the same migrations (two
+// foreign keys to the same table swap places between runs). Sort each block's
+// entries by their text so the output is a pure function of the schema and the
+// generated-files drift check can compare it byte for byte.
+export function sortRelationships(source: string): string {
+  const lines = source.split("\n");
+  const out: string[] = [];
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    out.push(line);
+    if (!/^\s*Relationships: \[$/.test(line)) continue;
+    const indent = line.match(/^\s*/)?.[0] ?? "";
+    const entries: string[][] = [];
+    let j = i + 1;
+    while (j < lines.length && lines[j] !== `${indent}]`) {
+      if (lines[j] === `${indent}  {`) {
+        const entry = [lines[j]];
+        j++;
+        while (j < lines.length && !/^\s*\},?$/.test(lines[j])) entry.push(lines[j++]);
+        entry.push(lines[j]);
+        entries.push(entry);
+      }
+      j++;
+    }
+    if (j >= lines.length) continue;
+    const closing = lines[j];
+    entries.sort((a, b) => {
+      const ka = a.slice(1, -1).join("\n");
+      const kb = b.slice(1, -1).join("\n");
+      return ka < kb ? -1 : ka > kb ? 1 : 0;
+    });
+    entries.forEach((entry, index) => {
+      const last = entry[entry.length - 1].replace(/,$/, "");
+      out.push(...entry.slice(0, -1), index < entries.length - 1 ? `${last},` : last);
+    });
+    out.push(closing);
+    i = j;
+  }
+  return out.join("\n");
+}
+
 type StagedOutput = {
   target: string;
   directory: string;
@@ -162,7 +204,7 @@ export function generateDatabaseTypes(databaseUrl: string | undefined): void {
     }
     const source = readFileSync(first.candidate, "utf8");
     validateTypes(source);
-    const normalized = stripPerTenantTables(source);
+    const normalized = sortRelationships(stripPerTenantTables(source));
     validateTypes(normalized);
     for (const entry of staged) writeFileSync(entry.candidate, normalized);
     try {

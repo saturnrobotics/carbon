@@ -1,23 +1,38 @@
 name: Saturn invoice checks
 
 on:
+  # Every push to the trunk gets a full run (including after each upstream sync).
   push:
     branches: [saturn/main]
+  # Pull requests run it only when they touch invoice intake, payment sync, the
+  # schema they depend on, or the operator tooling this job exercises. It is a
+  # ten-minute database + browser run, so it is informational, not a required
+  # check: a path-filtered required check would block unrelated PRs forever.
   pull_request:
     branches: [saturn/main]
+    paths:
+      - "apps/erp/app/modules/invoicing/**"
+      - "apps/erp/app/modules/purchasing/**"
+      - "apps/erp/app/routes/x+/purchase-invoice+/**"
+      - "apps/erp/app/routes/api+/purchase-invoice.*"
+      - "apps/erp/app/routes/api+/document-extraction.ts"
+      - "apps/erp/test/invoice-browser/**"
+      - "packages/jobs/src/invoice-intake/**"
+      - "packages/jobs/src/payment-sync/**"
+      - "packages/jobs/src/inngest/**"
+      - "packages/database/supabase/migrations/**"
+      - "packages/database/supabase/functions/**"
+      - "contrib/deploying/gcp-tailscale/*invoice*"
+      - "packages/dev/**"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/saturn-invoice-check.yml"
   workflow_dispatch:
-  workflow_call:
-    inputs:
-      verified_revision:
-        description: Exact candidate already inspected by the fork preflight
-        required: true
-        type: string
 
 permissions:
   contents: read
 
 concurrency:
-  group: saturn-invoice-${{ github.ref }}-${{ inputs.verified_revision || github.workflow }}
+  group: saturn-invoice-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -43,7 +58,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.verified_revision || github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4

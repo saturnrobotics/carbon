@@ -1,0 +1,121 @@
+name: resolve-sync-conflicts
+
+# Optional, gated LLM-assisted conflict resolution for sync/** PRs.
+#
+# Triggered by the `needs-conflict-resolution` label or a `/resolve` PR comment,
+# and only on PRs whose head branch is sync/**. If the ANTHROPIC_API_KEY secret is
+# configured it runs Claude Code with docs/fork/RESOLVE_PROMPT.md against the
+# branch; otherwise it posts a comment with the exact local command to run the
+# same prompt. Either way the result is pushed to the sync branch only and still
+# has to pass CI and human review before it can reach the trunk.
+
+on:
+  pull_request:
+    types: [labeled]
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: resolve-sync-conflicts-${{ github.event.pull_request.number || github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  gate:
+    # Decide whether this event is a resolution request on a sync/** PR.
+    runs-on: ubuntu-latest
+    if: >
+      (github.event_name == 'pull_request' && github.event.label.name == 'needs-conflict-resolution') ||
+      (github.event_name == 'issue_comment' && github.event.issue.pull_request && startsWith(github.event.comment.body, '/resolve'))
+    outputs:
+      run: ${{ steps.pr.outputs.run }}
+      number: ${{ steps.pr.outputs.number }}
+      head_ref: ${{ steps.pr.outputs.head_ref }}
+      has_key: ${{ steps.key.outputs.has_key }}
+    steps:
+      - id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NUMBER: ${{ github.event.pull_request.number || github.event.issue.number }}
+        run: |
+          head_ref="$(gh pr view "$NUMBER" --repo "$GITHUB_REPOSITORY" --json headRefName --jq .headRefName)"
+          echo "number=$NUMBER" >> "$GITHUB_OUTPUT"
+          echo "head_ref=$head_ref" >> "$GITHUB_OUTPUT"
+          case "$head_ref" in
+            sync/*) echo "run=true" >> "$GITHUB_OUTPUT" ;;
+            *) echo "run=false" >> "$GITHUB_OUTPUT"; echo "not a sync/** branch ($head_ref); ignoring" ;;
+          esac
+      - id: key
+        env:
+          HAS_KEY: ${{ secrets.ANTHROPIC_API_KEY != '' }}
+        run: echo "has_key=$HAS_KEY" >> "$GITHUB_OUTPUT"
+
+  resolve:
+    needs: gate
+    if: needs.gate.outputs.run == 'true' && needs.gate.outputs.has_key == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.gate.outputs.head_ref }}
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.89.0
+      - name: Configure git for the resolver
+        run: |
+          bash scripts/fork/setup-git.sh
+          git fetch --no-tags upstream main
+          # Re-open the merge so the agent sees real conflict markers and MERGE_HEAD,
+          # instead of the committed "WIP" tree.
+          if git log -1 --format=%s | grep -q '^WIP: unresolved upstream conflicts'; then
+            trunk="$(git merge-base HEAD origin/saturn/main)"
+            upstream_sha="$(git log -1 --format=%B | sed -n 's/^Upstream-Target: \([0-9a-f]\{40\}\)$/\1/p' | head -1)"
+            git reset -q --hard "$trunk"
+            git merge --no-ff --no-commit "${upstream_sha:-upstream/main}" || true
+          fi
+      - name: Resolve conflicts with Claude Code
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ github.token }}
+          prompt: |
+            Follow the instructions in docs/fork/RESOLVE_PROMPT.md exactly. You are on PR #${{ needs.gate.outputs.number }},
+            branch ${{ needs.gate.outputs.head_ref }}. The upstream merge is open in this checkout (MERGE_HEAD is set).
+          claude_args: >-
+            --allowedTools "Bash,Read,Edit,Write,Glob,Grep"
+            --max-turns 80
+
+  fallback:
+    needs: gate
+    if: needs.gate.outputs.run == 'true' && needs.gate.outputs.has_key != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post the local command
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh pr comment "${{ needs.gate.outputs.number }}" --repo "$GITHUB_REPOSITORY" --body-file - <<'MSG'
+          No `ANTHROPIC_API_KEY` secret is configured, so the assisted resolver did not run.
+          To run the same prompt locally on this branch:
+
+          ```bash
+          git fetch origin && git switch ${{ needs.gate.outputs.head_ref }}
+          bash scripts/fork/setup-git.sh
+          # re-open the merge if the branch holds the committed WIP conflict tree:
+          git reset --hard "$(git merge-base HEAD origin/saturn/main)" && git merge --no-ff --no-commit upstream/main || true
+          claude -p "$(cat docs/fork/RESOLVE_PROMPT.md)"
+          ```
+
+          Then push the branch; the PR stays a draft until CI is green and a human has reviewed it.
+          MSG

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Require GitHub's successful fork workflow and final job for an exact commit."""
+"""Require a successful generated-files-drift workflow run for an exact commit before deploying."""
 
 import argparse
 import json
@@ -12,7 +12,8 @@ import urllib.parse
 import urllib.request
 
 
-WORKFLOW = ".github/workflows/fork-check.yml"
+WORKFLOW = ".github/workflows/generated-files-drift.yml"
+GATE_JOB = "generated-files-drift"
 INTEGRATION_BRANCH = "saturn/main"
 
 
@@ -113,11 +114,11 @@ def require_verified(source, revision, *, branch=None):
     if branch is not None:
         query["branch"] = branch
     runs = github_items(
-        f"/repos/{slug}/actions/workflows/fork-check.yml/runs", "workflow_runs", **query
+        f"/repos/{slug}/actions/workflows/generated-files-drift.yml/runs", "workflow_runs", **query
     )
     if not runs:
         raise VerificationPending(
-            "Fork verification is missing for this revision; submit the candidate and wait for fork-verified"
+            "Fork verification is missing for this revision; submit the candidate and wait for the generated-files-drift check"
         )
     for run in runs:
         if (
@@ -154,18 +155,18 @@ def require_verified(source, revision, *, branch=None):
     latest = max(runs, key=lambda run: (run["run_number"], run["run_attempt"]))
     if latest.get("status") != "completed":
         raise VerificationPending(
-            "Fork verification is pending or unsuccessful; fork-verified must pass for this revision"
+            "Fork verification is pending or unsuccessful; generated-files-drift must pass for this revision"
         )
     if latest.get("conclusion") != "success":
         raise VerificationFailed(
-            "Fork verification is pending or unsuccessful; fork-verified must pass for this revision",
+            "Fork verification is pending or unsuccessful; generated-files-drift must pass for this revision",
             run_id=latest["id"],
         )
     run_id, attempt = latest["id"], latest["run_attempt"]
     jobs = github_items(
         f"/repos/{slug}/actions/runs/{run_id}/attempts/{attempt}/jobs", "jobs"
     )
-    gates = [job for job in jobs if job.get("name") == "fork-verified"]
+    gates = [job for job in jobs if job.get("name") == GATE_JOB]
     if (
         len(gates) != 1
         or gates[0].get("head_sha") != revision

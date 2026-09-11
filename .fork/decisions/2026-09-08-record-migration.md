@@ -52,6 +52,6 @@ Migration provenance:
 | `.ai/specs/implemented/2026-09-06-invoice-intake.md` | `.fork/specs/implemented/2026-09-06-invoice-intake.md` |
 
 Verification: the installer fixture proves root policy discovery for both harness
-entry points, registration of the fork-maintenance skill, and replacement of a
+entry points and replacement of a
 stale generated harness copy without changing authored policy. Policy cold-reading
 and the integration gate validate future instruction and enforcement changes.

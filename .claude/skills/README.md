@@ -49,7 +49,6 @@ in root-cause, BLOCKED in fix) always surface to the human.
 
 | Skill | Purpose | Produces |
 |-------|---------|----------|
-| `fork-maintenance` | Verified upstream integration, conflict handling, and durable fork safeguards | isolated candidate + `.fork/` records |
 | `research` | Competitor/industry survey for a feature | `.ai/research/{slug}.md` |
 | `spec-writing` | Design + spec with Open Questions hard stop | `.ai/specs/{date}-{slug}.md` |
 | `grill` | Interview stress-test of a plan/spec/design, one question at a time | resolutions in the spec/plan, or `.ai/runs/{date}-grill-{slug}.md` |

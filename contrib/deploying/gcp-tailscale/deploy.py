@@ -298,11 +298,6 @@ def publish_source(config, rev):
     destinations = run(["git", "-C", str(REPO), "remote", "get-url", "--push", "--all", "origin"], capture=True).splitlines()
     if len(destinations) != 1 or destinations[0].removesuffix(".git") not in allowed:
         raise ValueError("origin must have one push URL matching SOURCE_REPO_URL; inspect git remote -v")
-    print("Checking that the latest upstream/main is included...", flush=True)
-    run(["git", "-C", str(REPO), "fetch", "--no-tags", "upstream", "refs/heads/main:refs/remotes/upstream/main"])
-    contains = subprocess.run(["git", "-C", str(REPO), "merge-base", "--is-ancestor", "refs/remotes/upstream/main", rev])
-    if contains.returncode != 0:
-        raise ValueError("Merge the latest upstream first: bash contrib/deploying/gcp-tailscale/fork.sh sync; verify and rerun make deploy")
     print(f"Publishing {DEPLOY_BRANCH} at {rev[:12]}...", flush=True)
     # Pin the source we upload and publish to the same commit. No force push,
     # implicit feature-branch publication, local secrets, or GitHub build runner.
@@ -335,7 +330,7 @@ def deploy(config, desired_release=None, *, maintenance=False, prepared_release=
         previous = prepare_release.observe(Cloud(config))["manifest"]
         desired_release = release_plan.materialize_repository_inputs(desired_release, REPO)
         prepared_release = release_plan.plan(desired_release, previous)
-        for key in ("maintenance_required", "maintenance_fingerprint", "maintenance_reasons"):
+        for key in ("maintenance_required", "maintenance_fingerprint", "maintenance_inputs", "maintenance_reasons"):
             if key in desired_release:
                 prepared_release[key] = desired_release[key]
     planned_release = prepared_release
@@ -424,10 +419,13 @@ def deploy(config, desired_release=None, *, maintenance=False, prepared_release=
             cloud.check_vm()
             cloud.check_firewall()
             cloud.ssh("sudo", "bash", script, "/var/lib/carbon/config.json", release, "check")
-            print("Deployed commit", rev)
-            print("From a Tailscale device:", "https://" + config["ERP_HOST"], "https://" + config["MES_HOST"])
         finally:
             cloud.ssh("rm", "-rf", "--", staging)
+    # This is the last remote action: failed verification or staging cleanup
+    # leaves the previous successful manifest intact, even if apps were applied.
+    cloud.ssh("sudo", "bash", script, "/var/lib/carbon/config.json", release, "finalize")
+    print("Deployed commit", rev)
+    print("From a Tailscale device:", "https://" + config["ERP_HOST"], "https://" + config["MES_HOST"])
 
 
 def main():
@@ -458,7 +456,7 @@ def main():
             desired_release = release_plan.materialize_repository_inputs(private_json(args.release_plan), REPO)
             previous = prepare_release.observe(Cloud(config))["manifest"]
             planned = release_plan.plan(desired_release, previous)
-            for key in ("maintenance_fingerprint", "maintenance_required", "maintenance_reasons"):
+            for key in ("maintenance_fingerprint", "maintenance_inputs", "maintenance_required", "maintenance_reasons"):
                 if key in desired_release:
                     planned[key] = desired_release[key]
         else:

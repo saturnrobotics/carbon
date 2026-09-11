@@ -28,7 +28,7 @@ def plan(generation=3, *, changed=True, maintenance_required=False):
 
 
 class DeployLifecycleTests(unittest.TestCase):
-    def run_release(self, planned, *, snapshot_error=None, events=None):
+    def run_release(self, planned, *, snapshot_error=None, events=None, final_check_error=None, fail_at=None):
         config = json.loads((HERE / "config.example.json").read_text())
         config.update(PROJECT_ID="example-project", CLOUDFLARE_API_TOKEN="synthetic-token")
         desired = {"prepared_source_commit": REVISION, "base_images": BASES}
@@ -43,12 +43,16 @@ class DeployLifecycleTests(unittest.TestCase):
                 return "100.64.0.10\n"
             if len(args) > 2 and str(args[2]).endswith("/host-deploy.sh"):
                 events.append(args[-1])
+                if args[-1] == "check" and final_check_error is not None:
+                    raise final_check_error
             elif args[:3] == ("sudo", "systemctl", "stop"):
                 self.assertEqual(args[3:], ("docker.service", "docker.socket"))
                 events.append("docker-stop")
             elif args[:3] == ("sudo", "systemctl", "start"):
                 self.assertEqual(args[3:], ("docker.service",))
                 events.append("docker-start")
+            if args[:3] == ("rm", "-rf", "--") and fail_at == "cleanup":
+                raise subprocess.CalledProcessError(1, ["synthetic-cleanup"])
             return ""
 
         def call(*args, **kwargs):
@@ -69,6 +73,10 @@ class DeployLifecycleTests(unittest.TestCase):
         cloud.ssh.side_effect = ssh
         cloud.call.side_effect = call
         cloud.scp.side_effect = scp
+        if fail_at == "vm":
+            cloud.check_vm.side_effect = subprocess.CalledProcessError(1, ["synthetic-vm-check"])
+        if fail_at == "firewall":
+            cloud.check_firewall.side_effect = subprocess.CalledProcessError(1, ["synthetic-firewall-check"])
         with ExitStack() as stack:
             stack.enter_context(redirect_stdout(io.StringIO()))
             stack.enter_context(patch.object(deploy, "revision", return_value=REVISION))
@@ -93,7 +101,7 @@ class DeployLifecycleTests(unittest.TestCase):
     def assert_maintenance(self, planned):
         events, uploaded, cloud, publish, _, _, inference = self.run_release(planned)
         self.assertEqual(events, ["prepare", "quiesce", "docker-stop", "snapshot",
-                                  "docker-start", "maintenance-apply", "check"])
+                                  "docker-start", "maintenance-apply", "check", "finalize"])
         publish.assert_called_once()
         cloud.provision.assert_called_once()
         inference.assert_called_once_with(cloud)
@@ -124,13 +132,39 @@ class DeployLifecycleTests(unittest.TestCase):
     def test_erp_only_release_stays_routine_without_snapshot_or_quiesce(self):
         planned = plan()
         events, uploaded, cloud, publish, _, _, _ = self.run_release(planned)
-        self.assertEqual(events, ["prepare", "routine-apply", "check"])
+        self.assertEqual(events, ["prepare", "routine-apply", "check", "finalize"])
         cloud.call.assert_not_called()
         publish.assert_called_once()
         self.assertEqual(len(uploaded), 1)
         self.assertIs(uploaded[0]["RELEASE_MAINTENANCE"], False)
         self.assertEqual(set(uploaded[0]["RELEASE_PLAN"]["deploy"]), {"erp"})
         self.assertEqual(uploaded[0]["RELEASE_BASE_IMAGES"], BASES)
+
+    def test_final_verification_failure_never_finalizes_the_release(self):
+        for maintenance in (False, True):
+            with self.subTest(maintenance=maintenance):
+                events = []
+                failure = subprocess.CalledProcessError(1, ["synthetic-final-check"])
+                with self.assertRaises(subprocess.CalledProcessError):
+                    self.run_release(plan(maintenance_required=maintenance), events=events,
+                                     final_check_error=failure)
+                self.assertIn("check", events)
+                self.assertNotIn("finalize", events)
+
+    def test_cloud_check_or_cleanup_failure_never_finalizes_the_release(self):
+        for maintenance in (False, True):
+            for boundary in ("vm", "firewall", "cleanup"):
+                with self.subTest(maintenance=maintenance, boundary=boundary):
+                    events = []
+                    with self.assertRaises(subprocess.CalledProcessError):
+                        self.run_release(plan(maintenance_required=maintenance), events=events, fail_at=boundary)
+                    self.assertNotIn("finalize", events)
+
+    def test_finalization_is_the_last_remote_action_after_cleanup(self):
+        events, uploaded, cloud, publish, factory, dns, inference = self.run_release(plan())
+        calls = [call.args for call in cloud.ssh.call_args_list]
+        self.assertEqual(calls[-1][-1], "finalize")
+        self.assertEqual(calls[-2][:3], ("rm", "-rf", "--"))
 
     def test_unchanged_release_does_not_publish_or_provision(self):
         events, uploaded, cloud, publish, factory, dns, inference = self.run_release(plan(changed=False))

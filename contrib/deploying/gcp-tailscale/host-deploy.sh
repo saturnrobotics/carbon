@@ -7,7 +7,7 @@ umask 077
 readonly STATE=/var/lib/carbon
 readonly CONFIG=${1:?Usage: host-deploy.sh CONFIG_JSON REPO_PATH COMMAND}
 readonly REPO=${2:?Usage: host-deploy.sh CONFIG_JSON REPO_PATH COMMAND}
-readonly ACTION=${3:?Expected prepare, quiesce, routine-migrate, routine-apply, maintenance-apply, start, or check}
+readonly ACTION=${3:?Expected prepare, quiesce, routine-migrate, routine-apply, maintenance-apply, finalize, start, or check}
 readonly HERE="$REPO/contrib/deploying/gcp-tailscale"
 readonly CURRENT="$STATE/runtime/compose.json"
 
@@ -116,6 +116,8 @@ for name in selected:
     if name not in {"erp", "mes"}:
         raise SystemExit("Only app services may use the routine release path")
     current["services"][name] = prepared["services"][name]
+    for secret in prepared["services"][name].get("secrets", []):
+        current.setdefault("secrets", {})[secret] = prepared["secrets"][secret]
 fd, temporary = tempfile.mkstemp(dir=current_path.parent, prefix="compose.")
 with os.fdopen(fd, "w") as stream:
     json.dump(current, stream, indent=2)
@@ -147,24 +149,6 @@ os.replace(temporary, current_path)
 PY
 }
 
-save_release_manifest() {
-  python3 - "$CONFIG" "$STATE/runtime/release-manifest.json" <<'PY'
-import json, os, sys, tempfile
-from pathlib import Path
-config, destination = map(Path, sys.argv[1:])
-plan = json.loads(config.read_text())["RELEASE_PLAN"]
-manifest = {"generation": plan["generation"], "services": plan["services"]}
-if plan.get("maintenance_fingerprint"):
-    manifest["maintenance_fingerprint"] = plan["maintenance_fingerprint"]
-fd, temporary = tempfile.mkstemp(dir=destination.parent, prefix="release-manifest.")
-with os.fdopen(fd, "w") as stream:
-    json.dump(manifest, stream, sort_keys=True)
-    stream.write("\n")
-os.chmod(temporary, 0o600)
-os.replace(temporary, destination)
-PY
-}
-
 wait_service() {
   local service=$1 elapsed=0 timeout=${2:-240} container status
   while [ "$elapsed" -lt "$timeout" ]; do
@@ -176,7 +160,19 @@ wait_service() {
     sleep 5
     elapsed=$((elapsed + 5))
   done
-  fail "$service did not become healthy. Inspect its private VM logs with docker compose."
+  printf '%s\n' "$service did not become healthy. Inspect its private VM logs with docker compose." >&2
+  return 1
+}
+
+apply_selected_services() {
+  local service
+  while IFS= read -r service; do
+    [ -n "$service" ] || continue
+    # Explicit propagation is required when called from an if condition: Bash
+    # disables errexit there, including inside functions and loop iterations.
+    compose up -d --no-deps "$service" || return 1
+    wait_service "$service" || return 1
+  done < <(plan_services deploy)
 }
 
 verify_tailnet() {
@@ -235,14 +231,14 @@ case "$ACTION" in
     mkdir -p "$PREPARED"
     python3 "$HERE/render.py" "$CONFIG" "$REPO" "$PREPARED"
     docker compose --project-name carbon --file "$PREPARED/compose.json" config --quiet
-    if [ "$(config_value RELEASE_MAINTENANCE)" = True ]; then
-      targets="erp mes"
+    targets=$(plan_services build)
+    if [ "$(config_value RELEASE_MAINTENANCE)" = True ] || [ -n "$(plan_services migrate)" ]; then
       build_image --target ops --tag "carbon/ops:$REVISION"
-    else
-      targets=$(plan_services build)
-      if [ -n "$(plan_services migrate)" ]; then build_image --target ops --tag "carbon/ops:$REVISION"; fi
     fi
     for target in $targets; do build_image --build-arg "APP=$target" --tag "carbon/$target:$REVISION"; done
+    # Maintenance restarts the stack, but does not invalidate unchanged app images.
+    # Verify all reused images and record new IDs before quiescing any service.
+    python3 "$HERE/host_release.py" "$CONFIG" "$PREPARED/compose.json"
     printf '%s\n' "Prepared immutable source release; running containers are unchanged."
     ;;
   quiesce)
@@ -268,20 +264,11 @@ case "$ACTION" in
     mkdir -p "$STATE/runtime"
     cp "$CURRENT" "$STATE/runtime/routine-previous-compose.json"
     promote_selected_compose
-    if ! while IFS= read -r service; do
-      [ -n "$service" ] || continue
-      compose up -d --no-deps "$service"
-      wait_service "$service"
-    done < <(plan_services deploy); then
+    if ! apply_selected_services; then
       restore_selected_compose
-      while IFS= read -r service; do
-        [ -n "$service" ] || continue
-        compose up -d --no-deps "$service"
-        wait_service "$service"
-      done < <(plan_services deploy)
-      fail "Changed app health check failed; restored only the compatible changed app."
+      apply_selected_services || fail "Changed app rollout and its compatible rollback both failed; inspect private VM state."
+      fail "Changed app rollout failed; restored only the compatible selected apps."
     fi
-    save_release_manifest
     ;;
   maintenance-apply)
     verify_tailnet
@@ -316,9 +303,10 @@ case "$ACTION" in
     # data, destructive reset or migration-ledger repair enters this path.
     compose --profile ops run --rm --no-deps ops pnpm exec tsx src/seed.ts
     compose up -d
-    check_stack
-    printf '%s\n' "$REVISION" > "$STATE/runtime/revision"
-    save_release_manifest
+    ;;
+  finalize)
+    [ -f "$CURRENT" ] || fail "No applied deployment to finalize."
+    python3 "$HERE/host_release.py" finalize "$CONFIG" "$CURRENT" "$STATE/runtime/release-manifest.json"
     ;;
   start)
     [ -f "$CURRENT" ] || fail "No existing deployment to start."
@@ -330,5 +318,5 @@ case "$ACTION" in
     [ -f "$CURRENT" ] || fail "No deployment to check."
     check_stack
     ;;
-  *) fail "Expected prepare, quiesce, routine-migrate, routine-apply, maintenance-apply, start, or check." ;;
+  *) fail "Expected prepare, quiesce, routine-migrate, routine-apply, maintenance-apply, finalize, start, or check." ;;
 esac

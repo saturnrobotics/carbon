@@ -18,11 +18,11 @@ import { registerInvoiceSource } from "./ingestion";
 const url = process.env.INVOICE_INTAKE_TEST_DATABASE_URL;
 type Context = Parameters<typeof runInvoiceIntakeBackfillPage>[0];
 let db: Kysely<KyselyDatabase>;
+// Like the sibling suites (ingestion, payment-sync, company-backup): skip when
+// no isolated test database is configured, refuse anything that is not local.
 beforeAll(() => {
-  if (
-    !url ||
-    !["localhost", "127.0.0.1", "[::1]"].includes(new URL(url).hostname)
-  )
+  if (!url) return;
+  if (!["localhost", "127.0.0.1", "[::1]"].includes(new URL(url).hostname))
     throw new Error(
       "Set INVOICE_INTAKE_TEST_DATABASE_URL to an isolated local database"
     );
@@ -153,7 +153,7 @@ const settings = (c: Context) =>
     .where("companyId", "=", c.companyId)
     .executeTakeFirstOrThrow();
 
-describe("resumable historical invoice bridge", () => {
+describe.skipIf(!url)("resumable historical invoice bridge", () => {
   it("defers overlapping Gmail candidates without changing the saved payment evidence", async () =>
     fixture(async (c, files) => {
       const records: { id: string }[] = [];

@@ -32,14 +32,14 @@ def validate(config):
         email = account["email"].lower()
         if not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", email) or email in seen:
             raise ValueError("Gmail mailbox addresses must be valid and unique")
-        if "enabled" in account and type(account["enabled"]) is not bool:
+        if "enabled" in account and not isinstance(account["enabled"], bool):
             raise ValueError("Gmail enabled must be a boolean")
         if any(any(ord(c) < 32 for c in account[k]) for k in ("email", "clientId", "clientSecret", "refreshToken")):
             raise ValueError("Gmail credential values cannot contain control characters")
         seen.add(email)
 
 
-def configure(config, erp, directory, write_private):
+def configure(config, erp, directory, write_private, *, materialize=True):
     validate(config)
     erp["environment"]["PAYMENT_SYNC_COMPANY_ID"] = config.get("PAYMENT_SYNC_COMPANY_ID", "")
     for key in sorted(SECRET_KEYS):
@@ -49,7 +49,8 @@ def configure(config, erp, directory, write_private):
             path = directory / name
             write_private(path, value)
             # Only ERP receives the mount; the host parent directory is root-only.
-            path.chmod(0o444)
+            if materialize:
+                path.chmod(0o444)
             erp["secrets"].append(name)
             erp["environment"][key] = f"__{key}__"
         else:

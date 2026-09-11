@@ -16,6 +16,7 @@ import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { test } from "node:test";
+import { sortRelationships } from "./generate-db-types";
 import { fileURLToPath } from "node:url";
 
 const require = createRequire(import.meta.url);
@@ -214,4 +215,24 @@ for (const host of ["localhost", "127.0.0.1", "[::1]"]) {
 test("MCP generation does not cache incomplete transitive input coverage", () => {
   const turbo = JSON.parse(readFileSync(join(root, "turbo.json"), "utf8"));
   assert.equal(turbo.tasks["//#generate:mcp"].cache, false);
+});
+
+test("sortRelationships orders each Relationships block deterministically", () => {
+  const block = (entries: string[]) =>
+    ["      x: {", "        Relationships: [", ...entries, "        ]", "      }"].join("\n");
+  const entry = (fk: string, col: string, last = false) =>
+    [
+      "          {",
+      `            foreignKeyName: "${fk}"`,
+      `            columns: ["${col}"]`,
+      "            isOneToOne: false",
+      '            referencedRelation: "country"',
+      '            referencedColumns: ["code"]',
+      last ? "          }" : "          },"
+    ].join("\n");
+  const a = block([entry("x_fkey", "supplierCountryCode"), entry("x_fkey", "customerCountryCode", true)]);
+  const b = block([entry("x_fkey", "customerCountryCode"), entry("x_fkey", "supplierCountryCode", true)]);
+  assert.equal(sortRelationships(a), sortRelationships(b));
+  assert.equal(sortRelationships(a), b, "sorted output keeps a trailing comma on every entry but the last");
+  assert.equal(sortRelationships("        Relationships: []\n      }"), "        Relationships: []\n      }");
 });

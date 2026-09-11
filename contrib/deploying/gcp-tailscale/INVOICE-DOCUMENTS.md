@@ -146,7 +146,17 @@ The executable live runner creates one isolated synthetic company per candidate 
 
 3. Copy this private directory to the VM under `/var/lib/carbon/invoice-evaluation/`, for example `/var/lib/carbon/invoice-evaluation/first-run`. Use the deployment's existing IAP SSH/SCP access. Keep the directory mode `0700` and `live.json` mode `0600`. Generated PDFs/images, labels, `samples.json`, `report.json`, logs and generated Compose configuration must remain private. No credential file needs to be copied; the Ops container uses the existing deployment secrets and attached VM identity.
 
-4. On the VM, replace `DEPLOYED_REVISION` below with the value in `/var/lib/carbon/runtime/revision`. First prepare without sending any model requests:
+4. On the VM, read `/var/lib/carbon/runtime/release-manifest.json`. Use its
+   `prepared_source_commit` for `DEPLOYED_REVISION` in the helper path below.
+   The ERP source is separately recorded as `services.erp.source_commit`; verify
+   that Ops was built from that exact source before running this older evaluation
+   helper. Selective releases can leave an older Ops image. If they differ,
+   prepare a reviewed Ops-only maintenance rebuild from the ERP source first;
+   do not retag an unrelated image. The maintained operator in
+   [INVOICE-OPERATIONS.md](INVOICE-OPERATIONS.md#maintained-vm-operator) enforces
+   this compatibility check automatically. Legacy deployments without a release
+   receipt use `/var/lib/carbon/runtime/revision` and require matching ERP/Ops
+   source revisions. First prepare without sending any model requests:
 
    ```sh
    sudo python3 /var/lib/carbon/releases/DEPLOYED_REVISION/contrib/deploying/gcp-tailscale/run_invoice_evaluation.py --directory /var/lib/carbon/invoice-evaluation/first-run

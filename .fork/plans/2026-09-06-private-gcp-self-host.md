@@ -13,7 +13,7 @@
 
 ## Implementation
 
-1. `AGENTS.md`, `.gitignore`, `docs/public-fork.md`, and `scripts/sync-upstream.sh`: keep company configuration and data outside published source, preserve notices, and merge upstream on a review branch without publishing or deploying.
+1. `AGENTS.md`, `.gitignore`, and `docs/public-fork.md`: keep company configuration and data outside published source, preserve notices, and merge upstream on a review branch without publishing or deploying.
 2. `contrib/deploying/gcp-tailscale/auth/`: deployment-only private-schema token hook using verified Google identity and hosted-domain claims. Gate email login UI/actions with the existing provider configuration. Exercise the hook in a disposable PostgreSQL cluster, never the developer database.
 3. `contrib/deploying/gcp-tailscale/render.py` and `host-deploy.sh`: derive Compose services from the upstream Swarm example; correct required environment, jobs, migrations, seed, secrets, and private API routing. Publish only the Tailscale IPv4 HTTPS socket.
 4. `contrib/deploying/gcp-tailscale/deploy.py`, `bootstrap.sh`, configuration examples, and README: use explicit GCP project arguments, private VM plus NAT and IAP SSH, a retained data disk, Cloudflare DNS-01 certificates, and a stopped-service snapshot before migrations. Upload committed source only; configuration travels separately over SSH. Preserve existing DNS services; create only three DNS-only A records.

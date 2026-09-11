@@ -58,7 +58,9 @@ export const isoWeekFromYmd = (
   const date = new CalendarDate(year, month, day);
   const thursday = date.add({ days: 3 - getDayOfWeek(date, "en-GB") });
   return (
-    Math.floor(thursday.compare(new CalendarDate(thursday.year, 1, 1)) / 7) + 1
+    Math.floor(
+      thursday.compare(new CalendarDate(thursday.year, 1, 1)) / 7
+    ) + 1
   );
 };
 

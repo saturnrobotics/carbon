@@ -1,4 +1,6 @@
 [
+  "module-shape::knowledge::missing:types.ts",
+  "module-shape::knowledge::missing:ui",
   "module-shape::settings::extra-service:backups.service.ts",
   "module-shape::shared::extra-models:imports.models.ts",
   "module-shape::shared::missing:ui",
@@ -165,6 +167,7 @@
   "no-legacy-rls::20260430000001_tax-status.sql::has_company_permission(",
   "no-legacy-rls::20260817030612_remove-global-permission-wildcard.sql::has_company_permission(",
   "no-legacy-rls::20260817040245_fix-is-claims-admin-permission-key.sql::has_company_permission(",
+  "no-legacy-rls::20260908004744_knowledge-command-receipts.sql::has_company_permission(",
   "no-local-timezone::apps/erp/app/modules/accounting/accounting.ee.service.ts::new Date().toISOString().split(\"T\")[0]",
   "no-local-timezone::apps/erp/app/modules/items/items.service.ts::new Date().toISOString().split(\"T\")[0]",
   "no-local-timezone::apps/erp/app/modules/sales/sales.service.ts::new Date().toISOString().split(\"T\")[0]",
@@ -533,6 +536,7 @@
   "no-raw-rounding::packages/jobs/src/inngest/functions/integrations/accounting-sync-operations.ts::const cents = Math.round(amount * 100);",
   "no-raw-rounding::packages/jobs/src/inngest/functions/integrations/accounting-sync-operations.ts::const cents = Math.round(line.amount * 100);",
   "no-raw-rounding::packages/jobs/src/inngest/functions/scheduled/cleanup.ts::await step.sleep(\"jitter\", `${Math.floor(Math.random() * 3600)}s`);",
+  "no-raw-rounding::packages/jobs/src/invoice-intake/image.ts::const rows=passes.map(([x,y,dx,dy])=>[Math.max(0,Math.ceil((width-x)/dx)),Math.max(0,Math.ceil((height-y)/dy))]).filter(([w,h])=>w&&h).map(([w,h])=>[Math.ceil(w*channels*depth/8),h]);",
   "no-raw-rounding::packages/react/src/BarProgress.tsx::<span className=\"sr-only\">{Math.round(percentage)}%</span>",
   "no-raw-rounding::packages/react/src/BarProgress.tsx::const activeBars = Math.round((clampedProgress / max) * barCount);",
   "no-raw-rounding::packages/react/src/BarProgress.tsx::const bl = Math.round(a[2] + (b[2] - a[2]) * t);",

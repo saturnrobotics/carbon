@@ -3,8 +3,9 @@
 # Service images are pruned to their transitive workspace closure before the
 # service dependency install; an unrelated application cannot enter its image.
 ARG APP
-ARG NODE_IMAGE=node:22
-ARG NODE_SLIM_IMAGE=node:22-slim
+# Update these reviewed multi-platform digests deliberately for security refreshes.
+ARG NODE_IMAGE=node:22@sha256:8a34c4ab3ea2c5cd194f07e317b2a8f09461d3c8b05c4e34c8ccd56d56024c4d
+ARG NODE_SLIM_IMAGE=node:22-slim@sha256:83f487e0a63425e5b4d146fb5e5be574bcbe1b7b843d3ebafdd95eaf7767a7e5
 
 FROM ${NODE_IMAGE} AS source
 WORKDIR /repo
@@ -31,17 +32,18 @@ RUN corepack enable
 # and declared generator inputs only. Keep root-wide COPYs in `source` solely
 # for dependency analysis; the build and runner stages consume this closure.
 COPY --from=pruned /repo/out/json/ ./
-COPY --from=pruned /repo/out/full/ ./
-COPY --from=source /repo/scripts ./scripts
-COPY --from=source /repo/lingui.config.js ./lingui.config.js
 # Root postinstall generates ERP-only metadata. Run the actual app build graph
 # below instead, so installing MES never requires absent ERP source.
-RUN pnpm install --frozen-lockfile --ignore-scripts && pnpm rebuild esbuild supabase
+RUN --mount=type=cache,id=carbon-pnpm,target=/pnpm/store,sharing=locked \
+    pnpm install --store-dir /pnpm/store --frozen-lockfile --ignore-scripts && pnpm rebuild esbuild supabase
 
 FROM deps AS build
 ARG APP
 ARG NODE_OPTIONS="--max-old-space-size=8024"
 ENV NODE_OPTIONS=${NODE_OPTIONS}
+COPY --from=pruned /repo/out/full/ ./
+COPY --from=source /repo/scripts ./scripts
+COPY --from=source /repo/lingui.config.js ./lingui.config.js
 RUN pnpm run build:${APP}
 
 # --- Ops image (DB migrations + first-boot seed) --------------------------
@@ -71,7 +73,7 @@ ENV PORT=3000
 ENV TZ=UTC
 COPY --from=deps /repo/package.json /repo/pnpm-lock.yaml /repo/pnpm-workspace.yaml /repo/.npmrc ./
 COPY --from=deps /repo/node_modules ./node_modules
-COPY --from=deps /repo/packages ./packages
+COPY --from=build /repo/packages ./packages
 COPY --from=build /repo/apps/${APP} ./apps/${APP}
 # Strip build-time CLI tooling that the multi-stage copy drags into the runtime
 # node_modules but the running server (react-router-serve) never executes: the

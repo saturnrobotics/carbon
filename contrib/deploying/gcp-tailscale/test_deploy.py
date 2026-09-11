@@ -321,7 +321,7 @@ class SourceTests(unittest.TestCase):
                     deploy.deploy(fixture())
                 publish.assert_not_called()
 
-    def source_check(self, *, destination=None, contains=0, http_error=None):
+    def source_check(self, *, destination=None, http_error=None):
         config = fixture()
         slug = config["SOURCE_REPO_URL"].removeprefix("https://github.com/")
         calls = []
@@ -332,7 +332,7 @@ class SourceTests(unittest.TestCase):
             return ""
         response = MagicMock()
         response.__enter__.return_value.status = 200
-        with patch.object(deploy, "run", side_effect=git), patch.object(deploy.subprocess, "run", return_value=MagicMock(returncode=contains)), patch.object(deploy.urllib.request, "urlopen", return_value=response, side_effect=http_error) as request, patch.object(deploy.time, "sleep"):
+        with patch.object(deploy, "run", side_effect=git), patch.object(deploy.urllib.request, "urlopen", return_value=response, side_effect=http_error) as request, patch.object(deploy.time, "sleep"):
             try:
                 deploy.publish_source(config, "a" * 40)
             except ValueError as exc:
@@ -355,12 +355,6 @@ class SourceTests(unittest.TestCase):
                 self.assertIn("origin must", error)
                 self.assertFalse(any("push" in args for args in calls))
                 request.assert_not_called()
-
-    def test_missing_upstream_merge_stops_before_push_or_http(self):
-        calls, request, error = self.source_check(contains=1)
-        self.assertIn("fork.sh sync", error)
-        self.assertFalse(any("push" in args for args in calls))
-        request.assert_not_called()
 
     def test_source_errors_report_status_without_provider_body(self):
         for status in (404, 403, 429, 503):

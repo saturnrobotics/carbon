@@ -69,7 +69,7 @@
     "lingui:extract": "lingui extract --clean",
     "lint": "turbo run lint",
     "postinstall": "pnpm --filter @carbon/documents build && pnpm run generate:mcp",
-    "prepare": "pnpm exec husky install; if [ -f .ai/scripts/install-skills.sh ]; then bash .ai/scripts/install-skills.sh; fi",
+    "prepare": "pnpm exec husky install; if [ -f .ai/scripts/install-skills.sh ]; then bash .ai/scripts/install-skills.sh; fi; if [ -f scripts/fork/setup-git.sh ]; then bash scripts/fork/setup-git.sh --quiet; fi",
     "test": "turbo run test",
     "translate": "pnpm run lingui:extract && pnpm exec linguito translate --llm && pnpm lingui:clean",
     "typecheck": "turbo run typecheck --filter='*'",
