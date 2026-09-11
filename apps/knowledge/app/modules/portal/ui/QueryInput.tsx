@@ -1,5 +1,5 @@
 import type { QueryResult } from "@carbon/knowledge/query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { EvidenceCard } from "./EvidenceCard";
 
 export function QueryInput({
@@ -11,6 +11,22 @@ export function QueryInput({
   const [result, setResult] = useState<QueryResult>();
   const [error, setError] = useState<string>();
   const [pending, setPending] = useState(false);
+
+  // Results are private to one company and one signed-in person. The route
+  // remounts this component when the company scope changes (`key={scope}`),
+  // and a page restored from the back-forward cache after a sign-out drops
+  // them here, so a later visitor at the same browser never sees them.
+  useEffect(() => {
+    const onPageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) {
+        setResult(undefined);
+        setError(undefined);
+        setText("");
+      }
+    };
+    window.addEventListener("pageshow", onPageShow);
+    return () => window.removeEventListener("pageshow", onPageShow);
+  }, []);
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();

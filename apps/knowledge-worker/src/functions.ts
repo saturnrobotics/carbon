@@ -2,6 +2,7 @@ import {
   acknowledgeOutbox,
   claimOutbox,
   confirmOutboxApplied,
+  DELIVERY_EVENT_TYPES,
   type LeasedOutboxEvent
 } from "@carbon/knowledge/indexing/outbox.server";
 import { knowledgeInngest } from "./inngest";
@@ -45,8 +46,16 @@ export function createOutboxDeliveryFunction(runtime: {
           callerId: company.callerId,
           ...(runtime.sourceId ? { sourceId: runtime.sourceId } : {})
         };
+        // Indexing owns upserts only; invalidation kinds are leased by
+        // createOutboxInvalidationFunction so the two never contend.
         const claimed = await step.run(`claim-${company.companyId}`, () =>
-          claimOutbox(runtime.pool, principal, runtime.workerId)
+          claimOutbox(
+            runtime.pool,
+            principal,
+            runtime.workerId,
+            50,
+            DELIVERY_EVENT_TYPES
+          )
         );
         for (const entry of claimed) {
           await step.run(`apply-${entry.id}`, async () => {

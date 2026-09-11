@@ -29,6 +29,7 @@
     "./retention.server": "./src/retention.server.ts",
     "./query": "./src/query/answer.server.ts",
     "./query/router": "./src/query/router.ts",
+    "./query/conversation": "./src/query/conversation.ts",
     "./cache": "./src/cache/cache.server.ts",
     "./cache/epochs.server": "./src/cache/epochs.server.ts",
     "./cache/redis.server": "./src/cache/redis.server.ts",

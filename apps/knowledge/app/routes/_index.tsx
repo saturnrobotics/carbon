@@ -4,11 +4,20 @@ import { QueryInput } from "../modules/portal/ui/QueryInput";
 
 export function loader() {
   const source = readManualSourceConfiguration(process.env);
-  return { sourceDisplayName: source.displayName };
+  return {
+    sourceDisplayName: source.displayName,
+    // The company this deployment serves; a change resets client-held results.
+    scope: process.env.KNOWLEDGE_COMPANY_ID ?? ""
+  };
+}
+
+/** Private results must never survive in a shared cache or the back-forward cache. */
+export function headers() {
+  return { "cache-control": "private, no-store" };
 }
 
 export default function KnowledgeHome() {
-  const { sourceDisplayName } = useLoaderData<typeof loader>();
+  const { sourceDisplayName, scope } = useLoaderData<typeof loader>();
   return (
     <main className="page-shell">
       <header>
@@ -19,8 +28,11 @@ export default function KnowledgeHome() {
           revision, machine, or keyword. Open the exact original version from
           every result.
         </p>
+        <a className="signout-link" href="/logout">
+          Sign out
+        </a>
       </header>
-      <QueryInput sourceDisplayName={sourceDisplayName} />
+      <QueryInput key={scope} sourceDisplayName={sourceDisplayName} />
     </main>
   );
 }

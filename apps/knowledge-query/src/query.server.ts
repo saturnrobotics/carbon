@@ -8,8 +8,7 @@ import {
   admitReadRequest,
   durableBudget
 } from "@carbon/knowledge/budgets.server";
-import { AuthorizedCache, type CacheStore } from "@carbon/knowledge/cache";
-import { currentPolicySnapshot } from "@carbon/knowledge/cache/epochs.server";
+import type { CacheStore } from "@carbon/knowledge/cache";
 import { withKnowledgeTransaction } from "@carbon/knowledge/database.server";
 import { verifyWorkforceRequest } from "@carbon/knowledge/identity.server";
 import { assertProviderCandidates } from "@carbon/knowledge/provider-policy";
@@ -31,8 +30,6 @@ import {
 import { assembleEvidence } from "@carbon/knowledge/retrieval/evidence";
 import { reciprocalRankFusion } from "@carbon/knowledge/retrieval/fusion";
 import {
-  chunkJoins,
-  chunkProjection,
   lexicalSearch,
   type RetrievedChunk
 } from "@carbon/knowledge/retrieval/lexical.server";
@@ -40,6 +37,11 @@ import { vectorSearch } from "@carbon/knowledge/retrieval/vector.server";
 import type { SourceRegistryConfiguration } from "@carbon/knowledge/sources/registry.server";
 import type { Telemetry } from "@carbon/knowledge/telemetry";
 import type { Pool } from "pg";
+import {
+  createQueryCache,
+  createReadAuthorization,
+  queryCacheScope
+} from "./cache.server";
 import { createDriveAccessChecker } from "./drive-access.server";
 import { structuredSourceQuery } from "./sources.server";
 
@@ -217,78 +219,33 @@ export function createReadHandler(
           message: "No authorized sources are available.",
           partial: false
         });
-      const currentIdentity = async () => {
-        request.signal.throwIfAborted();
-        const binding = await options.identityStore.resolveHuman({
-          ...principal.sourceIdentity,
-          companyId: principal.companyId
-        });
-        return binding &&
-          binding.actorId === principal.actorId &&
-          binding.bindingActive &&
-          binding.userActive &&
-          binding.membershipActive &&
-          binding.capabilities.includes("knowledge.read")
-          ? binding
-          : null;
-      };
-      const policy = async () =>
-        trace.measure("policy", async () => {
-          const [snapshot, binding] = await Promise.all([
-            read((client) => currentPolicySnapshot(client, sourceIds)),
-            currentIdentity()
-          ]);
-          return {
-            ...snapshot,
-            allowed: snapshot.allowed && !!binding,
-            policyVersion: `${snapshot.policyVersion}:${binding?.revocationVersion}:${binding?.permissionsVersion}`
-          };
-        });
-      const authorizedChunks = async (ids: readonly string[]) =>
-        read(
-          async (client) =>
-            (
-              await client.query<RetrievedChunk>(
-                `SELECT ${chunkProjection} FROM ${chunkJoins} WHERE c."companyId"=$1 AND c.id=ANY($2::text[])`,
-                [principal.companyId, ids]
-              )
-            ).rows
-        );
       const liveAccess = createDriveAccessChecker({
         request,
         identity,
         workerOrigin: options.workerOrigin,
         workerAudience: options.workerAudience
       });
-      const authorizedCandidates = async (ids: readonly string[]) => {
-        if (!(await currentIdentity())) return null;
-        const rows = await authorizedChunks(ids);
-        return rows.length === new Set(ids).size &&
-          (await Promise.all(rows.map(liveAccess))).every(Boolean)
-          ? rows
-          : null;
-      };
-      const authorizeIds = async (ids: string[]) =>
-        !!(await authorizedCandidates(ids));
-      const cache = new AuthorizedCache(options.cacheStore, policy);
+      const { policy, authorizedCandidates, authorizeIds } =
+        createReadAuthorization({
+          read,
+          principal,
+          identityStore: options.identityStore,
+          sourceIds,
+          signal: request.signal,
+          trace,
+          liveAccess
+        });
+      const cache = createQueryCache(options.cacheStore, policy);
       let computed = false;
       const result = await cache.get(
-        {
-          companyId: principal.companyId,
-          actorId: principal.actorId,
-          callerId: principal.callerId,
-          capability: "knowledge.read",
-          intent: query.mode,
-          entities: [...sourceIds, query.context?.entityId ?? ""],
-          query: query.text,
-          locale: query.locale,
+        queryCacheScope({
+          principal,
+          query,
+          sourceIds,
           businessTimezone: options.businessTimezone,
-          modelVersion: options.model
-            ? `${options.model.version}:${options.model.model}`
-            : "locate-no-model",
-          promptVersion: "query-v1",
-          indexVersion: options.embedding?.version ?? "lexical-v1"
-        },
+          model: options.model,
+          embedding: options.embedding
+        }),
         async () => {
           computed = true;
           trace.record("cache", "miss");

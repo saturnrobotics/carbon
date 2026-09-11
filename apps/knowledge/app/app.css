@@ -16,6 +16,7 @@ body { margin: 0; }
 .query-form input[type="search"] { border: 1px solid #c8ccd4; border-radius: .6rem; padding: .8rem; outline: 0; font: inherit; line-height: 1.5; }
 .query-form button { justify-self: end; }
 .upload-link { display: inline-block; margin-top: 1rem; color: #166534; font-weight: 650; }
+.signout-link { display: inline-block; margin-top: 0.75rem; color: #475569; font-weight: 600; }
 .query-result { margin-top: 2rem; }
 .evidence-grid { display: grid; gap: .75rem; }
 .evidence-card { padding: 1rem; border: 1px solid #d9dce2; border-radius: .8rem; background: white; }

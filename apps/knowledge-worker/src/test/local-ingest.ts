@@ -19,6 +19,7 @@ import {
   readImmutableObject
 } from "../gcs";
 import { knowledgeInngest } from "../inngest";
+import { createOutboxInvalidationFunction } from "../invalidation";
 import { processKnowledgeOutbox } from "../processor";
 import { createWorkerHandler, type WorkerDependencies } from "../server";
 import {
@@ -189,7 +190,15 @@ async function main() {
   });
   const inngestHandler = serve({
     client: knowledgeInngest,
-    functions: [delivery]
+    functions: [
+      delivery,
+      createOutboxInvalidationFunction({
+        pool: ingestPool,
+        companies: [{ companyId: localCompanyId, callerId: "local-indexer" }],
+        workerId: `local-worker-${process.pid}`,
+        sourceId: localSourceId
+      })
+    ]
   });
 
   const localHandler = async (request: Request) => {
