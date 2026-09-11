@@ -91,6 +91,27 @@ else
   fi
 fi
 
+# The backup manifest records `exportedAt` and lists columns in catalog order,
+# neither of which is stable across runs. Keep the committed bytes when the
+# regenerated manifest is semantically identical (same tables, same column
+# sets, same everything else), so a no-op regeneration is a no-op in git too.
+manifest="packages/jobs/manifests/schema.json"
+if (( ! skip_db )) && git cat-file -e "HEAD:$manifest" 2>/dev/null; then
+  if node -e '
+    const fs = require("fs");
+    const norm = (t) => { const d = JSON.parse(t); delete d.exportedAt;
+      d.tables = (d.tables ?? []).map((x) => ({ ...x, columns: [...(x.columns ?? [])].sort() }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+      return JSON.stringify(d); };
+    process.exit(norm(fs.readFileSync(process.argv[1], "utf8")) === norm(fs.readFileSync(0, "utf8")) ? 0 : 1);
+  ' "$manifest" < <(git show "HEAD:$manifest"); then
+    git checkout --quiet HEAD -- "$manifest"
+    log "backup manifest unchanged semantically; kept the committed bytes"
+  else
+    warn "backup manifest changed (tables or columns differ from HEAD); review the diff"
+  fi
+fi
+
 # --- 3. Source-derived files -------------------------------------------------
 log "3/4 source-derived generators (mcp digest, workflow catalog, agent knowledge base)"
 pnpm run generate:mcp
