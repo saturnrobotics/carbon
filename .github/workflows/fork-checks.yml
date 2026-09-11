@@ -71,6 +71,15 @@ jobs:
         with:
           python-version: "3.12"
       - run: python3 -m pip install --disable-pip-version-check PyYAML==6.0.2 ruff==0.4.1
+      # The release planner proves the workspace closure through the repo's
+      # own turbo binary (node_modules/.bin/turbo), so the tests need the
+      # workspace installed. --ignore-scripts skips the postinstall builds.
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --ignore-scripts
       - name: Lint Python
         run: ruff check contrib/deploying
       - name: Deployment tooling unit tests
