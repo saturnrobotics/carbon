@@ -1,0 +1,100 @@
+name: fork-checks
+
+# Checks for fork-owned code that has no upstream runner: the hardened generator
+# helpers under scripts/lib, the fork's node tests under .fork/tests, locale
+# coverage, the deployment tooling's Python suite, the Docker build-context
+# privacy proof, and lint for the sync scripts and workflows themselves.
+# Path-filtered on pull requests; every push to the trunk runs it all.
+
+on:
+  push:
+    branches: [saturn/main]
+  pull_request:
+    branches: [saturn/main]
+    paths:
+      - "scripts/**"
+      - ".fork/**"
+      - "packages/locale/**"
+      - "lingui.config.js"
+      - "contrib/deploying/**"
+      - "contrib/building/**"
+      - ".dockerignore"
+      - "**/.dockerignore"
+      - "**/Dockerfile*"
+      - ".github/workflows/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fork-checks-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  node:
+    name: generator and fork node tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Generator helpers and fork node tests
+        run: |
+          pnpm exec tsx --test scripts/lib/generate-db-types.test.ts scripts/lib/swagger-schema.test.ts scripts/lib/local-script-config.test.ts
+          pnpm exec tsx --test .fork/tests/dispatcher.test.ts .fork/tests/locales.test.ts
+      - name: Locale source coverage and translation completeness
+        run: |
+          pnpm exec tsx .fork/check-locales.ts
+          pnpm exec linguito check
+
+  python:
+    name: deployment tooling tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      PYTHONDONTWRITEBYTECODE: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python3 -m pip install --disable-pip-version-check PyYAML==6.0.2 ruff==0.4.1
+      - name: Lint Python
+        run: ruff check contrib/deploying
+      - name: Deployment tooling unit tests
+        run: python3 -m unittest discover -s contrib/deploying/gcp-tailscale -p 'test_*.py'
+      - name: Docker build contexts exclude private artifacts and keep source
+        run: python3 contrib/deploying/knowledge/verify-build-context.py
+
+  scripts-and-workflows:
+    name: shell and workflow lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: shellcheck the fork scripts
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q shellcheck >/dev/null
+          shellcheck -x scripts/fork/*.sh
+      - name: actionlint the workflows
+        run: |
+          bash <(curl -sSL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash) 1.7.7 >/dev/null
+          # Fork-owned workflows only; upstream's carry findings that are upstream's to fix.
+          ./actionlint -color \
+            .github/workflows/generated-files-drift.yml .github/workflows/upstream-sync.yml \
+            .github/workflows/resolve-sync-conflicts.yml .github/workflows/fork-checks.yml \
+            .github/workflows/saturn-invoice-check.yml .github/workflows/knowledge-check.yml

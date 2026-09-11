@@ -5,7 +5,7 @@ on:
     paths:
       - "apps/knowledge*/**"
       - "packages/knowledge/**"
-      - "packages/database/**"
+      - "packages/database/supabase/migrations/**"
       - "contrib/deploying/knowledge/**"
       - "contrib/deploying/gcp-tailscale/release*"
       - "pnpm-lock.yaml"
@@ -60,7 +60,7 @@ jobs:
           # https://github.com/supabase/supautils/issues/214
           docker run -d --name knowledge-schema-test --label knowledge.disposable=true --tmpfs /var/lib/postgresql/data:rw,size=2147483648 -p 127.0.0.1:59910:5432 -e POSTGRES_USER=supabase_admin -e POSTGRES_PASSWORD=synthetic-test-only -e POSTGRES_DB=knowledge_test supabase/postgres:15.14.1.112 postgres -D /etc/postgresql -c supautils.hint_roles= -c max_wal_size=128MB -c min_wal_size=32MB -c checkpoint_timeout=30s
           docker run -d --name knowledge-cache-test --label knowledge.disposable=true -p 127.0.0.1:59913:6379 redis:7-alpine redis-server --save '' --appendonly no --maxmemory 64mb --maxmemory-policy allkeys-lru
-          for attempt in $(seq 1 30); do
+          for _ in $(seq 1 30); do
             if docker exec -e PGPASSWORD=synthetic-test-only knowledge-schema-test psql -X -h 127.0.0.1 -U supabase_admin -d knowledge_test -At -c 'SELECT 1'; then break; fi
             sleep 1
           done

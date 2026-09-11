@@ -31,6 +31,7 @@
 #      generate:agent-kb       -> apps/erp/app/modules/agent/kb/**
 #   4. cargo update --workspace -> Cargo.lock
 set -euo pipefail
+# shellcheck source=scripts/fork/lib.sh
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib.sh"
 cd "$(fork_repo_root)"
 

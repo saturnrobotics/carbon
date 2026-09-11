@@ -7,6 +7,7 @@
 # conflicted file. Verifies no conflict markers remain, regenerates the generated
 # files, runs the migration guard, commits, and prints the next steps.
 set -euo pipefail
+# shellcheck source=scripts/fork/lib.sh
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib.sh"
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$(fork_repo_root)"

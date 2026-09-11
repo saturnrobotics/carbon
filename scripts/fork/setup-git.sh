@@ -6,6 +6,7 @@
 # Safe to run repeatedly and from `pnpm install` (prepare): it is a no-op outside
 # a git checkout, needs no network, and only touches repo-local git config.
 set -euo pipefail
+# shellcheck source=scripts/fork/lib.sh
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib.sh"
 
 quiet=0
@@ -31,6 +32,17 @@ else
       git remote set-url "$UPSTREAM_REMOTE" "$UPSTREAM_URL"
       say "replaced stale remote $UPSTREAM_REMOTE url ($current) with $UPSTREAM_URL" ;;
   esac
+fi
+
+# 1b. Record the trunk as origin's default branch (offline: only a symbolic
+# ref). Tools that look up "the default branch" — the backup-manifest baseline
+# check among them — read origin/HEAD, which a clone made before saturn/main
+# became the GitHub default still points at main.
+if git rev-parse --verify --quiet "refs/remotes/origin/$FORK_TRUNK" >/dev/null; then
+  if [[ "$(git symbolic-ref --quiet refs/remotes/origin/HEAD 2>/dev/null || true)" != "refs/remotes/origin/$FORK_TRUNK" ]]; then
+    git remote set-head origin "$FORK_TRUNK"
+    say "pointed origin/HEAD at origin/$FORK_TRUNK"
+  fi
 fi
 
 # 2. Conflict reuse and readable conflict markers.

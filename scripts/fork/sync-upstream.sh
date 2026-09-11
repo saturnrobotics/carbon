@@ -16,6 +16,7 @@
 # the files that would conflict and the regen-driver files taken from upstream,
 # then aborts the merge and deletes the temporary branch.
 set -euo pipefail
+# shellcheck source=scripts/fork/lib.sh
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib.sh"
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$(fork_repo_root)"
