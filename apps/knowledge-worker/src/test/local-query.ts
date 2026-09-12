@@ -17,19 +17,33 @@ import {
 } from "./local-fixture";
 import { startLocalHttpServer } from "./local-http";
 
-/** Evidence links open the portal, which the local stack publishes on a
- * configurable port (see compose.local.yaml). Unset keeps the historical 4200. */
-const portalOrigin = `https://localhost:${process.env.KNOWLEDGE_E2E_PORTAL_PORT ?? "4200"}`;
-
 function required(name: string): string {
   const value = process.env[name]?.trim();
   if (!value) throw new Error(`${name} is required for the local fixture`);
   return value;
 }
 
+/** The portal origin evidence links open. Either spelling the harness supplies
+ * is accepted — a whole origin, or just the port the local stack published (see
+ * compose.local.yaml) — and unset keeps the historical 4200. */
+function loopbackPortalOrigin(): string {
+  const port = process.env.KNOWLEDGE_E2E_PORTAL_PORT?.trim();
+  const parsed = new URL(
+    process.env.KNOWLEDGE_WEB_ORIGIN?.trim() ||
+      `https://localhost:${port || "4200"}`
+  );
+  if (
+    parsed.protocol !== "https:" ||
+    !["localhost", "127.0.0.1", "[::1]"].includes(parsed.hostname)
+  )
+    throw new Error("KNOWLEDGE_WEB_ORIGIN must be an HTTPS loopback origin");
+  return parsed.origin;
+}
+
 async function main() {
   if (process.env.KNOWLEDGE_E2E_SYNTHETIC_FIXTURES !== "1")
     throw new Error("Local synthetic identity is disabled");
+  const portalOrigin = loopbackPortalOrigin();
   const pool = new Pool({
     connectionString: required("KNOWLEDGE_E2E_DATABASE_URL"),
     options: "-c role=knowledge_read",
@@ -67,6 +81,10 @@ async function main() {
         await redis.store.set(key, value, ttlSeconds);
       }
     },
+    // The portal origin this fixture stamps onto evidence `sourceUri` links.
+    // It follows the harness's portal port: a fixture that kept a fixed 4200
+    // while the portal moved would hand the browser download links pointing at
+    // whatever else holds that port.
     origin: portalOrigin,
     businessTimezone: "UTC",
     manualSourceId: localSourceId,
