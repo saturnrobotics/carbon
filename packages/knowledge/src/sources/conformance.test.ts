@@ -54,7 +54,8 @@ describe("generic source conformance", () => {
           },
           companyGroupId: "a",
           allowedOperations: [],
-          accessLevels: []
+          accessLevels: [],
+          assurance: { mode: "carbon-mfa" }
         },
         headers: async () => new Headers(),
         fetch: async () =>
@@ -97,7 +98,8 @@ it("registers engineering and CRM producers through the same verified finite tra
         },
         companyGroupId: "a",
         allowedOperations: [],
-        accessLevels: []
+        accessLevels: [],
+        assurance: { mode: "carbon-mfa" }
       },
       headers: async () => new Headers(),
       fetch: async () => Response.json(page)

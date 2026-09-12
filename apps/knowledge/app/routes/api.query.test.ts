@@ -67,6 +67,39 @@ describe("knowledge query BFF", () => {
     );
   });
 
+  it("names a step-up denial from the query service and keeps other denials generic", async () => {
+    const verifyBrowser = vi.fn().mockResolvedValue(verified);
+    const forwardingHeaders = vi.fn().mockResolvedValue(new Headers());
+    const forward = (upstream: Response) =>
+      forwardKnowledgeQuery(request(), {
+        queryUrl: "https://query.example.test",
+        queryAudience: "https://query.example.test",
+        companyId: "company_synthetic",
+        verifyBrowser,
+        forwardingHeaders,
+        fetchImpl: vi.fn().mockResolvedValue(upstream)
+      });
+
+    const stepUp = await forward(
+      Response.json({ error: "step_up_required" }, { status: 403 })
+    );
+    expect(stepUp.status).toBe(403);
+    expect(await stepUp.json()).toEqual({ error: "step_up_required" });
+    expect(stepUp.headers.get("cache-control")).toBe("no-store");
+
+    const forbidden = await forward(
+      Response.json({ error: "forbidden" }, { status: 403 })
+    );
+    expect(forbidden.status).toBe(403);
+    expect(await forbidden.json()).toEqual({ error: "query_unavailable" });
+
+    const spoofed = await forward(
+      Response.json({ error: "step_up_required" }, { status: 503 })
+    );
+    expect(spoofed.status).toBe(503);
+    expect(await spoofed.json()).toEqual({ error: "query_unavailable" });
+  });
+
   it.each([
     ["cross-origin", request(payload, "https://evil.example.test"), 403],
     ["unbounded body", request({ ...payload, text: "x".repeat(8_001) }), 422]

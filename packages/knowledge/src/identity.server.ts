@@ -1,5 +1,8 @@
 import { GoogleAuth, OAuth2Client } from "google-auth-library";
-import type { PublicKeys } from "google-auth-library/build/src/auth/oauth2client.js";
+import type {
+  OAuth2ClientEndpoints,
+  PublicKeys
+} from "google-auth-library/build/src/auth/oauth2client.js";
 import { z } from "zod";
 import type { Principal } from "./contracts";
 
@@ -24,6 +27,44 @@ const FORBIDDEN_IDENTITY_HEADERS = [
 ] as const;
 
 const boundedString = z.string().trim().min(1).max(2_048);
+
+/**
+ * How a caller's requests satisfy Carbon's MFA requirement. An IAP signature
+ * proves admission, never assurance, so there is no third mode and nothing is
+ * inferred from an email or a domain.
+ *
+ * - `carbon-mfa` (the default): the actor must satisfy Carbon's own MFA gate.
+ * - `workspace-equivalent`: the operator has documented that Workspace 2-step
+ *   verification plus the named IAP access level is accepted as equivalent;
+ *   the verifier then requires that access level in `google.access_levels`.
+ */
+const callerAssuranceSchema = z.discriminatedUnion("mode", [
+  z.object({ mode: z.literal("carbon-mfa") }).strict(),
+  z
+    .object({
+      mode: z.literal("workspace-equivalent"),
+      accessLevel: boundedString
+    })
+    .strict()
+]);
+export const DEFAULT_CALLER_ASSURANCE = { mode: "carbon-mfa" } as const;
+export type CallerAssurance = z.infer<typeof callerAssuranceSchema>;
+export type AssuranceMode = CallerAssurance["mode"];
+
+/**
+ * The verdict Carbon attaches to a delegated principal once the company's MFA
+ * requirement and the actor's factor state are known. `verifyWorkforceRequest`
+ * cannot produce it: only the Carbon receiver can read those.
+ */
+export interface PrincipalAssurance {
+  /** Carbon requires MFA for this company, or the deployment is controlled. */
+  required: boolean;
+  /** The request meets that requirement; always true when nothing is required. */
+  satisfied: boolean;
+  /** The caller's configured assurance mode that produced the verdict. */
+  method: AssuranceMode;
+}
+
 const callerSchema = z
   .object({
     callerId: boundedString,
@@ -31,7 +72,8 @@ const callerSchema = z
     sourceIapAudience: boundedString,
     operations: z.array(boundedString).min(1).max(100),
     capabilities: z.array(boundedString).max(100),
-    requiredAccessLevels: z.array(boundedString).max(20)
+    requiredAccessLevels: z.array(boundedString).max(20),
+    assurance: callerAssuranceSchema.default(DEFAULT_CALLER_ASSURANCE)
   })
   .strict();
 
@@ -77,7 +119,12 @@ export interface TrustedTokenVerifier {
   ): Promise<VerifiedTokenClaims>;
 }
 
-export type TrustedCallerConfiguration = z.infer<
+/** A registry as written: `assurance` may be omitted and defaults to `carbon-mfa`. */
+export type TrustedCallerConfiguration = z.input<
+  typeof trustedCallerConfigurationSchema
+>;
+/** A registry after parsing: every caller carries its assurance mode. */
+export type ParsedTrustedCallerConfiguration = z.output<
   typeof trustedCallerConfigurationSchema
 >;
 
@@ -106,6 +153,8 @@ export interface VerifiedWorkforceIdentity {
   companyGroupId: string;
   allowedOperations: string[];
   accessLevels: string[];
+  /** The caller's registered mode; `workspace-equivalent` is enforced before this is returned. */
+  assurance: CallerAssurance;
 }
 
 export interface VerifiedIapBrowserRequest {
@@ -181,13 +230,49 @@ function isIdentityBinding(value: unknown): value is IdentityBinding {
   );
 }
 
+export interface GoogleWorkforceTokenVerifierOptions {
+  /** A preconfigured client. When given, the URL options are not applied. */
+  oauthClient?: OAuth2Client;
+  /**
+   * Google's federated sign-on certificates as a JSON object of `kid` to PEM.
+   * Defaults to `https://www.googleapis.com/oauth2/v1/certs`.
+   */
+  serviceCertificatesUrl?: string | URL;
+  /**
+   * IAP public keys as a JSON object of `kid` to PEM.
+   * Defaults to `https://www.gstatic.com/iap/verify/public_key`.
+   */
+  iapPublicKeysUrl?: string | URL;
+  /** Epoch seconds driving the IAP key-cache lifetimes; defaults to the clock. */
+  nowEpochSeconds?: () => number;
+}
+
+function certificateEndpoints(
+  options: GoogleWorkforceTokenVerifierOptions
+): Partial<OAuth2ClientEndpoints> {
+  // The client spreads these over its defaults, so an explicit `undefined`
+  // would erase Google's URL rather than keep it.
+  const endpoints: Partial<OAuth2ClientEndpoints> = {};
+  if (options.serviceCertificatesUrl !== undefined) {
+    endpoints.oauth2FederatedSignonPemCertsUrl = options.serviceCertificatesUrl;
+  }
+  if (options.iapPublicKeysUrl !== undefined) {
+    endpoints.oauth2IapPublicKeyUrl = options.iapPublicKeysUrl;
+  }
+  return endpoints;
+}
+
 export class GoogleWorkforceTokenVerifier implements TrustedTokenVerifier {
   private readonly oauthClient: OAuth2Client;
+  private readonly now: () => number;
   private keys?: { value: PublicKeys; expiresAt: number; refreshedAt: number };
   private keyRefresh?: Promise<PublicKeys>;
 
-  constructor(oauthClient = new OAuth2Client()) {
-    this.oauthClient = oauthClient;
+  constructor(options: GoogleWorkforceTokenVerifierOptions = {}) {
+    this.oauthClient =
+      options.oauthClient ??
+      new OAuth2Client({ endpoints: certificateEndpoints(options) });
+    this.now = options.nowEpochSeconds ?? epochSeconds;
   }
 
   async verifyServiceToken(token: string, expectedAudience: string) {
@@ -219,7 +304,7 @@ export class GoogleWorkforceTokenVerifier implements TrustedTokenVerifier {
   }
 
   private async iapKeys(forceRefresh: boolean): Promise<PublicKeys> {
-    const now = epochSeconds();
+    const now = this.now();
     if (!forceRefresh && this.keys && this.keys.expiresAt > now) {
       return this.keys.value;
     }
@@ -250,7 +335,7 @@ export class GoogleWorkforceTokenVerifier implements TrustedTokenVerifier {
 
 export function parseTrustedCallerConfiguration(
   value: string | unknown
-): TrustedCallerConfiguration {
+): ParsedTrustedCallerConfiguration {
   const parsed = typeof value === "string" ? JSON.parse(value) : value;
   return trustedCallerConfigurationSchema.parse(parsed);
 }
@@ -321,6 +406,14 @@ export async function verifyWorkforceRequest(options: {
     ) {
       throw unauthorized();
     }
+    // The documented equivalence holds only for the named access level. A
+    // request without it is refused, never downgraded to carbon-mfa.
+    if (
+      caller.assurance.mode === "workspace-equivalent" &&
+      !accessLevels.includes(caller.assurance.accessLevel)
+    ) {
+      throw unauthorized();
+    }
 
     const binding = await options.identityStore.resolveHuman({
       issuer: userClaims.iss,
@@ -355,7 +448,8 @@ export async function verifyWorkforceRequest(options: {
       },
       companyGroupId: binding.companyGroupId,
       allowedOperations: [...caller.operations],
-      accessLevels: [...accessLevels]
+      accessLevels: [...accessLevels],
+      assurance: { ...caller.assurance }
     };
   } catch {
     throw unauthorized();
@@ -449,27 +543,34 @@ export async function createWorkforceForwardingHeaders(options: {
   return headers;
 }
 
+/**
+ * A service audience is a bare https URL: no credentials, query or fragment,
+ * and no surrounding whitespace. Shared by the outbound token minting below and
+ * the release-time registry validator.
+ */
+export function isServiceAudience(value: string): boolean {
+  if (value !== value.trim()) return false;
+  let audience: URL;
+  try {
+    audience = new URL(value);
+  } catch {
+    return false;
+  }
+  return (
+    audience.protocol === "https:" &&
+    !audience.username &&
+    !audience.password &&
+    !audience.search &&
+    !audience.hash
+  );
+}
+
 /** Mint a fresh receiver-audience ID token for a machine-to-machine call. */
 export async function createServiceAuthorizationHeader(
   targetAudience: string,
   googleAuth: GoogleAuth = new GoogleAuth()
 ): Promise<string> {
-  let audience: URL;
-  try {
-    audience = new URL(targetAudience);
-  } catch {
-    throw new Error("Invalid service audience");
-  }
-  if (
-    audience.protocol !== "https:" ||
-    audience.username ||
-    audience.password ||
-    audience.search ||
-    audience.hash
-  ) {
-    throw new Error("Invalid service audience");
-  }
-  if (targetAudience !== targetAudience.trim()) {
+  if (!isServiceAudience(targetAudience)) {
     throw new Error("Invalid service audience");
   }
   const client = await googleAuth.getIdTokenClient(targetAudience);

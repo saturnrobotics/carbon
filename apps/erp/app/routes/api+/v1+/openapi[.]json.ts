@@ -1,10 +1,13 @@
 // GET /api/v1/openapi.json — the generated OpenAPI 3 spec for the Carbon API.
 // Public, so clients can generate a typed client in any language. Memoized at module
 // scope (the router and its schemas are static for the process lifetime).
+//
+// Generated from `disclosedRouter`, not `router`: the document describes what an
+// API key can call, and the workforce-only knowledge operations answer 404 to one.
 
 import { CarbonJsonSchemaConverter } from "@carbon/api/schema";
 import { OpenAPIGenerator } from "@orpc/openapi";
-import { router } from "./lib/router.server";
+import { disclosedRouter } from "./lib/router.server";
 import { specOptions } from "./lib/spec-options.server";
 
 // The promise, not the string: concurrent cold-start requests on this public
@@ -15,7 +18,7 @@ async function generateSpec(): Promise<string> {
   const generator = new OpenAPIGenerator({
     schemaConverters: [new CarbonJsonSchemaConverter()]
   });
-  const spec = await generator.generate(router, specOptions());
+  const spec = await generator.generate(disclosedRouter, specOptions());
   return JSON.stringify(spec);
 }
 

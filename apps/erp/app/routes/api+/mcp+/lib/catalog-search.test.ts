@@ -9,6 +9,7 @@ import {
 import toolMetadata from "./tool-metadata.json";
 
 const tools = toolMetadata.tools as unknown as ManifestEntry[];
+const disclosed = tools.filter((t) => t.module !== "knowledge");
 const catalog = createCatalogSearch(tools);
 
 const page = { limit: 20, offset: 0 };
@@ -138,9 +139,25 @@ describe("catalog search", () => {
   test("filter-only search keeps metadata order and paginates", async () => {
     const first = await catalog.search({ limit: 3, offset: 0 });
     expect(first.matches.map((t) => t.name)).toEqual(
-      tools.slice(0, 3).map((t) => t.name)
+      disclosed.slice(0, 3).map((t) => t.name)
     );
-    expect(first.total).toBe(tools.length);
+    expect(first.total).toBe(disclosed.length);
+    expect(catalog.totalTools).toBe(disclosed.length);
+  });
+
+  test("never indexes the workforce-only knowledge module", async () => {
+    // Restated independently of the filter the catalog applies, so this pins
+    // the rule rather than deriving it: those operations answer NOT_FOUND to
+    // every MCP caller, so discovery must not offer them.
+    expect(tools.some((t) => t.module === "knowledge")).toBe(true);
+    expect(catalog.moduleNames).not.toContain("knowledge");
+    const byModule = await catalog.search({ module: "knowledge", ...page });
+    expect(byModule).toEqual({ matches: [], total: 0 });
+    const byName = await catalog.search({
+      query: "knowledge_getItemIdentity",
+      ...page
+    });
+    expect(byName.matches.map((t) => t.module)).not.toContain("knowledge");
   });
 
   test("query pagination pages ranked results without overlap", async () => {

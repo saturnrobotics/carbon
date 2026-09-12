@@ -382,6 +382,39 @@ delete TLS state to rotate it implicitly. All database clients share Carbon's
 PostgreSQL service downtime, server resources, and disk snapshot recovery point.
 Their application releases can remain independent of Carbon's releases.
 
+## Knowledge workforce receiver
+
+The ERP API (`/api/v1/knowledge/*`) also accepts delegated requests from the
+separately deployed knowledge services. A caller presents its own Google-signed
+service token plus the end user's IAP assertion; ERP admits the pair only when
+the caller is named in a trusted-caller registry and the user is enrolled. Two
+optional private inputs wire that receiver; both reach only the ERP container,
+never MES.
+
+- `KNOWLEDGE_RECEIVER_AUDIENCE` in `.local/config.json`: the HTTPS URL callers
+  mint their service tokens for, normally the ERP origin. Ordinary configuration,
+  because it is the reviewable statement of what ERP accepts.
+- `KNOWLEDGE_TRUSTED_CALLERS_JSON` in `.local/secrets.json`: the registry as a
+  single-line JSON string in the shape of
+  `../knowledge/callers.schema.json`. It names service-account subjects and IAP
+  audiences, so it is a secret. It is written to the host secrets directory,
+  mounted into ERP alone, and pinned in the release plan by content hash like
+  the other per-service secrets, so rotating it reconfigures ERP without
+  touching MES or selecting platform maintenance.
+
+Validation is fail-closed: the registry must parse and match the schema, its
+`receiver.audience` must equal `KNOWLEDGE_RECEIVER_AUDIENCE`, and the example
+placeholder is refused rather than deployed. Supplying the audience alone is
+allowed; the receiver then stays disabled. Remove the placeholder key from your
+copy of `secrets.example.json` if you do not run the knowledge services.
+
+Runtime behaviour matches the API-key branch: a workforce request is answered
+with a plain `401 Unauthorized` on any verification failure, and with
+`503 Workforce authentication is not configured` when no registry is set. The
+body never says why. Enrolling users and registering the knowledge services'
+identities happens in [the knowledge deployment](../knowledge/README.md); this
+deployment only carries ERP's half of the contract.
+
 ## Private-network limitations
 
 External webhook senders cannot reach this installation. Payment, accounting,

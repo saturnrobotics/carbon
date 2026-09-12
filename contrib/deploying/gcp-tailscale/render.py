@@ -22,6 +22,7 @@ import yaml
 import private_postgres
 import payment_sync
 import invoice_inference
+import knowledge_receiver
 
 
 def write_private(path, content):
@@ -99,6 +100,7 @@ def render(config, repo, output, state=Path("/var/lib/carbon"), *, materialize=T
 
     private_postgres.validate(config)
     payment_sync.validate(config)
+    knowledge_receiver.validate(config)
     repo, output = repo.resolve(), output.resolve()
     names = ("ERP_HOST", "MES_HOST", "SUPABASE_HOST", "AUTH_ALLOWED_GOOGLE_DOMAIN")
     for key in names:
@@ -201,6 +203,7 @@ def render(config, repo, output, state=Path("/var/lib/carbon"), *, materialize=T
             "com.carbon.release.config-digest": app_releases[app]["config_digest"],
         })
     payment_sync.configure(config, services["erp"], directory, emit, materialize=materialize)
+    knowledge_receiver.configure(config, services["erp"], directory, emit, materialize=materialize)
     invoice_inference.configure(config, services["erp"])
     # A 200 response alone is insufficient: ERP reports dependency failures in JSON.
     services["erp"]["healthcheck"]["test"] = ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/health').then(r=>r.json()).then(b=>process.exit(b.status==='healthy'?0:1)).catch(()=>process.exit(1))"]

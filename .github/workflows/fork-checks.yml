@@ -2,8 +2,9 @@ name: fork-checks
 
 # Checks for fork-owned code that has no upstream runner: the hardened generator
 # helpers under scripts/lib, the fork's node tests under .fork/tests, locale
-# coverage, the deployment tooling's Python suite, the Docker build-context
-# privacy proof, and lint for the sync scripts and workflows themselves.
+# coverage, the knowledge trusted-caller registry validator, the deployment
+# tooling's Python suite, the Docker build-context privacy proof, and lint for
+# the sync scripts and workflows themselves.
 # Path-filtered on pull requests; every push to the trunk runs it all.
 
 on:
@@ -15,6 +16,8 @@ on:
       - "scripts/**"
       - ".fork/**"
       - "packages/locale/**"
+      - "packages/knowledge/scripts/validate-callers.ts"
+      - "packages/knowledge/src/identity.server.ts"
       - "lingui.config.js"
       - "contrib/deploying/**"
       - "contrib/building/**"
@@ -52,6 +55,11 @@ jobs:
         run: |
           pnpm exec tsx --test scripts/lib/generate-db-types.test.ts scripts/lib/swagger-schema.test.ts scripts/lib/local-script-config.test.ts
           pnpm exec tsx --test .fork/tests/dispatcher.test.ts .fork/tests/locales.test.ts
+      - name: Knowledge trusted-caller registry validates
+        # The synthetic example must pass the runtime schema, callers.schema.json
+        # and the release rules; real registries are validated the same way
+        # before release and never committed.
+        run: pnpm --filter @carbon/knowledge callers:validate contrib/deploying/knowledge/callers.example.json
       - name: Locale source coverage and translation completeness
         run: |
           pnpm exec tsx .fork/check-locales.ts

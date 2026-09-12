@@ -4,6 +4,34 @@ import {
   type VerifiedWorkforceIdentity
 } from "../identity.server";
 import { withDeadline } from "../query/deadline.server";
+import { isStepUpRequiredBody, StepUpRequiredError } from "../step-up";
+
+async function readBounded(
+  body: ReadableStream<Uint8Array>,
+  limit: number
+): Promise<string> {
+  const reader = body.getReader();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  try {
+    for (;;) {
+      const next = await reader.read();
+      if (next.done) break;
+      size += next.value.byteLength;
+      if (size > limit) throw Error("Source response limit exceeded");
+      chunks.push(next.value);
+    }
+  } finally {
+    await reader.cancel();
+  }
+  const buffer = new Uint8Array(size);
+  let offset = 0;
+  for (const chunk of chunks) {
+    buffer.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder().decode(buffer);
+}
 
 const operations = new Set([
   "/api/v1/knowledge/resolveItems",
@@ -32,6 +60,7 @@ export const SOURCE_READ_DEADLINE_MS = 1000;
 export const SOURCE_CHANGE_FEED_DEADLINE_MS = 10_000;
 const REQUEST_LIMIT_BYTES = 32768;
 const RESPONSE_LIMIT_BYTES = 262144;
+const DENIAL_LIMIT_BYTES = 4096;
 
 export type SourceConnection = { origin: string; audience: string };
 export type SourceRequestContext = {
@@ -126,6 +155,17 @@ async function boundedCall(
       throw new SourceTransportError("deadline", null, "Deadline exceeded");
     throw new SourceTransportError("source-error", null, "Source unreachable");
   }
+  if (response.status === 403 && response.body) {
+    // A source that requires Carbon MFA says so in a structured body;
+    // every other denial stays opaque.
+    let denial: unknown;
+    try {
+      denial = JSON.parse(await readBounded(response.body, DENIAL_LIMIT_BYTES));
+    } catch {
+      denial = undefined;
+    }
+    if (isStepUpRequiredBody(denial)) throw new StepUpRequiredError();
+  }
   if (!response.ok || !response.body) {
     const denied = response.status === 401 || response.status === 403;
     throw new SourceTransportError(
@@ -134,28 +174,9 @@ async function boundedCall(
       denied ? "Source access denied" : "Source unavailable"
     );
   }
-  const reader = response.body.getReader();
-  const chunks: Uint8Array[] = [];
-  let size = 0;
-  try {
-    for (;;) {
-      const next = await reader.read();
-      if (next.done) break;
-      size += next.value.byteLength;
-      if (size > RESPONSE_LIMIT_BYTES)
-        throw Error("Source response limit exceeded");
-      chunks.push(next.value);
-    }
-  } finally {
-    await reader.cancel();
-  }
-  const buffer = new Uint8Array(size);
-  let offset = 0;
-  for (const chunk of chunks) {
-    buffer.set(chunk, offset);
-    offset += chunk.byteLength;
-  }
-  return JSON.parse(new TextDecoder().decode(buffer)) as unknown;
+  return JSON.parse(
+    await readBounded(response.body, RESPONSE_LIMIT_BYTES)
+  ) as unknown;
 }
 
 /** Forwards the verified employee's evidence with a fresh service credential. */

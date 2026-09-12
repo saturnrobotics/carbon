@@ -86,6 +86,17 @@ class ValidationTests(unittest.TestCase):
     def test_valid_private_configuration(self):
         self.assertEqual(deploy.validate(fixture(), SECRETS)["REGION"], "us-east1")
 
+    def test_optional_knowledge_receiver_inputs(self):
+        registry = json.dumps({"version": 1, "receiver": {"id": "carbon-erp", "audience": "https://erp.hq.example.com"}, "callers": [{"callerId": "knowledge-query", "serviceAccountSubject": "synthetic-subject-1", "sourceIapAudience": "/projects/0/global/backendServices/0", "operations": ["knowledge_resolveItems"], "capabilities": ["knowledge.read"], "requiredAccessLevels": []}]})
+        deploy.validate(fixture(), {**SECRETS, "KNOWLEDGE_TRUSTED_CALLERS_JSON": registry})
+        config = fixture()
+        del config["KNOWLEDGE_RECEIVER_AUDIENCE"]
+        deploy.validate(config, SECRETS)
+        with self.assertRaisesRegex(ValueError, "Unknown configuration keys"):
+            deploy.validate({**fixture(), "KNOWLEDGE_RECEIVER_ID": "carbon-erp"}, SECRETS)
+        with self.assertRaisesRegex(ValueError, "Unknown configuration keys"):
+            deploy.validate(fixture(), {**SECRETS, "KNOWLEDGE_MACHINE_CALLERS_JSON": registry})
+
     def test_optional_private_postgres_configuration(self):
         config = {**fixture(), "POSTGRES_PRIVATE_IP": "10.73.0.2", "POSTGRES_CLIENT_CIDRS": ["10.81.0.0/26"]}
         self.assertEqual(deploy.validate(config, SECRETS)["POSTGRES_CLIENT_CIDRS"], ["10.81.0.0/26"])
