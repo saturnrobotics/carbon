@@ -2,9 +2,23 @@ import { queryRequestSchema } from "@carbon/knowledge";
 import type { VerifiedIapBrowserRequest } from "@carbon/knowledge/identity.server";
 import { queryResultSchema } from "@carbon/knowledge/query";
 import {
+  isStepUpRequiredBody,
+  stepUpRequiredResponse
+} from "@carbon/knowledge/step-up";
+import {
   forwardVerifiedWorkforceRequest,
   verifyKnowledgeBrowserRequest
 } from "./identity.server";
+
+/** Only a 403 from the query service is read for the step-up code; any other body is ignored. */
+async function isStepUpDenial(response: Response): Promise<boolean> {
+  if (response.status !== 403) return false;
+  try {
+    return isStepUpRequiredBody(await response.json());
+  } catch {
+    return false;
+  }
+}
 
 type QueryGatewayDependencies = {
   queryUrl: string;
@@ -68,6 +82,7 @@ export async function forwardKnowledgeQuery(
       { method: "POST", headers, body: JSON.stringify(payload) }
     );
     if (!response.ok) {
+      if (await isStepUpDenial(response)) return stepUpRequiredResponse();
       return Response.json(
         { error: "query_unavailable" },
         { status: response.status, headers: { "cache-control": "no-store" } }

@@ -129,7 +129,103 @@ describe("trusted workforce forwarding", () => {
       },
       companyGroupId: "group_alpha",
       allowedOperations: ["knowledge_getItemIdentity"],
-      accessLevels: ["accessPolicies/123/accessLevels/managed-device"]
+      accessLevels: ["accessPolicies/123/accessLevels/managed-device"],
+      assurance: { mode: "carbon-mfa" }
+    });
+  });
+
+  describe("caller assurance", () => {
+    const equivalentLevel = "accessPolicies/123/accessLevels/workspace-2sv";
+    const workspaceEquivalent: TrustedCallerConfiguration = {
+      ...configuration,
+      callers: configuration.callers.map((caller) => ({
+        ...caller,
+        assurance: {
+          mode: "workspace-equivalent" as const,
+          accessLevel: equivalentLevel
+        }
+      }))
+    };
+    const withLevel = {
+      ...iapClaims,
+      google: {
+        access_levels: [
+          "accessPolicies/123/accessLevels/managed-device",
+          equivalentLevel
+        ]
+      }
+    };
+
+    it("defaults an unconfigured caller to carbon-mfa and leaves the verdict to Carbon", async () => {
+      const result = await verifyWorkforceRequest({
+        request: request(),
+        operation: "knowledge_getItemIdentity",
+        configuration,
+        tokenVerifier: verifier(),
+        identityStore: identityStore(),
+        nowEpochSeconds: now
+      });
+      expect(result.assurance).toEqual({ mode: "carbon-mfa" });
+      expect(result.principal).not.toHaveProperty("assurance");
+    });
+
+    it("passes workspace-equivalent only with the documented access level", async () => {
+      const result = await verifyWorkforceRequest({
+        request: request(),
+        operation: "knowledge_getItemIdentity",
+        configuration: workspaceEquivalent,
+        tokenVerifier: verifier(serviceClaims, withLevel),
+        identityStore: identityStore(),
+        nowEpochSeconds: now
+      });
+      expect(result.assurance).toEqual({
+        mode: "workspace-equivalent",
+        accessLevel: equivalentLevel
+      });
+    });
+
+    it("rejects workspace-equivalent without the access level instead of downgrading", async () => {
+      const resolveHuman = vi.fn(async () => binding);
+      await expect(
+        verifyWorkforceRequest({
+          request: request(),
+          operation: "knowledge_getItemIdentity",
+          configuration: workspaceEquivalent,
+          tokenVerifier: verifier(),
+          identityStore: { resolveHuman },
+          nowEpochSeconds: now
+        })
+      ).rejects.toThrow(/unauthorized workforce request/i);
+      expect(resolveHuman).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ["a third mode", { mode: "iap-signature" }],
+      [
+        "workspace-equivalent without an access level",
+        { mode: "workspace-equivalent" }
+      ],
+      [
+        "carbon-mfa with an access level",
+        { mode: "carbon-mfa", accessLevel: equivalentLevel }
+      ]
+    ])("refuses a registry with %s", async (_name, assurance) => {
+      await expect(
+        verifyWorkforceRequest({
+          request: request(),
+          operation: "knowledge_getItemIdentity",
+          configuration: {
+            ...configuration,
+            callers: configuration.callers.map((caller) => ({
+              ...caller,
+              assurance: assurance as never
+            }))
+          },
+          tokenVerifier: verifier(serviceClaims, withLevel),
+          identityStore: identityStore(),
+          nowEpochSeconds: now
+        })
+      ).rejects.toThrow(/unauthorized workforce request/i);
     });
   });
 
