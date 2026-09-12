@@ -1,11 +1,16 @@
 import { defineConfig } from "@playwright/test";
-import { loopbackTestOrigin } from "./tests/setup";
+import { assertLoopbackOrigin } from "./tests/loopback";
 
-const externalBaseUrl = process.env.KNOWLEDGE_E2E_BASE_URL;
-// Only the scheme and the loopback host are fixed; the port follows whichever
-// synthetic stack published the portal (see tests/setup.ts).
-if (externalBaseUrl)
-  loopbackTestOrigin("KNOWLEDGE_E2E_BASE_URL", externalBaseUrl, "https:");
+/** Refuse anything but a loopback target. The PORT is configurable so a second
+ * harness can run beside a long-lived one; the HOST never is. */
+const baseUrl = assertLoopbackOrigin(
+  "KNOWLEDGE_E2E_BASE_URL",
+  process.env.KNOWLEDGE_E2E_BASE_URL ?? "https://localhost:4200",
+  "https:"
+);
+const externalBaseUrl = process.env.KNOWLEDGE_E2E_BASE_URL
+  ? baseUrl
+  : undefined;
 
 export default defineConfig({
   testDir: "./tests",
@@ -20,7 +25,7 @@ export default defineConfig({
   workers: 1,
   fullyParallel: false,
   use: {
-    baseURL: externalBaseUrl ?? "https://localhost:4200",
+    baseURL: baseUrl,
     ignoreHTTPSErrors: true,
     // Playwright leaves both of these unlimited by default, so one action that
     // can never succeed — a click on a button that stays disabled, a redirect
@@ -35,7 +40,7 @@ export default defineConfig({
     ? undefined
     : {
         command: "corepack pnpm tsx tests/harness/start-e2e.ts",
-        url: "https://localhost:4200/",
+        url: baseUrl,
         env: {
           ...process.env,
           KNOWLEDGE_E2E_SYNTHETIC_FIXTURES: "1",
@@ -44,10 +49,14 @@ export default defineConfig({
           // gate in explicitly. No release image or release plan sets this.
           KNOWLEDGE_DRIVE_ENABLED: "true",
           KNOWLEDGE_COMPANY_ID: "company-b",
-          KNOWLEDGE_WEB_ORIGIN: "https://localhost:4200",
-          KNOWLEDGE_WORKER_URL: "http://127.0.0.1:4301",
+          KNOWLEDGE_E2E_PORTAL_PORT: String(new URL(baseUrl).port || 443),
+          KNOWLEDGE_WEB_ORIGIN: new URL(baseUrl).origin,
+          KNOWLEDGE_WORKER_URL:
+            process.env.KNOWLEDGE_E2E_GATEWAY_URL ?? "http://127.0.0.1:4301",
           KNOWLEDGE_WORKER_AUDIENCE: "e2e-worker",
-          KNOWLEDGE_QUERY_URL: "http://127.0.0.1:4302",
+          KNOWLEDGE_QUERY_URL:
+            process.env.KNOWLEDGE_E2E_QUERY_FIXTURE_URL ??
+            "http://127.0.0.1:4302",
           KNOWLEDGE_QUERY_AUDIENCE: "e2e-query",
           KNOWLEDGE_MANUAL_SOURCE_JSON:
             '{"sourceId":"source-b","displayName":"Operations manuals"}'

@@ -619,10 +619,13 @@ execution order. No cloud environment has been provisioned for this release.
 Use Docker Compose v2, Corepack/pnpm, Python 3 and a Chromium installation for
 Playwright. Run commands from the repository root. All fixture identities and
 passwords are synthetic; these test images must never be deployed publicly.
-The runner uses ports 4200, 4301, 4302 and 59910–59914 on loopback. Resolve a
-port conflict without stopping an unrelated development database. The host-facing
-Compose network uses a normal bridge so loopback published ports work on Docker
-Desktop. The parser has only an internal network, with storage reached through
+The runner uses ports 4200, 4301, 4302, 4303, 4304 and 59910–59914 on loopback.
+Resolve a port conflict without stopping an unrelated development database: every
+published port, the Compose project name and the image tag are environment
+variables that default to those values, so a second stack can run beside a
+long-lived one without retagging or stopping it (see "Running a second stack"
+below). The host-facing Compose network uses a normal bridge so loopback
+published ports work on Docker Desktop. The parser has only an internal network, with storage reached through
 the test proxy. Local bridge networking does not prove production egress policy.
 
 ```bash
@@ -640,6 +643,43 @@ The stack persists its own named PostgreSQL, Redis, storage and Inngest volumes.
 fixtures without resetting a developer database. Use `local-stack.sh status`,
 `local-stack.sh logs ingest` and `local-stack.sh stop` to inspect or stop only
 this stack. Stopping preserves its volumes.
+
+`local-stack.sh down` removes this stack's containers and its named volumes.
+
+### Running a second stack
+
+Set a distinct project name, image tag and ports; unset variables keep the
+defaults above, so an unparameterised invocation is unchanged.
+
+```bash
+export KNOWLEDGE_STACK_NAME=knowledge-mine KNOWLEDGE_IMAGE_PREFIX=knowledge-mine
+export KNOWLEDGE_IMAGE_TAG=mine-v1
+export KNOWLEDGE_PORT_PORTAL=4270 KNOWLEDGE_PORT_GATEWAY=4371
+export KNOWLEDGE_PORT_QUERY=4372 KNOWLEDGE_PORT_DRIVE_GATEWAY=4373
+export KNOWLEDGE_PORT_DRIVE_QUERY=4374 KNOWLEDGE_PORT_POSTGRES=59970
+export KNOWLEDGE_PORT_REDIS=59971 KNOWLEDGE_PORT_STORAGE=59972
+export KNOWLEDGE_PORT_INNGEST=59974
+contrib/deploying/knowledge/build-images.sh e2e
+contrib/deploying/knowledge/local-stack.sh test
+contrib/deploying/knowledge/local-stack.sh down
+```
+
+### The deferred Drive surface in the harness
+
+`drive-source.spec.ts` exercises the Drive connector, which `manual-v1` defers.
+Two pieces make that possible without touching the release fence:
+
+- The route manifest is a BUILD-time artifact, so `build-images.sh e2e` passes
+  `--build-arg KNOWLEDGE_DRIVE_ENABLED=true` to `Dockerfile.web`'s `e2e` stage
+  only. The release `runtime` stage descends from `builder`, which never receives
+  the argument, so passing it to a release build changes nothing;
+  `test_images.py` pins that and `release.py` separately refuses the variable on
+  a deployed revision.
+- The `drive` Compose service runs the loopback Drive fixture (an in-memory
+  Drive, no Google credential) on its own two ports, because the manual
+  library's query fixture is pinned to the upload source and can never answer
+  for a Drive one. The manual gateway forwards `/v1/drive/*` there, so the
+  portal keeps a single worker URL as it does in production.
 
 For an explicit production architecture build, use `build-images.sh amd64`.
 Production targets use their production entry points; separate `e2e` targets

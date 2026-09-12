@@ -23,7 +23,21 @@ COPY LICENSE ./LICENSE
 RUN pnpm --filter knowledge build
 RUN pnpm --filter knowledge deploy --prod --legacy --ignore-scripts /runtime
 
+# The disposable browser-harness image. React Router's route manifest is a
+# BUILD-time artifact, so the Drive surface the approved `manual-v1` profile
+# defers can only be admitted by a build that names it. This stage takes it as
+# a build argument and rebuilds the app with it, so the harness image carries
+# the route in its own bundle instead of depending on a container environment
+# variable that a served build would ignore.
+#
+# The argument is declared HERE and nowhere else: `runtime` below descends from
+# `builder`, which never receives it, so no release image can be built with the
+# Drive surface admitted even if the argument is passed. `test_images.py` pins
+# that, and `release.py` separately refuses the runtime variable on a revision.
 FROM builder AS e2e
+ARG KNOWLEDGE_DRIVE_ENABLED
+ENV KNOWLEDGE_DRIVE_ENABLED=${KNOWLEDGE_DRIVE_ENABLED}
+RUN pnpm --filter knowledge build
 WORKDIR /repo/apps/knowledge
 ENV NODE_ENV=test
 ENV KNOWLEDGE_RELEASE_PROFILE=manual-v1

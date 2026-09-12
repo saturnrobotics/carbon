@@ -31,7 +31,7 @@ RUN pnpm install --frozen-lockfile --ignore-scripts
 COPY --from=e2e-pruner /repo/out-e2e/full/ ./
 COPY LICENSE ./LICENSE
 RUN pnpm --filter knowledge-worker exec tsup \
-  src/test/local-ingest.ts src/test/local-query.ts \
+  src/test/local-ingest.ts src/test/local-query.ts src/test/local-drive.ts \
   --format esm --no-splitting --out-dir e2e-dist
 
 FROM ${NODE_IMAGE} AS runtime-base

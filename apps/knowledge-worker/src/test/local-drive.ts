@@ -7,10 +7,16 @@
  * synthetic loopback verifier; the query service's outbound service token by a
  * loopback forwarding seam. No credential, no network, no real Drive.
  *
- * Endpoints on 4301 (worker) and 4302 (query), plus test controls:
+ * Endpoints on `PORT` (worker, 4301 by default) and
+ * `KNOWLEDGE_E2E_QUERY_PORT` (query, 4302 by default), plus test controls:
+ *   POST /__e2e/drive/reset           re-seed the enrollment and the Drive
  *   POST /__e2e/drive/sync            run one sync and publish pending upserts
  *   POST /__e2e/drive/revoke-folder   drop the reader from the folder and file
  *   POST /__e2e/drive/cleanup         remove every row this fixture created
+ *
+ * Both ports are configurable because this fixture runs beside the manual
+ * library fixture, which owns the same two by default, and because a second
+ * harness on one machine must not need the first one's ports.
  */
 import { createHash } from "node:crypto";
 import type { VerifiedWorkforceIdentity } from "@carbon/knowledge/identity.server";
@@ -120,6 +126,14 @@ class FakeDrive implements DriveApiClient {
       file: this.files.get("root")
     });
   }
+  /** Undo `revokeFolder` and forget the cursor, so a repeated run starts from
+   * the granted Drive and an initial listing rather than an empty increment. */
+  restore() {
+    this.permissions.set("root", [reader]);
+    this.permissions.set("manual", [reader]);
+    this.pending = [];
+    this.token = 1;
+  }
   canOpen(fileId: string) {
     return (this.permissions.get(fileId) ?? []).some(
       (permission) => permission.emailAddress === reader.emailAddress
@@ -189,6 +203,26 @@ function rolePool(
   });
 }
 
+function loopbackPort(name: string, fallback: number): number {
+  const port = Number(process.env[name] ?? fallback);
+  if (!Number.isInteger(port) || port < 1024 || port > 65_535)
+    throw new Error(`${name} must be an unprivileged port`);
+  return port;
+}
+
+/** The browser origin this fixture's query handler answers for. */
+function browserOrigin(): string {
+  const value =
+    process.env.KNOWLEDGE_WEB_ORIGIN?.trim() ?? "https://localhost:4200";
+  const parsed = new URL(value);
+  if (
+    parsed.protocol !== "https:" ||
+    !["localhost", "127.0.0.1", "[::1]"].includes(parsed.hostname)
+  )
+    throw new Error("KNOWLEDGE_WEB_ORIGIN must be an HTTPS loopback origin");
+  return parsed.origin;
+}
+
 async function main() {
   if (process.env.KNOWLEDGE_E2E_SYNTHETIC_FIXTURES !== "1")
     throw new Error("Local synthetic identity is disabled");
@@ -250,40 +284,61 @@ async function main() {
       [localCompanyId]
     );
   };
-  await cleanup();
-  await admin.query(
-    `INSERT INTO knowledge.source(id,"companyId","createdBy",kind,"externalId","displayName","ownerId",classification,"providerPolicy")
+  /** The enrollment this fixture's spec reads. Repeatable on purpose: the spec
+   * cleans up after itself, and a seed that only ran at process start made the
+   * suite pass once and then fail on every later run against the same stack. */
+  const seed = async () => {
+    await admin.query(
+      `INSERT INTO knowledge.source(id,"companyId","createdBy",kind,"externalId","displayName","ownerId",classification,"providerPolicy")
      VALUES ($1,$2,'bob','drive','drive-e2e','Engineering drive','bob','source-restricted',$3::jsonb)`,
-    [
-      sourceId,
-      localCompanyId,
-      JSON.stringify({
-        machineCallers: [callerId],
-        ingestDatabaseRoles: [sessionUser]
-      })
-    ]
-  );
-  await admin.query(
-    `INSERT INTO knowledge."driveEnrollment" ("companyId","createdBy","sourceId",corpora,"driveId","rootFolderIds","oauthScope","credentialSecretRef")
+      [
+        sourceId,
+        localCompanyId,
+        JSON.stringify({
+          machineCallers: [callerId],
+          ingestDatabaseRoles: [sessionUser]
+        })
+      ]
+    );
+    await admin.query(
+      `INSERT INTO knowledge."driveEnrollment" ("companyId","createdBy","sourceId",corpora,"driveId","rootFolderIds","oauthScope","credentialSecretRef")
      VALUES ($1,'bob',$2,'drive','drive-e2e',ARRAY['root'],'https://www.googleapis.com/auth/drive.readonly','projects/synthetic/secrets/drive-e2e/versions/1')`,
-    [localCompanyId, sourceId]
-  );
-  await admin.query(
-    `INSERT INTO knowledge."sourceUserBinding"(id,"companyId","createdBy","sourceId","canonicalUserId","sourceUserId",active)
+      [localCompanyId, sourceId]
+    );
+    await admin.query(
+      `INSERT INTO knowledge."sourceUserBinding"(id,"companyId","createdBy","sourceId","canonicalUserId","sourceUserId",active)
      VALUES ('e2e-drive-bob',$1,'bob',$2,'bob','bob@example.com',true)`,
-    [localCompanyId, sourceId]
-  );
-  await admin.query(
-    `INSERT INTO knowledge."grant"(id,"companyId","createdBy","sourceId","subjectKind","subjectId",capability,origin,"policyVersion")
+      [localCompanyId, sourceId]
+    );
+    await admin.query(
+      `INSERT INTO knowledge."grant"(id,"companyId","createdBy","sourceId","subjectKind","subjectId",capability,origin,"policyVersion")
      VALUES ('e2e-drive-bob-local',$1,'bob',$2,'user','bob','read','local',1),
             ('e2e-drive-bob-member',$1,'bob',$2,'user','bob','read','source',1)`,
-    [localCompanyId, sourceId]
-  );
-  await admin.query(
-    `INSERT INTO knowledge."identityBinding" (id,"companyId","createdBy",issuer,subject,"canonicalUserId",active,"revocationVersion",capabilities)
-     VALUES ('e2e-drive-bob-binding',$1,'bob','https://cloud.google.com/iap','subject-b','bob',true,1,ARRAY['knowledge.read']::text[])`,
-    [localCompanyId]
-  );
+      [localCompanyId, sourceId]
+    );
+    // One binding per (company, issuer, subject) is a uniqueness constraint, and
+    // the docker stack's own fixture already binds this reader with a superset of
+    // these capabilities. Claiming it would downgrade the manual workflow's
+    // reader, so the fixture adds one only where none exists — which is what lets
+    // the Drive fixture run beside the manual one in a single database.
+    await admin.query(
+      `INSERT INTO knowledge."identityBinding" (id,"companyId","createdBy",issuer,subject,"canonicalUserId",active,"revocationVersion",capabilities)
+     VALUES ('e2e-drive-bob-binding',$1,'bob','https://cloud.google.com/iap','subject-b','bob',true,1,ARRAY['knowledge.read']::text[])
+     ON CONFLICT ("companyId",issuer,subject) DO NOTHING`,
+      [localCompanyId]
+    );
+  };
+  const reset = async () => {
+    await cleanup();
+    await seed();
+  };
+  await reset();
+  // The in-memory Drive is process state, so a reset restores it too — the spec
+  // revokes the folder, and a second run must start from the granted Drive.
+  const resetDrive = async () => {
+    drive.restore();
+    await reset();
+  };
 
   const workerId = `local-drive-${process.pid}`;
   const syncNow = async () => {
@@ -404,14 +459,19 @@ async function main() {
     }) as typeof fetch
   };
   const worker = createWorkerHandler(dependencies);
+  const workerPort = loopbackPort("PORT", 4301);
   const workerServer = startLocalHttpServer({
-    port: 4301,
+    port: workerPort,
     maximumBytes: 1_000_000,
     handler: async (request) => {
       const url = new URL(request.url);
       if (request.method === "GET" && url.pathname === "/health") {
         await admin.query("SELECT 1");
         return Response.json({ status: "ok", service: "local-drive" });
+      }
+      if (request.method === "POST" && url.pathname === "/__e2e/drive/reset") {
+        await resetDrive();
+        return Response.json({ state: "seeded" });
       }
       if (request.method === "POST" && url.pathname === "/__e2e/drive/sync")
         return Response.json(await syncNow());
@@ -442,7 +502,10 @@ async function main() {
       return originalFetch(input as never, init);
     return worker(
       new Request(
-        new URL(`${url.pathname}${url.search}`, "http://127.0.0.1:4301"),
+        new URL(
+          `${url.pathname}${url.search}`,
+          `http://127.0.0.1:${workerPort}`
+        ),
         {
           method: init?.method ?? "POST",
           headers: init?.headers
@@ -462,7 +525,7 @@ async function main() {
         // proven by the packages/knowledge integration suite.
       }
     },
-    origin: "https://localhost:4200",
+    origin: browserOrigin(),
     businessTimezone: "UTC",
     workerOrigin: "https://drive-check.local/",
     workerAudience: "e2e-worker",
@@ -475,7 +538,7 @@ async function main() {
       })
   });
   const queryServer = startLocalHttpServer({
-    port: 4302,
+    port: loopbackPort("KNOWLEDGE_E2E_QUERY_PORT", 4302),
     maximumBytes: 32_768,
     handler: async (request) => {
       const url = new URL(request.url);

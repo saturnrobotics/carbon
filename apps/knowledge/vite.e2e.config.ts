@@ -10,13 +10,23 @@ import { defineConfig, type Plugin, type PluginOption } from "vite";
 import babelMacros from "vite-plugin-babel-macros";
 
 const appDirectory = dirname(fileURLToPath(import.meta.url));
-// The published port is also the port served inside the container, so the
-// browser's `Host`, Vite's asset origin and the app's own origin assertion all
-// agree. Unset (CI and the default stack) keeps the historical 4200.
-const portalPort = Number(process.env.KNOWLEDGE_E2E_PORTAL_PORT ?? 4200);
-if (!Number.isInteger(portalPort) || portalPort < 1 || portalPort > 65535)
-  throw new Error("KNOWLEDGE_E2E_PORTAL_PORT must be a TCP port");
-const portalOrigin = `https://localhost:${portalPort}`;
+
+/** The loopback port this harness serves on. Configurable so a second harness
+ * can run beside a long-lived one; loopback-only either way. It is also the
+ * port served INSIDE the container, so the browser's `Host`, Vite's asset
+ * origin and the app's own origin assertion all agree. Unset (CI and the
+ * default stack) keeps the historical 4200. */
+const port = Number(process.env.KNOWLEDGE_E2E_PORTAL_PORT ?? "4200");
+if (!Number.isInteger(port) || port < 1024 || port > 65_535)
+  throw new Error("KNOWLEDGE_E2E_PORTAL_PORT must be an unprivileged port");
+const browserOrigin = new URL(
+  process.env.KNOWLEDGE_WEB_ORIGIN ?? `https://localhost:${port}`
+);
+if (
+  browserOrigin.protocol !== "https:" ||
+  !["localhost", "127.0.0.1", "[::1]"].includes(browserOrigin.hostname)
+)
+  throw new Error("KNOWLEDGE_WEB_ORIGIN must be an HTTPS loopback origin");
 const identityModule = resolve(appDirectory, "app/services/identity.server.ts");
 const syntheticIdentityModule = resolve(
   appDirectory,
@@ -41,7 +51,7 @@ function loopbackIdentityOnly(): Plugin {
     configureServer(server) {
       server.middlewares.use((request, _response, next) => {
         if (request.headers.origin === "null") {
-          request.headers.origin = portalOrigin;
+          request.headers.origin = browserOrigin.origin;
         }
         next();
       });
@@ -61,9 +71,9 @@ export default defineConfig({
     // progressive form submission `Origin: null`. This test-only transport
     // shim restores the known HTTPS loopback origin before the real action and
     // its production CSRF assertion execute.
-    origin: portalOrigin,
+    origin: browserOrigin.origin,
     host: process.env.KNOWLEDGE_E2E_DOCKER === "1" ? "0.0.0.0" : "127.0.0.1",
-    port: portalPort,
+    port,
     strictPort: true,
     https: {
       key: readFileSync(resolve(appDirectory, "tests/harness/.cert/key.pem")),

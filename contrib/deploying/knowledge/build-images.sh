@@ -26,8 +26,10 @@ esac
 root=$(CDPATH= cd -- "$(dirname -- "$0")/../../.." && pwd)
 cd "$root"
 
-# Stack name and tag are overridable so a second local stack can be built
-# alongside a running one without retagging its images. CI leaves both unset.
+# Stack name and tag are overridable so a concurrent harness can build its own
+# images alongside a running stack without retagging anyone else's. Both
+# default to the historical values, so an unparameterised invocation — CI's —
+# is unchanged.
 stack=${KNOWLEDGE_LOCAL_STACK:-knowledge-manual-local}
 tag=${KNOWLEDGE_LOCAL_TAG:-manual-v1}
 
@@ -38,7 +40,16 @@ if [ "$mode" = "e2e" ]; then
     --tag "$stack-schema:$tag" \
     .
   for unit in ingest web parser; do
+    # Only the disposable web harness admits the deferred Drive surface, and
+    # only through the `e2e` stage's build argument. No release build below
+    # passes it, and the release `runtime` stage cannot receive it at all.
+    if [ "$unit" = web ]; then
+      set -- --build-arg KNOWLEDGE_DRIVE_ENABLED=true
+    else
+      set --
+    fi
     docker build \
+      "$@" \
       --file "contrib/deploying/knowledge/Dockerfile.$unit" \
       --target e2e \
       --tag "$stack-$unit-e2e:$tag" \

@@ -42,6 +42,38 @@ function required(name: string): string {
   return value;
 }
 
+/** Connection-scoped headers belong to one hop. Copying them onto the next
+ * request or back onto this response makes the framing disagree with the body
+ * that was already read. */
+const CONNECTION_HEADERS = new Set([
+  "connection",
+  "content-encoding",
+  "content-length",
+  "host",
+  "keep-alive",
+  "transfer-encoding",
+  "upgrade"
+]);
+
+function withoutConnectionHeaders(headers: Headers): Headers {
+  const copied = new Headers();
+  headers.forEach((value, key) => {
+    if (!CONNECTION_HEADERS.has(key.toLowerCase())) copied.set(key, value);
+  });
+  return copied;
+}
+
+/** Sibling Drive fixture, when the compose stack runs one. Loopback or a
+ * compose service name only: this is a test gateway, never an open proxy. */
+function driveFixture(): string | null {
+  const value = process.env.KNOWLEDGE_E2E_DRIVE_FIXTURE_URL?.trim();
+  if (!value) return null;
+  const parsed = new URL(value);
+  if (parsed.protocol !== "http:" || parsed.username || parsed.password)
+    throw new Error("KNOWLEDGE_E2E_DRIVE_FIXTURE_URL must be a plain HTTP URL");
+  return parsed.origin;
+}
+
 function rolePool(
   connectionString: string,
   role: "knowledge_ingest" | "knowledge_read" | "knowledge_review"
@@ -88,6 +120,7 @@ async function main() {
     throw new Error("Local synthetic identity is disabled");
   const databaseUrl = required("KNOWLEDGE_E2E_DATABASE_URL");
   const parserUrl = required("KNOWLEDGE_E2E_PARSER_URL");
+  const driveFixtureUrl = driveFixture();
   const reviewPool = rolePool(databaseUrl, "knowledge_review");
   const readPool = rolePool(databaseUrl, "knowledge_read");
   const ingestPool = rolePool(databaseUrl, "knowledge_ingest");
@@ -218,6 +251,29 @@ async function main() {
 
   const localHandler = async (request: Request) => {
     const url = new URL(request.url);
+    // This fixture's caller configuration admits the portal's manual-library
+    // operations only, so it answers no Drive route; the Drive fixture beside
+    // it owns that surface with its own reader verification and in-memory
+    // Drive. Forwarding the prefix keeps the portal on one worker URL, which
+    // is what production has. Absent the variable nothing here changes.
+    if (driveFixtureUrl && url.pathname.startsWith("/v1/drive/")) {
+      const upstream = await fetch(
+        new URL(`${url.pathname}${url.search}`, driveFixtureUrl),
+        {
+          method: request.method,
+          headers: withoutConnectionHeaders(request.headers),
+          body:
+            request.method === "GET" || request.method === "HEAD"
+              ? undefined
+              : await request.arrayBuffer(),
+          redirect: "error"
+        }
+      );
+      return new Response(await upstream.arrayBuffer(), {
+        status: upstream.status,
+        headers: withoutConnectionHeaders(upstream.headers)
+      });
+    }
     if (request.method === "GET" && url.pathname === "/health") {
       await fixturePool.query("SELECT 1");
       return Response.json({

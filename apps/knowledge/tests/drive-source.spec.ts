@@ -2,16 +2,21 @@ import { type Browser, expect, type Page, test } from "@playwright/test";
 
 /**
  * Drive connector workflow against the loopback fixture
- * (`apps/knowledge-worker/src/test/local-drive.ts` on 4301/4302): an enrolled
- * Drive appears under Settings, a synchronized manual is found through the
- * query service after a live Drive check, and a folder permission change hides
- * it — first through the live check alone, then through the synchronized ACL.
+ * (`apps/knowledge-worker/src/test/local-drive.ts`): an enrolled Drive appears
+ * under Settings, a synchronized manual is found through the query service
+ * after a live Drive check, and a folder permission change hides it — first
+ * through the live check alone, then through the synchronized ACL.
  * The Drive is in-memory; no Google credential or endpoint is used.
+ *
+ * The Drive fixture is a SEPARATE pair of endpoints from the manual library's:
+ * that query service is pinned to the upload source and can never answer for a
+ * Drive one, and its gateway admits no Drive caller. When only one fixture
+ * runs, both pairs are the same two ports, which is why these default to them.
  */
 const gateway =
-  process.env.KNOWLEDGE_E2E_GATEWAY_URL ?? "http://127.0.0.1:4301";
+  process.env.KNOWLEDGE_E2E_DRIVE_GATEWAY_URL ?? "http://127.0.0.1:4301";
 const queryFixture =
-  process.env.KNOWLEDGE_E2E_QUERY_FIXTURE_URL ?? "http://127.0.0.1:4302";
+  process.env.KNOWLEDGE_E2E_DRIVE_QUERY_URL ?? "http://127.0.0.1:4302";
 const manualTitle = "Drive manual DM-100";
 
 async function actorPage(browser: Browser, actor: "bob" | "alice") {
@@ -36,7 +41,9 @@ async function control(path: string) {
   return response.status === 204 ? null : response.json();
 }
 
-async function evidenceTitles(actor: "bob" | "alice"): Promise<string[]> {
+async function queryEvidence(
+  actor: "bob" | "alice"
+): Promise<{ status: number; titles: string[] }> {
   const response = await fetch(new URL("/v1/query", queryFixture), {
     method: "POST",
     headers: {
@@ -52,14 +59,29 @@ async function evidenceTitles(actor: "bob" | "alice"): Promise<string[]> {
       locale: "en-US"
     })
   });
-  expect(response.status).toBe(200);
   const result = (await response.json()) as {
     evidence?: Array<{ title: string }>;
   };
-  return (result.evidence ?? []).map((item) => item.title);
+  return {
+    status: response.status,
+    titles: (result.evidence ?? []).map((item) => item.title)
+  };
+}
+
+async function evidenceTitles(actor: "bob" | "alice"): Promise<string[]> {
+  const result = await queryEvidence(actor);
+  expect(result.status).toBe(200);
+  return result.titles;
 }
 
 test.describe.configure({ mode: "serial" });
+
+// Seed before, clean up after. The fixture seeds at process start too, but the
+// cleanup below removes that seed, so without this the suite passed once and
+// then found no enrollment on every later run against the same stack.
+test.beforeAll(async () => {
+  await control("/__e2e/drive/reset");
+});
 
 test.afterAll(async () => {
   await control("/__e2e/drive/cleanup");
@@ -81,9 +103,13 @@ test("an enrolled Drive is listed with its scope, owner and eligibility, and onl
   await expect(source).not.toContainText("secrets/");
   await bob.context.close();
 
+  // Alice authenticates at this portal and reaches the same page. She holds no
+  // grant on the Drive source, so the enrollment is not merely unusable to her
+  // — it is not disclosed at all.
   const alice = await actorPage(browser, "alice");
   await alice.page.goto("/settings/sources");
   await expect(alice.page.getByTestId("drive-sources-empty")).toBeVisible();
+  await expect(alice.page.getByText("Engineering drive")).toHaveCount(0);
   await alice.context.close();
 });
 
@@ -92,8 +118,13 @@ test("a synchronized manual is found only after the reader's live Drive check pa
   const synced = (await control("/__e2e/drive/sync")) as { mode: string };
   expect(synced.mode).toBe("initial");
   expect(await evidenceTitles("bob")).toEqual([manualTitle]);
-  // A collaborator without a Drive binding never sees it.
-  expect(await evidenceTitles("alice")).toEqual([]);
+  // Alice is a fixture user of another company and the loopback stack binds no
+  // identity for her here, so the read handler refuses her request outright
+  // rather than answering it. Either way she receives no Drive evidence; that
+  // she is refused before retrieval is the stronger of the two.
+  const refused = await queryEvidence("alice");
+  expect(refused.status).not.toBe(200);
+  expect(refused.titles).toEqual([]);
 
   // Drive revokes the folder. Before the connector has synchronized, the
   // local ACL still grants bob, and the live check alone must hide the manual.
@@ -114,9 +145,14 @@ test("the settings page reflects the last synchronization and a sync can be requ
   const source = bob.page.getByTestId("drive-source");
   await expect(source).toContainText("Last sync succeeded");
   await waitForClientNavigation(bob.page);
+  const submitted = bob.page.waitForResponse((response) =>
+    new URL(response.url()).pathname.startsWith("/settings/sources")
+  );
   await source.getByRole("button", { name: "Reconcile now" }).click();
-  // bob holds read at the source, not admin: the request is refused and the
-  // page reports nothing requested.
+  // bob holds read at the source, not admin: the connector refuses the request
+  // and the page reports nothing requested. Wait for the submission to land so
+  // the absent confirmation is a refusal rather than an unfinished click.
+  expect((await submitted).status()).toBeLessThan(400);
   await expect(bob.page.getByRole("status")).toHaveCount(0);
   await bob.context.close();
 });

@@ -39,11 +39,20 @@ async function uploadReviewAndPublish(page: Page) {
     page.getByRole("heading", { name: "Review document" })
   ).toBeVisible();
 
+  // Address the evidence panel by ROLE, not by label text. `getByLabel` is a
+  // case-insensitive substring match, and every unresolved review field asks
+  // the reviewer to "confirm this field against the source evidence" from
+  // inside its own `<label>` — so the label form matched the panel AND the
+  // field inputs. Unresolved fields are this page's normal first state, which
+  // is why this was ambiguous on every run rather than intermittently.
+  const sourceEvidence = page.getByRole("complementary", {
+    name: "Source evidence"
+  });
   await expect
     .poll(
       async () => {
         await page.reload();
-        return page.getByLabel("Source evidence").textContent();
+        return sourceEvidence.textContent();
       },
       { timeout: 90_000 }
     )
@@ -258,7 +267,9 @@ test("manual workflow uses real extraction, durable delivery, Redis, and exact i
       .poll(
         async () => {
           await bob.page.reload();
-          return bob.page.getByLabel("Source evidence").textContent();
+          return bob.page
+            .getByRole("complementary", { name: "Source evidence" })
+            .textContent();
         },
         { timeout: 90_000 }
       )
@@ -312,7 +323,9 @@ test("manual workflow uses real extraction, durable delivery, Redis, and exact i
       .poll(
         async () => {
           await bob.page.reload();
-          return bob.page.getByLabel("Source evidence").textContent();
+          return bob.page
+            .getByRole("complementary", { name: "Source evidence" })
+            .textContent();
         },
         { timeout: 90_000 }
       )

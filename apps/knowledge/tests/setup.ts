@@ -1,42 +1,11 @@
 import { execFileSync } from "node:child_process";
 import { chromium } from "@playwright/test";
 import { waitForClientNavigation } from "./harness/browser";
+import { assertLoopbackOrigin } from "./loopback";
 
 const container =
   process.env.KNOWLEDGE_E2E_DATABASE_CONTAINER ?? "knowledge-schema-test";
 const expectedPort = process.env.KNOWLEDGE_E2E_DATABASE_PORT ?? "59910";
-
-const LOOPBACK_HOSTNAMES = new Set(["localhost", "127.0.0.1", "[::1]"]);
-
-/** A browser-test origin must be a bare loopback origin on the expected
- * scheme: no credentials, no path, no query, no fragment, no other host. The
- * PORT is deliberately free, so a second synthetic stack can run beside one
- * that is already up; what keeps the suite off real data is the labelled
- * disposable database below, not the port number. */
-export function loopbackTestOrigin(
-  name: string,
-  fallback: string,
-  protocol: "http:" | "https:"
-): string {
-  const value = process.env[name] ?? fallback;
-  let parsed: URL;
-  try {
-    parsed = new URL(value);
-  } catch {
-    throw new Error(`${name} must be a loopback test origin`);
-  }
-  if (
-    parsed.protocol !== protocol ||
-    !LOOPBACK_HOSTNAMES.has(parsed.hostname) ||
-    parsed.username ||
-    parsed.password ||
-    parsed.pathname !== "/" ||
-    parsed.search ||
-    parsed.hash
-  )
-    throw new Error(`${name} must be a loopback test origin`);
-  return parsed.href;
-}
 
 /** Refuse to run browser tests unless the supplied database is the known labelled
  * disposable fixture. The local services then clean only captured intake IDs. */
@@ -123,25 +92,39 @@ async function warmPortalRoutes(baseUrl: string) {
 }
 
 export default async function requireLocalSyntheticFixtures() {
-  const baseUrl = loopbackTestOrigin(
+  const baseUrl = assertLoopbackOrigin(
     "KNOWLEDGE_E2E_BASE_URL",
-    "https://localhost:4200",
+    process.env.KNOWLEDGE_E2E_BASE_URL ?? "https://localhost:4200",
     "https:"
   );
-  const gatewayUrl = loopbackTestOrigin(
+  const gatewayUrl = assertLoopbackOrigin(
     "KNOWLEDGE_E2E_GATEWAY_URL",
-    "http://127.0.0.1:4301",
+    process.env.KNOWLEDGE_E2E_GATEWAY_URL ?? "http://127.0.0.1:4301",
     "http:"
   );
-  const queryUrl = loopbackTestOrigin(
+  const queryUrl = assertLoopbackOrigin(
     "KNOWLEDGE_E2E_QUERY_FIXTURE_URL",
-    "http://127.0.0.1:4302",
+    process.env.KNOWLEDGE_E2E_QUERY_FIXTURE_URL ?? "http://127.0.0.1:4302",
+    "http:"
+  );
+  // The Drive connector fixture is a second pair of endpoints: the manual
+  // library's query service is pinned to the upload source and can never
+  // answer for a Drive one, and its gateway admits no Drive caller.
+  const driveGatewayUrl = assertLoopbackOrigin(
+    "KNOWLEDGE_E2E_DRIVE_GATEWAY_URL",
+    process.env.KNOWLEDGE_E2E_DRIVE_GATEWAY_URL ?? "http://127.0.0.1:4301",
+    "http:"
+  );
+  const driveQueryUrl = assertLoopbackOrigin(
+    "KNOWLEDGE_E2E_DRIVE_QUERY_URL",
+    process.env.KNOWLEDGE_E2E_DRIVE_QUERY_URL ?? "http://127.0.0.1:4302",
     "http:"
   );
   assertDisposableFixture();
-  await Promise.all([
-    requireHealthy(new URL("/health", gatewayUrl).href),
-    requireHealthy(new URL("/health", queryUrl).href)
-  ]);
+  await Promise.all(
+    [...new Set([gatewayUrl, queryUrl, driveGatewayUrl, driveQueryUrl])].map(
+      (url) => requireHealthy(new URL("/health", url).href)
+    )
+  );
   await warmPortalRoutes(baseUrl);
 }
