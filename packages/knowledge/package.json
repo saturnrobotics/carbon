@@ -47,6 +47,7 @@
     "./provider-policy": "./src/provider-policy.ts"
   },
   "scripts": {
+    "callers:validate": "tsx scripts/validate-callers.ts",
     "clean": "rimraf .turbo node_modules dist",
     "evaluate": "tsx scripts/evaluate.ts",
     "generate:types": "tsx scripts/generate-types.ts",
