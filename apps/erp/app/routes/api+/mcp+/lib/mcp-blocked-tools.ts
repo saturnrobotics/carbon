@@ -34,6 +34,15 @@ export const MCP_BLOCKED_TOOL_NAMES: readonly string[] = [
   // before calling it). `production_scheduleJob` is the intended MCP entry point —
   // it re-applies that gate — so the raw trigger must not be reachable via MCP.
   "production_triggerJobSchedule",
+  // The procurement-draft transaction and its read-only preflight. Their second
+  // parameter is an `authorizedContext` — companyId, actorId and the caller's
+  // already-decided `canCreatePurchasing` — so a published operation would let a
+  // caller supply its own authorization and tenancy for the write. The
+  // authorization, the payload-hash check and the idempotency receipt belong to
+  // the command boundary, and `knowledge_createProcurementDraft` is the one
+  // entry point that applies them (it stamps the context server-side).
+  "purchasing_createProcurementDraft",
+  "purchasing_resolveProcurementDraft",
   // Unreachable by construction: these tables carry USER-scoped RLS
   // (`"createdBy"::uuid = auth.uid()`, migration 20260228000000_rls-refactor-3.sql),
   // but an API key authenticates by header rather than a Supabase JWT, so

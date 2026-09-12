@@ -1,23 +1,14 @@
-import { execFileSync } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import {
   getPostgresConnectionPool,
   type KyselyDatabase
 } from "@carbon/database/client";
 import { Kysely, PostgresDialect, sql } from "kysely";
-import {
-  afterAll,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  vi
-} from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 vi.mock("@lingui/core/macro", () => ({
   msg: (parts: TemplateStringsArray) => ({ id: parts.join("") })
 }));
-
 vi.mock("@carbon/glossary", () => ({
   terms: {},
   getEntry: vi.fn(),
@@ -26,295 +17,683 @@ vi.mock("@carbon/glossary", () => ({
   termSlug: vi.fn()
 }));
 
-const { createProcurementDraft } = await import("./purchasing.service");
+const { createProcurementDraft, resolveProcurementDraft } = await import(
+  "./purchasing.service"
+);
 
-const databaseUrl = process.env.PROCUREMENT_DRAFT_TEST_DATABASE_URL;
-const disposableContainer =
-  process.env.PROCUREMENT_DRAFT_TEST_CONTAINER ?? "knowledge-schema-test";
-
-type DockerInspection = {
-  Config?: { Labels?: Record<string, string> };
-  NetworkSettings?: {
-    Ports?: Record<string, Array<{ HostPort?: string }> | null>;
-  };
-};
-
-/** A destructive test may only target the explicitly labelled disposable container.
- * Checking the Docker port mapping prevents a localhost URL from silently naming a
- * developer PostgreSQL process instead of that container. */
-function isExplicitDisposableDatabase(url: URL): boolean {
-  if (
-    process.env.PROCUREMENT_DRAFT_TEST_DATABASE_DISPOSABLE !== "1" ||
-    !["localhost", "127.0.0.1", "[::1]"].includes(url.hostname) ||
-    url.port === "" ||
-    url.port === "5432" ||
-    url.pathname !== "/procurement_draft_test" ||
-    url.username !== "knowledge_test_migrator"
-  ) {
-    return false;
-  }
-  try {
-    const inspected = JSON.parse(
-      execFileSync("docker", ["inspect", disposableContainer], {
-        encoding: "utf8",
-        stdio: ["ignore", "pipe", "ignore"]
-      })
-    ) as DockerInspection[];
-    const container = inspected[0];
-    const ports = container?.NetworkSettings?.Ports?.["5432/tcp"] ?? [];
-    return (
-      container?.Config?.Labels?.["knowledge.disposable"] === "true" &&
-      ports.some((port) => port.HostPort === url.port)
-    );
-  } catch {
-    return false;
-  }
-}
-
-const enabled = (() => {
-  if (!databaseUrl) return false;
-  return isExplicitDisposableDatabase(new URL(databaseUrl));
-})();
-
-function assertDisposableDatabase() {
-  if (!databaseUrl || !isExplicitDisposableDatabase(new URL(databaseUrl))) {
-    throw new Error(
-      "Refusing to drop schemas without the explicitly labelled disposable PostgreSQL fixture"
-    );
-  }
-}
-
+// Same harness as the knowledge outbox/changes suites: skip without an isolated
+// local database and refuse anything that is not local. The full Carbon schema
+// is the point of this suite — the real sequence function, the real supplier
+// interceptors, the real knowledge outbox trigger and real rollback.
+const url = process.env.PROCUREMENT_DRAFT_TEST_DATABASE_URL;
 let db: Kysely<KyselyDatabase>;
 
-const actor = "user-procurement";
-const companyId = "company-procurement";
-const companyGroupId = "group-procurement";
-const supplierId = "supplier-procurement";
-const locationId = "location-procurement";
-const itemReadableId = "PART-100";
-const currentRevisionId = "item-revision-current";
-const previousRevisionId = "item-revision-previous";
-const payloadHash = "a".repeat(64);
-
-const input = (
-  overrides: Partial<Parameters<typeof createProcurementDraft>[2]> = {}
-) => ({
-  idempotencyKey: "procurement-command-1",
-  payloadHash,
-  supplierId,
-  receivingLocationId: locationId,
-  orderDate: "2026-09-07",
-  lines: [
-    {
-      itemId: itemReadableId,
-      itemRevisionId: currentRevisionId,
-      quantity: 2,
-      purchaseUnitOfMeasureCode: "BOX",
-      inventoryUnitOfMeasureCode: "EA",
-      conversionFactor: 10,
-      supplierUnitPrice: 1.25
-    }
-  ],
-  ...overrides
+beforeAll(() => {
+  if (!url) return;
+  const parsed = new URL(url);
+  if (
+    !["localhost", "127.0.0.1", "[::1]"].includes(parsed.hostname) ||
+    parsed.port === "5432"
+  ) {
+    throw new Error(
+      "Set PROCUREMENT_DRAFT_TEST_DATABASE_URL to an isolated local database"
+    );
+  }
+  process.env.SUPABASE_DB_URL = url;
+  db = new Kysely<KyselyDatabase>({
+    dialect: new PostgresDialect({ pool: getPostgresConnectionPool(4) })
+  });
+});
+afterAll(async () => {
+  await db?.destroy();
 });
 
-async function installSchema() {
-  await sql
-    .raw(`
-    DROP SCHEMA IF EXISTS knowledge CASCADE;
-    DROP SCHEMA IF EXISTS public CASCADE;
-    CREATE SCHEMA public;
-    CREATE SCHEMA knowledge;
-    CREATE EXTENSION IF NOT EXISTS pgcrypto;
-    CREATE TABLE company (id text PRIMARY KEY, "baseCurrencyCode" text NOT NULL);
-    CREATE TABLE currency (code text NOT NULL, "companyGroupId" text NOT NULL, "decimalPlaces" integer NOT NULL, active boolean NOT NULL, PRIMARY KEY (code, "companyGroupId"));
-    CREATE TABLE supplier (id text PRIMARY KEY, "companyId" text NOT NULL, "currencyCode" text, "supplierStatus" text, "taxPercent" numeric NOT NULL DEFAULT 0);
-    CREATE TABLE location (id text PRIMARY KEY, "companyId" text NOT NULL);
-    CREATE TABLE "supplierPayment" ("supplierId" text PRIMARY KEY, "companyId" text NOT NULL, "invoiceSupplierId" text, "invoiceSupplierContactId" text, "invoiceSupplierLocationId" text, "paymentTermId" text, "currencyCode" text);
-    CREATE TABLE "supplierShipping" ("supplierId" text PRIMARY KEY, "companyId" text NOT NULL, "shippingMethodId" text, "shippingTermId" text, incoterm text, "incotermLocation" text);
-    CREATE TABLE item (id text PRIMARY KEY, "companyId" text NOT NULL, "readableId" text NOT NULL, "readableIdWithRevision" text, description text, type text NOT NULL, "unitOfMeasureCode" text, "revisionStatus" text NOT NULL, "changeOrderId" text, revision text, "createdAt" timestamptz NOT NULL DEFAULT now());
-    CREATE TABLE "changeOrder" (id text PRIMARY KEY, "companyId" text NOT NULL, status text NOT NULL);
-    CREATE TABLE "itemReplenishment" ("itemId" text PRIMARY KEY, "companyId" text NOT NULL, "purchasingBlocked" boolean NOT NULL DEFAULT false, "purchasingUnitOfMeasureCode" text, "conversionFactor" numeric NOT NULL DEFAULT 1);
-    CREATE TABLE "supplierPart" (id text PRIMARY KEY, "supplierId" text NOT NULL, "itemId" text NOT NULL, "companyId" text NOT NULL, active boolean NOT NULL, "supplierUnitOfMeasureCode" text, "conversionFactor" numeric NOT NULL, "unitPrice" numeric);
-    CREATE TABLE sequence ("table" text NOT NULL, "companyId" text NOT NULL, next integer NOT NULL, PRIMARY KEY ("table", "companyId"));
-    CREATE OR REPLACE FUNCTION get_next_sequence(sequence_name text, company_id text) RETURNS text LANGUAGE plpgsql AS $$
-    DECLARE next_value integer;
-    BEGIN
-      UPDATE sequence SET next = next + 1 WHERE "table" = sequence_name AND "companyId" = company_id RETURNING next INTO next_value;
-      IF NOT FOUND THEN RAISE EXCEPTION 'sequence not found'; END IF;
-      RETURN 'PO-' || lpad(next_value::text, 6, '0');
-    END;
-    $$;
-    CREATE TABLE "supplierInteraction" (id text PRIMARY KEY DEFAULT ('si-' || gen_random_uuid()::text), "companyId" text NOT NULL, "supplierId" text NOT NULL);
-    CREATE TABLE "purchaseOrder" (id text PRIMARY KEY DEFAULT ('po-' || gen_random_uuid()::text), "purchaseOrderId" text NOT NULL UNIQUE, "purchaseOrderType" text NOT NULL, status text NOT NULL, "supplierId" text NOT NULL, "supplierInteractionId" text NOT NULL, "orderDate" date, "currencyCode" text, "exchangeRate" numeric, "exchangeRateUpdatedAt" timestamptz, "companyId" text NOT NULL, "createdBy" text NOT NULL, "updatedBy" text);
-    CREATE TABLE "purchaseOrderDelivery" (id text PRIMARY KEY, "locationId" text, "shippingMethodId" text, "shippingTermId" text, incoterm text, "incotermLocation" text, "companyId" text NOT NULL);
-    CREATE TABLE "purchaseOrderPayment" (id text PRIMARY KEY, "paymentTermId" text, "invoiceSupplierId" text, "invoiceSupplierContactId" text, "invoiceSupplierLocationId" text, "companyId" text NOT NULL);
-    CREATE TABLE "purchaseOrderLine" (id text PRIMARY KEY DEFAULT ('pol-' || gen_random_uuid()::text), "purchaseOrderId" text NOT NULL, "purchaseOrderLineType" text NOT NULL, "itemId" text, description text, "purchaseQuantity" numeric, "purchaseUnitOfMeasureCode" text, "inventoryUnitOfMeasureCode" text, "conversionFactor" numeric, "supplierPartId" text, "supplierUnitPrice" numeric, "supplierTaxAmount" numeric NOT NULL DEFAULT 0, "taxPercent" numeric NOT NULL DEFAULT 0, "exchangeRate" numeric NOT NULL DEFAULT 1, "locationId" text, "sortOrder" integer NOT NULL, "companyId" text NOT NULL, "createdBy" text NOT NULL, "updatedBy" text);
-    CREATE TABLE "knowledgeCommandReceipt" (id text PRIMARY KEY DEFAULT ('kcmd-' || gen_random_uuid()::text), "companyId" text NOT NULL, "actorId" text NOT NULL, action text NOT NULL, "idempotencyKey" text NOT NULL, "payloadHash" text NOT NULL, "purchaseOrderId" text NOT NULL, UNIQUE ("companyId", "actorId", action, "idempotencyKey"));
-    CREATE TABLE knowledge.source (id text PRIMARY KEY, "companyId" text NOT NULL, kind text NOT NULL, status text NOT NULL);
-    CREATE TABLE knowledge.outbox (id text PRIMARY KEY DEFAULT ('kout-' || gen_random_uuid()::text), "companyId" text NOT NULL, "createdBy" text NOT NULL, "sourceId" text NOT NULL, "entityType" text NOT NULL, "entityId" text NOT NULL, "sourceVersion" text NOT NULL, "eventType" text NOT NULL, payload jsonb NOT NULL, UNIQUE ("companyId", "sourceId", "entityType", "entityId", "sourceVersion", "eventType"));
-  `)
-    .execute(db);
+type Fixture = {
+  companyId: string;
+  companyGroupId: string;
+  userId: string;
+  supplierId: string;
+  locationId: string;
+  itemReadableId: string;
+  currentRevisionId: string;
+  previousRevisionId: string;
+};
+
+const PAYLOAD_HASH = "a".repeat(64);
+const IDEMPOTENCY_KEY = "procurement-command-1";
+const PURCHASE_UOM = "BX";
+const INVENTORY_UOM = "EA";
+
+function context(fixture: Fixture, canCreatePurchasing = true) {
+  return {
+    companyId: fixture.companyId,
+    companyGroupId: fixture.companyGroupId,
+    actorId: fixture.userId,
+    canCreatePurchasing
+  };
 }
 
-async function seed() {
-  await sql
-    .raw(`
-    TRUNCATE knowledge.outbox, knowledge.source, "knowledgeCommandReceipt", "purchaseOrderLine", "purchaseOrderPayment", "purchaseOrderDelivery", "purchaseOrder", "supplierInteraction", sequence, "supplierPart", "itemReplenishment", "changeOrder", item, "supplierShipping", "supplierPayment", location, supplier, currency, company;
-    INSERT INTO company VALUES ('${companyId}', 'USD');
-    INSERT INTO knowledge.source VALUES ('carbon-purchasing-source', '${companyId}', 'carbon', 'active');
-    INSERT INTO currency VALUES ('USD', '${companyGroupId}', 2, true);
-    INSERT INTO supplier VALUES ('${supplierId}', '${companyId}', 'USD', 'Active', 0.1);
-    INSERT INTO location VALUES ('${locationId}', '${companyId}');
-    INSERT INTO "supplierPayment" VALUES ('${supplierId}', '${companyId}', '${supplierId}', NULL, NULL, 'net-30', 'USD');
-    INSERT INTO "supplierShipping" VALUES ('${supplierId}', '${companyId}', 'ground', 'standard', NULL, NULL);
-    INSERT INTO item (id, "companyId", "readableId", "readableIdWithRevision", description, type, "unitOfMeasureCode", "revisionStatus", revision, "createdAt") VALUES
-      ('${previousRevisionId}', '${companyId}', '${itemReadableId}', '${itemReadableId}.A', 'Previous revision', 'Part', 'EA', 'Production', 'A', '2026-01-01T00:00:00Z'),
-      ('${currentRevisionId}', '${companyId}', '${itemReadableId}', '${itemReadableId}.B', 'Current revision', 'Part', 'EA', 'Production', 'B', '2026-02-01T00:00:00Z');
-    INSERT INTO "itemReplenishment" VALUES ('${currentRevisionId}', '${companyId}', false, 'BOX', 10);
-    INSERT INTO "supplierPart" VALUES ('supplier-part-current', '${supplierId}', '${currentRevisionId}', '${companyId}', true, 'BOX', 10, 1.25);
-    INSERT INTO sequence VALUES ('purchaseOrder', '${companyId}', 0);
-  `)
-    .execute(db);
-}
-
-async function count(table: string) {
-  const result = await sql<{
-    count: string;
-  }>`select count(*)::text as count from ${sql.table(table)}`.execute(db);
-  return Number(result.rows[0]?.count ?? 0);
-}
-
-describe.skipIf(!enabled)(
-  "createProcurementDraft against disposable PostgreSQL",
-  () => {
-    beforeAll(async () => {
-      process.env.SUPABASE_DB_URL = databaseUrl!;
-      db = new Kysely<KyselyDatabase>({
-        dialect: new PostgresDialect({ pool: getPostgresConnectionPool(4) })
-      });
-      assertDisposableDatabase();
-      await installSchema();
-    });
-
-    beforeEach(seed);
-
-    afterAll(async () => {
-      if (db) {
-        await sql
-          .raw(
-            "DROP SCHEMA IF EXISTS knowledge CASCADE; DROP SCHEMA IF EXISTS public CASCADE"
-          )
-          .execute(db);
-        await db.destroy();
-      }
-    });
-
-    const context = {
-      companyId,
-      companyGroupId,
-      actorId: actor,
-      canCreatePurchasing: true,
-      knowledgeSourceId: "carbon-purchasing-source"
-    };
-
-    it("writes a Draft PO with Carbon supplier defaults, line tax, and one receipt", async () => {
-      const result = await createProcurementDraft(db, context, input());
-
-      expect(result.replayed).toBe(false);
-      expect(await count("purchaseOrder")).toBe(1);
-      expect(await count("purchaseOrderLine")).toBe(1);
-      expect(await count("purchaseOrderPayment")).toBe(1);
-      expect(await count("purchaseOrderDelivery")).toBe(1);
-      expect(await count("knowledgeCommandReceipt")).toBe(1);
-      const outbox = await sql<{
-        count: string;
-      }>`select count(*)::text as count from knowledge.outbox`.execute(db);
-      expect(Number(outbox.rows[0]?.count ?? 0)).toBe(1);
-      const line = await sql<{
-        supplierUnitPrice: number;
-        supplierTaxAmount: number;
-        conversionFactor: number;
-      }>`
-      select "supplierUnitPrice", "supplierTaxAmount", "conversionFactor" from "purchaseOrderLine"
-    `.execute(db);
-      expect(line.rows[0]).toMatchObject({
+function input(
+  fixture: Pick<
+    Fixture,
+    "supplierId" | "locationId" | "itemReadableId" | "currentRevisionId"
+  >,
+  overrides: Record<string, unknown> = {},
+  lineOverrides: Record<string, unknown> = {}
+) {
+  return {
+    idempotencyKey: IDEMPOTENCY_KEY,
+    payloadHash: PAYLOAD_HASH,
+    supplierId: fixture.supplierId,
+    receivingLocationId: fixture.locationId,
+    orderDate: "2026-09-07",
+    lines: [
+      {
+        itemId: fixture.itemReadableId,
+        itemRevisionId: fixture.currentRevisionId,
+        quantity: 2,
+        purchaseUnitOfMeasureCode: PURCHASE_UOM,
+        inventoryUnitOfMeasureCode: INVENTORY_UOM,
+        conversionFactor: 10,
         supplierUnitPrice: 1.25,
-        supplierTaxAmount: 0.25,
+        ...lineOverrides
+      }
+    ],
+    ...overrides
+  };
+}
+
+/**
+ * A configured company is a prerequisite, not something a test may invent: the
+ * units of measure, group currencies and document sequences a purchase order
+ * needs are created by onboarding's own seeding, and a hand-built company would
+ * prove the draft works against a schema no customer has. So the suite borrows
+ * the local stack's seeded company and adds only its own user, supplier,
+ * location, items and supplier part, removing each afterwards.
+ */
+async function seededCompany() {
+  const rows = await sql<{ id: string; companyGroupId: string | null }>`
+    select c.id, c."companyGroupId"
+    from company c
+    where (
+        select count(*) from "unitOfMeasure" u
+        where u."companyId" = c.id and u.code in (${INVENTORY_UOM}, ${PURCHASE_UOM})
+      ) = 2
+      and exists (
+        select 1 from sequence s
+        where s."companyId" = c.id and s."table" = 'purchaseOrder'
+      )
+    order by c.id
+  `.execute(db);
+  const company = rows.rows[0];
+  if (rows.rows.length !== 1 || !company?.companyGroupId) {
+    throw new Error(
+      "This suite needs exactly one seeded company with units of measure and a purchaseOrder sequence"
+    );
+  }
+  return { id: company.id, companyGroupId: company.companyGroupId };
+}
+
+async function fixture(run: (f: Fixture) => Promise<void>) {
+  const company = await seededCompany();
+  const userId = randomUUID();
+  const created: Array<() => Promise<unknown>> = [];
+  let supplierId = "";
+  try {
+    await db
+      .insertInto("user")
+      .values({ id: userId, email: `${userId}@example.com` })
+      .execute();
+    const readableId = `PDF-${userId.slice(0, 8)}`;
+    const supplier = await db
+      .insertInto("supplier")
+      .values({
+        companyId: company.id,
+        createdBy: userId,
+        name: `Synthetic Supplier ${userId.slice(0, 8)}`,
+        supplierStatus: "Active",
+        currencyCode: "USD",
+        taxPercent: 0.1
+      })
+      .returning("id")
+      .executeTakeFirstOrThrow();
+    supplierId = supplier.id;
+    created.push(() =>
+      db.deleteFrom("supplier").where("id", "=", supplier.id).execute()
+    );
+    const location = await db
+      .insertInto("location")
+      .values({
+        companyId: company.id,
+        createdBy: userId,
+        name: `Synthetic Receiving ${userId.slice(0, 8)}`,
+        addressLine1: "1 Example Way",
+        city: "Example",
+        postalCode: "00000",
+        timezone: "America/New_York"
+      })
+      .returning("id")
+      .executeTakeFirstOrThrow();
+    created.push(() =>
+      db.deleteFrom("location").where("id", "=", location.id).execute()
+    );
+    const revisions: string[] = [];
+    for (const revision of ["A", "B"]) {
+      const item = await db
+        .insertInto("item")
+        .values({
+          companyId: company.id,
+          createdBy: userId,
+          readableId,
+          revision,
+          name: "Synthetic bracket",
+          description: `Revision ${revision}`,
+          type: "Part",
+          itemTrackingType: "Inventory",
+          unitOfMeasureCode: INVENTORY_UOM,
+          revisionStatus: "Production"
+        })
+        .returning("id")
+        .executeTakeFirstOrThrow();
+      revisions.push(item.id);
+      created.push(() =>
+        db.deleteFrom("item").where("id", "=", item.id).execute()
+      );
+    }
+    const [previousRevisionId, currentRevisionId] = revisions as [
+      string,
+      string
+    ];
+    await db
+      .updateTable("itemReplenishment")
+      .set({
+        purchasingUnitOfMeasureCode: PURCHASE_UOM,
         conversionFactor: 10
+      })
+      .where("itemId", "=", currentRevisionId)
+      .where("companyId", "=", company.id)
+      .execute();
+    await db
+      .insertInto("supplierPart")
+      .values({
+        companyId: company.id,
+        createdBy: userId,
+        supplierId: supplier.id,
+        itemId: currentRevisionId,
+        active: true,
+        supplierUnitOfMeasureCode: PURCHASE_UOM,
+        conversionFactor: 10,
+        unitPrice: 1.25
+      })
+      .execute();
+
+    await run({
+      companyId: company.id,
+      companyGroupId: company.companyGroupId,
+      userId,
+      supplierId: supplier.id,
+      locationId: location.id,
+      itemReadableId: readableId,
+      currentRevisionId,
+      previousRevisionId
+    });
+  } finally {
+    const orderIds = (await orders(userId)).map((order) => order.id);
+    await db
+      .deleteFrom("knowledgeCommandReceipt")
+      .where("actorId", "=", userId)
+      .execute();
+    if (orderIds.length > 0) {
+      await db
+        .deleteFrom("knowledgeSourceOutbox")
+        .where("entityType", "=", "purchaseOrder")
+        .where("entityId", "in", orderIds)
+        .execute();
+      await db
+        .deleteFrom("purchaseOrderLine")
+        .where("purchaseOrderId", "in", orderIds)
+        .execute();
+      await db
+        .deleteFrom("purchaseOrderPayment")
+        .where("id", "in", orderIds)
+        .execute();
+      await db
+        .deleteFrom("purchaseOrderDelivery")
+        .where("id", "in", orderIds)
+        .execute();
+      await db
+        .deleteFrom("purchaseOrder")
+        .where("id", "in", orderIds)
+        .execute();
+    }
+    await db
+      .deleteFrom("supplierInteraction")
+      .where("companyId", "=", company.id)
+      .where("supplierId", "=", supplierId)
+      .execute();
+    await db
+      .deleteFrom("changeOrder")
+      .where("companyId", "=", company.id)
+      .where("createdBy", "=", userId)
+      .execute();
+    await db
+      .deleteFrom("supplierPart")
+      .where("companyId", "=", company.id)
+      .where("createdBy", "=", userId)
+      .execute();
+    for (const cleanup of created.reverse()) await cleanup();
+    // Last: deleting the fixture's items announced tombstones of their own, and
+    // every outbox row references the user that caused it.
+    await db
+      .deleteFrom("knowledgeSourceOutbox")
+      .where("createdBy", "=", userId)
+      .execute();
+    await db.deleteFrom("user").where("id", "=", userId).execute();
+  }
+}
+
+/** Only ever this fixture's own rows: the seeded company has data of its own.
+ * DATE columns are read as text — node-postgres decodes them to a JS `Date`,
+ * which is exactly the calendar-shifting value this repo never compares on. */
+function orders(userId: string) {
+  return db
+    .selectFrom("purchaseOrder")
+    .selectAll()
+    .select(sql<string | null>`"orderDate"::text`.as("orderDay"))
+    .where("createdBy", "=", userId)
+    .execute();
+}
+
+async function counts(f: Fixture) {
+  const orderIds = (await orders(f.userId)).map((order) => order.id);
+  const scoped = async (
+    table:
+      | "purchaseOrderLine"
+      | "purchaseOrderDelivery"
+      | "purchaseOrderPayment",
+    column: "purchaseOrderId" | "id"
+  ) => {
+    if (orderIds.length === 0) return 0;
+    const rows = await sql<{ count: string }>`
+      select count(*)::text as count from ${sql.table(table)}
+      where ${sql.ref(column)} = any(${orderIds}::text[])
+    `.execute(db);
+    return Number(rows.rows[0]?.count ?? 0);
+  };
+  const receipts = await db
+    .selectFrom("knowledgeCommandReceipt")
+    .select(({ fn }) => fn.countAll<string>().as("count"))
+    .where("actorId", "=", f.userId)
+    .executeTakeFirstOrThrow();
+  const interactions = await db
+    .selectFrom("supplierInteraction")
+    .select(({ fn }) => fn.countAll<string>().as("count"))
+    .where("companyId", "=", f.companyId)
+    .where("supplierId", "=", f.supplierId)
+    .executeTakeFirstOrThrow();
+  const outbox =
+    orderIds.length === 0
+      ? []
+      : await db
+          .selectFrom("knowledgeSourceOutbox")
+          .select(["entityType", "entityId", "eventType"])
+          .where("entityType", "=", "purchaseOrder")
+          .where("entityId", "in", orderIds)
+          .execute();
+  return {
+    orders: orderIds.length,
+    lines: await scoped("purchaseOrderLine", "purchaseOrderId"),
+    deliveries: await scoped("purchaseOrderDelivery", "id"),
+    payments: await scoped("purchaseOrderPayment", "id"),
+    interactions: Number(interactions.count),
+    receipts: Number(receipts.count),
+    outbox
+  };
+}
+
+const NOTHING_WRITTEN = {
+  orders: 0,
+  lines: 0,
+  deliveries: 0,
+  payments: 0,
+  interactions: 0,
+  receipts: 0,
+  outbox: []
+};
+
+describe.skipIf(!url)("createProcurementDraft", () => {
+  it("writes one Draft PO with supplier defaults, line tax and a receipt", async () => {
+    await fixture(async (f) => {
+      const result = await createProcurementDraft(db, context(f), input(f));
+      expect(result.replayed).toBe(false);
+
+      const [order] = await orders(f.userId);
+      expect(order).toMatchObject({
+        id: result.purchaseOrderId,
+        status: "Draft",
+        purchaseOrderType: "Purchase",
+        supplierId: f.supplierId,
+        currencyCode: "USD",
+        exchangeRate: 1,
+        orderDay: "2026-09-07",
+        createdBy: f.userId
+      });
+      expect(order?.purchaseOrderId).toMatch(/\d/);
+
+      const delivery = await db
+        .selectFrom("purchaseOrderDelivery")
+        .select([
+          "locationId",
+          sql<string | null>`"receiptRequestedDate"::text`.as("requestedDay")
+        ])
+        .where("id", "=", order!.id)
+        .executeTakeFirstOrThrow();
+      expect(delivery.locationId).toBe(f.locationId);
+      // The arrival date is receiving context; it never became the order date.
+      expect(delivery.requestedDay).toBeNull();
+      const payment = await db
+        .selectFrom("purchaseOrderPayment")
+        .selectAll()
+        .where("id", "=", order!.id)
+        .executeTakeFirstOrThrow();
+      expect(payment.invoiceSupplierId).toBe(f.supplierId);
+
+      const line = await db
+        .selectFrom("purchaseOrderLine")
+        .selectAll()
+        .where("purchaseOrderId", "=", order!.id)
+        .executeTakeFirstOrThrow();
+      expect(line).toMatchObject({
+        purchaseOrderLineType: "Part",
+        itemId: f.currentRevisionId,
+        purchaseQuantity: 2,
+        purchaseUnitOfMeasureCode: PURCHASE_UOM,
+        inventoryUnitOfMeasureCode: INVENTORY_UOM,
+        conversionFactor: 10,
+        supplierUnitPrice: 1.25,
+        // 2 × 1.25 at the supplier's 10% tax, at the currency's own decimals.
+        supplierTaxAmount: 0.25,
+        taxPercent: 0.1,
+        locationId: f.locationId,
+        sortOrder: 1
+      });
+
+      const receipt = await db
+        .selectFrom("knowledgeCommandReceipt")
+        .selectAll()
+        .where("actorId", "=", f.userId)
+        .executeTakeFirstOrThrow();
+      expect(receipt).toMatchObject({
+        companyId: f.companyId,
+        action: "carbon.procurement.draft",
+        idempotencyKey: IDEMPOTENCY_KEY,
+        payloadHash: PAYLOAD_HASH,
+        purchaseOrderId: order!.id
+      });
+      // The payload contract the receipt was written under; BIGINT reaches the
+      // node-postgres driver as a string, so it is compared numerically.
+      expect(Number(receipt.version)).toBe(1);
+
+      // The knowledge outbox event was written by the source trigger in the
+      // SAME transaction; no post-commit notification is involved.
+      expect(await counts(f)).toMatchObject({
+        orders: 1,
+        lines: 1,
+        deliveries: 1,
+        payments: 1,
+        receipts: 1,
+        outbox: [
+          {
+            entityType: "purchaseOrder",
+            entityId: order!.id,
+            eventType: "upsert"
+          }
+        ]
       });
     });
+  });
 
-    it("rolls back every write when the supplier is invalid", async () => {
-      await expect(
-        createProcurementDraft(
-          db,
-          context,
-          input({ supplierId: "missing-supplier" })
+  it("carries a requested arrival date onto the delivery, distinct from the order date", async () => {
+    await fixture(async (f) => {
+      await createProcurementDraft(
+        db,
+        context(f),
+        input(f, { requestedArrivalDate: "2026-10-15" })
+      );
+      const [order] = await orders(f.userId);
+      const delivery = await db
+        .selectFrom("purchaseOrderDelivery")
+        .select(
+          sql<string | null>`"receiptRequestedDate"::text`.as("requestedDay")
         )
-      ).rejects.toThrow("Supplier is not an active supplier");
-
-      expect(await count("purchaseOrder")).toBe(0);
-      expect(await count("purchaseOrderLine")).toBe(0);
-      expect(await count("knowledgeCommandReceipt")).toBe(0);
+        .where("id", "=", order!.id)
+        .executeTakeFirstOrThrow();
+      expect(delivery.requestedDay).toBe("2026-10-15");
+      expect(order?.orderDay).toBe("2026-09-07");
     });
+  });
 
-    it("rejects a non-current revision before allocating a PO or receipt", async () => {
-      await expect(
-        createProcurementDraft(
-          db,
-          context,
-          input({
-            lines: [{ ...input().lines[0], itemRevisionId: previousRevisionId }]
-          })
-        )
-      ).rejects.toThrow("no longer the current released revision");
-
-      expect(await count("purchaseOrder")).toBe(0);
-      expect(await count("knowledgeCommandReceipt")).toBe(0);
-    });
-
-    it("reuses the unreleased-ECO guard before allocating a PO or receipt", async () => {
-      await sql`
-        insert into "changeOrder" (id, "companyId", status)
-        values ('eco-open', ${companyId}, 'Draft')
+  it("defaults the order date to today on the company calendar", async () => {
+    await fixture(async (f) => {
+      const resolved = await resolveProcurementDraft(
+        db,
+        context(f),
+        input(f, { orderDate: undefined })
+      );
+      const companyDay = await sql<{ today: string }>`
+        select company_today(${f.companyId})::text as today
       `.execute(db);
-      await sql`
-        update item set "changeOrderId" = 'eco-open' where id = ${currentRevisionId}
-      `.execute(db);
+      expect(resolved.orderDate).toBe(companyDay.rows[0]?.today);
+    });
+  });
+
+  it.each([
+    [
+      "a supplier outside the company",
+      { supplierId: "supplier-elsewhere" },
+      {},
+      /not an active supplier/
+    ],
+    [
+      "an inactive supplier",
+      { supplierId: "INACTIVE" },
+      {},
+      /not an active supplier/
+    ],
+    [
+      "a location outside the company",
+      { receivingLocationId: "location-elsewhere" },
+      {},
+      /Receiving location is not in this company/
+    ],
+    [
+      "a superseded item revision",
+      {},
+      { itemRevisionId: "PREVIOUS" },
+      /no longer the current released revision/
+    ],
+    [
+      "a stale conversion factor",
+      {},
+      { conversionFactor: 5 },
+      /proposal is stale/
+    ],
+    [
+      "a stale purchase unit",
+      {},
+      { purchaseUnitOfMeasureCode: INVENTORY_UOM },
+      /proposal is stale/
+    ],
+    [
+      "a stale supplier price",
+      {},
+      { supplierUnitPrice: 0.99 },
+      /proposal is stale/
+    ],
+    [
+      "arrival before the order date",
+      { requestedArrivalDate: "2026-09-01" },
+      {},
+      /cannot precede/
+    ],
+    ["a non-positive quantity", {}, { quantity: 0 }, /positive quantity/],
+    [
+      "an over-precise quantity",
+      {},
+      { quantity: 2.0001234 },
+      /five decimal places/
+    ]
+  ])("refuses %s and writes nothing", async (_label, overrides, lineOverrides, message) => {
+    await fixture(async (f) => {
+      const resolved = { ...overrides } as Record<string, unknown>;
+      if (resolved.supplierId === "INACTIVE") {
+        await db
+          .updateTable("supplier")
+          .set({ supplierStatus: "Inactive" })
+          .where("id", "=", f.supplierId)
+          .execute();
+        resolved.supplierId = f.supplierId;
+      }
+      const line = { ...lineOverrides } as Record<string, unknown>;
+      if (line.itemRevisionId === "PREVIOUS") {
+        line.itemRevisionId = f.previousRevisionId;
+      }
+      await expect(
+        createProcurementDraft(db, context(f), input(f, resolved, line))
+      ).rejects.toThrow(message);
+      expect(await counts(f)).toEqual(NOTHING_WRITTEN);
+    });
+  });
+
+  it("refuses an actor without current purchasing-create permission", async () => {
+    await fixture(async (f) => {
+      await expect(
+        createProcurementDraft(db, context(f, false), input(f))
+      ).rejects.toThrow(/Purchasing create permission is required/);
+      expect(await counts(f)).toEqual(NOTHING_WRITTEN);
+    });
+  });
+
+  it("reuses the unreleased-ECO guard before allocating anything", async () => {
+    await fixture(async (f) => {
+      const changeOrder = await db
+        .insertInto("changeOrder")
+        .values({
+          companyId: f.companyId,
+          createdBy: f.userId,
+          changeOrderId: `ECO-${f.userId.slice(0, 8)}`,
+          name: "Synthetic change order",
+          openDate: "2026-09-01",
+          status: "Draft"
+        })
+        .returning("id")
+        .executeTakeFirstOrThrow();
+      await db
+        .updateTable("item")
+        .set({ changeOrderId: changeOrder.id })
+        .where("id", "=", f.currentRevisionId)
+        .execute();
 
       await expect(
-        createProcurementDraft(db, context, input())
-      ).rejects.toThrow("unreleased engineering change order");
-      expect(await count("purchaseOrder")).toBe(0);
-      expect(await count("knowledgeCommandReceipt")).toBe(0);
-    });
+        createProcurementDraft(db, context(f), input(f))
+      ).rejects.toThrow(/unreleased engineering change order/);
+      expect(await counts(f)).toEqual(NOTHING_WRITTEN);
 
-    it("converges concurrent retries to one receipt and purchase order", async () => {
+      // Releasing the change order makes the same command executable.
+      await db
+        .updateTable("changeOrder")
+        .set({ status: "Done" })
+        .where("id", "=", changeOrder.id)
+        .execute();
+      await expect(
+        createProcurementDraft(db, context(f), input(f))
+      ).resolves.toMatchObject({ replayed: false });
+      await db
+        .updateTable("item")
+        .set({ changeOrderId: null })
+        .where("id", "=", f.currentRevisionId)
+        .execute();
+    });
+  });
+
+  it("converges concurrent retries on one order and one receipt", async () => {
+    await fixture(async (f) => {
       const [first, second] = await Promise.all([
-        createProcurementDraft(db, context, input()),
-        createProcurementDraft(db, context, input())
+        createProcurementDraft(db, context(f), input(f)),
+        createProcurementDraft(db, context(f), input(f))
       ]);
-
       expect(
         new Set([first.purchaseOrderId, second.purchaseOrderId]).size
       ).toBe(1);
       expect([first.replayed, second.replayed].filter(Boolean)).toHaveLength(1);
-      expect(await count("purchaseOrder")).toBe(1);
-      expect(await count("knowledgeCommandReceipt")).toBe(1);
+      expect(await counts(f)).toMatchObject({
+        orders: 1,
+        lines: 1,
+        receipts: 1
+      });
     });
+  });
 
-    it("rejects a reused idempotency key with a changed payload", async () => {
-      await createProcurementDraft(db, context, input());
+  it("replays a repeated command and refuses a changed payload under the same key", async () => {
+    await fixture(async (f) => {
+      const first = await createProcurementDraft(db, context(f), input(f));
+      const replay = await createProcurementDraft(db, context(f), input(f));
+      expect(replay).toEqual({
+        purchaseOrderId: first.purchaseOrderId,
+        replayed: true
+      });
+
       await expect(
         createProcurementDraft(
           db,
-          context,
-          input({ payloadHash: "b".repeat(64) })
+          context(f),
+          input(f, { payloadHash: "b".repeat(64) })
         )
-      ).rejects.toThrow("Idempotency key was reused with a different payload");
-      expect(await count("purchaseOrder")).toBe(1);
-      expect(await count("knowledgeCommandReceipt")).toBe(1);
+      ).rejects.toThrow(/reused with a different payload/);
+      expect(await counts(f)).toMatchObject({ orders: 1, receipts: 1 });
     });
-  }
-);
+  });
+
+  it("rolls back header, lines, defaults, receipt and outbox on a fault", async () => {
+    await fixture(async (f) => {
+      // Fault injection at the LAST write of the transaction: by then the
+      // order, its delivery, payment, lines and the outbox event all exist.
+      await sql`
+        create or replace function public.procurement_draft_fault() returns trigger
+        language plpgsql as $$ begin raise exception 'injected receipt failure'; end $$
+      `.execute(db);
+      await sql`
+        create trigger procurement_draft_fault
+        before insert on public."knowledgeCommandReceipt"
+        for each row execute function public.procurement_draft_fault()
+      `.execute(db);
+      try {
+        await expect(
+          createProcurementDraft(db, context(f), input(f))
+        ).rejects.toThrow(/injected receipt failure/);
+      } finally {
+        await sql`
+          drop trigger if exists procurement_draft_fault on public."knowledgeCommandReceipt"
+        `.execute(db);
+        await sql`
+          drop function if exists public.procurement_draft_fault()
+        `.execute(db);
+      }
+
+      expect(await counts(f)).toEqual(NOTHING_WRITTEN);
+    });
+  });
+
+  it("refuses a command aimed at another company's supplier", async () => {
+    await fixture(async (f) => {
+      await expect(
+        createProcurementDraft(
+          db,
+          { ...context(f), companyId: "company-elsewhere" },
+          input(f)
+        )
+      ).rejects.toThrow(/not an active supplier/);
+      expect(await counts(f)).toEqual(NOTHING_WRITTEN);
+    });
+  });
+});
