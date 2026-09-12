@@ -470,6 +470,26 @@ export type Database = {
           provenance?: Json;
         };
       };
+      extensionVersion: {
+        Row: {
+          name: string;
+          version: string;
+          recordedBy: string;
+          recordedAt: string;
+        };
+        Insert: {
+          name: string;
+          version: string;
+          recordedBy: string;
+          recordedAt?: string;
+        };
+        Update: {
+          name?: string;
+          version?: string;
+          recordedBy?: string;
+          recordedAt?: string;
+        };
+      };
       extraction: {
         Row: {
           id: string;
