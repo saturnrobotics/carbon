@@ -4,6 +4,7 @@ import { sourceEntityRequestSchema } from "@carbon/knowledge";
 import { withKnowledgeTransaction } from "@carbon/knowledge/database.server";
 import type { VerifiedWorkforceIdentity } from "@carbon/knowledge/identity.server";
 import type { QueryResult } from "@carbon/knowledge/query";
+import type { SourceOutcome } from "@carbon/knowledge/sources/contract";
 import {
   createSourceRegistry,
   type SourceRegistryConfiguration
@@ -15,6 +16,49 @@ import { resolveRecentManual } from "./manual.server";
 function revision(value: unknown) {
   return `projection:${createHash("sha256").update(JSON.stringify(value)).digest("hex")}`;
 }
+/**
+ * A structured source outcome rendered for the reader. Nothing here names or
+ * counts hidden rows: an outage is labelled as such, a denial as such, and
+ * `moreHidden` only says the list is not the whole population.
+ */
+export function outcomeResult(
+  base: QueryResult,
+  outcome: SourceOutcome
+): QueryResult | null {
+  if (outcome.kind === "ok") return null;
+  if (outcome.kind === "ambiguous")
+    return {
+      ...base,
+      kind: "clarification",
+      message: outcome.moreHidden
+        ? "More than one record matches. Select one, or narrow the description; some matches are not shown."
+        : "More than one record matches. Select one.",
+      choices: outcome.choices.slice(0, 20)
+    };
+  if (outcome.kind === "insufficient-permission")
+    return {
+      ...base,
+      kind: "abstention",
+      message: "This source did not authorize the request.",
+      partial: true
+    };
+  if (outcome.kind === "not-found")
+    return {
+      ...base,
+      kind: "abstention",
+      message: "No authorized matching records were found."
+    };
+  return {
+    ...base,
+    kind: "abstention",
+    message:
+      outcome.reason === "deadline"
+        ? "A source did not answer within its time budget; this is not an empty result."
+        : "A source could not complete this request; this is not an empty result.",
+    partial: true
+  };
+}
+
 async function permittedSources(
   pool: Pool,
   identity: VerifiedWorkforceIdentity,
@@ -124,6 +168,7 @@ export async function structuredSourceQuery(options: {
   pool: Pool;
   configuration: SourceRegistryConfiguration;
   origin: string;
+  businessTimezone?: string;
   workerOrigin?: string;
   workerAudience?: string;
 }): Promise<QueryResult | null> {
@@ -138,11 +183,17 @@ export async function structuredSourceQuery(options: {
     /^(?:please\s+)?(?:find|show|open|locate)(?:\s+me)?\s+(?:the\s+)?(?:customers?|contacts?|parts?|assembl(?:y|ies)|pcbs?|machines?)\b/i.test(
       query.text
     );
+  const partIntent =
+    !manualIntent &&
+    /^(?:please\s+)?(?:find|show|open|locate)(?:\s+me)?\s+(?:the\s+)?(?:parts?|items?)\b/i.test(
+      query.text
+    );
   if (
     !ticketIntent &&
     !purchaseIntent &&
     !manualIntent &&
     !genericIntent &&
+    !partIntent &&
     !query.context?.source
   )
     return null;
@@ -163,11 +214,16 @@ export async function structuredSourceQuery(options: {
       ? source.kind === "kanban"
       : purchaseIntent
         ? source.kind === "carbon"
-        : source.kind === "engineering" || source.kind === "crm"
+        : partIntent
+          ? source.kind === "carbon" ||
+            source.kind === "engineering" ||
+            source.kind === "crm"
+          : source.kind === "engineering" || source.kind === "crm"
   );
   if (!selected.length) return null;
   const evidence: Evidence[] = [];
   let partial = false;
+  let blocking: SourceOutcome | null = null;
   const observedAt = now("UTC").toAbsoluteString();
   const results = await Promise.allSettled(
     selected.map(async (source) => {
@@ -199,6 +255,48 @@ export async function structuredSourceQuery(options: {
           observedAt,
           policyVersion: identity.principal.policyVersion,
           freshness: "current" as const
+        }));
+      }
+      if (source.kind === "carbon" && partIntent) {
+        const search = query.text
+          .replace(/^(?:please\s+)?(?:find|show|open|locate)(?:\s+me)?\s+/i, "")
+          .replace(/\b(?:parts?|items?|the|for)\b/gi, " ")
+          .replace(/\s+/g, " ")
+          .trim();
+        if (!search) return [];
+        const { outcome, page } = await registry
+          .adapter(source.id)
+          .searchEntities({ query: search, limit: 40 });
+        if (!page) {
+          blocking = outcome;
+          return [];
+        }
+        if (page.status !== "complete") partial = true;
+        return page.items.slice(0, 8).map((entity) => ({
+          id: revision([source.id, entity.id]),
+          sourceId: source.id,
+          entityId: entity.id,
+          sourceRevision: entity.revision,
+          title: entity.title,
+          excerpt: Object.entries(entity.fields)
+            .filter(([key, value]) => key !== "link" && value !== null)
+            .slice(0, 6)
+            .map(([key, value]) => `${key}: ${value}`)
+            .join("\n"),
+          // The owning application's authenticated page: Carbon re-authorizes
+          // on open, and the freshness stamp says when this row was observed.
+          sourceUri:
+            typeof entity.fields.link === "string"
+              ? entity.fields.link
+              : new URL(
+                  `/sources/${encodeURIComponent(source.id)}/entities/${encodeURIComponent(entity.id)}`,
+                  options.origin
+                ).toString(),
+          observedAt: page.observedAt,
+          policyVersion: identity.principal.policyVersion,
+          freshness: (page.status === "complete" ? "current" : "partial") as
+            | "current"
+            | "partial"
         }));
       }
       if (source.kind === "engineering" || source.kind === "crm") {
@@ -259,12 +357,13 @@ export async function structuredSourceQuery(options: {
   if (
     !ticketIntent &&
     !purchaseIntent &&
+    !partIntent &&
     !query.context?.source &&
     !evidence.length &&
     !partial
   )
     return null;
-  return {
+  const base: QueryResult = {
     requestId: query.requestId,
     kind: evidence.length ? "results" : "abstention",
     evidence: evidence.slice(0, 8),
@@ -272,8 +371,13 @@ export async function structuredSourceQuery(options: {
     message: evidence.length
       ? ""
       : partial
-        ? "A source could not complete this request."
+        ? "A source could not complete this request; this is not an empty result."
         : "No authorized matching records were found.",
     partial
   };
+  // A structured refusal from a source outranks an empty page: an outage or a
+  // denial is never rendered as an authoritative "nothing found".
+  const structured =
+    blocking && !evidence.length ? outcomeResult(base, blocking) : null;
+  return structured ?? base;
 }

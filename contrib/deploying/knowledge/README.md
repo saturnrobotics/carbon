@@ -111,6 +111,28 @@ machine caller with `source.index.read`, the enrolled company and source only;
 its caller ID and database login must match the source `providerPolicy` values.
 Validate trusted-caller JSON against `callers.schema.json` before release.
 
+### Carbon change feed (optional)
+
+The ingestion worker can carry Carbon's `knowledgeSourceOutbox` into the
+knowledge index. It is registered only when both sides are configured; without
+either value the worker's function list and Carbon's route stay closed.
+
+- Worker: `KNOWLEDGE_CARBON_SOURCE_JSON={"sourceId":"<carbon-source-id>","origin":"https://<erp-host>","audience":"<erp-receiver-audience>"}`.
+  The companies it serves are the machine callers in
+  `KNOWLEDGE_MACHINE_CALLERS_JSON` that hold `source.changes.read` for that
+  source id. Pulls run every minute (`knowledge-carbon-changes`); the
+  reconciliation sweep for trigger-silenced bulk reloads runs every fifteen
+  minutes (`knowledge-carbon-reconcile`), one keyset page per entity type per run.
+- Carbon: `KNOWLEDGE_MACHINE_CALLERS_JSON` with the same shape the worker uses
+  (`audience` is Carbon's receiver audience; each caller lists the worker
+  service-account subject, `companyIds`, the knowledge `sourceIds` and
+  `capabilities: ["source.changes.read"]`). The feed is
+  `POST /api/v1/knowledge/source-changes`, machine-only: it refuses forwarded
+  employee evidence and is not an employee operation of the `$.ts` dispatch.
+  The `knowledge.source` row for that source id must exist in Carbon's database
+  with `kind = 'carbon'` and `status = 'active'`, and its `providerPolicy` must
+  name the worker's `machineCallers` and `ingestDatabaseRoles`.
+
 ## Runtime requirements
 
 `release.py` requires the exact environment and pinned-secret sets declared in

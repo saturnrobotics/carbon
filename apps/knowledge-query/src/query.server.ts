@@ -163,6 +163,7 @@ export function createReadHandler(
             pool: options.pool,
             configuration: sourceConfiguration,
             origin: options.origin,
+            businessTimezone: options.businessTimezone,
             workerOrigin: options.workerOrigin,
             workerAudience: options.workerAudience
           })
