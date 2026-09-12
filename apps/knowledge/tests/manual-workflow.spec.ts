@@ -3,6 +3,7 @@ import {
   actorPage,
   e2eGateway,
   queryFixture,
+  submitSearch,
   textPdf,
   waitForClientNavigation
 } from "./harness/browser";
@@ -76,8 +77,8 @@ async function uploadReviewAndPublish(page: Page) {
 
   const publishStarted = performance.now();
   await page.goto("/");
-  await page.getByLabel("Search manuals").fill(manualPart);
-  await page.getByRole("button", { name: "Search manuals" }).click();
+  await waitForClientNavigation(page);
+  await submitSearch(page, manualPart);
   const download = page.getByRole("link", {
     name: "Download original",
     exact: true
@@ -89,7 +90,7 @@ async function uploadReviewAndPublish(page: Page) {
       new URL(response.url()).pathname === "/api/query" &&
       response.request().method() === "POST"
   );
-  await page.getByRole("button", { name: "Search manuals" }).click();
+  await submitSearch(page, manualPart);
   expect((await repeated).status()).toBe(200);
   const href = await download.getAttribute("href");
   return {
@@ -183,8 +184,8 @@ test("manual workflow uses real extraction, durable delivery, Redis, and exact i
     // receives an actor/company override from the browser; its synthetic test
     // identity is emitted only by the loopback-only server alias.
     await alice.page.goto("/");
-    await alice.page.getByLabel("Search manuals").fill(manualPart);
-    await alice.page.getByRole("button", { name: "Search manuals" }).click();
+    await waitForClientNavigation(alice.page);
+    await submitSearch(alice.page, manualPart);
     await expect(alice.page.getByRole("alert")).toBeVisible();
     await expect(alice.page.getByText(manualTitle)).toHaveCount(0);
     const deniedOriginal = await alice.page.goto(downloadPath!);
@@ -213,8 +214,8 @@ test("manual workflow uses real extraction, durable delivery, Redis, and exact i
       (await request.post(`${e2eGateway}/__e2e/revoke/bob`)).ok()
     ).toBeTruthy();
     await bob.page.goto("/");
-    await bob.page.getByLabel("Search manuals").fill(manualPart);
-    await bob.page.getByRole("button", { name: "Search manuals" }).click();
+    await waitForClientNavigation(bob.page);
+    await submitSearch(bob.page, manualPart);
     await expect(bob.page.getByRole("alert")).toBeVisible();
     const revokedOriginal = await bob.page.goto(downloadPath!);
     expect(revokedOriginal?.status()).not.toBe(200);
@@ -225,15 +226,15 @@ test("manual workflow uses real extraction, durable delivery, Redis, and exact i
       (await request.post(`${e2eGateway}/__e2e/restore/bob`)).ok()
     ).toBeTruthy();
     await bob.page.goto("/");
-    await bob.page.getByLabel("Search manuals").fill(manualPart);
-    await bob.page.getByRole("button", { name: "Search manuals" }).click();
+    await waitForClientNavigation(bob.page);
+    await submitSearch(bob.page, manualPart);
     await bob.page.getByRole("link", { name: "Remove manual" }).first().click();
     await Promise.all([
       bob.page.waitForURL("/"),
       bob.page.getByRole("button", { name: "Confirm removal" }).click()
     ]);
-    await bob.page.getByLabel("Search manuals").fill(manualPart);
-    await bob.page.getByRole("button", { name: "Search manuals" }).click();
+    await waitForClientNavigation(bob.page);
+    await submitSearch(bob.page, manualPart);
     await expect(
       bob.page.getByText("No matching manuals found.")
     ).toBeVisible();
@@ -338,8 +339,8 @@ test("manual workflow uses real extraction, durable delivery, Redis, and exact i
     await bob.page.getByRole("button", { name: "Publish manual" }).click();
     expect((await replacementPublish).status()).toBeLessThan(400);
     await bob.page.goto("/");
-    await bob.page.getByLabel("Search manuals").fill(replacementPart);
-    await bob.page.getByRole("button", { name: "Search manuals" }).click();
+    await waitForClientNavigation(bob.page);
+    await submitSearch(bob.page, replacementPart);
     await expect(
       bob.page.getByRole("link", { name: "Download original", exact: true })
     ).toBeVisible();
