@@ -196,6 +196,53 @@ subject, company)` deactivates a binding and increments it, and a later
 re-enrollment keeps the advanced value. Never use email as the IAP subject and
 never auto-enroll an assertion observed at runtime.
 
+### Emergency disablement
+
+Three things revoke a binding. Each sets it inactive and advances its
+`revocationVersion`, which is part of every cached principal's `policyVersion`
+and of the answer-cache policy snapshot, so a warmed cache entry is never
+delivered again and the next request that presents the subject is refused.
+
+1. The operator command, for one subject or for every binding of one user,
+   connected as the schema login:
+
+   ```bash
+   KNOWLEDGE_MIGRATION_DATABASE_URL='postgresql://<schema-login>@127.0.0.1:<port>/<database>' \
+   pnpm --filter @carbon/knowledge identity:revoke -- \
+     --company <company-id> --iap-subject accounts.google.com:<numeric-iap-user-id>
+
+   pnpm --filter @carbon/knowledge identity:revoke -- \
+     --user-id <carbon-user-id>            # or --user-email <hint>; --company narrows it
+   ```
+
+   It prints one `revocationVersion=<n>` line per binding and nothing else
+   that identifies the binding. Listing a user's bindings needs a connection
+   that can `SET ROLE knowledge_migrate`; otherwise pass `--iap-subject` with
+   `--company`. A non-local database URL is refused unless `--allow-remote` is
+   given and the interactive confirmation is answered.
+2. Deactivating the Carbon user (`public."user".active` to false) revokes every
+   binding of that user in every company, through the source-owned trigger
+   installed by Carbon migration `20260911211525_knowledge-identity-revocation`.
+   Re-activating the user does not re-enable a binding; re-enroll explicitly.
+3. Removing the user's company membership (`public."userToCompany"` row)
+   revokes that user's bindings in that company only.
+
+Permission edits need no revocation: the resolver's `permissionsVersion`
+already changes with every `userPermission` write.
+
+Propagation budget: a local revocation takes effect on the next request to
+any knowledge service, with no cache flush or restart, because every delivery
+re-reads the binding. Google Workspace suspension and IAP session or access
+level propagation are separate systems with their own delays and are not
+promised here; revoke locally first and treat the Workspace side as a second,
+independent step.
+
+The trigger function is owned by `knowledge_enrollment_owner` and returns
+without touching anything while `knowledge."identityBinding"` does not exist,
+so the Carbon migration applies on installs without the knowledge platform and
+the triggers start working once the private enrollment migration has run,
+whichever order the two are applied in.
+
 ### Source, grants and request policy
 
 The remaining rows are a shape-only SQL template. Replace every angle-bracket
