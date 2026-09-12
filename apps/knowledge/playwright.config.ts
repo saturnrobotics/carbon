@@ -11,6 +11,9 @@ export default defineConfig({
   testDir: "./tests",
   testMatch: "**/*.spec.ts",
   globalSetup: "./tests/setup.ts",
+  // Specs share one fixture identity and revoke it mid-test; never interleave them.
+  workers: 1,
+  fullyParallel: false,
   use: {
     baseURL: externalBaseUrl ?? "https://localhost:4200",
     ignoreHTTPSErrors: true,
