@@ -163,6 +163,18 @@ export function createCarbonWorkforceIdentityStore(): WorkforceIdentityStore {
   };
 }
 
+/**
+ * The receiver has no trusted-caller registry, so no workforce request can be
+ * admitted. Distinct from a verification failure: an operator has to act on it,
+ * and the transport reports it as unavailable rather than unauthorized.
+ */
+export class WorkforceNotConfiguredError extends Error {
+  constructor() {
+    super("Workforce authentication is not configured");
+    this.name = "WorkforceNotConfiguredError";
+  }
+}
+
 export function authorizeCarbonWorkforceRequest(options: {
   request: Request;
   operation: string;
@@ -170,8 +182,7 @@ export function authorizeCarbonWorkforceRequest(options: {
 }) {
   const configurationJson =
     options.configurationJson ?? process.env.KNOWLEDGE_TRUSTED_CALLERS_JSON;
-  if (!configurationJson)
-    throw new Error("Workforce authentication is not configured");
+  if (!configurationJson) throw new WorkforceNotConfiguredError();
   return authorizeWorkforceRequest({
     request: options.request,
     operation: options.operation,
