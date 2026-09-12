@@ -1,34 +1,29 @@
 -- Fixed, synthetic rows for the labelled local-only manual workflow stack.
 UPDATE public."user" SET active=true WHERE id IN ('alice','bob','automation');
 
-INSERT INTO knowledge."identityBinding" (
-  id,"companyId","createdBy",issuer,subject,"canonicalUserId",active,
-  "revocationVersion",capabilities
-) VALUES (
-  'e2e-bob-iap-binding','company-b','bob','https://cloud.google.com/iap',
-  'subject-b','bob',true,1,
+-- Workforce bindings are created only through the owner function: every runtime
+-- role's INSERT/UPDATE/DELETE policy on knowledge."identityBinding" is false.
+-- The call is idempotent, so re-running `local-stack.sh up` is a no-op. Subjects
+-- use the IAP shape with reserved synthetic ids that no real account can hold.
+SELECT knowledge.enroll_workforce_identity(
+  'https://cloud.google.com/iap',
+  'accounts.google.com:100000000000000000002',
+  'company-b',
+  'bob',
   ARRAY[
     'knowledge.read','knowledge.intake.capture','knowledge.intake.review',
     'knowledge.intake.publish','knowledge.document.delete',
     'knowledge.document.download'
   ]::text[]
-)
-ON CONFLICT ("companyId",issuer,subject) DO UPDATE SET
-  active=true,
-  capabilities=EXCLUDED.capabilities,
-  version=knowledge."identityBinding".version+1;
+)->>'id' AS "bobBindingId";
 
-INSERT INTO knowledge."identityBinding" (
-  id,"companyId","createdBy",issuer,subject,"canonicalUserId",active,
-  "revocationVersion",capabilities
-) VALUES (
-  'e2e-alice-iap-binding','company-a','alice','https://cloud.google.com/iap',
-  'subject-a','alice',true,1,ARRAY['knowledge.read']::text[]
-)
-ON CONFLICT ("companyId",issuer,subject) DO UPDATE SET
-  active=true,
-  capabilities=EXCLUDED.capabilities,
-  version=knowledge."identityBinding".version+1;
+SELECT knowledge.enroll_workforce_identity(
+  'https://cloud.google.com/iap',
+  'accounts.google.com:100000000000000000001',
+  'company-a',
+  'alice',
+  ARRAY['knowledge.read']::text[]
+)->>'id' AS "aliceBindingId";
 
 UPDATE knowledge.source SET
   status='active',

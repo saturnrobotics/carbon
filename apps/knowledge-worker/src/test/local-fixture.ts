@@ -27,9 +27,11 @@ export const localCapabilities = [
   "knowledge.document.download"
 ] as const;
 
+// Reserved synthetic IAP subjects, matching the bindings that
+// contrib/deploying/knowledge/local-stack-fixture.sql enrolls.
 const actorSubjects = {
-  alice: "subject-a",
-  bob: "subject-b"
+  alice: "accounts.google.com:100000000000000000001",
+  bob: "accounts.google.com:100000000000000000002"
 } as const;
 
 export function localCallerConfiguration(
