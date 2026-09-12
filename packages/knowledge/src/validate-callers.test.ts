@@ -10,7 +10,9 @@ import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { trustedCallerConfigurationSchema } from "./identity.server";
 import {
+  CALLER_VALIDATION_USAGE,
   jsonSchemaIssues,
+  runCallerValidation,
   TRUSTED_CALLERS_SCHEMA_PATH,
   validateCallerRegistry
 } from "./trusted-callers";
@@ -354,57 +356,116 @@ describe("validate-callers", () => {
     ]);
     expect(report.releaseIssues).toEqual([]);
   });
+});
 
-  it("exits 0 for the example and 1 for rejected registries from the command line", () => {
-    const packageDirectory = resolve(import.meta.dirname, "..");
-    const tsx = resolve(packageDirectory, "node_modules/.bin/tsx");
-    const script = resolve(packageDirectory, "scripts/validate-callers.ts");
-    const scratch = mkdtempSync(join(tmpdir(), "callers-"));
-    const run = (...args: string[]) =>
-      spawnSync(tsx, [script, ...args], {
-        cwd: packageDirectory,
-        encoding: "utf8"
-      });
-    const writeRegistry = (name: string, document: unknown) => {
-      const path = join(scratch, name);
-      writeFileSync(path, JSON.stringify(document));
-      return path;
-    };
+const DUPLICATE_SUBJECT_ISSUE =
+  "runtime schema: $.callers.1.serviceAccountSubject: Service-account subjects must be unique";
 
-    const accepted = run(examplePath);
+/**
+ * The CLI layer: argument handling, the printed report and the exit code.
+ *
+ * Every case but the last calls runCallerValidation in the runtime vitest has
+ * already loaded. Driving each one through `tsx scripts/validate-callers.ts`
+ * instead cost 181-189 ms per spawn here and ~3.6 s per spawn on a CI runner,
+ * where the four spawns this used to make took 14.4 s against the 5 s default
+ * timeout. Almost all of that is the TypeScript loader starting up — `tsx -e 0`
+ * alone is 153-180 ms against node's 18 ms — so it bought a second copy of
+ * nothing: the validation itself runs in under 2 ms.
+ */
+describe("validate-callers from the command line", () => {
+  const packageDirectory = resolve(import.meta.dirname, "..");
+  const scratch = mkdtempSync(join(tmpdir(), "callers-"));
+
+  function writeRegistry(name: string, document: unknown): string {
+    const path = join(scratch, name);
+    writeFileSync(path, JSON.stringify(document));
+    return path;
+  }
+
+  const duplicatePath = writeRegistry(
+    "duplicate.json",
+    variant((registry) => {
+      callerAt(registry, 1).serviceAccountSubject = callerAt(
+        registry,
+        0
+      ).serviceAccountSubject;
+    })
+  );
+  const insecurePath = writeRegistry(
+    "insecure.json",
+    variant((registry) => {
+      registry.receiver.audience = "http://knowledge-query.example.com";
+    })
+  );
+
+  async function run(...args: string[]) {
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const status = await runCallerValidation(
+      args,
+      {
+        print: (line) => {
+          stdout.push(line);
+        },
+        fail: (line) => {
+          stderr.push(line);
+        }
+      },
+      packageDirectory
+    );
+    return { status, stdout: stdout.join("\n"), stderr: stderr.join("\n") };
+  }
+
+  it("exits 0 for the example registry", async () => {
+    const accepted = await run(examplePath);
     expect(accepted.status, accepted.stderr).toBe(0);
     expect(accepted.stdout).toContain("caller knowledge-web:");
     expect(accepted.stdout).toContain("conforms to the runtime schema");
+  });
 
-    const duplicate = run(
-      writeRegistry(
-        "duplicate.json",
-        variant((registry) => {
-          callerAt(registry, 1).serviceAccountSubject = callerAt(
-            registry,
-            0
-          ).serviceAccountSubject;
-        })
-      )
-    );
+  it("exits 1 for a duplicate subject", async () => {
+    const duplicate = await run(duplicatePath);
     expect(duplicate.status).toBe(1);
-    expect(duplicate.stderr).toContain(
-      "runtime schema: $.callers.1.serviceAccountSubject: Service-account subjects must be unique"
-    );
+    expect(duplicate.stderr).toContain(DUPLICATE_SUBJECT_ISSUE);
+  });
 
-    const insecure = run(
-      writeRegistry(
-        "insecure.json",
-        variant((registry) => {
-          registry.receiver.audience = "http://knowledge-query.example.com";
-        })
-      )
-    );
+  it("exits 1 for an http receiver audience", async () => {
+    const insecure = await run(insecurePath);
     expect(insecure.status).toBe(1);
     expect(insecure.stderr).toContain(
       "release rule: $.receiver.audience: must be a bare https URL"
     );
+  });
 
-    expect(run().status).toBe(2);
+  it("exits 2 without a registry file", async () => {
+    const usage = await run();
+    expect(usage.status).toBe(2);
+    expect(usage.stderr).toContain(CALLER_VALIDATION_USAGE);
+  });
+
+  /**
+   * The one process-level case, and the only one that pays the loader: it
+   * proves the line the calls above cannot reach, that runCallerValidation's
+   * return value becomes the process's exit status. A REJECTED registry is
+   * what proves it. This validator is a release gate, so the regression that
+   * matters is one that exits 0 on a registry it should refuse — an exit-0
+   * expectation passes straight through that, and only a non-zero one catches
+   * it. The example's exit 0 through this same entry point is what
+   * fork-checks.yml runs (`callers:validate callers.example.json`) on every
+   * change to the validator.
+   *
+   * The timeout is explicit because one loader start-up is the floor for any
+   * process-level case and ~3.6 s of it on a CI runner leaves too little room
+   * under the 5 s default; 10 s is roughly triple the measured cost and still
+   * fails if this ever grows a second spawn.
+   */
+  it("exits non-zero from the real entry point", { timeout: 10_000 }, () => {
+    const spawned = spawnSync(
+      resolve(packageDirectory, "node_modules/.bin/tsx"),
+      [resolve(packageDirectory, "scripts/validate-callers.ts"), duplicatePath],
+      { cwd: packageDirectory, encoding: "utf8" }
+    );
+    expect(spawned.status, spawned.stderr).toBe(1);
+    expect(spawned.stderr).toContain(DUPLICATE_SUBJECT_ISSUE);
   });
 });
