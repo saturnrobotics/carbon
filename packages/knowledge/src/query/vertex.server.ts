@@ -3,7 +3,8 @@ import { GoogleAuth } from "google-auth-library";
 import { z } from "zod";
 import type { BudgetReservation } from "../budgets.server";
 import type { Evidence, QueryRequest } from "../contracts";
-import { synthesisSchema } from "./answer.server";
+import { QUERY_BUDGETS } from "./budgets";
+import { synthesisSchema } from "./result";
 
 export const vertexConfigurationSchema = z
   .object({
@@ -80,7 +81,7 @@ export function createVertexAnswerProvider(
     evidence: Evidence[],
     signal: AbortSignal
   ) => {
-    if (evidence.length === 0 || evidence.length > 8)
+    if (evidence.length === 0 || evidence.length > QUERY_BUDGETS.evidenceBlocks)
       throw Error("Invalid evidence budget");
     const prompt = JSON.stringify({
       question: request.text,
@@ -101,8 +102,11 @@ export function createVertexAnswerProvider(
       payloadHash: createHash("sha256")
         .update(JSON.stringify({ version: config.version, ...body }))
         .digest("hex"),
-      maxTokens: 8800,
-      maxMicroUsd: Math.max(1, cost(8000, 800, config))
+      maxTokens: QUERY_BUDGETS.contextTokens + QUERY_BUDGETS.outputTokens,
+      maxMicroUsd: Math.max(
+        1,
+        cost(QUERY_BUDGETS.contextTokens, QUERY_BUDGETS.outputTokens, config)
+      )
     };
     await dependencies.budget.reserve(reservation);
     const token = await (
@@ -128,21 +132,26 @@ export function createVertexAnswerProvider(
     const countSchema = z.object({
       totalTokens: z.number().int().nonnegative()
     });
-    if (new TextEncoder().encode(request.text).length > 2000) {
+    // A conservative byte count admits short questions without a round trip;
+    // anything longer is counted exactly and refused above the input budget.
+    if (
+      new TextEncoder().encode(request.text).length > QUERY_BUDGETS.inputTokens
+    ) {
       const queryCount = countSchema.parse(
         await call("countTokens", {
           contents: [{ role: "user", parts: [{ text: request.text }] }]
         })
       );
-      if (queryCount.totalTokens > 2000)
+      if (queryCount.totalTokens > QUERY_BUDGETS.inputTokens)
         throw Error("Input token budget exceeded");
     }
     const count = countSchema.parse(await call("countTokens", body));
-    if (count.totalTokens > 8000) throw Error("Context token budget exceeded");
+    if (count.totalTokens > QUERY_BUDGETS.contextTokens)
+      throw Error("Context token budget exceeded");
     const response = await call("generateContent", {
       ...body,
       generationConfig: {
-        maxOutputTokens: 800,
+        maxOutputTokens: QUERY_BUDGETS.outputTokens,
         candidateCount: 1,
         temperature: 0,
         thinkingConfig: { thinkingBudget: 0 },
@@ -186,9 +195,9 @@ export function createVertexAnswerProvider(
     const usage = result.usageMetadata;
     const outputTokens = usage.totalTokenCount - usage.promptTokenCount;
     if (
-      usage.promptTokenCount > 8000 ||
+      usage.promptTokenCount > QUERY_BUDGETS.contextTokens ||
       outputTokens < 0 ||
-      outputTokens > 800 ||
+      outputTokens > QUERY_BUDGETS.outputTokens ||
       usage.candidatesTokenCount > outputTokens
     )
       throw Error("Provider token ceiling violated");

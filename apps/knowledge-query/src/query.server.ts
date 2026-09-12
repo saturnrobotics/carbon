@@ -14,15 +14,27 @@ import { verifyWorkforceRequest } from "@carbon/knowledge/identity.server";
 import { assertProviderCandidates } from "@carbon/knowledge/provider-policy";
 import {
   executeReadQuery,
+  type QueryResult,
   queryResultSchema,
   type ReadDependencies
 } from "@carbon/knowledge/query";
+import {
+  conservativeTokenCount,
+  QUERY_BUDGETS
+} from "@carbon/knowledge/query/budgets";
+import type { ConversationState } from "@carbon/knowledge/query/conversation";
 import {
   createVertexEmbedder,
   type EmbeddingConfiguration
 } from "@carbon/knowledge/query/embedding.server";
 import { requestTelemetry } from "@carbon/knowledge/query/request-boundary.server";
 import { routeQuery } from "@carbon/knowledge/query/router";
+import {
+  acceptsQueryStream,
+  encodeQueryStreamEvent,
+  QUERY_STREAM_MEDIA_TYPE,
+  type QueryStreamEvent
+} from "@carbon/knowledge/query/stream";
 import {
   createVertexAnswerProvider,
   type VertexConfiguration
@@ -47,6 +59,7 @@ import {
   createReadAuthorization,
   queryCacheScope
 } from "./cache.server";
+import type { ConversationStore } from "./conversation.server";
 import { createDriveAccessChecker } from "./drive-access.server";
 import { structuredSourceQuery } from "./sources.server";
 
@@ -89,6 +102,63 @@ export function createProviderDisclosure(options: {
     );
   };
 }
+
+/** Maps a failure inside a started stream to the only codes the reader sees. */
+export function streamErrorCode(error: unknown): QueryStreamEvent & {
+  type: "error";
+} {
+  const message = error instanceof Error ? error.message : "";
+  if (/Authorization changed|Access denied/.test(message))
+    return { type: "error", error: "authorization_changed" };
+  if (/deadline exceeded/i.test(message))
+    return { type: "error", error: "request_deadline_exceeded" };
+  return { type: "error", error: "query_unavailable" };
+}
+
+/**
+ * Delivers a read either as one JSON document or, when the caller accepts
+ * NDJSON, as the events the read produces while it runs. A stream carries the
+ * same terminal result a JSON response would; a failure after the first event
+ * is reported as an error event rather than a status the reader cannot see.
+ */
+export function respondWithQuery(
+  streaming: boolean,
+  compute: (emit: (event: QueryStreamEvent) => void) => Promise<QueryResult>
+): Promise<Response> | Response {
+  const headers = { "cache-control": "no-store" };
+  if (!streaming)
+    return compute(() => undefined).then((result) =>
+      Response.json(result, { headers })
+    );
+  const encoder = new TextEncoder();
+  const body = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      let open = true;
+      const emit = (event: QueryStreamEvent) => {
+        if (!open) return;
+        try {
+          controller.enqueue(encoder.encode(encodeQueryStreamEvent(event)));
+        } catch {
+          open = false;
+        }
+      };
+      try {
+        const result = await compute(emit);
+        emit({ type: "result", result });
+      } catch (error) {
+        emit(streamErrorCode(error));
+      } finally {
+        open = false;
+        controller.close();
+      }
+    }
+  });
+  return new Response(body, {
+    status: 200,
+    headers: { ...headers, "content-type": QUERY_STREAM_MEDIA_TYPE }
+  });
+}
+
 export function createReadHandler(
   options: IdentityOptions & {
     pool: Pool;
@@ -101,6 +171,8 @@ export function createReadHandler(
     workerOrigin?: string;
     workerAudience?: string;
     manualSourceId?: string;
+    /** Follow-up context between requests; absent means every question stands alone. */
+    conversationStore?: ConversationStore;
   }
 ) {
   return async (request: Request): Promise<Response> => {
@@ -126,6 +198,8 @@ export function createReadHandler(
         parsed.data.context.source !== options.manualSourceId
       )
         return Response.json({ error: "source_unavailable" }, { status: 403 });
+      // Routing is decided once, from the request text alone, before any
+      // admission, source or index work.
       if (options.manualSourceId && routeQuery(parsed.data).kind === "command")
         return Response.json(
           { error: "manual_library_is_read_only" },
@@ -135,9 +209,16 @@ export function createReadHandler(
         ? {
             ...parsed.data,
             mode: "locate" as const,
-            context: { source: options.manualSourceId }
+            context: {
+              source: options.manualSourceId,
+              ...(parsed.data.context?.conversationId
+                ? { conversationId: parsed.data.context.conversationId }
+                : {})
+            }
           }
         : parsed.data;
+      const route = routeQuery(query);
+      const streaming = acceptsQueryStream(request);
       if (
         !(await trace.measure("policy", () =>
           admitReadRequest(options.pool, principal, "knowledge.query")
@@ -150,20 +231,22 @@ export function createReadHandler(
             headers: { "cache-control": "no-store", "retry-after": "60" }
           }
         );
-      if (routeQuery(query).kind === "command")
-        return Response.json(
-          await executeReadQuery(query, principal, {
+      if (route.kind === "command")
+        return respondWithQuery(streaming, () =>
+          executeReadQuery(query, principal, {
             retrieve: async () => [],
             authorize: async () => false
-          }),
-          { headers: { "cache-control": "no-store" } }
+          })
         );
-      if (options.sources && !options.manualSourceId) {
+      // A registered live source answers before any index or model. It runs
+      // outside the stream so a source's step-up denial keeps its own status.
+      if (options.sources && !options.manualSourceId && route.structured) {
         const sourceConfiguration = options.sources;
         const structured = await trace.measure("source", () =>
           structuredSourceQuery({
             request,
             query,
+            route,
             identity,
             pool: options.pool,
             configuration: sourceConfiguration,
@@ -186,9 +269,8 @@ export function createReadHandler(
             !current.capabilities.includes("knowledge.read")
           )
             throw Error("Authorization changed");
-          return Response.json(queryResultSchema.parse(structured), {
-            headers: { "cache-control": "no-store" }
-          });
+          const result = queryResultSchema.parse(structured);
+          return respondWithQuery(streaming, async () => result);
         }
       }
       const read = <T>(
@@ -202,29 +284,33 @@ export function createReadHandler(
           operation
         );
       };
+      const sourceLimit = QUERY_BUDGETS.sourcesPerRequest;
       const sourceRows = await read(
         async (client) =>
           (
             await client.query<{ id: string }>(
-              `SELECT id FROM knowledge.source WHERE "companyId"=$1 AND status='active' AND ($2::text IS NULL OR id=$2) AND ($3::boolean=false OR kind='upload') ORDER BY id LIMIT 5`,
+              `SELECT id FROM knowledge.source WHERE "companyId"=$1 AND status='active' AND ($2::text IS NULL OR id=$2) AND ($3::boolean=false OR kind='upload') ORDER BY id LIMIT $4`,
               [
                 principal.companyId,
                 query.context?.source ?? null,
-                !!options.manualSourceId
+                !!options.manualSourceId,
+                sourceLimit + 1
               ]
             )
           ).rows
       );
-      const sourceIds = sourceRows.slice(0, 4).map((source) => source.id);
+      const sourceIds = sourceRows
+        .slice(0, sourceLimit)
+        .map((source) => source.id);
       if (!sourceIds.length)
-        return Response.json({
+        return respondWithQuery(streaming, async () => ({
           requestId: query.requestId,
           kind: "abstention",
           evidence: [],
           claims: [],
           message: "No authorized sources are available.",
           partial: false
-        });
+        }));
       const liveAccess = createDriveAccessChecker({
         request,
         identity,
@@ -241,145 +327,187 @@ export function createReadHandler(
           trace,
           liveAccess
         });
+      // Follow-up context is restored whole or not at all, and only after
+      // every referenced evidence id passes the same check a cached result
+      // must pass. A missing or refused context starts the question afresh.
+      const conversationId = query.context?.conversationId;
+      const conversation: ConversationState | null =
+        conversationId && options.conversationStore
+          ? await options.conversationStore.load(
+              principal,
+              conversationId,
+              authorizeIds
+            )
+          : null;
       const cache = createQueryCache(options.cacheStore, policy);
-      let computed = false;
-      const result = await cache.get(
-        queryCacheScope({
-          principal,
-          query,
-          sourceIds,
-          businessTimezone: options.businessTimezone,
-          model: options.model,
-          embedding: options.embedding
-        }),
-        async () => {
-          computed = true;
-          trace.record("cache", "miss");
-          const retrievedIds = new Set<string>();
-          let retrievalPartial = false;
-          const embed =
-            !options.manualSourceId && options.embedding
-              ? createVertexEmbedder(options.embedding, {
-                  budget: durableBudget(options.pool, principal)
-                })
-              : undefined;
-          const answer =
-            !options.manualSourceId && options.model
-              ? createVertexAnswerProvider(options.model, {
-                  budget: durableBudget(options.pool, principal)
-                })
-              : undefined;
-          const result = await executeReadQuery(query, principal, {
-            signal: request.signal,
-            retrieve: async (text, signal) => {
-              if (signal.aborted) throw Error("Query canceled");
-              const semantic = embed && routeQuery(query).kind !== "locate";
-              const rankings = await trace.measure("retrieval", () =>
-                Promise.allSettled([
-                  read((client) =>
-                    lexicalSearch(
-                      client,
-                      principal.companyId,
-                      sourceIds,
-                      text,
-                      semantic ? 20 : 40
-                    )
-                  ),
-                  ...(semantic
-                    ? [
-                        (async () => {
-                          const vector = await embed({
-                            text,
-                            requestId: createHash("sha256")
-                              .update(`${query.requestId}:embedding`)
-                              .digest("hex"),
-                            task: "RETRIEVAL_QUERY",
-                            signal: AbortSignal.any([
-                              signal,
-                              AbortSignal.timeout(900)
-                            ])
-                          });
-                          // The database picks the index or the exact path
-                          // and reports it on every row (see retrieval/recall.ts).
-                          return read((client) =>
-                            vectorSearchApproximate(
-                              client,
-                              principal.companyId,
-                              sourceIds,
-                              vector.embedding,
-                              vector.profile,
-                              20
-                            )
-                          );
-                        })()
-                      ]
-                    : [])
-                ])
-              );
-              const permittedRankings: RetrievedChunk[][] = [];
-              for (const ranking of rankings) {
-                if (ranking.status === "fulfilled")
-                  permittedRankings.push(ranking.value);
-                else retrievalPartial = true;
-              }
-              const chunks = reciprocalRankFusion(permittedRankings, 8);
-              const live = await Promise.all(chunks.map(liveAccess));
-              const denied = new Set<string>();
-              for (const [index, chunk] of chunks.entries()) {
-                if (live[index]) retrievedIds.add(chunk.id);
-                else {
-                  denied.add(chunk.id);
-                  retrievalPartial = true;
-                }
-              }
-              return assembleEvidence(chunks, {
-                origin: options.origin,
-                policyVersion: principal.policyVersion,
-                maxTokens: 7000,
-                countTokens: (text) => new TextEncoder().encode(text).length,
-                // Selected chunks were checked above; a parent section is
-                // checked live the same way before it is delivered.
-                authorize: async (chunk) => {
-                  if (retrievedIds.has(chunk.id)) return true;
-                  if (denied.has(chunk.id) || !(await liveAccess(chunk)))
-                    return false;
-                  retrievedIds.add(chunk.id);
-                  return true;
-                },
-                expandSections: (selected) =>
-                  read((client) =>
-                    loadParentSections(client, principal.companyId, selected)
-                  )
-              });
-            },
-            authorize: async (evidence) => retrievedIds.has(evidence.id),
-            ...(answer
-              ? {
-                  synthesize: createProviderDisclosure({
-                    providerId: "vertex",
-                    trace,
-                    authorizedCandidates,
-                    answer
+      return respondWithQuery(streaming, async (emit) => {
+        let computed = false;
+        const result = await cache.get(
+          queryCacheScope({
+            principal,
+            query,
+            sourceIds,
+            conversationEvidenceIds: conversation?.evidenceIds ?? [],
+            businessTimezone: options.businessTimezone,
+            model: options.model,
+            embedding: options.embedding
+          }),
+          async () => {
+            computed = true;
+            trace.record("cache", "miss");
+            const retrievedIds = new Set<string>();
+            let retrievalPartial = false;
+            const embed =
+              !options.manualSourceId && options.embedding
+                ? createVertexEmbedder(options.embedding, {
+                    budget: durableBudget(options.pool, principal)
                   })
+                : undefined;
+            const answer =
+              !options.manualSourceId && options.model
+                ? createVertexAnswerProvider(options.model, {
+                    budget: durableBudget(options.pool, principal)
+                  })
+                : undefined;
+            const result = await executeReadQuery(query, principal, {
+              signal: request.signal,
+              emit,
+              retrieve: async (text, signal) => {
+                if (signal.aborted) throw Error("Query canceled");
+                const semantic = embed && route.kind !== "locate";
+                const rankings = await trace.measure("retrieval", () =>
+                  Promise.allSettled([
+                    read((client) =>
+                      lexicalSearch(
+                        client,
+                        principal.companyId,
+                        sourceIds,
+                        text,
+                        semantic ? 20 : QUERY_BUDGETS.candidatesPerSource
+                      )
+                    ),
+                    ...(semantic
+                      ? [
+                          (async () => {
+                            const vector = await embed({
+                              text,
+                              requestId: createHash("sha256")
+                                .update(`${query.requestId}:embedding`)
+                                .digest("hex"),
+                              task: "RETRIEVAL_QUERY",
+                              signal: AbortSignal.any([
+                                signal,
+                                AbortSignal.timeout(900)
+                              ])
+                            });
+                            // The database picks the index or the exact path
+                            // and reports it on every row (see retrieval/recall.ts).
+                            return read((client) =>
+                              vectorSearchApproximate(
+                                client,
+                                principal.companyId,
+                                sourceIds,
+                                vector.embedding,
+                                vector.profile,
+                                20
+                              )
+                            );
+                          })()
+                        ]
+                      : [])
+                  ])
+                );
+                const permittedRankings: RetrievedChunk[][] = [];
+                for (const ranking of rankings) {
+                  if (ranking.status === "fulfilled")
+                    permittedRankings.push(ranking.value);
+                  else retrievalPartial = true;
                 }
-              : {})
-          });
-          result.partial = sourceRows.length > 4 || retrievalPartial;
-          return {
-            value: result,
-            evidenceIds: result.evidence.map((item) => item.id),
-            cacheable: !result.partial
-          };
-        },
-        (value) => queryResultSchema.parse(value),
-        authorizeIds
-      );
-      if (!computed) trace.record("cache", "hit");
-      // Request IDs are delivery metadata, never another request's cached ID.
-      return Response.json(
-        { ...result, requestId: query.requestId },
-        { headers: { "cache-control": "no-store" } }
-      );
+                if (retrievalPartial)
+                  emit({
+                    type: "progress",
+                    stage: "retrieval",
+                    state: "partial"
+                  });
+                // What the reader was last shown stays a candidate for the
+                // follow-up, re-read under current authorization, ranked
+                // alongside the fresh hits rather than replacing them.
+                if (conversation?.evidenceIds.length) {
+                  const prior = await authorizedCandidates(
+                    conversation.evidenceIds
+                  );
+                  if (prior) permittedRankings.push([...prior]);
+                }
+                const chunks = reciprocalRankFusion(
+                  permittedRankings,
+                  QUERY_BUDGETS.evidenceBlocks
+                );
+                const live = await Promise.all(chunks.map(liveAccess));
+                const denied = new Set<string>();
+                for (const [index, chunk] of chunks.entries()) {
+                  if (live[index]) retrievedIds.add(chunk.id);
+                  else {
+                    denied.add(chunk.id);
+                    retrievalPartial = true;
+                  }
+                }
+                return assembleEvidence(chunks, {
+                  origin: options.origin,
+                  policyVersion: principal.policyVersion,
+                  maxTokens: QUERY_BUDGETS.evidenceTokens,
+                  countTokens: conservativeTokenCount,
+                  // Selected chunks were checked above; a parent section is
+                  // checked live the same way before it is delivered.
+                  authorize: async (chunk) => {
+                    if (retrievedIds.has(chunk.id)) return true;
+                    if (denied.has(chunk.id) || !(await liveAccess(chunk)))
+                      return false;
+                    retrievedIds.add(chunk.id);
+                    return true;
+                  },
+                  expandSections: (selected) =>
+                    read((client) =>
+                      loadParentSections(client, principal.companyId, selected)
+                    )
+                });
+              },
+              authorize: async (evidence) => retrievedIds.has(evidence.id),
+              ...(answer
+                ? {
+                    synthesize: createProviderDisclosure({
+                      providerId: "vertex",
+                      trace,
+                      authorizedCandidates,
+                      answer
+                    })
+                  }
+                : {})
+            });
+            result.partial =
+              sourceRows.length > sourceLimit || retrievalPartial;
+            return {
+              value: result,
+              evidenceIds: result.evidence.map((item) => item.id),
+              cacheable: !result.partial
+            };
+          },
+          (value) => queryResultSchema.parse(value),
+          authorizeIds
+        );
+        if (!computed) trace.record("cache", "hit");
+        if (
+          conversationId &&
+          options.conversationStore &&
+          result.evidence.length
+        )
+          await options.conversationStore.save(
+            principal,
+            conversationId,
+            result.evidence.map((item) => item.id)
+          );
+        // Request IDs are delivery metadata, never another request's cached ID.
+        return { ...result, requestId: query.requestId };
+      });
     } catch (error) {
       // A source that requires Carbon MFA is the one failure the portal must
       // be able to name; everything else stays an opaque unavailability.

@@ -47,7 +47,8 @@ const identity = {
   },
   companyGroupId: "company",
   allowedOperations: [],
-  accessLevels: []
+  accessLevels: [],
+  assurance: { mode: "carbon-mfa" as const }
 };
 const motor = (id: string, mpn: string) => ({
   id,

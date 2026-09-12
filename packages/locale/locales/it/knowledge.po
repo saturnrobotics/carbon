@@ -12,6 +12,9 @@ msgstr ""
 "Language-Team: \n"
 "Plural-Forms: \n"
 
+msgid "A follow-up question keeps the evidence shown here in context."
+msgstr ""
+
 msgid "Access to this document was revoked."
 msgstr ""
 
@@ -19,6 +22,9 @@ msgid "Acknowledge the changed evidence before publishing."
 msgstr ""
 
 msgid "Add a document"
+msgstr ""
+
+msgid "Answer"
 msgstr ""
 
 msgid "Back to company knowledge"
@@ -36,6 +42,9 @@ msgstr ""
 msgid "Check freshness"
 msgstr ""
 
+msgid "Choices"
+msgstr ""
+
 msgid "Choose either a file or a URL, not both."
 msgstr ""
 
@@ -43,6 +52,10 @@ msgid "Choose one PDF, image, photo, or HTTPS address."
 msgstr ""
 
 msgid "Company knowledge"
+msgstr ""
+
+#. placeholder {0}: evidence.length
+msgid "Composing an answer from {0} evidence blocks…"
 msgstr ""
 
 msgid "Confirm removal"
@@ -111,6 +124,9 @@ msgstr ""
 msgid "Link this document to one existing item, or keep it as a generic document. Linking never creates or changes items."
 msgstr ""
 
+msgid "Live record"
+msgstr ""
+
 msgid "Machine"
 msgstr ""
 
@@ -163,8 +179,15 @@ msgstr ""
 msgid "Only the first candidates are shown; narrow the search."
 msgstr ""
 
+msgid "Open record"
+msgstr ""
+
 #. placeholder {0}: selected?.classification ?? ""
 msgid "Owner: {actorId}. Access: {0}. Readers of this library can find the document once it is reviewed and published."
+msgstr ""
+
+#. placeholder {0}: source.page
+msgid "page {0}"
 msgstr ""
 
 msgid "Page {page}"
@@ -177,6 +200,9 @@ msgid "Part number"
 msgstr ""
 
 msgid "Part number, MPN, or name"
+msgstr ""
+
+msgid "Partial source answer"
 msgstr ""
 
 msgid "PDF and image files are captured with their immutable object version before extraction."
@@ -234,7 +260,13 @@ msgstr ""
 msgid "Search published company manuals by manufacturer, part number, revision, machine, or keyword. Open the exact original version from every result."
 msgstr ""
 
+msgid "Searching authorized sources…"
+msgstr ""
+
 msgid "Searching…"
+msgstr ""
+
+msgid "see evidence"
 msgstr ""
 
 msgid "Selected: {fileName}"
@@ -244,6 +276,9 @@ msgid "Show evidence ({evidenceCount})"
 msgstr ""
 
 msgid "Some authorized manuals were unavailable."
+msgstr ""
+
+msgid "Some sources did not answer; results may be partial."
 msgstr ""
 
 msgid "Source details"
@@ -259,10 +294,16 @@ msgstr ""
 msgid "Source revision: {0}"
 msgstr ""
 
+msgid "Source unavailable"
+msgstr ""
+
 msgid "Source URL"
 msgstr ""
 
 msgid "Sources"
+msgstr ""
+
+msgid "Start a new question"
 msgstr ""
 
 msgid "State:"
@@ -296,6 +337,9 @@ msgid "The knowledge company is not configured."
 msgstr ""
 
 msgid "The knowledge service could not complete this request."
+msgstr ""
+
+msgid "The request did not complete within its time budget."
 msgstr ""
 
 msgid "The request was not valid."
@@ -368,4 +412,7 @@ msgid "You cannot add documents to any library. Ask an administrator for a libra
 msgstr ""
 
 msgid "You do not have permission for this action in this library."
+msgstr ""
+
+msgid "Your access changed while this request ran. Search again."
 msgstr ""

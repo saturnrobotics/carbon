@@ -1,8 +1,9 @@
 import { type Evidence, evidenceSchema } from "../contracts";
+import { QUERY_BUDGETS } from "../query/budgets";
 import type { RetrievedChunk } from "./lexical.server";
 
-export const MAX_EVIDENCE_BLOCKS = 8;
-export const MAX_EVIDENCE_CANDIDATES = 40;
+export const MAX_EVIDENCE_BLOCKS = QUERY_BUDGETS.evidenceBlocks;
+export const MAX_EVIDENCE_CANDIDATES = QUERY_BUDGETS.candidatesPerSource;
 
 /**
  * Order evidence candidates deterministically: every selected chunk first, in
@@ -73,7 +74,7 @@ export async function assembleEvidence(
   if (
     chunks.length > MAX_EVIDENCE_CANDIDATES ||
     options.maxTokens < 1 ||
-    options.maxTokens > 7000
+    options.maxTokens > QUERY_BUDGETS.evidenceTokens
   )
     throw new Error("Invalid evidence budget");
   const candidates = options.expandSections

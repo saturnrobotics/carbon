@@ -1,3 +1,4 @@
+import type { ServerResponse } from "node:http";
 import {
   createTelemetry,
   type Telemetry,
@@ -64,4 +65,28 @@ export function requestBoundary(
     headers.set("cache-control", "no-store");
     return new Response(result.body, { status: result.status, headers });
   };
+}
+
+/**
+ * Writes a fetch `Response` to a Node response as it is produced. A streamed
+ * read reaches the reader event by event; a buffered JSON response is written
+ * exactly as before.
+ */
+export async function writeWebResponse(
+  outgoing: ServerResponse,
+  response: Response
+): Promise<void> {
+  response.headers.forEach((value, key) => {
+    outgoing.setHeader(key, value);
+  });
+  outgoing.writeHead(response.status);
+  if (!response.body) {
+    outgoing.end();
+    return;
+  }
+  try {
+    for await (const chunk of response.body) outgoing.write(chunk);
+  } finally {
+    outgoing.end();
+  }
 }

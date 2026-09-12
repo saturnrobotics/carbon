@@ -6,6 +6,7 @@
 import { createServer, type Server } from "node:http";
 import type { VerifiedWorkforceIdentity } from "@carbon/knowledge/identity.server";
 import { postgresIdentityStore } from "@carbon/knowledge/identity-store.server";
+import { writeWebResponse } from "@carbon/knowledge/query/request-boundary.server";
 import { Pool } from "pg";
 import { createReadHandler } from "../../../knowledge-query/src/query.server";
 import { createWorkerHandler, type WorkerDependencies } from "../server";
@@ -159,12 +160,7 @@ async function bridge(
           { method: incoming.method, headers, ...(body.length ? { body } : {}) }
         )
       );
-      response.headers.forEach((value, key) => {
-        outgoing.setHeader(key, value);
-      });
-      outgoing
-        .writeHead(response.status)
-        .end(Buffer.from(await response.arrayBuffer()));
+      await writeWebResponse(outgoing, response);
     } catch {
       outgoing
         .writeHead(503)

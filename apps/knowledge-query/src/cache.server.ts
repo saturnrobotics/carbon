@@ -39,6 +39,8 @@ export function queryCacheScope(options: {
   principal: Pick<HumanReadPrincipal, "companyId" | "actorId" | "callerId">;
   query: QueryRequest;
   sourceIds: readonly string[];
+  /** Restored follow-up context; a question asked in context is a different question. */
+  conversationEvidenceIds?: readonly string[];
   businessTimezone: string;
   model?: VertexConfiguration;
   embedding?: EmbeddingConfiguration;
@@ -49,7 +51,13 @@ export function queryCacheScope(options: {
     callerId: options.principal.callerId,
     capability: "knowledge.read",
     intent: options.query.mode,
-    entities: [...options.sourceIds, options.query.context?.entityId ?? ""],
+    entities: [
+      ...options.sourceIds,
+      options.query.context?.entityId ?? "",
+      ...(options.conversationEvidenceIds ?? []).map(
+        (id) => `conversation:${id}`
+      )
+    ],
     query: options.query.text,
     locale: options.query.locale,
     businessTimezone: options.businessTimezone,
@@ -122,7 +130,7 @@ export function createReadAuthorization(options: {
       ? rows
       : null;
   };
-  const authorizeIds = async (ids: string[]) =>
+  const authorizeIds = async (ids: readonly string[]) =>
     !!(await authorizedCandidates(ids));
   return { currentIdentity, policy, authorizedCandidates, authorizeIds };
 }
