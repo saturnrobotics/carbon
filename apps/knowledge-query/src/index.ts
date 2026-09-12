@@ -11,6 +11,7 @@ import { readManualSourceConfiguration } from "@carbon/knowledge/release-profile
 import { Pool } from "pg";
 import { startCacheIsolationProbe } from "./cache-probe";
 import { handleIdentityRequest } from "./identity.server";
+import { createItemSearchHandler } from "./items.server";
 import { createReadHandler } from "./query.server";
 
 export const serviceName = "knowledge-query";
@@ -71,6 +72,14 @@ export function createHandler(
     origin: environment.KNOWLEDGE_PORTAL_ORIGIN!,
     businessTimezone: environment.KNOWLEDGE_BUSINESS_TIMEZONE!
   });
+  // The manual release registers no Carbon item source; the handler answers
+  // `unavailable` so intake review can still publish a generic document.
+  const itemHandler = createItemSearchHandler({
+    configuration,
+    identityStore,
+    tokenVerifier,
+    pool
+  });
   return requestBoundary("query", async (request) => {
     const pathname = new URL(request.url).pathname;
     if (request.method === "POST" && pathname === "/v1/identity")
@@ -81,6 +90,8 @@ export function createHandler(
       });
     if (request.method === "POST" && pathname === "/v1/query")
       return readHandler(request);
+    if (request.method === "POST" && pathname === "/v1/items")
+      return itemHandler(request);
     return Response.json({ error: "not_found" }, { status: 404 });
   });
 }

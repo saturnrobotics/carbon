@@ -1,7 +1,13 @@
-import { proposedFieldsSchema } from "@carbon/knowledge/intake/contracts";
-import { redirect, useLoaderData } from "react-router";
-import { manualMetadataSchema } from "../modules/intake/intake.models";
-import { forwardIntakeRequest } from "../modules/intake/intake.service";
+import { Trans } from "@lingui/react/macro";
+import { data, redirect, useActionData, useLoaderData } from "react-router";
+import {
+  intakeReviewModel,
+  reviewSubmissionSchema
+} from "../modules/intake/intake.models";
+import {
+  forwardIntakeRequest,
+  workerErrorCode
+} from "../modules/intake/intake.service";
 import { IntakeReview } from "../modules/intake/ui/IntakeReview";
 
 export async function loader({
@@ -18,7 +24,7 @@ export async function loader({
     workerPath: `/v1/intake/${encodeURIComponent(params.id ?? "")}`
   });
   if (!response.ok) throw response;
-  return response.json();
+  return intakeReviewModel(await response.json());
 }
 
 export async function action({
@@ -35,6 +41,8 @@ export async function action({
   const expectedVersion = String(form.get("expectedVersion") ?? "");
   let body: string;
   if (intent === "publish") {
+    // Publishing is its own intent: the worker re-checks the publish
+    // capability, the library grant, and unresolved evidence itself.
     body = JSON.stringify({
       expectedGeneration,
       expectedVersion,
@@ -42,15 +50,18 @@ export async function action({
     });
   } else {
     try {
+      const submission = reviewSubmissionSchema.parse({
+        metadata: JSON.parse(String(form.get("metadata") ?? "{}")),
+        item: JSON.parse(String(form.get("item") ?? "null"))
+      });
       body = JSON.stringify({
         expectedGeneration,
         expectedVersion,
-        metadata: manualMetadataSchema.parse(
-          JSON.parse(String(form.get("metadata") ?? "{}"))
-        )
+        metadata: submission.metadata,
+        item: submission.item
       });
     } catch {
-      throw new Response("Valid manual metadata is required", { status: 422 });
+      throw new Response("review_invalid", { status: 422 });
     }
   }
   const response = await forwardIntakeRequest({
@@ -60,67 +71,32 @@ export async function action({
     body,
     contentType: "application/json"
   });
-  if (!response.ok) throw response;
+  if (!response.ok)
+    return data(
+      { error: await workerErrorCode(response) },
+      { status: response.status }
+    );
   if (intent === "publish")
     return redirect(`/intake/${encodeURIComponent(params.id ?? "")}`);
   return response;
 }
 
 export default function IntakeReviewRoute() {
-  const data = useLoaderData() as {
-    intake: {
-      id: string;
-      version?: string;
-      generation?: string;
-      state: "captured" | "extracting" | "needs-review" | "ready" | "failed";
-      extraction?: Record<string, string>;
-      extractionOutput?: {
-        evidence?: Record<string, Array<{ page: number; text: string }>>;
-        proposed?: unknown;
-      };
-      reviewDecisions?: Record<string, { value?: string }>;
-      reviewedMetadata?: Record<string, string>;
-      unresolved?: string[];
-    };
-  };
-  const intake = data.intake;
-  const corrected =
-    intake.reviewedMetadata ??
-    Object.fromEntries(
-      Object.entries(intake.reviewDecisions ?? {}).flatMap(
-        ([field, decision]) =>
-          typeof decision.value === "string" ? [[field, decision.value]] : []
-      )
-    );
-  const sourcePages = Object.values(intake.extractionOutput?.evidence ?? {})
-    .flat()
-    .slice(0, 100);
-  // A version-1 generation has no typed proposals; a malformed one renders none.
-  const proposedFields = proposedFieldsSchema.safeParse(
-    intake.extractionOutput?.proposed
-  );
+  const model = useLoaderData<typeof loader>();
+  const attempt = useActionData<typeof action>();
+  const error =
+    attempt && typeof attempt === "object" && "error" in attempt
+      ? (attempt as { error?: string }).error
+      : undefined;
   return (
-    <main className="page-shell">
+    <main className="page-shell page-shell-wide">
       <a className="back-link" href="/">
-        Back to manual search
+        <Trans>Back to manual search</Trans>
       </a>
-      <h1>Review document</h1>
-      <IntakeReview
-        model={{
-          id: intake.id,
-          version: intake.version,
-          generation: intake.generation,
-          state: intake.state,
-          title: intake.extraction?.title ?? "Captured document",
-          proposed: intake.extraction ?? {},
-          corrected,
-          proposedFields: proposedFields.success
-            ? proposedFields.data
-            : undefined,
-          unresolved: intake.unresolved ?? [],
-          sourcePages
-        }}
-      />
+      <h1>
+        <Trans>Review document</Trans>
+      </h1>
+      <IntakeReview error={error} model={model} />
     </main>
   );
 }

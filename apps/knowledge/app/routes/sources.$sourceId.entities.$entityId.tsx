@@ -1,4 +1,5 @@
 import type { SourceEntity, SourceEntityRequest } from "@carbon/knowledge";
+import { Trans, useLingui } from "@lingui/react/macro";
 import { Link, useLoaderData } from "react-router";
 import { forwardKnowledgeEntity } from "../services/entity-gateway.server";
 
@@ -13,7 +14,7 @@ export async function loader({
   const queryAudience = process.env.KNOWLEDGE_QUERY_AUDIENCE;
   const companyId = process.env.KNOWLEDGE_COMPANY_ID;
   if (!queryUrl || !queryAudience || !companyId) {
-    throw Response.json({ error: "entity_not_configured" }, { status: 503 });
+    throw Response.json({ error: "not_configured" }, { status: 503 });
   }
   const kind = new URL(request.url).searchParams.get("kind") ?? undefined;
   const input: SourceEntityRequest = {
@@ -31,30 +32,35 @@ export async function loader({
 }
 
 export default function SourceEntityRoute() {
+  const { t } = useLingui();
   const entity = useLoaderData<typeof loader>() as SourceEntity;
   return (
     <main className="page-shell entity-page">
       <Link className="back-link" to="/">
-        Back to company knowledge
+        <Trans>Back to company knowledge</Trans>
       </Link>
       <header>
         <p className="eyebrow">{entity.kind}</p>
         <h1>{entity.title}</h1>
         {entity.description ? <p>{entity.description}</p> : null}
       </header>
-      <section aria-label="Source details" className="entity-card">
+      <section aria-label={t`Source details`} className="entity-card">
         <dl>
           {Object.entries(entity.fields).map(([label, value]) => (
             <div key={label}>
               <dt>{label}</dt>
-              <dd>{value === null ? "Not set" : String(value)}</dd>
+              <dd>{value === null ? t`Not set` : String(value)}</dd>
             </div>
           ))}
         </dl>
       </section>
       <footer className="entity-provenance">
-        <span>Source revision: {entity.sourceRevision}</span>
-        <time dateTime={entity.observedAt}>Observed {entity.observedAt}</time>
+        <span>
+          <Trans>Source revision: {entity.sourceRevision}</Trans>
+        </span>
+        <time dateTime={entity.observedAt}>
+          <Trans>Observed {entity.observedAt}</Trans>
+        </time>
       </footer>
     </main>
   );

@@ -6,6 +6,7 @@ import type { Pool } from "pg";
 
 export const localCompanyId = "company-b";
 export const localSourceId = "source-b";
+export const localItemSourceId = "source-carbon-e2e";
 export const localCallerId = "knowledge-e2e-loopback";
 export const localBucket = "knowledge-e2e";
 
@@ -151,3 +152,94 @@ export async function cleanCapturedIntakes(
     [localCompanyId, intakeIds]
   );
 }
+
+const syntheticItems = [
+  {
+    id: "item-e2e-motor",
+    readableId: "EM-100",
+    name: "E2E motor",
+    revision: "A",
+    mpn: "EM-100-A"
+  },
+  {
+    id: "item-e2e-pump",
+    readableId: "EP-200",
+    name: "E2E pump",
+    revision: "B",
+    mpn: null
+  }
+];
+
+/** Synthetic remote for URL intake. The production fetch policy (HTTPS-only,
+ * private-address refusal, redirect and byte limits, content-type check) runs
+ * unchanged; only DNS and the socket for this one invalid-TLD host are stubbed.
+ * `https://<host>/<token>.pdf` serves a one-page PDF whose text is the token. */
+export const localUrlIntakeHost = "manuals.e2e.invalid";
+
+function syntheticPdf(text: string): Buffer {
+  const escaped = text.replace(/[\\()]/g, (char) => `\\${char}`);
+  const stream = `BT\n/F1 18 Tf\n72 720 Td\n(${escaped}) Tj\nET\n`;
+  const objects = [
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>",
+    `<< /Length ${Buffer.byteLength(stream)} >>\nstream\n${stream}endstream`,
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>"
+  ];
+  let body = "%PDF-1.4\n";
+  const offsets: number[] = [];
+  for (const [index, object] of objects.entries()) {
+    offsets.push(Buffer.byteLength(body));
+    body += `${index + 1} 0 obj\n${object}\nendobj\n`;
+  }
+  const xref = Buffer.byteLength(body);
+  body += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+  body += offsets
+    .map((offset) => `${String(offset).padStart(10, "0")} 00000 n \n`)
+    .join("");
+  body += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+  return Buffer.from(body, "ascii");
+}
+
+export const syntheticUrlIntakeResolve = async (
+  hostname: string,
+  fallback: (hostname: string) => Promise<readonly string[]>
+): Promise<readonly string[]> =>
+  hostname === localUrlIntakeHost ? ["203.0.113.10"] : fallback(hostname);
+
+export const syntheticUrlIntakeFetch: typeof fetch = async (input, init) => {
+  const url = new URL(
+    typeof input === "string" || input instanceof URL
+      ? input.toString()
+      : input.url
+  );
+  if (url.hostname !== localUrlIntakeHost) return fetch(input, init);
+  const token = url.pathname.match(/^\/([A-Za-z0-9_-]{1,64})\.pdf$/)?.[1];
+  if (!token) return new Response("not found", { status: 404 });
+  return new Response(new Uint8Array(syntheticPdf(`${token} E2E URL manual`)), {
+    headers: { "content-type": "application/pdf" }
+  });
+};
+
+/** Answers only the registered Carbon `resolveItems` operation, from fixed rows. */
+export const syntheticItemSourceFetch: typeof fetch = async (input, init) => {
+  const url = new URL(
+    typeof input === "string" || input instanceof URL
+      ? input.toString()
+      : input.url
+  );
+  if (
+    url.pathname !== "/api/v1/knowledge/resolveItems" ||
+    init?.method !== "POST"
+  )
+    return Response.json({ error: "not_found" }, { status: 404 });
+  const body = JSON.parse(String(init?.body ?? "{}")) as { search?: string };
+  const search = (body.search ?? "").toLowerCase();
+  return Response.json({
+    results: syntheticItems.filter((item) =>
+      [item.readableId, item.name, item.mpn ?? ""].some((value) =>
+        value.toLowerCase().includes(search)
+      )
+    )
+  });
+};

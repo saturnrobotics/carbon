@@ -276,6 +276,58 @@ export const sourceEntitySchema = z
 export type SourceEntityRequest = z.infer<typeof sourceEntityRequestSchema>;
 export type SourceEntity = z.infer<typeof sourceEntitySchema>;
 
+/** Bounded existing-item lookup for intake review. The query service answers
+ * from the Carbon canonical read (`resolveItems`); a library without a
+ * configured item source answers `unavailable` rather than guessing. */
+export const itemSearchRequestSchema = z
+  .object({
+    search: z.string().trim().min(1).max(KNOWLEDGE_LIMITS.idCharacters),
+    limit: z.number().int().min(1).max(20).default(10)
+  })
+  .strict();
+
+export const itemCandidateSchema = z
+  .object({
+    id: opaqueIdSchema,
+    readableId: z.string().max(KNOWLEDGE_LIMITS.idCharacters),
+    name: z.string().max(KNOWLEDGE_LIMITS.titleCharacters),
+    revision: z.string().max(KNOWLEDGE_LIMITS.idCharacters).nullable(),
+    mpn: z.string().max(KNOWLEDGE_LIMITS.idCharacters).nullable(),
+    sourceId: opaqueIdSchema
+  })
+  .strict();
+
+export const itemSearchResultSchema = z
+  .object({
+    items: z.array(itemCandidateSchema).max(20),
+    status: z.enum(["complete", "partial", "unavailable"]),
+    incompleteReason: z.string().trim().min(1).max(1_000).optional()
+  })
+  .strict();
+
+export type ItemSearchRequest = z.infer<typeof itemSearchRequestSchema>;
+export type ItemCandidate = z.infer<typeof itemCandidateSchema>;
+export type ItemSearchResult = z.infer<typeof itemSearchResultSchema>;
+
+/** Upload libraries the signed-in actor may capture into, as the worker reports them. */
+export const writableIntakeSourcesSchema = z
+  .object({
+    actorId: opaqueIdSchema,
+    sources: z
+      .array(
+        z
+          .object({
+            sourceId: opaqueIdSchema,
+            displayName: z.string().max(KNOWLEDGE_LIMITS.titleCharacters),
+            classification: z.string().max(KNOWLEDGE_LIMITS.idCharacters)
+          })
+          .strict()
+      )
+      .max(20)
+  })
+  .strict();
+export type WritableIntakeSources = z.infer<typeof writableIntakeSourcesSchema>;
+
 export const evidenceSchema = z
   .object({
     id: opaqueIdSchema,

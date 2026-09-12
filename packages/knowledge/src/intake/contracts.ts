@@ -36,6 +36,19 @@ export const reviewedManualMetadataSchema = z
 export type ReviewedManualMetadata = z.infer<
   typeof reviewedManualMetadataSchema
 >;
+/** One reviewer-chosen existing item, or none. The candidate list is read from
+ * the Carbon canonical source at review time; only the bounded identity that a
+ * later linking layer needs is retained with the review. */
+export const itemAssociationSchema = z
+  .object({
+    id: z.string().trim().min(1).max(256),
+    readableId: z.string().trim().max(256),
+    name: z.string().trim().max(500),
+    revision: z.string().max(256).nullable(),
+    mpn: z.string().max(256).nullable()
+  })
+  .strict();
+export type ItemAssociation = z.infer<typeof itemAssociationSchema>;
 export type Evidence = { page: number; region?: string; text: string };
 
 /**

@@ -7,6 +7,7 @@ export default [
   route("logout", "routes/logout.ts"),
   route("step-up", "routes/step-up.tsx"),
   route("api/query", "routes/api.query.ts"),
+  route("api/items", "routes/api.items.ts"),
   route("intake", "routes/intake.tsx"),
   route("intake/:id", "routes/intake.$id.tsx"),
   route(
