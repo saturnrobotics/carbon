@@ -1,5 +1,8 @@
 import type { PoolClient } from "pg";
 
+/** Which ranking produced a chunk; carried onto its evidence block. */
+export type RetrievalPath = "lexical" | "vector-exact" | "vector-ann";
+
 export type RetrievedChunk = {
   id: string;
   documentId: string;
@@ -17,6 +20,7 @@ export type RetrievedChunk = {
   providerPolicy: Record<string, unknown>;
   aclVersion: string;
   observedAt: string;
+  retrievalPath?: RetrievalPath;
 };
 
 export function checkRetrievalBounds(
@@ -50,11 +54,11 @@ export async function lexicalSearch(
   sourceIds: readonly string[],
   query: string,
   limit = 40
-) {
+): Promise<RetrievedChunk[]> {
   checkRetrievalBounds(query, sourceIds, limit);
   const result = await client.query<RetrievedChunk>(
     `SELECT * FROM knowledge.search_lexical($1,$2::text[],$3,$4)`,
     [companyId, sourceIds, query, limit]
   );
-  return result.rows;
+  return result.rows.map((row) => ({ ...row, retrievalPath: "lexical" }));
 }

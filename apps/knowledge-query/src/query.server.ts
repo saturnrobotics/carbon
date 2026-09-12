@@ -33,7 +33,8 @@ import {
   lexicalSearch,
   type RetrievedChunk
 } from "@carbon/knowledge/retrieval/lexical.server";
-import { vectorSearch } from "@carbon/knowledge/retrieval/vector.server";
+import { loadParentSections } from "@carbon/knowledge/retrieval/sections.server";
+import { vectorSearchApproximate } from "@carbon/knowledge/retrieval/vector.server";
 import type { SourceRegistryConfiguration } from "@carbon/knowledge/sources/registry.server";
 import type { Telemetry } from "@carbon/knowledge/telemetry";
 import type { Pool } from "pg";
@@ -294,8 +295,10 @@ export function createReadHandler(
                               AbortSignal.timeout(900)
                             ])
                           });
+                          // The database picks the index or the exact path
+                          // and reports it on every row (see retrieval/recall.ts).
                           return read((client) =>
-                            vectorSearch(
+                            vectorSearchApproximate(
                               client,
                               principal.companyId,
                               sourceIds,
@@ -317,16 +320,32 @@ export function createReadHandler(
               }
               const chunks = reciprocalRankFusion(permittedRankings, 8);
               const live = await Promise.all(chunks.map(liveAccess));
+              const denied = new Set<string>();
               for (const [index, chunk] of chunks.entries()) {
                 if (live[index]) retrievedIds.add(chunk.id);
-                else retrievalPartial = true;
+                else {
+                  denied.add(chunk.id);
+                  retrievalPartial = true;
+                }
               }
               return assembleEvidence(chunks, {
                 origin: options.origin,
                 policyVersion: principal.policyVersion,
                 maxTokens: 7000,
                 countTokens: (text) => new TextEncoder().encode(text).length,
-                authorize: async (chunk) => retrievedIds.has(chunk.id)
+                // Selected chunks were checked above; a parent section is
+                // checked live the same way before it is delivered.
+                authorize: async (chunk) => {
+                  if (retrievedIds.has(chunk.id)) return true;
+                  if (denied.has(chunk.id) || !(await liveAccess(chunk)))
+                    return false;
+                  retrievedIds.add(chunk.id);
+                  return true;
+                },
+                expandSections: (selected) =>
+                  read((client) =>
+                    loadParentSections(client, principal.companyId, selected)
+                  )
               });
             },
             authorize: async (evidence) => retrievedIds.has(evidence.id),
