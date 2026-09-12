@@ -394,4 +394,104 @@ describe.skipIf(!url)("knowledge source outbox", () => {
         "upsert"
       ]);
     }));
+
+  // Deleting a company (settings.service.ts deleteSubsidiary) CASCADEs to all
+  // four source tables, so the trigger runs for each child row after the
+  // "company" row it references is already gone. Enqueueing there aborts the
+  // whole delete on knowledgeSourceOutbox_companyId_fkey. This is the ONLY
+  // state in which the company can be absent — companyId is NOT NULL with its
+  // own FK on every source table — and the event it would describe names a
+  // company, an entity and an outbox row the same statement is deleting.
+  it("lets a company delete cascade instead of recording an undeliverable event", async () =>
+    fixture(async (f) => {
+      // Qualifying, unclaimed rows are present on all four source tables when
+      // the delete starts: an item, a posted receipt, its line, and an order.
+      await postReceipt(db, f);
+      await db
+        .updateTable("receiptLine")
+        .set({ receivedQuantity: 2, updatedAt: "2026-09-01T11:00:00Z" })
+        .where("id", "=", f.receiptLineId)
+        .where("companyId", "=", f.companyId)
+        .execute();
+      const supplier = await db
+        .insertInto("supplier")
+        .values({ name: "Teardown Supplier", companyId: f.companyId })
+        .returning("id")
+        .executeTakeFirstOrThrow();
+      const interaction = await db
+        .insertInto("supplierInteraction")
+        .values({ companyId: f.companyId, supplierId: supplier.id })
+        .returning("id")
+        .executeTakeFirstOrThrow();
+      await db
+        .insertInto("purchaseOrder")
+        .values({
+          companyId: f.companyId,
+          createdBy: f.userId,
+          purchaseOrderId: `PO-${f.userId.slice(0, 8)}`,
+          supplierId: supplier.id,
+          supplierInteractionId: interaction.id
+        })
+        .execute();
+      expect(
+        (await outboxRows(f.companyId)).map((row) => row.entityType)
+      ).toEqual(["receipt", "receiptLine", "purchaseOrder"]);
+
+      // The bare production shape: no pre-deletion of children, just the row.
+      await db.deleteFrom("company").where("id", "=", f.companyId).execute();
+
+      expect(await outboxRows(f.companyId)).toEqual([]);
+      const survivors = await db
+        .selectFrom("knowledgeSourceOutbox")
+        .select("id")
+        .where("companyId", "=", f.companyId)
+        .execute();
+      expect(survivors).toEqual([]);
+    }));
+
+  // The other side of that guard: a company the trigger has never seen
+  // COMMITTED is still a live company, and its events are real. An
+  // existence check that could not see an uncommitted insert would silently
+  // drop every event of a company created and seeded in one transaction.
+  it("records events for a company created in the same open transaction", async () => {
+    const userId = randomUUID();
+    await db
+      .insertInto("user")
+      .values({ id: userId, email: `${userId}@example.com` })
+      .execute();
+    try {
+      await expect(
+        db.transaction().execute(async (trx) => {
+          const company = await trx
+            .insertInto("company")
+            .values({ name: "Uncommitted Company", baseCurrencyCode: "USD" })
+            .returning("id")
+            .executeTakeFirstOrThrow();
+          const item = await trx
+            .insertInto("item")
+            .values({
+              companyId: company.id,
+              createdBy: userId,
+              readableId: `KSO-NEW-${userId.slice(0, 8)}`,
+              name: "Synthetic bracket",
+              type: "Part",
+              itemTrackingType: "Inventory"
+            })
+            .returning("id")
+            .executeTakeFirstOrThrow();
+          const inside = await trx
+            .selectFrom("knowledgeSourceOutbox")
+            .select(["entityType", "entityId", "eventType"])
+            .where("companyId", "=", company.id)
+            .execute();
+          expect(inside).toEqual([
+            { entityType: "item", entityId: item.id, eventType: "upsert" }
+          ]);
+          throw new Rollback();
+        })
+      ).rejects.toBeInstanceOf(Rollback);
+    } finally {
+      await db.deleteFrom("user").where("id", "=", userId).execute();
+    }
+  });
 });
