@@ -18,6 +18,7 @@ import {
 } from "./conversation.server";
 import { handleIdentityRequest } from "./identity.server";
 import { createItemSearchHandler } from "./items.server";
+import { createQueryMcpHandler } from "./mcp";
 import { createReadHandler } from "./query.server";
 
 export const serviceName = "knowledge-query";
@@ -94,6 +95,11 @@ export function createHandler(
     tokenVerifier,
     pool
   });
+  // Optional transport over the read handler mounted below; off by default.
+  const mcpHandler = createQueryMcpHandler({
+    environment,
+    routes: { "/v1/query": readHandler }
+  });
   return requestBoundary("query", async (request) => {
     const pathname = new URL(request.url).pathname;
     if (request.method === "POST" && pathname === "/v1/identity")
@@ -106,6 +112,7 @@ export function createHandler(
       return readHandler(request);
     if (request.method === "POST" && pathname === "/v1/items")
       return itemHandler(request);
+    if (pathname === "/v1/mcp") return mcpHandler(request);
     return Response.json({ error: "not_found" }, { status: 404 });
   });
 }

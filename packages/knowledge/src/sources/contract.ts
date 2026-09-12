@@ -201,3 +201,107 @@ export const entityVersionSchema = z
 export const entityVersionPageSchema =
   createSourcePageSchema(entityVersionSchema);
 export type EntityVersionPage = z.infer<typeof entityVersionPageSchema>;
+
+/** The finite read contract's schema version a producer declares. */
+export const SOURCE_CONTRACT_SCHEMA_VERSION = "source.v1" as const;
+export const sourceKindSchema = z.enum([
+  "carbon",
+  "kanban",
+  "engineering",
+  "crm"
+]);
+export type SourceKind = z.infer<typeof sourceKindSchema>;
+export const sourceCapabilityIdSchema = z.enum([
+  "entities.search",
+  "entities.get",
+  "facts.query",
+  "documents.references",
+  "access.check",
+  "changes.feed"
+]);
+
+/**
+ * Declarative registration of one adapter kind. Everything the router and the
+ * conformance suite may assume about a source is written here, once, next to
+ * the factory that implements it: nothing is inferred from a response. A
+ * producer that cannot state one of these has not finished its contract.
+ */
+export const sourceAdapterDescriptorSchema = z
+  .object({
+    kind: sourceKindSchema,
+    schemaVersion: z.literal(SOURCE_CONTRACT_SCHEMA_VERSION),
+    capabilities: z.array(sourceCapabilityIdSchema).min(1).max(6),
+    entityTypes: z.array(sourceEntitySchema.shape.type).min(1).max(9),
+    auth: z
+      .object({
+        /** Employee reads carry the trusted-forwarder pair; there is no other human path. */
+        human: z.literal("workforce-forwarding"),
+        /** Machine feeds carry a receiver-audience service token, or nothing at all. */
+        machine: z.enum(["service-token", "none"]),
+        requiredCapability: z.literal("knowledge.read")
+      })
+      .strict(),
+    filters: z.array(z.enum(["query", "entityId", "cursor", "limit"])).min(1),
+    projections: z
+      .object({
+        fields: z.array(z.string().min(1).max(100)).max(30),
+        facts: z.array(factQuerySchema.shape.fact).max(4)
+      })
+      .strict(),
+    freshness: z
+      .object({
+        /** Bounded by the shared live-fact rule (`SOURCE_FACT_VALIDITY_SECONDS`). */
+        factValiditySeconds: z.number().int().min(1).max(15),
+        revisions: z.enum(["immutable", "mutable"])
+      })
+      .strict(),
+    pagination: z
+      .object({
+        style: z.enum(["cursor", "bounded"]),
+        maxLimit: z.number().int().min(1).max(40)
+      })
+      .strict(),
+    rateLimit: z
+      .object({
+        requestsPerMinute: z.number().int().min(1).max(100_000),
+        concurrent: z.number().int().min(1).max(64)
+      })
+      .strict(),
+    events: z
+      .object({
+        feed: z.enum(["cursor", "lease", "none"]),
+        eventTypes: z.array(sourceChangeSchema.shape.eventType).max(3),
+        /** How a consumer learns a row is gone; `not-found-only` sources need a sweep. */
+        deletion: z.enum(["tombstone-event", "not-found-only"])
+      })
+      .strict(),
+    deepLinks: z
+      .object({
+        field: z.literal("link"),
+        /** The owning application authorizes on open; the link is never a grant. */
+        authorizedOnOpen: z.literal(true)
+      })
+      .strict()
+  })
+  .strict()
+  .superRefine((descriptor, context) => {
+    const feeds = descriptor.capabilities.includes("changes.feed");
+    if (feeds !== (descriptor.events.feed !== "none"))
+      context.addIssue({
+        code: "custom",
+        path: ["events", "feed"],
+        message: "A changes feed is declared by both capability and events"
+      });
+    if (
+      descriptor.events.deletion === "tombstone-event" &&
+      !descriptor.events.eventTypes.includes("delete")
+    )
+      context.addIssue({
+        code: "custom",
+        path: ["events", "deletion"],
+        message: "Tombstone deletion requires a delete event type"
+      });
+  });
+export type SourceAdapterDescriptor = z.infer<
+  typeof sourceAdapterDescriptorSchema
+>;

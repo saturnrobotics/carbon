@@ -1,14 +1,149 @@
 import { z } from "zod";
 import { createCarbonSourceAdapter } from "./carbon.server";
-import { itemSchema, receiptIdentitySchema, ticketSchema } from "./contract";
-import { createGenericReadAdapter } from "./generic.server";
+import {
+  itemSchema,
+  receiptIdentitySchema,
+  SOURCE_CONTRACT_SCHEMA_VERSION,
+  type SourceAdapterDescriptor,
+  type SourceKind,
+  sourceAdapterDescriptorSchema,
+  sourceKindSchema,
+  ticketSchema
+} from "./contract";
+import {
+  createGenericReadAdapter,
+  genericSourceDescriptor
+} from "./generic.server";
 import {
   createSourceTransport,
   type SourceRequestContext
 } from "./http.server";
 import { createKanbanSourceAdapter } from "./kanban.server";
+import { SOURCE_FACT_VALIDITY_SECONDS } from "./outcome";
 
 export { itemSchema, receiptIdentitySchema, ticketSchema } from "./contract";
+
+/**
+ * The declarative registration table: one row per adapter kind, each naming
+ * its descriptor and its factory. The registry, the query service and the
+ * conformance suite read this table; none of them branches on a kind that is
+ * not in it. Adding a producer kind is adding a row here, not a router edit.
+ */
+export const SOURCE_ADAPTERS: Readonly<
+  Record<SourceKind, Readonly<{ descriptor: SourceAdapterDescriptor }>>
+> = Object.freeze({
+  carbon: Object.freeze({
+    descriptor: sourceAdapterDescriptorSchema.parse({
+      kind: "carbon",
+      schemaVersion: SOURCE_CONTRACT_SCHEMA_VERSION,
+      capabilities: [
+        "entities.search",
+        "entities.get",
+        "facts.query",
+        "documents.references",
+        "access.check",
+        "changes.feed"
+      ],
+      entityTypes: ["part", "purchase-order", "receipt"],
+      auth: {
+        human: "workforce-forwarding",
+        machine: "service-token",
+        requiredCapability: "knowledge.read"
+      },
+      filters: ["query", "entityId", "limit"],
+      projections: {
+        fields: [
+          "readableId",
+          "readableIdWithRevision",
+          "revision",
+          "revisionStatus",
+          "mpn",
+          "itemType",
+          "unitOfMeasureCode",
+          "active",
+          "updatedAt",
+          "purchaseOrderId",
+          "status",
+          "orderDate",
+          "revisionId",
+          "supplierId",
+          "supplierReference",
+          "closedAt",
+          "receiptId",
+          "postingDate",
+          "sourceDocument",
+          "sourceDocumentId",
+          "sourceDocumentReadableId",
+          "locationId",
+          "link"
+        ],
+        facts: ["status", "revision", "availability"]
+      },
+      freshness: {
+        factValiditySeconds: SOURCE_FACT_VALIDITY_SECONDS,
+        revisions: "mutable"
+      },
+      // Carbon's resolver has no cursor: a full page means "narrow the search".
+      pagination: { style: "bounded", maxLimit: 40 },
+      rateLimit: { requestsPerMinute: 600, concurrent: 8 },
+      events: {
+        feed: "lease",
+        eventTypes: ["upsert", "delete", "acl-change"],
+        deletion: "tombstone-event"
+      },
+      deepLinks: { field: "link", authorizedOnOpen: true }
+    })
+  }),
+  kanban: Object.freeze({
+    descriptor: sourceAdapterDescriptorSchema.parse({
+      kind: "kanban",
+      schemaVersion: SOURCE_CONTRACT_SCHEMA_VERSION,
+      capabilities: [
+        "entities.search",
+        "entities.get",
+        "facts.query",
+        "documents.references",
+        "access.check",
+        "changes.feed"
+      ],
+      entityTypes: ["ticket"],
+      auth: {
+        human: "workforce-forwarding",
+        machine: "service-token",
+        requiredCapability: "knowledge.read"
+      },
+      filters: ["query", "entityId", "cursor", "limit"],
+      projections: {
+        fields: [
+          "boardId",
+          "columnId",
+          "dueDate",
+          "version",
+          "updatedAt",
+          "archivedAt",
+          "link"
+        ],
+        facts: ["status", "revision"]
+      },
+      freshness: {
+        factValiditySeconds: SOURCE_FACT_VALIDITY_SECONDS,
+        revisions: "mutable"
+      },
+      pagination: { style: "cursor", maxLimit: 40 },
+      rateLimit: { requestsPerMinute: 600, concurrent: 8 },
+      events: {
+        feed: "cursor",
+        eventTypes: ["upsert", "delete", "acl-change"],
+        deletion: "tombstone-event"
+      },
+      deepLinks: { field: "link", authorizedOnOpen: true }
+    })
+  }),
+  engineering: Object.freeze({
+    descriptor: genericSourceDescriptor("engineering")
+  }),
+  crm: Object.freeze({ descriptor: genericSourceDescriptor("crm") })
+});
 
 const id = z.string().min(1).max(256);
 const origin = z
@@ -33,7 +168,7 @@ export const sourceRegistryConfigurationSchema = z
         z
           .object({
             id,
-            kind: z.enum(["carbon", "kanban", "engineering", "crm"]),
+            kind: sourceKindSchema,
             origin,
             audience: z.string().min(1).max(2048)
           })
@@ -59,6 +194,14 @@ export function createSourceRegistry(
   const config = sourceRegistryConfigurationSchema.parse(configuration);
   return {
     list: () => config.sources.map(({ id, kind }) => ({ id, kind })),
+    /** The declared contract of a registered source; what every consumer may assume. */
+    describe(sourceId: string): SourceAdapterDescriptor {
+      const connection = config.sources.find(
+        (source) => source.id === sourceId
+      );
+      if (!connection) throw Error("Source unavailable");
+      return SOURCE_ADAPTERS[connection.kind].descriptor;
+    },
     /** The uniform finite-contract adapter for a registered Carbon or Kanban source. */
     adapter(sourceId: string) {
       const connection = config.sources.find(
