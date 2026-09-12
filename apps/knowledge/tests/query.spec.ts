@@ -1,6 +1,7 @@
 import { expect, type Page, test } from "@playwright/test";
 import {
   actorPage,
+  submitSearch,
   textPdf,
   waitForClientNavigation,
   waitForEvidence
@@ -57,8 +58,7 @@ async function search(page: Page, text: string) {
       new URL(response.url()).pathname === "/api/query" &&
       response.request().method() === "POST"
   );
-  await page.getByLabel("Search manuals").fill(text);
-  await page.getByRole("button", { name: "Search manuals" }).click();
+  await submitSearch(page, text);
   return answered;
 }
 
@@ -106,9 +106,18 @@ test("the read portal streams evidence, cites the exact version, and keeps compa
       exact: true
     });
     await expect(original).toBeVisible();
-    expect(await original.getAttribute("href")).toMatch(
-      /^\/documents\/[^/]+\/versions\/[^/]+$/
+    // Evidence carries an absolute `sourceUri` by contract (`z.string().url()`
+    // in `evidenceSchema`), because the same field addresses live records in
+    // the applications that own them. What matters for a citation is that a
+    // document opens the exact immutable version on THIS portal's origin: the
+    // service builds it from its configured `KNOWLEDGE_PORTAL_ORIGIN`, never
+    // from a request host, so an internal hostname must never appear here.
+    const opened = new URL(
+      (await original.getAttribute("href")) ?? "",
+      bob.page.url()
     );
+    expect(opened.origin).toBe(new URL(bob.page.url()).origin);
+    expect(opened.pathname).toMatch(/^\/documents\/[^/]+\/versions\/[^/]+$/);
     await expect(
       bob.page.getByText(
         "A follow-up question keeps the evidence shown here in context."

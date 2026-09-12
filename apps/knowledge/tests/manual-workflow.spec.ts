@@ -94,6 +94,11 @@ async function uploadReviewAndPublish(page: Page) {
   });
   await expect(download).toBeVisible();
   const searchMilliseconds = performance.now() - publishStarted;
+  // Ask the identical question again, as a NEW question. Repeating it inside
+  // the same conversation sends the first answer's evidence back as follow-up
+  // context, and context is deliberately part of the answer cache's key, so
+  // only a fresh question asks the cache what the first search stored.
+  await page.getByRole("button", { name: "Start a new question" }).click();
   const repeated = page.waitForResponse(
     (response) =>
       new URL(response.url()).pathname === "/api/query" &&
