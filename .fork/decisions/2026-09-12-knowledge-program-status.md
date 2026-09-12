@@ -91,3 +91,30 @@ Merge in pull request number order, or review the integrated tree at PR 30. The
 authorization changes warrant review first: PR 24 installs triggers on Carbon's
 `user` and `userToCompany` tables, and PR 27 changes which operations the public
 API document and the tool catalogue disclose.
+
+## Follow-ups this program recorded but did not take
+
+Each is small, is not required by any task's acceptance boundary, and is written
+here so it survives the pull requests that found it.
+
+The knowledge scripts invoke `corepack pnpm`, which fails wherever Corepack
+resolves a pnpm other than the pinned one, and refuses to switch. Every agent
+that hit it used a path shim rather than editing the scripts, since the call
+appears in `packages/knowledge/scripts/setup-disposable.py` and several commands
+in `verify-security.ts`, on branches that are still open. Prefer the pnpm already
+on the path, and fall back to Corepack.
+
+The backup schema manifest is generated from `information_schema.columns` with no
+`ORDER BY`, so two machines regenerate byte-different files that are semantically
+equal. `scripts/fork/regenerate.sh` hides this by restoring the committed bytes
+when the comparison is semantically clean. Ordering the query would make
+regeneration byte-stable, but column order also reaches real backup exports, so
+the change needs its own review.
+
+Two verification surfaces are unusually hostile to parallel work, which is how
+several gates in this program went unexecuted. The browser harness pins fixed
+loopback origins, host ports and one image tag, so two agents cannot run it at
+once and a long-lived stack blocks it entirely. Separately,
+`knowledge_resolve_workforce_identity` segfaults a Postgres backend when called
+under `SET ROLE anon` unless the container sets `supautils.hint_roles` empty, as
+the continuous integration configuration does.
