@@ -43,6 +43,50 @@ describe("manual-v1 portal", () => {
     expect(markup).toContain("Publish manual");
   });
 
+  it("shows typed proposals with confidence and unit under the fixed labels", () => {
+    const markup = renderToStaticMarkup(
+      <IntakeReview
+        model={{
+          id: "intake-synthetic",
+          state: "needs-review",
+          title: "Captured manual",
+          proposed: {},
+          corrected: {},
+          proposedFields: {
+            mpn: {
+              value: "MTR-100",
+              confidence: 0.72,
+              evidence: [{ page: 3 }]
+            },
+            documentType: {
+              value: "datasheet",
+              confidence: 0.9,
+              evidence: [{ page: 1 }]
+            },
+            measurements: {
+              ratedVoltage: {
+                value: 24,
+                unit: "V",
+                confidence: 0.4,
+                evidence: [{ page: 5 }]
+              }
+            }
+          },
+          unresolved: ["mpn", "measurements.ratedVoltage"],
+          sourcePages: []
+        }}
+      />
+    );
+    expect(markup).toContain('value="MTR-100"');
+    expect(markup).toContain("(review, 72% confidence) from page 3");
+    expect(markup).toContain("Proposed 24 V (unresolved, 40% confidence)");
+    expect(markup).toContain("Proposed datasheet (confident, 90% confidence)");
+    expect(markup).toContain('id="partNumber-unresolved"');
+    expect(markup).toContain('id="measurements.ratedVoltage-unresolved"');
+    expect(markup).not.toContain('id="mpn-unresolved"');
+    expect(markup).not.toContain('id="documentType-unresolved"');
+  });
+
   it("advertises keyword manual search without deferred features", () => {
     const markup = renderToStaticMarkup(
       <QueryInput sourceDisplayName="Operations manuals" />
