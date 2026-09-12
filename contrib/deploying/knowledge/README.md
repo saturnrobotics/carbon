@@ -371,6 +371,46 @@ either value the worker's function list and Carbon's route stay closed.
   with `kind = 'carbon'` and `status = 'active'`, and its `providerPolicy` must
   name the worker's `machineCallers` and `ingestDatabaseRoles`.
 
+### MCP transport (disabled; not deployable yet)
+
+MCP is an optional transport over the query and command handlers that HTTP
+already exposes, and **HTTP remains the primary integration surface**. It is off
+in every deployment today, and turning it on takes three deliberate changes, not
+one:
+
+1. `KNOWLEDGE_MCP_ENABLED=true` on the service (`knowledge-query` serves it at
+   `POST /v1/mcp`, `knowledge-actions` at `POST /mcp`). Only the exact string
+   `true` counts; `1`, `yes` and `TRUE` are off.
+2. A `KNOWLEDGE_RELEASE_PROFILE` other than `manual-v1`. The approved manual
+   release is read-only document retrieval and activates no deferred surface
+   even when old environment values are present, so the mount answers `404`
+   under it regardless of the flag.
+3. An edit to `REQUIRED_ENVIRONMENT` in `release.py`, which today rejects the
+   variable as deferred runtime configuration and so refuses to stage a revision
+   carrying it. That refusal is deliberate: it keeps the transport out of a
+   deployed service until an intended client has passed authentication and the
+   permission-parity gates below.
+
+Do not make those changes until, on the real services:
+
+- an intended MCP client authenticates with the ordinary machine pair —
+  `Authorization: Bearer <receiver-audience service-account ID token>` plus
+  `X-Portal-User-Evidence` and `X-Portal-Company-Id` headers. A browser IAP
+  session **cookie is not an MCP authentication protocol**: cookies are never
+  read as a credential and never forwarded, so a client holding only a browser
+  session is refused; and
+- `pnpm --filter @carbon/knowledge test mcp-parity` passes, which is what proves
+  MCP exposes no operation and no data beyond HTTP for the same actor and
+  caller. Every tool delegates to the service's own HTTP route — same identity
+  verification, caller authorization, budgets, rate limits and idempotency key —
+  and a tool whose path the service does not mount is neither listed nor
+  callable.
+
+The reviewed surface is `MCP_TOOLS` in `packages/knowledge/src/mcp/surface.ts`:
+`knowledge_query`, `knowledge_get_source_entity` and `knowledge_create_ticket`.
+The generated ERP tool catalog is a different, unrelated surface and is never
+exposed here.
+
 ## Google Drive enrollment (deferred connector)
 
 Drive synchronization is not part of `manual-v1`; `release.py` still rejects its
