@@ -46,6 +46,15 @@ import {
 } from "./backup-baseline";
 
 const SCHEMA_FILE = join(import.meta.dirname, "../../manifests/schema.json");
+/**
+ * Git exports GIT_DIR to its hooks, and `pnpm --filter` runs this script with
+ * packages/jobs as the cwd. Without GIT_WORK_TREE, git takes the cwd as the
+ * work-tree root, so `git add <absolute path>` issued from here indexed the
+ * manifest as `manifests/schema.json` at the repository root. Every git call
+ * runs from the repository root instead, where a relative or an absolute
+ * GIT_DIR both resolve to this checkout.
+ */
+const REPO_ROOT = join(import.meta.dirname, "../../../..");
 
 /**
  * The baseline lives on the repository's default branch. A fork's trunk need
@@ -191,6 +200,7 @@ function reportBlocking(
 
 function git(args: string[]): string {
   return execFileSync("git", args, {
+    cwd: REPO_ROOT,
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"]
   }).trim();
