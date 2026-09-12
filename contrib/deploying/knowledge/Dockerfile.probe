@@ -1,6 +1,10 @@
-FROM node:22-alpine
+# Reviewed multi-platform digest. base-images.json is the record;
+# test_base_image_pins.py keeps every knowledge Dockerfile equal to it.
+ARG NODE_IMAGE=node:22-alpine@sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32
+FROM ${NODE_IMAGE}
 WORKDIR /app
 COPY contrib/deploying/knowledge/probe/server.ts ./server.ts
+COPY LICENSE ./LICENSE
 ENV PORT=8080
 EXPOSE 8080
 CMD ["node", "--experimental-strip-types", "server.ts"]

@@ -24,6 +24,27 @@ locals {
       filter    = "resource.type=\"cloud_run_job\" AND jsonPayload.stage=\"retention\" AND jsonPayload.outcome=\"error\""
       threshold = 0
     }
+    # The query service's periodic cache-isolation self-test reports a leak as a
+    # `security` error; an unreachable store is a `cache` error (above), so an
+    # outage never fires this policy.
+    cache-leakage = {
+      filter    = "resource.type=\"cloud_run_revision\" AND jsonPayload.stage=\"security\" AND jsonPayload.outcome=\"error\""
+      threshold = 0
+    }
+  }
+  # Numeric backlog ages the ingestion worker emits after every delivery pass
+  # (`jsonPayload.stage="indexing"`, telemetry allowlist keys). Both are seconds.
+  knowledge_backlog_alerts = {
+    indexing-lag = {
+      field       = "lagSeconds"
+      description = "oldest undelivered outbox row (index or ACL staleness) above fifteen minutes"
+      threshold   = 900
+    }
+    outbox-queue-age = {
+      field       = "queueSeconds"
+      description = "oldest claimable but unclaimed outbox row above ten minutes"
+      threshold   = 600
+    }
   }
 }
 
@@ -63,11 +84,56 @@ resource "google_monitoring_alert_policy" "knowledge_log_alert" {
   }
 }
 
-resource "google_logging_metric" "knowledge_request_latency" {
+resource "google_logging_metric" "knowledge_backlog" {
+  for_each        = local.knowledge_backlog_alerts
   project         = var.project_id
-  name            = "knowledge/request-latency-ms"
-  filter          = "resource.type=\"cloud_run_revision\" AND jsonPayload.stage=\"request\" AND jsonPayload.outcome=~\"success|error|timeout\""
-  value_extractor = "EXTRACT(jsonPayload.metrics.durationMs)"
+  name            = "knowledge/${each.key}-seconds"
+  filter          = "resource.type=\"cloud_run_revision\" AND jsonPayload.stage=\"indexing\" AND jsonPayload.outcome=\"success\" AND jsonPayload.${each.value.field}:*"
+  value_extractor = "EXTRACT(jsonPayload.${each.value.field})"
+  metric_descriptor {
+    metric_kind = "DELTA"
+    value_type  = "DISTRIBUTION"
+  }
+  bucket_options {
+    exponential_buckets {
+      num_finite_buckets = 16
+      growth_factor      = 2
+      scale              = 1
+    }
+  }
+}
+
+resource "google_monitoring_alert_policy" "knowledge_backlog" {
+  for_each              = local.knowledge_backlog_alerts
+  project               = var.project_id
+  display_name          = "Knowledge ${each.key}"
+  combiner              = "OR"
+  notification_channels = var.monitoring_notification_channels
+  conditions {
+    display_name = each.value.description
+    condition_threshold {
+      filter          = "metric.type=\"logging.googleapis.com/user/${google_logging_metric.knowledge_backlog[each.key].name}\""
+      comparison      = "COMPARISON_GT"
+      threshold_value = each.value.threshold
+      duration        = "300s"
+      aggregations {
+        alignment_period   = "300s"
+        per_series_aligner = "ALIGN_PERCENTILE_99"
+      }
+    }
+  }
+  alert_strategy {
+    auto_close = "1800s"
+  }
+}
+
+resource "google_logging_metric" "knowledge_request_latency" {
+  project = var.project_id
+  name    = "knowledge/request-latency-ms"
+  filter  = "resource.type=\"cloud_run_revision\" AND jsonPayload.stage=\"request\" AND jsonPayload.outcome=~\"success|error|timeout\""
+  # Telemetry records are flat (`packages/knowledge/src/telemetry.ts`); the
+  # metric keys sit beside `stage`, not under a `metrics` object.
+  value_extractor = "EXTRACT(jsonPayload.durationMs)"
   metric_descriptor {
     metric_kind = "DELTA"
     value_type  = "DISTRIBUTION"

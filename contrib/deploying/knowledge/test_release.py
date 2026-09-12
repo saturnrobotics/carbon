@@ -239,5 +239,101 @@ class ReleaseControllerTests(unittest.TestCase):
         self.assertTrue(any("--to-revisions=knowledge-web-old=100" in call for call in adapter.calls))
 
 
+FIRST, MIDDLE, LAST = "20260908000245_knowledge-foundation", "20260908014537_retention-recovery", "20260908050421_ingest-source-visibility-execute"
+
+
+def database_plan(unit="knowledge-query", *, minimum=FIRST, maximum=LAST):
+    """A plan selecting one database unit with a declared compatible migration window."""
+    image = f"us-docker.pkg.dev/example/knowledge/{unit}@sha256:" + "b" * 64
+    candidate = plan()
+    spec = dict(candidate["services"].pop("knowledge-web"), kind=release.UNITS[unit], image=image)
+    spec["service_account"] = f"{unit}@example.iam.gserviceaccount.com"
+    spec["environment"] = {key: "value" for key in release.REQUIRED_ENVIRONMENT[unit]}
+    if "KNOWLEDGE_MANUAL_SOURCE_JSON" in spec["environment"]:
+        spec["environment"]["KNOWLEDGE_MANUAL_SOURCE_JSON"] = '{"sourceId":"manuals","displayName":"Manual library"}'
+    if "KNOWLEDGE_RELEASE_PROFILE" in spec["environment"]:
+        spec["environment"]["KNOWLEDGE_RELEASE_PROFILE"] = "manual-v1"
+    spec["secrets"] = {key: f"projects/example/secrets/{key.lower().replace('_', '-')}/versions/3" for key in release.REQUIRED_SECRETS[unit]}
+    spec["migrations"] = {"minimum": minimum, "maximum": maximum}
+    candidate["services"] = {unit: spec}
+    candidate["deploy"] = {unit: ["source changed"]}
+    candidate["build_receipt"] = {unit: {"image": image, "image_digest": image.rsplit("@", 1)[-1], "source_commit": "a" * 40}}
+    return candidate
+
+
+def ledger(*names):
+    return {"schema_version": 1, "names": list(names)}
+
+
+class MigrationCompatibilityTests(unittest.TestCase):
+    def test_database_units_declare_a_window_and_credential_free_units_cannot(self):
+        release.validate_plan(database_plan())
+        for unit in sorted(release.DATABASE_UNITS):
+            with self.subTest(unit=unit):
+                candidate = database_plan(unit)
+                release.validate_plan(candidate)
+                candidate["services"][unit].pop("migrations")
+                with self.assertRaisesRegex(ValueError, f"{unit} requires migrations.minimum and migrations.maximum"):
+                    release.validate_plan(candidate)
+        for window in ({"minimum": FIRST}, {"minimum": FIRST, "maximum": "v2"}, {"minimum": FIRST, "maximum": LAST, "extra": 1}, {"minimum": 1, "maximum": LAST}):
+            with self.subTest(window=window):
+                candidate = database_plan()
+                candidate["services"]["knowledge-query"]["migrations"] = window
+                with self.assertRaisesRegex(ValueError, "requires migrations.minimum and migrations.maximum"):
+                    release.validate_plan(candidate)
+        with self.assertRaisesRegex(ValueError, "minimum is newer than migrations.maximum"):
+            release.validate_plan(database_plan(minimum=LAST, maximum=FIRST))
+        web = plan()
+        web["services"]["knowledge-web"]["migrations"] = {"minimum": FIRST, "maximum": LAST}
+        with self.assertRaisesRegex(ValueError, "knowledge-web holds no database credential"):
+            release.validate_plan(web)
+
+    def test_ledger_head_is_the_greatest_applied_name_and_malformed_observations_are_refused(self):
+        self.assertEqual(release.ledger_head(ledger(MIDDLE, FIRST, LAST)), LAST)
+        # The runner records file names with their `.sql` suffix; a verbatim export normalizes to the bare name.
+        self.assertEqual(release.ledger_head(ledger(FIRST + ".sql", MIDDLE + ".sql")), MIDDLE)
+        self.assertIsNone(release.ledger_head(ledger()))
+        for observation in ({"names": [FIRST]}, {"schema_version": 1, "names": "x"}, ledger("foundation.sql"), ledger(FIRST + ".SQL"), ledger(7)):
+            with self.subTest(observation=observation), self.assertRaisesRegex(ValueError, "Schema ledger observation"):
+                release.ledger_head(observation)
+
+    def test_promotion_requires_the_ledger_head_inside_the_selected_window(self):
+        current = {"generation": 3, "services": {}}
+        inside = database_plan(minimum=FIRST, maximum=MIDDLE)
+        self.assertEqual(release.check_migration_compatibility(inside, ledger(FIRST, MIDDLE)), {"knowledge-query": MIDDLE})
+        self.assertEqual([m["name"] for m in release.select_mutations(inside, current, {}, ledger(FIRST, MIDDLE))], ["knowledge-query"])
+        with self.assertRaisesRegex(ValueError, "requires --schema-ledger"):
+            release.select_mutations(inside, current, {})
+        with self.assertRaisesRegex(ValueError, f"requires migration {MIDDLE} but the ledger head is {FIRST}; run the schema job first"):
+            release.select_mutations(database_plan(minimum=MIDDLE, maximum=LAST), current, {}, ledger(FIRST))
+        with self.assertRaisesRegex(ValueError, f"supports migrations up to {MIDDLE} but the ledger head is {LAST}"):
+            release.select_mutations(inside, current, {}, ledger(FIRST, MIDDLE, LAST))
+        with self.assertRaisesRegex(ValueError, "cannot be promoted before the schema job applies the first"):
+            release.select_mutations(inside, current, {}, ledger())
+        self.assertEqual(release.check_migration_compatibility(database_plan("knowledge-schema"), ledger()), {"knowledge-schema": None})
+        with self.assertRaisesRegex(ValueError, "knowledge-schema supports migrations up to"):
+            release.check_migration_compatibility(database_plan("knowledge-schema", minimum=FIRST, maximum=MIDDLE), ledger(LAST))
+        self.assertEqual(release.check_migration_compatibility(plan(), None), {})
+
+    def test_promote_checks_the_ledger_before_any_write_and_records_the_window(self):
+        class RecordingGcloud:
+            def __init__(self): self.calls = []
+            def call(self, args, *, capture=False):
+                self.calls.append(args)
+                if "describe" in args:
+                    return json.dumps({"metadata": {"generation": 9}})
+                return ""
+        candidate = database_plan("knowledge-retention", minimum=MIDDLE, maximum=LAST)
+        with tempfile.TemporaryDirectory() as directory:
+            adapter = RecordingGcloud()
+            with self.assertRaisesRegex(ValueError, "run the schema job first"):
+                release.promote(candidate, {"generation": 3, "services": {}}, project="example", region="us-east1", manifest=Path(directory) / "manifest.json", adapter=adapter, ledger=ledger(FIRST))
+            self.assertFalse(any("replace" in call for call in adapter.calls))
+            self.assertFalse((Path(directory) / "manifest.json").exists())
+            release.promote(candidate, {"generation": 3, "services": {}}, project="example", region="us-east1", manifest=Path(directory) / "manifest.json", adapter=adapter, ledger=ledger(FIRST, MIDDLE))
+            saved = json.loads((Path(directory) / "manifest.json").read_text())
+            self.assertEqual(saved["services"]["knowledge-retention"]["migrations"], {"minimum": MIDDLE, "maximum": LAST})
+
+
 if __name__ == "__main__":
     unittest.main()

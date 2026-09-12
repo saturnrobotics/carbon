@@ -49,6 +49,12 @@ IAP_SERVICES = {"knowledge-web"}
 # egress firewall allows toward Carbon's private PostgreSQL listener.
 SOURCE_DATABASE_CLIENT_TAG = "knowledge-source-database-client"
 DATABASE_UNITS = frozenset(name for name, secrets in REQUIRED_SECRETS.items() if any(key.endswith("_DATABASE_URL") for key in secrets))
+# Knowledge migrations are `<14-digit timestamp>_<slug>` files applied in name order, so
+# the ledger head (`max(name)` in `knowledge_migrations.ledger`) and a unit's compatible
+# window compare as plain strings. Every database unit declares the window its build
+# was verified against; the controller refuses to promote it onto a ledger outside it.
+MIGRATION_NAME = re.compile(r"^[0-9]{14}_[a-z0-9-]+$")
+LEDGER_SCHEMA_VERSION = 1
 
 
 def canonical_digest(value: Any) -> str:
@@ -145,6 +151,14 @@ def validate_plan(plan: dict[str, Any]) -> None:
             raise ValueError(f"{name} requires a bounded max_instances")
         if not isinstance(spec.get("concurrency"), int) or spec["concurrency"] < 1:
             raise ValueError(f"{name} requires bounded concurrency")
+        migrations = spec.get("migrations")
+        if name in DATABASE_UNITS:
+            if not isinstance(migrations, dict) or set(migrations) != {"minimum", "maximum"} or not all(isinstance(migrations[key], str) and MIGRATION_NAME.fullmatch(migrations[key]) for key in ("minimum", "maximum")):
+                raise ValueError(f"{name} requires migrations.minimum and migrations.maximum knowledge migration names")
+            if migrations["minimum"] > migrations["maximum"]:
+                raise ValueError(f"{name} migrations.minimum is newer than migrations.maximum")
+        elif migrations is not None:
+            raise ValueError(f"{name} holds no database credential and cannot declare migration compatibility")
     receipts = plan.get("build_receipt", {})
     if not isinstance(receipts, dict):
         raise ValueError("build_receipt must be an object")
@@ -155,12 +169,45 @@ def validate_plan(plan: dict[str, Any]) -> None:
             raise ValueError(f"{name} needs the verified build receipt for its selected immutable image")
 
 
+def ledger_head(ledger: dict[str, Any]) -> str | None:
+    """Head of an observed `knowledge_migrations.ledger`; None when no migration has been applied."""
+    if not isinstance(ledger, dict) or ledger.get("schema_version") != LEDGER_SCHEMA_VERSION or not isinstance(ledger.get("names"), list):
+        raise ValueError("Schema ledger observation must use schema_version 1 and a names list")
+    # `applyKnowledgeMigrations` records the file name, `.sql` included; windows use the bare name.
+    names = [name[:-4] if isinstance(name, str) and name.endswith(".sql") else name for name in ledger["names"]]
+    if not all(isinstance(name, str) and MIGRATION_NAME.fullmatch(name) for name in names):
+        raise ValueError("Schema ledger observation contains a name that is not a knowledge migration")
+    return max(names) if names else None
+
+
+def check_migration_compatibility(plan: dict[str, Any], ledger: dict[str, Any] | None) -> dict[str, str | None]:
+    """Refuse a database unit whose compatible window does not contain the deployed ledger head."""
+    selected = [name for name in sorted(plan.get("deploy", {})) if name in DATABASE_UNITS]
+    if not selected:
+        return {}
+    if ledger is None:
+        raise ValueError(f"Promoting {', '.join(selected)} requires --schema-ledger, the observed knowledge_migrations.ledger")
+    head = ledger_head(ledger)
+    for name in selected:
+        window = plan["services"][name]["migrations"]
+        if head is None:
+            if name != "knowledge-schema":
+                raise ValueError(f"{name} cannot be promoted before the schema job applies the first knowledge migration")
+            continue
+        if head < window["minimum"]:
+            raise ValueError(f"{name} requires migration {window['minimum']} but the ledger head is {head}; run the schema job first")
+        if head > window["maximum"]:
+            raise ValueError(f"{name} supports migrations up to {window['maximum']} but the ledger head is {head}; select a build verified against it")
+    return {name: head for name in selected}
+
+
 def revision_digest(spec: dict[str, Any]) -> str:
     return canonical_digest({key: spec[key] for key in ("image", "service_account", "environment", "secrets", "resources", "max_instances", "concurrency", "network", "subnetwork", "egress")})
 
 
-def select_mutations(plan: dict[str, Any], current: dict[str, Any], observed: dict[str, str]) -> list[dict[str, Any]]:
+def select_mutations(plan: dict[str, Any], current: dict[str, Any], observed: dict[str, str], ledger: dict[str, Any] | None = None) -> list[dict[str, Any]]:
     validate_plan(plan)
+    check_migration_compatibility(plan, ledger)
     if current.get("generation") != plan.get("expected_generation"):
         raise ValueError("Release manifest generation changed; re-plan before promotion")
     mutations = []
@@ -249,6 +296,7 @@ def save_manifest(path: Path, plan: dict[str, Any], current: dict[str, Any], mut
             "revision_digest": mutation["revision_digest"],
             "image_digest": plan["services"][mutation["name"]]["image"].rsplit("@", 1)[1],
             "deployed_revision": mutation.get("deployed_revision"),
+            "migrations": plan["services"][mutation["name"]].get("migrations"),
         }
     path.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.NamedTemporaryFile("w", dir=path.parent, delete=False) as stream:
@@ -259,7 +307,7 @@ def save_manifest(path: Path, plan: dict[str, Any], current: dict[str, Any], mut
     temporary.replace(path)
 
 
-def promote(plan: dict[str, Any], current: dict[str, Any], *, project: str, region: str, manifest: Path, adapter: Gcloud) -> list[dict[str, Any]]:
+def promote(plan: dict[str, Any], current: dict[str, Any], *, project: str, region: str, manifest: Path, adapter: Gcloud, ledger: dict[str, Any] | None = None) -> list[dict[str, Any]]:
     selected = sorted(plan.get("deploy", {}))
     observed_documents: dict[str, dict[str, Any]] = {}
     observed = {}
@@ -270,7 +318,7 @@ def promote(plan: dict[str, Any], current: dict[str, Any], *, project: str, regi
             continue
         observed_documents[name] = document
         observed[name] = document.get("spec", {}).get("template", {}).get("metadata", {}).get("labels", {}).get("knowledge.carbon/revision-digest", "")
-    mutations = select_mutations(plan, current, observed)
+    mutations = select_mutations(plan, current, observed, ledger)
     # Render every document before the first write so a missing IAP shell
     # refuses the whole promotion instead of a partial one.
     documents = {mutation["name"]: revision_document(mutation["name"], plan["services"][mutation["name"]], mutation["revision_digest"], observed_documents.get(mutation["name"])) for mutation in mutations}
@@ -327,6 +375,7 @@ def main() -> None:
     parser.add_argument("--region", required=True)
     parser.add_argument("--foundation-outputs", type=Path, help="JSON from `terraform -chdir=contrib/deploying/knowledge output -json`; supplies every service audience")
     parser.add_argument("--override-audiences", action="store_true", help="keep audience values written in the plan even where they differ from the foundation outputs")
+    parser.add_argument("--schema-ledger", type=Path, help="JSON observation of knowledge_migrations.ledger ({schema_version: 1, names: [...]}); required when a database unit is selected")
     parser.add_argument("--apply", action="store_true")
     args = parser.parse_args()
     if args.foundation_outputs is None and not args.override_audiences:
@@ -334,12 +383,13 @@ def main() -> None:
     plan, current = json.loads(args.plan.read_text()), json.loads(args.current.read_text())
     if args.foundation_outputs is not None:
         plan = apply_foundation_audiences(plan, json.loads(args.foundation_outputs.read_text()), override=args.override_audiences)
+    ledger = json.loads(args.schema_ledger.read_text()) if args.schema_ledger is not None else None
     selected = sorted(plan.get("deploy", {}))
-    mutations = select_mutations(plan, current, observed_revision_digests(args.project, args.region, selected) if args.apply else {name: current.get("services", {}).get(name, {}).get("revision_digest", "") for name in selected})
+    mutations = select_mutations(plan, current, observed_revision_digests(args.project, args.region, selected) if args.apply else {name: current.get("services", {}).get(name, {}).get("revision_digest", "") for name in selected}, ledger)
     if not args.apply:
         print(json.dumps({"mutations": mutations}, indent=2))
         return
-    promoted = promote(plan, current, project=args.project, region=args.region, manifest=args.current, adapter=Gcloud())
+    promoted = promote(plan, current, project=args.project, region=args.region, manifest=args.current, adapter=Gcloud(), ledger=ledger)
     print(json.dumps({"promoted": promoted}, indent=2))
 
 

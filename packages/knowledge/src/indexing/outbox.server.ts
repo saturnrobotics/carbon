@@ -67,6 +67,40 @@ export async function acknowledgeOutbox(
   });
 }
 
+export type OutboxBacklog = {
+  /** Undelivered rows for the company. */
+  pending: number;
+  /** Age of the oldest undelivered row: how stale the index or an ACL can be. */
+  lagSeconds: number;
+  /** Age of the oldest row that is claimable but held by no worker: worker starvation. */
+  queueSeconds: number;
+};
+/** Content-free numbers only; the telemetry allowlist carries them to the alert policies. */
+export async function outboxBacklog(
+  pool: Pool,
+  principal: DatabasePrincipal
+): Promise<OutboxBacklog> {
+  return withKnowledgeTransaction(pool, principal, "read", async (client) => {
+    const result = await client.query<{
+      pending: number;
+      lagSeconds: number | null;
+      queueSeconds: number | null;
+    }>(
+      `SELECT count(*)::int AS pending,
+        extract(epoch FROM now()-min("createdAt"))::float8 AS "lagSeconds",
+        extract(epoch FROM now()-min("availableAt") FILTER (WHERE "availableAt"<=now() AND ("leaseUntil" IS NULL OR "leaseUntil"<now())))::float8 AS "queueSeconds"
+       FROM knowledge.outbox WHERE "companyId"=$1 AND "deliveredAt" IS NULL`,
+      [principal.companyId]
+    );
+    const row = result.rows[0];
+    return {
+      pending: Number(row?.pending ?? 0),
+      lagSeconds: Math.max(0, Number(row?.lagSeconds ?? 0)),
+      queueSeconds: Math.max(0, Number(row?.queueSeconds ?? 0))
+    };
+  });
+}
+
 export async function confirmOutboxApplied(
   pool: Pool,
   principal: DatabasePrincipal,
