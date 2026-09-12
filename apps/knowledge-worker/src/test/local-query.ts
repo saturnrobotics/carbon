@@ -23,9 +23,22 @@ function required(name: string): string {
   return value;
 }
 
+function loopbackPortalOrigin(): string {
+  const parsed = new URL(
+    process.env.KNOWLEDGE_WEB_ORIGIN?.trim() || "https://localhost:4200"
+  );
+  if (
+    parsed.protocol !== "https:" ||
+    !["localhost", "127.0.0.1", "[::1]"].includes(parsed.hostname)
+  )
+    throw new Error("KNOWLEDGE_WEB_ORIGIN must be an HTTPS loopback origin");
+  return parsed.origin;
+}
+
 async function main() {
   if (process.env.KNOWLEDGE_E2E_SYNTHETIC_FIXTURES !== "1")
     throw new Error("Local synthetic identity is disabled");
+  const portalOrigin = loopbackPortalOrigin();
   const pool = new Pool({
     connectionString: required("KNOWLEDGE_E2E_DATABASE_URL"),
     options: "-c role=knowledge_read",
@@ -63,7 +76,11 @@ async function main() {
         await redis.store.set(key, value, ttlSeconds);
       }
     },
-    origin: "https://localhost:4200",
+    // The portal origin this fixture stamps onto evidence `sourceUri` links.
+    // It follows the harness's portal port: a fixture that kept a fixed 4200
+    // while the portal moved would hand the browser download links pointing at
+    // whatever else holds that port.
+    origin: portalOrigin,
     businessTimezone: "UTC",
     manualSourceId: localSourceId,
     conversationStore: createConversationStore(conversations.store)
