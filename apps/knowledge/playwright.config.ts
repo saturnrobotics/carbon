@@ -24,6 +24,10 @@ export default defineConfig({
         env: {
           ...process.env,
           KNOWLEDGE_E2E_SYNTHETIC_FIXTURES: "1",
+          // `drive-source.spec.ts` exercises a surface the approved manual-v1
+          // release profile defers, so the harness opts the build-time route
+          // gate in explicitly. No release image or release plan sets this.
+          KNOWLEDGE_DRIVE_ENABLED: "true",
           KNOWLEDGE_COMPANY_ID: "company-b",
           KNOWLEDGE_WEB_ORIGIN: "https://localhost:4200",
           KNOWLEDGE_WORKER_URL: "http://127.0.0.1:4301",

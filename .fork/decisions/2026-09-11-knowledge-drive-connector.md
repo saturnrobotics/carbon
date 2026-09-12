@@ -71,3 +71,49 @@ Drive stays deferred from `manual-v1`: nothing here activates under that profile
   synchronization: documents shared only with a group stay unreadable locally.
 - Push channel registration (`changes.watch`) is an operator step; the endpoint
   verifies the enrolled channel and token hash and treats the hint as a hint.
+
+## Follow-up: the settings route had to stay out of the release fence (2026-09-12)
+
+Registering `routes/settings.sources.tsx` in `apps/knowledge/app/routes.ts`
+contradicted the fence that the same profile decision is enforced by:
+`test_production_web_route_manifest_excludes_deferred_routes` in
+`contrib/deploying/knowledge/test_images.py` lists `settings.sources` among the
+surfaces `manual-v1` defers, so the branch registered a route its own release
+fence declares deferred.
+
+Enabling Drive in the shipped profile is a release decision, so the fence was
+kept and the surface made unreachable instead. `routes.ts` is now the production
+manifest and names no deferred module; `routes.deferred.ts` holds the entry and
+contributes it only when `isDriveSurfaceEnabled`
+(`packages/knowledge/src/sources/drive-deployment.ts`) reads
+`KNOWLEDGE_DRIVE_ENABLED=true`. Route config is a BUILD-time artifact, so a
+release image — built with the variable absent — ships no Drive route in its
+bundle at all, which no runtime environment can re-open. `release.py` already
+rejects the variable on a revision (any key outside `REQUIRED_ENVIRONMENT` is
+deferred configuration) and already pins `knowledge-web` to `manual-v1`; a new
+case in `test_images.py` pins both of those so the indirection cannot quietly
+become the only thing holding the fence.
+
+Task 22's companion "profile past `manual-v1`" condition is deliberately absent
+here. MCP lives in a service that never reads the manual source configuration;
+the web app does, and `readManualSourceConfiguration` refuses any other profile,
+so four of its routes throw under one. For this surface that condition would
+mean "unreachable in every configuration that boots", including the loopback
+harness — so the three locks above carry the boundary instead, and the harnesses
+(`playwright.config.ts`, `compose.local.yaml`) set the variable so
+`drive-source.spec.ts` stays exercisable.
+
+Two findings worth carrying forward:
+
+- `pnpm --filter knowledge build` was already FAILING on this branch, and the
+  registered route was why: `DriveSourceList.tsx` is a client component that
+  imports `describeProviderEligibility` from `sources.service.ts`, which imports
+  `forwardIntakeRequest` from `intake.service.ts`, which imports
+  `services/identity.server` — so React Router's `dot-server` plugin refused the
+  client graph. Deferring the route makes the default build green, but a build
+  with `KNOWLEDGE_DRIVE_ENABLED=true` still fails. The fix is to move the
+  client-safe schema and label helper out of `sources.service.ts`; that belongs
+  with the page, not with the fence, and is not done here.
+- The fence test reads `routes.ts` as TEXT. That makes it cheap and readable, but
+  it cannot see a route added through an import, which is why the gate needed its
+  own assertions rather than relying on the literal's absence.

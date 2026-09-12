@@ -185,6 +185,10 @@ services:
     image: knowledge-manual-local-web-e2e:manual-v1
     environment:
       KNOWLEDGE_COMPANY_ID: company-b
+      # `drive-source.spec.ts` exercises a surface manual-v1 defers, so this
+      # disposable e2e portal opts the build-time route gate in. The released
+      # web image names it nowhere and `release.py` refuses it on a revision.
+      KNOWLEDGE_DRIVE_ENABLED: "true"
       KNOWLEDGE_E2E_DOCKER: "1"
       KNOWLEDGE_E2E_SYNTHETIC_FIXTURES: "1"
       KNOWLEDGE_MANUAL_SOURCE_JSON: '{"sourceId":"source-b","displayName":"Operations manuals"}'
