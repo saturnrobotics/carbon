@@ -8,8 +8,12 @@
  *    labels: an https receiver audience, numeric service-account subjects and
  *    `/projects/...` IAP audiences.
  *
- * The CLI in scripts/validate-callers.ts is a thin wrapper over this module.
+ * The CLI in scripts/validate-callers.ts is a thin wrapper over this module:
+ * runCallerValidation below is the whole of it apart from the process wiring,
+ * so its argument handling, report and exit codes are covered without spawning
+ * the TypeScript loader.
  */
+import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import {
   isServiceAudience,
@@ -283,4 +287,71 @@ export function validateCallerRegistry(
     releaseIssues: parsed.success ? releaseIssues(parsed.data) : [],
     summary
   };
+}
+
+/**
+ * Where the CLI writes its report. Injected so the argument handling, the
+ * printed lines and the exit code can be exercised in the caller's own
+ * runtime; only scripts/validate-callers.ts binds it to the process streams.
+ */
+export interface CallerValidationOutput {
+  print: (line: string) => void;
+  fail: (line: string) => void;
+}
+
+export const CALLER_VALIDATION_USAGE =
+  "usage: callers:validate <registry.json> [--schema <callers.schema.json>]";
+
+/**
+ * The CLI apart from its process wiring: reads the registry and schema named
+ * by `argv`, writes the report to `output`, and returns the exit code — 0 when
+ * the registry is clean, 1 on any issue, 2 on a usage error. Relative
+ * arguments resolve against `base`, which the caller supplies because where a
+ * repo-relative path points is a property of how the process was launched.
+ */
+export async function runCallerValidation(
+  argv: readonly string[],
+  output: CallerValidationOutput,
+  base: string
+): Promise<number> {
+  const remaining = [...argv];
+  const files: string[] = [];
+  let schemaPath = TRUSTED_CALLERS_SCHEMA_PATH;
+  while (remaining.length > 0) {
+    const argument = remaining.shift() as string;
+    if (argument === "--schema") {
+      const value = remaining.shift();
+      if (!value) {
+        output.fail(CALLER_VALIDATION_USAGE);
+        return 2;
+      }
+      schemaPath = resolve(base, value);
+    } else {
+      files.push(argument);
+    }
+  }
+  const [registryFile] = files;
+  if (files.length !== 1 || !registryFile) {
+    output.fail(CALLER_VALIDATION_USAGE);
+    return 2;
+  }
+  const registryPath = resolve(base, registryFile);
+  const document: unknown = JSON.parse(await readFile(registryPath, "utf8"));
+  const schema: unknown = JSON.parse(await readFile(schemaPath, "utf8"));
+  const report = validateCallerRegistry(document, schema);
+  for (const line of report.summary) output.print(line);
+  const failures = [
+    ...report.runtimeIssues.map((issue) => `runtime schema: ${issue}`),
+    ...report.schemaIssues.map((issue) => `callers.schema.json: ${issue}`),
+    ...report.releaseIssues.map((issue) => `release rule: ${issue}`)
+  ];
+  if (failures.length > 0) {
+    for (const failure of failures) output.fail(failure);
+    output.fail(`${registryPath}: ${failures.length} issue(s)`);
+    return 1;
+  }
+  output.print(
+    `${registryPath}: conforms to the runtime schema, ${schemaPath} and the release rules`
+  );
+  return 0;
 }

@@ -17,6 +17,7 @@ on:
       - ".fork/**"
       - "packages/locale/**"
       - "packages/knowledge/scripts/validate-callers.ts"
+      - "packages/knowledge/src/trusted-callers.ts"
       - "packages/knowledge/src/identity.server.ts"
       - "lingui.config.js"
       - "contrib/deploying/**"
