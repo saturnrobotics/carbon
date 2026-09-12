@@ -8241,6 +8241,258 @@ export default {
         tags: ["workflowLastRun"]
       }
     },
+    "/knowledgeSourceOutbox": {
+      get: {
+        parameters: [
+          {
+            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.id"
+          },
+          {
+            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.companyId"
+          },
+          {
+            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.source"
+          },
+          {
+            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.entityType"
+          },
+          {
+            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.entityId"
+          },
+          {
+            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.sourceVersion"
+          },
+          {
+            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.eventType"
+          },
+          {
+            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.payload"
+          },
+          {
+            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.availableAt"
+          },
+          {
+            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.claimedAt"
+          },
+          {
+            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.leaseOwner"
+          },
+          {
+            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.leaseExpiresAt"
+          },
+          {
+            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.attempts"
+          },
+          {
+            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.deliveredAt"
+          },
+          {
+            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.createdBy"
+          },
+          {
+            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.createdAt"
+          },
+          {
+            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.updatedBy"
+          },
+          {
+            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.updatedAt"
+          },
+          {
+            $ref: "#/parameters/select"
+          },
+          {
+            $ref: "#/parameters/order"
+          },
+          {
+            $ref: "#/parameters/range"
+          },
+          {
+            $ref: "#/parameters/rangeUnit"
+          },
+          {
+            $ref: "#/parameters/offset"
+          },
+          {
+            $ref: "#/parameters/limit"
+          },
+          {
+            $ref: "#/parameters/preferCount"
+          }
+        ],
+        responses: {
+          "200": {
+            description: "OK",
+            schema: {
+              items: {
+                $ref: "#/definitions/knowledgeSourceOutbox"
+              },
+              type: "array"
+            }
+          },
+          "206": {
+            description: "Partial Content"
+          }
+        },
+        tags: ["knowledgeSourceOutbox"]
+      },
+      post: {
+        parameters: [
+          {
+            $ref: "#/parameters/body.knowledgeSourceOutbox"
+          },
+          {
+            $ref: "#/parameters/select"
+          },
+          {
+            $ref: "#/parameters/preferPost"
+          }
+        ],
+        responses: {
+          "201": {
+            description: "Created"
+          }
+        },
+        tags: ["knowledgeSourceOutbox"]
+      },
+      delete: {
+        parameters: [
+          {
+            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.id"
+          },
+          {
+            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.companyId"
+          },
+          {
+            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.source"
+          },
+          {
+            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.entityType"
+          },
+          {
+            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.entityId"
+          },
+          {
+            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.sourceVersion"
+          },
+          {
+            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.eventType"
+          },
+          {
+            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.payload"
+          },
+          {
+            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.availableAt"
+          },
+          {
+            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.claimedAt"
+          },
+          {
+            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.leaseOwner"
+          },
+          {
+            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.leaseExpiresAt"
+          },
+          {
+            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.attempts"
+          },
+          {
+            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.deliveredAt"
+          },
+          {
+            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.createdBy"
+          },
+          {
+            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.createdAt"
+          },
+          {
+            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.updatedBy"
+          },
+          {
+            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.updatedAt"
+          },
+          {
+            $ref: "#/parameters/preferReturn"
+          }
+        ],
+        responses: {
+          "204": {
+            description: "No Content"
+          }
+        },
+        tags: ["knowledgeSourceOutbox"]
+      },
+      patch: {
+        parameters: [
+          {
+            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.id"
+          },
+          {
+            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.companyId"
+          },
+          {
+            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.source"
+          },
+          {
+            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.entityType"
+          },
+          {
+            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.entityId"
+          },
+          {
+            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.sourceVersion"
+          },
+          {
+            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.eventType"
+          },
+          {
+            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.payload"
+          },
+          {
+            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.availableAt"
+          },
+          {
+            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.claimedAt"
+          },
+          {
+            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.leaseOwner"
+          },
+          {
+            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.leaseExpiresAt"
+          },
+          {
+            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.attempts"
+          },
+          {
+            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.deliveredAt"
+          },
+          {
+            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.createdBy"
+          },
+          {
+            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.createdAt"
+          },
+          {
+            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.updatedBy"
+          },
+          {
+            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.updatedAt"
+          },
+          {
+            $ref: "#/parameters/body.knowledgeSourceOutbox"
+          },
+          {
+            $ref: "#/parameters/preferReturn"
+          }
+        ],
+        responses: {
+          "204": {
+            description: "No Content"
+          }
+        },
+        tags: ["knowledgeSourceOutbox"]
+      }
+    },
     "/dimension": {
       get: {
         parameters: [
@@ -110194,6 +110446,108 @@ export default {
       },
       type: "object"
     },
+    knowledgeSourceOutbox: {
+      required: [
+        "id",
+        "companyId",
+        "source",
+        "entityType",
+        "entityId",
+        "sourceVersion",
+        "eventType",
+        "payload",
+        "availableAt",
+        "attempts",
+        "createdBy",
+        "createdAt"
+      ],
+      properties: {
+        id: {
+          default: "public.id('kso'::text)",
+          description: "Note:\nThis is a Primary Key.<pk/>",
+          format: "text",
+          type: "string"
+        },
+        companyId: {
+          description:
+            "Note:\nThis is a Primary Key.<pk/>\nThis is a Foreign Key to `company.id`.<fk table='company' column='id'/>",
+          format: "text",
+          type: "string"
+        },
+        source: {
+          default: "carbon",
+          format: "text",
+          type: "string"
+        },
+        entityType: {
+          format: "text",
+          type: "string"
+        },
+        entityId: {
+          format: "text",
+          type: "string"
+        },
+        sourceVersion: {
+          format: "text",
+          type: "string"
+        },
+        eventType: {
+          format: "text",
+          type: "string"
+        },
+        payload: {
+          format: "jsonb"
+        },
+        availableAt: {
+          default: "now()",
+          format: "timestamp with time zone",
+          type: "string"
+        },
+        claimedAt: {
+          format: "timestamp with time zone",
+          type: "string"
+        },
+        leaseOwner: {
+          format: "text",
+          type: "string"
+        },
+        leaseExpiresAt: {
+          format: "timestamp with time zone",
+          type: "string"
+        },
+        attempts: {
+          default: 0,
+          format: "integer",
+          type: "integer"
+        },
+        deliveredAt: {
+          format: "timestamp with time zone",
+          type: "string"
+        },
+        createdBy: {
+          description:
+            "Note:\nThis is a Foreign Key to `user.id`.<fk table='user' column='id'/>",
+          format: "text",
+          type: "string"
+        },
+        createdAt: {
+          default: "now()",
+          format: "timestamp with time zone",
+          type: "string"
+        },
+        updatedBy: {
+          description:
+            "Note:\nThis is a Foreign Key to `user.id`.<fk table='user' column='id'/>",
+          format: "text",
+          type: "string"
+        },
+        updatedAt: {
+          format: "timestamp with time zone",
+          type: "string"
+        }
+      },
+      type: "object"
+    },
     dimension: {
       required: [
         "id",
@@ -155437,6 +155791,123 @@ export default {
     },
     "rowFilter.workflowLastRun.durationMs": {
       name: "durationMs",
+      required: false,
+      in: "query",
+      type: "string"
+    },
+    "body.knowledgeSourceOutbox": {
+      name: "knowledgeSourceOutbox",
+      description: "knowledgeSourceOutbox",
+      required: false,
+      in: "body",
+      schema: {
+        $ref: "#/definitions/knowledgeSourceOutbox"
+      }
+    },
+    "rowFilter.knowledgeSourceOutbox.id": {
+      name: "id",
+      required: false,
+      in: "query",
+      type: "string"
+    },
+    "rowFilter.knowledgeSourceOutbox.companyId": {
+      name: "companyId",
+      required: false,
+      in: "query",
+      type: "string"
+    },
+    "rowFilter.knowledgeSourceOutbox.source": {
+      name: "source",
+      required: false,
+      in: "query",
+      type: "string"
+    },
+    "rowFilter.knowledgeSourceOutbox.entityType": {
+      name: "entityType",
+      required: false,
+      in: "query",
+      type: "string"
+    },
+    "rowFilter.knowledgeSourceOutbox.entityId": {
+      name: "entityId",
+      required: false,
+      in: "query",
+      type: "string"
+    },
+    "rowFilter.knowledgeSourceOutbox.sourceVersion": {
+      name: "sourceVersion",
+      required: false,
+      in: "query",
+      type: "string"
+    },
+    "rowFilter.knowledgeSourceOutbox.eventType": {
+      name: "eventType",
+      required: false,
+      in: "query",
+      type: "string"
+    },
+    "rowFilter.knowledgeSourceOutbox.payload": {
+      name: "payload",
+      required: false,
+      in: "query",
+      type: "string"
+    },
+    "rowFilter.knowledgeSourceOutbox.availableAt": {
+      name: "availableAt",
+      required: false,
+      in: "query",
+      type: "string"
+    },
+    "rowFilter.knowledgeSourceOutbox.claimedAt": {
+      name: "claimedAt",
+      required: false,
+      in: "query",
+      type: "string"
+    },
+    "rowFilter.knowledgeSourceOutbox.leaseOwner": {
+      name: "leaseOwner",
+      required: false,
+      in: "query",
+      type: "string"
+    },
+    "rowFilter.knowledgeSourceOutbox.leaseExpiresAt": {
+      name: "leaseExpiresAt",
+      required: false,
+      in: "query",
+      type: "string"
+    },
+    "rowFilter.knowledgeSourceOutbox.attempts": {
+      name: "attempts",
+      required: false,
+      in: "query",
+      type: "string"
+    },
+    "rowFilter.knowledgeSourceOutbox.deliveredAt": {
+      name: "deliveredAt",
+      required: false,
+      in: "query",
+      type: "string"
+    },
+    "rowFilter.knowledgeSourceOutbox.createdBy": {
+      name: "createdBy",
+      required: false,
+      in: "query",
+      type: "string"
+    },
+    "rowFilter.knowledgeSourceOutbox.createdAt": {
+      name: "createdAt",
+      required: false,
+      in: "query",
+      type: "string"
+    },
+    "rowFilter.knowledgeSourceOutbox.updatedBy": {
+      name: "updatedBy",
+      required: false,
+      in: "query",
+      type: "string"
+    },
+    "rowFilter.knowledgeSourceOutbox.updatedAt": {
+      name: "updatedAt",
       required: false,
       in: "query",
       type: "string"

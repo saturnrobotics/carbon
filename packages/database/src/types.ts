@@ -27836,6 +27836,168 @@ export type Database = {
           }
         ]
       }
+      knowledgeSourceOutbox: {
+        Row: {
+          attempts: number
+          availableAt: string
+          claimedAt: string | null
+          companyId: string
+          createdAt: string
+          createdBy: string
+          deliveredAt: string | null
+          entityId: string
+          entityType: string
+          eventType: string
+          id: string
+          leaseExpiresAt: string | null
+          leaseOwner: string | null
+          payload: Json
+          source: string
+          sourceVersion: string
+          updatedAt: string | null
+          updatedBy: string | null
+        }
+        Insert: {
+          attempts?: number
+          availableAt?: string
+          claimedAt?: string | null
+          companyId: string
+          createdAt?: string
+          createdBy: string
+          deliveredAt?: string | null
+          entityId: string
+          entityType: string
+          eventType: string
+          id?: string
+          leaseExpiresAt?: string | null
+          leaseOwner?: string | null
+          payload?: Json
+          source?: string
+          sourceVersion: string
+          updatedAt?: string | null
+          updatedBy?: string | null
+        }
+        Update: {
+          attempts?: number
+          availableAt?: string
+          claimedAt?: string | null
+          companyId?: string
+          createdAt?: string
+          createdBy?: string
+          deliveredAt?: string | null
+          entityId?: string
+          entityType?: string
+          eventType?: string
+          id?: string
+          leaseExpiresAt?: string | null
+          leaseOwner?: string | null
+          payload?: Json
+          source?: string
+          sourceVersion?: string
+          updatedAt?: string | null
+          updatedBy?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "knowledgeSourceOutbox_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "knowledgeSourceOutbox_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "knowledgeSourceOutbox_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "customFieldTables"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "knowledgeSourceOutbox_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "integrations"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "knowledgeSourceOutbox_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "knowledgeSourceOutbox_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "knowledgeSourceOutbox_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "knowledgeSourceOutbox_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "knowledgeSourceOutbox_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "knowledgeSourceOutbox_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "knowledgeSourceOutbox_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "knowledgeSourceOutbox_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "knowledgeSourceOutbox_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "knowledgeSourceOutbox_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          }
+        ]
+      }
       lessonCompletion: {
         Row: {
           courseId: string
