@@ -63,6 +63,25 @@ class PrivateStackTests(unittest.TestCase):
                 self.assertNotIn("INVOICE_AI_PROJECT", service.get("environment", {}))
         self.assertEqual([name for name, service in stack["services"].items() if "ports" in service], ["caddy"])
 
+    def test_knowledge_receiver_inputs_change_only_the_erp_service(self):
+        registry = json.dumps({"version": 1, "receiver": {"id": "carbon-erp", "audience": "https://erp.example.com"}, "callers": [{"callerId": "knowledge-query", "serviceAccountSubject": "synthetic-subject-1", "sourceIapAudience": "/projects/0/global/backendServices/0", "operations": ["knowledge_resolveItems"], "capabilities": ["knowledge.read"], "requiredAccessLevels": []}]})
+        config = {**self.config, "KNOWLEDGE_RECEIVER_AUDIENCE": "https://erp.example.com", "KNOWLEDGE_TRUSTED_CALLERS_JSON": registry}
+        stack, files = module.render(config, REPO, self.output, self.state, materialize=False)
+        secret = str(self.state / "secrets/knowledge_trusted_callers_json")
+        self.assertEqual(files.pop(secret), registry)
+        self.assertNotIn("synthetic-subject-1", json.dumps(stack))
+        erp, baseline_erp = stack["services"]["erp"], self.stack["services"]["erp"]
+        self.assertEqual(erp["environment"].pop("KNOWLEDGE_RECEIVER_AUDIENCE"), "https://erp.example.com")
+        self.assertEqual(erp["environment"].pop("KNOWLEDGE_TRUSTED_CALLERS_JSON"), "__KNOWLEDGE_TRUSTED_CALLERS_JSON__")
+        self.assertEqual(baseline_erp["environment"].pop("KNOWLEDGE_RECEIVER_AUDIENCE"), "")
+        self.assertEqual(baseline_erp["environment"].pop("KNOWLEDGE_TRUSTED_CALLERS_JSON"), "")
+        self.assertEqual(erp["secrets"], baseline_erp["secrets"] + ["knowledge_trusted_callers_json"])
+        erp["secrets"] = baseline_erp["secrets"]
+        self.assertEqual(stack["secrets"].pop("knowledge_trusted_callers_json"), {"file": secret})
+        self.assertEqual(stack, self.stack)
+        self.assertNotIn("KNOWLEDGE_RECEIVER_AUDIENCE", self.stack["services"]["mes"]["environment"])
+        self.assertNotIn("KNOWLEDGE_TRUSTED_CALLERS_JSON", self.stack["services"]["mes"]["environment"])
+
     def test_only_tailnet_https_is_published(self):
         published = [(name, svc["ports"]) for name, svc in self.stack["services"].items() if "ports" in svc]
         self.assertEqual(published, [("caddy", [{"target": 443, "published": "443", "host_ip": "100.72.10.8", "protocol": "tcp"}])])
