@@ -4,6 +4,11 @@ import { outboxBacklog } from "@carbon/knowledge/indexing/outbox.server";
 import { createTelemetry } from "@carbon/knowledge/telemetry";
 import { serve } from "inngest/node";
 import { createBacklogObserver } from "./backlog";
+import {
+  createCarbonChangeFunction,
+  createCarbonReconciliationFunction,
+  readCarbonSourceConfiguration
+} from "./carbon-changes";
 import { createOutboxDeliveryFunction } from "./functions";
 import { knowledgeInngest } from "./inngest";
 import { createOutboxInvalidationFunction } from "./invalidation";
@@ -62,8 +67,45 @@ export function startServer(
         ).values()
       ]
     : [];
+  const carbonSource = dependencies
+    ? readCarbonSourceConfiguration(environment)
+    : null;
+  const carbonRuntime =
+    dependencies && carbonSource
+      ? {
+          pool: dependencies.ingestPool,
+          companies: [
+            ...new Map(
+              dependencies.machineConfiguration.callers
+                .filter(
+                  (caller) =>
+                    caller.capabilities.includes("source.changes.read") &&
+                    caller.sourceIds.includes(carbonSource.sourceId)
+                )
+                .flatMap((caller) =>
+                  caller.companyIds.map(
+                    (companyId) =>
+                      [
+                        `${caller.callerId}:${companyId}`,
+                        { companyId, callerId: caller.callerId }
+                      ] as const
+                  )
+                )
+            ).values()
+          ],
+          workerId: environment.K_REVISION ?? `knowledge-worker-${process.pid}`,
+          source: carbonSource,
+          automationUserId: dependencies.automationUserId
+        }
+      : null;
   const functions = dependencies
     ? [
+        ...(carbonRuntime
+          ? [
+              createCarbonChangeFunction(carbonRuntime),
+              createCarbonReconciliationFunction(carbonRuntime)
+            ]
+          : []),
         createOutboxDeliveryFunction({
           pool: dependencies.ingestPool,
           companies: workerCompanies,

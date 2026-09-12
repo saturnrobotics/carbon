@@ -1,9 +1,14 @@
 import { z } from "zod";
+import { createCarbonSourceAdapter } from "./carbon.server";
+import { itemSchema, receiptIdentitySchema, ticketSchema } from "./contract";
 import { createGenericReadAdapter } from "./generic.server";
 import {
   createSourceTransport,
   type SourceRequestContext
 } from "./http.server";
+import { createKanbanSourceAdapter } from "./kanban.server";
+
+export { itemSchema, receiptIdentitySchema, ticketSchema } from "./contract";
 
 const id = z.string().min(1).max(256);
 const origin = z
@@ -47,44 +52,6 @@ export const sourceRegistryConfigurationSchema = z
 export type SourceRegistryConfiguration = z.infer<
   typeof sourceRegistryConfigurationSchema
 >;
-export const itemSchema = z.object({
-  id,
-  readableId: z.string().max(256),
-  name: z.string().max(500),
-  revision: z.string().max(256).nullable(),
-  mpn: z.string().max(256).nullable(),
-  description: z.string().max(16000).nullable().optional()
-});
-export const ticketSchema = z.object({
-  id,
-  boardId: id,
-  columnId: id,
-  title: z.string().max(300),
-  description: z.string().max(16000).nullable(),
-  dueDate: z.string().max(40).nullable(),
-  version: z.number().int().positive(),
-  updatedAt: z.string().max(40),
-  archivedAt: z.string().max(40).nullable()
-});
-export const receiptIdentitySchema = z.object({
-  id,
-  itemId: id,
-  revision: z.string().max(256),
-  manufacturer: z.string().max(256),
-  mpn: z.string().max(256),
-  receivedAt: z.string().datetime({ offset: true }),
-  quantity: z.string().max(45),
-  reversedQuantity: z.string().max(45),
-  posted: z.boolean(),
-  voided: z.boolean(),
-  serial: z.string().max(256).optional(),
-  lot: z.string().max(256).optional(),
-  variant: z.string().max(256).optional(),
-  missingIdentityFields: z
-    .array(z.enum(["manufacturer", "mpn", "serial", "lot"]))
-    .max(4)
-    .optional()
-});
 export function createSourceRegistry(
   configuration: SourceRegistryConfiguration,
   context: SourceRequestContext
@@ -92,6 +59,18 @@ export function createSourceRegistry(
   const config = sourceRegistryConfigurationSchema.parse(configuration);
   return {
     list: () => config.sources.map(({ id, kind }) => ({ id, kind })),
+    /** The uniform finite-contract adapter for a registered Carbon or Kanban source. */
+    adapter(sourceId: string) {
+      const connection = config.sources.find(
+        (source) =>
+          source.id === sourceId &&
+          (source.kind === "carbon" || source.kind === "kanban")
+      );
+      if (!connection) throw Error("Source unavailable");
+      return connection.kind === "carbon"
+        ? createCarbonSourceAdapter(connection, context)
+        : createKanbanSourceAdapter(connection, context);
+    },
     generic(sourceId: string) {
       const connection = config.sources.find(
         (source) =>
