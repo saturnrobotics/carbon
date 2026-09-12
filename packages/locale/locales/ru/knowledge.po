@@ -13,406 +13,406 @@ msgstr ""
 "Plural-Forms: \n"
 
 msgid "A follow-up question keeps the evidence shown here in context."
-msgstr ""
+msgstr "Дополнительный вопрос сохраняет контекст показанных здесь доказательств."
 
 msgid "Access to this document was revoked."
-msgstr ""
+msgstr "Доступ к этому документу был отозван."
 
 msgid "Acknowledge the changed evidence before publishing."
-msgstr ""
+msgstr "Подтвердите изменённые доказательства перед публикацией."
 
 msgid "Add a document"
-msgstr ""
+msgstr "Добавить документ"
 
 msgid "Answer"
-msgstr ""
+msgstr "Ответ"
 
 msgid "Back to company knowledge"
-msgstr ""
+msgstr "Вернуться к базе знаний организации"
 
 msgid "Back to manual search"
-msgstr ""
+msgstr "Вернуться к ручному поиску"
 
 msgid "Captured"
-msgstr ""
+msgstr "Захвачено"
 
 msgid "Captured document"
-msgstr ""
+msgstr "Захваченный документ"
 
 msgid "Check freshness"
-msgstr ""
+msgstr "Проверить актуальность"
 
 msgid "Choices"
-msgstr ""
+msgstr "Варианты"
 
 msgid "Choose either a file or a URL, not both."
-msgstr ""
+msgstr "Выберите либо файл, либо URL, но не оба."
 
 msgid "Choose one PDF, image, photo, or HTTPS address."
-msgstr ""
+msgstr "Выберите один PDF, изображение, фотографию или адрес HTTPS."
 
 msgid "Company knowledge"
-msgstr ""
+msgstr "База знаний организации"
 
 #. placeholder {0}: evidence.length
 msgid "Composing an answer from {0} evidence blocks…"
-msgstr ""
+msgstr "Составление ответа из {0} блоков доказательств…"
 
 msgid "Confirm removal"
-msgstr ""
+msgstr "Подтвердить удаление"
 
 msgid "Corrections are saved. The document can be published."
-msgstr ""
+msgstr "Исправления сохранены. Документ можно опубликовать."
 
 msgid "Current version"
-msgstr ""
+msgstr "Текущая версия"
 
 msgid "Document"
-msgstr ""
+msgstr "Документ"
 
 msgid "Download original"
-msgstr ""
+msgstr "Скачать оригинал"
 
 msgid "Download original · page {page}"
-msgstr ""
+msgstr "Скачать оригинал · страница {page}"
 
 msgid "Drag and drop a PDF or image here, or choose a file."
-msgstr ""
+msgstr "Перетащите сюда PDF или изображение, или выберите файл."
 
 msgid "Drive sources are enrolled by an administrator. Portal sign-in does not authorize Drive access."
-msgstr ""
+msgstr "Источники Drive зарегистрированы администратором. Вход на портал не разрешает доступ к Drive."
 
 msgid "Existing item"
-msgstr ""
+msgstr "Существующая номенклатура"
 
 msgid "Extracted text anchored to page numbers. Page images are not available for this document; download the original to see the layout."
-msgstr ""
+msgstr "Извлечённый текст привязан к номерам страниц. Изображения страниц недоступны для этого документа; скачайте оригинал, чтобы увидеть макет."
 
 msgid "Extracting"
-msgstr ""
+msgstr "Извлечение"
 
 msgid "Extraction failed"
-msgstr ""
+msgstr "Ошибка извлечения"
 
 msgid "Fetched from"
-msgstr ""
+msgstr "Получено из"
 
 msgid "Find the right manual."
-msgstr ""
+msgstr "Найдите нужное руководство."
 
 msgid "I reviewed this evidence"
-msgstr ""
+msgstr "Я проверил эти доказательства"
 
 msgid "Intake review"
-msgstr ""
+msgstr "Входящее рассмотрение"
 
 msgid "Item association"
-msgstr ""
+msgstr "Связь номенклатуры"
 
 msgid "Item lookup is not available for this library. The document can still be published as a generic document."
-msgstr ""
+msgstr "Поиск номенклатуры недоступен для этой библиотеки. Документ можно всё ещё опубликовать как универсальный документ."
 
 msgid "Item lookup is unavailable right now."
-msgstr ""
+msgstr "Поиск номенклатуры сейчас недоступен."
 
 msgid "Library"
-msgstr ""
+msgstr "Библиотека"
 
 msgid "Library and access"
-msgstr ""
+msgstr "Библиотека и доступ"
 
 msgid "Link this document to one existing item, or keep it as a generic document. Linking never creates or changes items."
-msgstr ""
+msgstr "Свяжите этот документ с одной существующей номенклатурой или оставьте его как универсальный документ. Связывание никогда не создаёт и не изменяет номенклатуру."
 
 msgid "Live record"
-msgstr ""
+msgstr "Текущая запись"
 
 msgid "Machine"
-msgstr ""
+msgstr "Станок"
 
 msgid "Manual file"
-msgstr ""
+msgstr "Файл руководства"
 
 msgid "Manual search is unavailable."
-msgstr ""
+msgstr "Ручной поиск недоступен."
 
 msgid "Manufacturer"
-msgstr ""
+msgstr "Производитель"
 
 msgid "Manufacturer, part number, revision, machine, or keyword"
-msgstr ""
+msgstr "Производитель, номер детали, ревизия, станок или ключевое слово"
 
 msgid "Needs review"
-msgstr ""
+msgstr "Требует рассмотрения"
 
 msgid "New evidence changed this field after it was reviewed."
-msgstr ""
+msgstr "Новое доказательство изменило это поле после того, как оно было проверено."
 
 msgid "No evidence on any page"
-msgstr ""
+msgstr "Нет доказательств ни на одной странице"
 
 msgid "No item association (generic document)"
-msgstr ""
+msgstr "Нет связанной номенклатуры (обобщенный документ)"
 
 msgid "No matching items."
-msgstr ""
+msgstr "Нет совпадающих номенклатур."
 
 msgid "No matching manuals found."
-msgstr ""
+msgstr "Руководства не найдены."
 
 msgid "No text has been extracted yet."
-msgstr ""
+msgstr "Текст еще не был извлечен."
 
 msgid "Not set"
-msgstr ""
+msgstr "Не установлено"
 
 msgid "Not yet decided. Saving the review records your choice."
-msgstr ""
+msgstr "Еще не решено. Сохранение рассмотрения записывает ваш выбор."
 
 #. placeholder {0}: entity.observedAt
 msgid "Observed {0}"
-msgstr ""
+msgstr "Наблюдалось {0}"
 
 msgid "Only public HTTPS addresses are fetched, through the server's fetch policy, and the fetched copy is stored immutably."
-msgstr ""
+msgstr "Только общедоступные адреса HTTPS извлекаются через политику выборки сервера, и полученная копия хранится неизменяемо."
 
 msgid "Only the first candidates are shown; narrow the search."
-msgstr ""
+msgstr "Показаны только первые кандидаты; сузьте поиск."
 
 msgid "Open record"
-msgstr ""
+msgstr "Открыть запись"
 
 #. placeholder {0}: selected?.classification ?? ""
 msgid "Owner: {actorId}. Access: {0}. Readers of this library can find the document once it is reviewed and published."
-msgstr ""
+msgstr "Ответственный: {actorId}. Доступ: {0}. Читатели этой библиотеки смогут найти документ после рассмотрения и опубликования."
 
 #. placeholder {0}: source.page
 msgid "page {0}"
-msgstr ""
+msgstr "страница {0}"
 
 msgid "Page {page}"
-msgstr ""
+msgstr "Страница {page}"
 
 msgid "Page not found."
-msgstr ""
+msgstr "Страница не найдена."
 
 msgid "Part number"
-msgstr ""
+msgstr "Номер детали"
 
 msgid "Part number, MPN, or name"
-msgstr ""
+msgstr "Номер детали, MPN или название"
 
 msgid "Partial source answer"
-msgstr ""
+msgstr "Частичный ответ источника"
 
 msgid "PDF and image files are captured with their immutable object version before extraction."
-msgstr ""
+msgstr "PDF и файлы изображений захватываются с их неизменяемой версией объекта перед извлечением."
 
 msgid "Proposed fields"
-msgstr ""
+msgstr "Предложенные поля"
 
 msgid "Proposed fields are ready. Confirm or correct them, then save."
-msgstr ""
+msgstr "Предложенные поля готовы. Подтвердите или исправьте их, затем сохраните."
 
 #. placeholder {0}: model.proposed[field]
 msgid "Proposed: {0}"
-msgstr ""
+msgstr "Предложено: {0}"
 
 msgid "Publish manual"
-msgstr ""
+msgstr "Опубликовать руководство"
 
 msgid "Published"
-msgstr ""
+msgstr "Опубликовано"
 
 msgid "Remove manual"
-msgstr ""
+msgstr "Убрать руководство"
 
 msgid "Remove this manual?"
-msgstr ""
+msgstr "Убрать это руководство?"
 
 msgid "Request unavailable"
-msgstr ""
+msgstr "Запрос недоступен"
 
 msgid "Review document"
-msgstr ""
+msgstr "Рассмотреть документ"
 
 msgid "Reviewed"
-msgstr ""
+msgstr "Рассмотрено"
 
 msgid "Revision"
-msgstr ""
+msgstr "Ревизия"
 
 msgid "Save review"
-msgstr ""
+msgstr "Сохранить рассмотрение"
 
 msgid "Save the review before publishing."
-msgstr ""
+msgstr "Сохраните рассмотрение перед опубликованием."
 
 msgid "Saved correction"
-msgstr ""
+msgstr "Сохраненное исправление"
 
 msgid "Search items"
-msgstr ""
+msgstr "Поиск номенклатуры"
 
 msgid "Search manuals"
-msgstr ""
+msgstr "Поиск руководств"
 
 msgid "Search published company manuals by manufacturer, part number, revision, machine, or keyword. Open the exact original version from every result."
-msgstr ""
+msgstr "Поиск опубликованных руководств организации по производителю, номеру детали, ревизии, станку или ключевому слову. Откройте точную исходную версию из каждого результата."
 
 msgid "Searching authorized sources…"
-msgstr ""
+msgstr "Поиск в авторизованных источниках…"
 
 msgid "Searching…"
-msgstr ""
+msgstr "Поиск…"
 
 msgid "see evidence"
-msgstr ""
+msgstr "посмотреть доказательства"
 
 msgid "Selected: {fileName}"
-msgstr ""
+msgstr "Выбран: {fileName}"
 
 msgid "Show evidence ({evidenceCount})"
-msgstr ""
+msgstr "Показать доказательства ({evidenceCount})"
 
 msgid "Some authorized manuals were unavailable."
-msgstr ""
+msgstr "Некоторые авторизованные руководства были недоступны."
 
 msgid "Some sources did not answer; results may be partial."
-msgstr ""
+msgstr "Некоторые источники не ответили; результаты могут быть частичными."
 
 msgid "Source details"
-msgstr ""
+msgstr "Детали источника"
 
 msgid "Source evidence"
-msgstr ""
+msgstr "Доказательства источника"
 
 msgid "Source pages"
-msgstr ""
+msgstr "Страницы источника"
 
 #. placeholder {0}: entity.sourceRevision
 msgid "Source revision: {0}"
-msgstr ""
+msgstr "Исходная ревизия: {0}"
 
 msgid "Source unavailable"
-msgstr ""
+msgstr "Источник недоступен"
 
 msgid "Source URL"
-msgstr ""
+msgstr "Исходный URL"
 
 msgid "Sources"
-msgstr ""
+msgstr "Источники"
 
 msgid "Start a new question"
-msgstr ""
+msgstr "Задать новый вопрос"
 
 msgid "State:"
-msgstr ""
+msgstr "Состояние:"
 
 msgid "Status {status}"
-msgstr ""
+msgstr "Статус {status}"
 
 msgid "Take a photo of a nameplate or label"
-msgstr ""
+msgstr "Сфотографируйте табличку или ярлык"
 
 msgid "Text is being extracted from the document."
-msgstr ""
+msgstr "Текст извлекается из документа."
 
 msgid "The document could not be fetched from that address."
-msgstr ""
+msgstr "Документ не удалось получить по этому адресу."
 
 msgid "The document could not be fetched from that address. Check that it is a public HTTPS link to a PDF or image, or upload the file instead."
-msgstr ""
+msgstr "Документ не удалось получить по этому адресу. Проверьте, что это открытая HTTPS-ссылка на PDF или изображение, либо загрузите файл вместо этого."
 
 msgid "The document is queued for extraction."
-msgstr ""
+msgstr "Документ добавлен в очередь на извлечение."
 
 msgid "The document is stored and waiting for extraction."
-msgstr ""
+msgstr "Документ сохранён и ожидает извлечения."
 
 msgid "The document was captured, but text could not be extracted. Review cannot start until extraction succeeds."
-msgstr ""
+msgstr "Документ был захвачен, но текст не удалось извлечь. Рассмотрение не может начаться до тех пор, пока извлечение не будет успешным."
 
 msgid "The knowledge company is not configured."
-msgstr ""
+msgstr "Организация знаний не настроена."
 
 msgid "The knowledge service could not complete this request."
-msgstr ""
+msgstr "Служба знаний не смогла выполнить этот запрос."
 
 msgid "The request did not complete within its time budget."
-msgstr ""
+msgstr "Запрос не завершился в отведенное время."
 
 msgid "The request was not valid."
-msgstr ""
+msgstr "Запрос был недействительным."
 
 msgid "The review could not be saved. Check the fields and unresolved evidence."
-msgstr ""
+msgstr "Рассмотрение не удалось сохранить. Проверьте поля и неразрешённые доказательства."
 
 msgid "The review service is unavailable. Nothing was changed."
-msgstr ""
+msgstr "Служба рассмотрения недоступна. Ничего не было изменено."
 
 msgid "The upload could not be captured."
-msgstr ""
+msgstr "Загрузка не могла быть захвачена."
 
 msgid "The upload service is unavailable. The document was not captured."
-msgstr ""
+msgstr "Служба загрузки недоступна. Документ не был захвачен."
 
 msgid "This action is not configured for the library."
-msgstr ""
+msgstr "Это действие не настроено для библиотеки."
 
 msgid "This document changed since you opened it, or the same content was already reviewed. Reload and check before saving again."
-msgstr ""
+msgstr "Этот документ изменился с момента его открытия, или аналогичное содержимое уже было рассмотрено. Перезагрузите и проверьте перед повторным сохранением."
 
 msgid "This document changed while you were working. Reload it and try again."
-msgstr ""
+msgstr "Этот документ изменился, пока вы работали. Перезагрузите его и попробуйте снова."
 
 msgid "This document is not available for review."
-msgstr ""
+msgstr "Этот документ недоступен для рассмотрения."
 
 msgid "This document version is not available."
-msgstr ""
+msgstr "Эта версия документа недоступна."
 
 msgid "This removes the manual from {sourceDisplayName} search and blocks its original version from download."
-msgstr ""
+msgstr "Это удаляет руководство из поиска {sourceDisplayName} и блокирует скачивание его исходной версии."
 
 msgid "This review was published; it is now read-only."
-msgstr ""
+msgstr "Это рассмотрение было опубликовано; оно теперь доступно только для чтения."
 
 msgid "Title"
-msgstr ""
+msgstr "Название"
 
 msgid "Upload a manual"
-msgstr ""
+msgstr "Загрузить руководство"
 
 msgid "Upload a manual, photograph a nameplate, or point at a public address. Access follows the library you choose."
-msgstr ""
+msgstr "Загрузите руководство, сфотографируйте табличку или укажите на открытый адрес. Доступ соответствует выбранной вами библиотеке."
 
 msgid "Upload manual"
-msgstr ""
+msgstr "Загрузить руководство"
 
 msgid "Valid review fields are required."
-msgstr ""
+msgstr "Требуются действительные поля рассмотрения."
 
 msgid "You are not allowed to add documents to the selected library."
-msgstr ""
+msgstr "Вам не разрешено добавлять документы в выбранную библиотеку."
 
 msgid "You are not allowed to add documents to this library."
-msgstr ""
+msgstr "Вам не разрешено добавлять документы в эту библиотеку."
 
 msgid "You are not allowed to publish in this library. The review was kept."
-msgstr ""
+msgstr "Вам не разрешено публиковать в этой библиотеке. Рассмотрение было сохранено."
 
 msgid "You are not allowed to review documents in this library."
-msgstr ""
+msgstr "Вам не разрешено рассматривать документы в этой библиотеке."
 
 msgid "You are not signed in to this library, or your access was revoked."
-msgstr ""
+msgstr "Вы не вошли в эту библиотеку, или ваш доступ был отозван."
 
 msgid "You cannot add documents to any library. Ask an administrator for a library grant."
-msgstr ""
+msgstr "Вы не можете добавлять документы в какую-либо библиотеку. Попросите администратора предоставить доступ к библиотеке."
 
 msgid "You do not have permission for this action in this library."
-msgstr ""
+msgstr "Вы не имеете прав доступа для этого действия в этой библиотеке."
 
 msgid "Your access changed while this request ran. Search again."
-msgstr ""
+msgstr "Ваш доступ изменился во время выполнения этого запроса. Повторите поиск."
