@@ -143,6 +143,20 @@ const sourceIdentitySchema = z
   })
   .strict();
 
+/**
+ * Set by the Carbon receiver once the company's MFA requirement and the actor's
+ * factor state are known (`authorizeWorkforceRequest`). Absent on a principal
+ * the knowledge services verified themselves: an IAP assertion proves
+ * admission, not assurance, so nothing here is inferred from one.
+ */
+const principalAssuranceSchema = z
+  .object({
+    required: z.boolean(),
+    satisfied: z.boolean(),
+    method: z.enum(["carbon-mfa", "workspace-equivalent"])
+  })
+  .strict();
+
 const humanPrincipalSchema = z
   .object({
     kind: z.literal("human"),
@@ -153,7 +167,8 @@ const humanPrincipalSchema = z
     policyVersion: boundedIdentifierSchema,
     capabilities: z
       .array(boundedIdentifierSchema)
-      .max(KNOWLEDGE_LIMITS.capabilities)
+      .max(KNOWLEDGE_LIMITS.capabilities),
+    assurance: principalAssuranceSchema.optional()
   })
   .strict();
 

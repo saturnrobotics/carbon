@@ -13,7 +13,11 @@
       "capabilities": ["knowledge.read"],
       "requiredAccessLevels": [
         "accessPolicies/123456789012/accessLevels/managed_device"
-      ]
+      ],
+      "assurance": {
+        "mode": "workspace-equivalent",
+        "accessLevel": "accessPolicies/123456789012/accessLevels/workspace_2sv"
+      }
     },
     {
       "callerId": "knowledge-ingest",
@@ -30,7 +34,8 @@
       ],
       "requiredAccessLevels": [
         "accessPolicies/123456789012/accessLevels/managed_device"
-      ]
+      ],
+      "assurance": { "mode": "carbon-mfa" }
     }
   ]
 }

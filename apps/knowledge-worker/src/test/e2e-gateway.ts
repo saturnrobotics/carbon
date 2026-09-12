@@ -72,7 +72,8 @@ function principal(actor: Actor): VerifiedWorkforceIdentity {
       "knowledge.document.delete",
       "knowledge.document.download"
     ],
-    accessLevels: ["e2e-test"]
+    accessLevels: ["e2e-test"],
+    assurance: { mode: "carbon-mfa" }
   };
 }
 

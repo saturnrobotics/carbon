@@ -44,7 +44,8 @@ const identity = {
   },
   companyGroupId: "company",
   allowedOperations: [],
-  accessLevels: []
+  accessLevels: [],
+  assurance: { mode: "carbon-mfa" as const }
 };
 const entity = {
   id: "pcb-1",

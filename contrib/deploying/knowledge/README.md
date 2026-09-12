@@ -277,6 +277,31 @@ reference that the `fork-checks` workflow validates on every change; a test pins
 the zod schema and the JSON Schema to the same verdicts. Real registries belong
 in `.local/` or the deployment secret store, never in a tracked file.
 
+### Required assurance
+
+An IAP assertion proves admission, never assurance. Each caller's `assurance`
+says how its requests satisfy a company's Carbon MFA requirement
+(`companySettings.requireMfa`, forced on under `CONTROLLED_ENVIRONMENT`):
+
+- `{"mode": "carbon-mfa"}` (the default when omitted): Carbon's own MFA gate
+  applies. The forwarding contract carries no Carbon session, so a company that
+  requires MFA denies every delegated read with `step_up_required` and the
+  portal tells the user to sign in to Carbon with two-factor authentication.
+  The web service renders a login link on that page when
+  `KNOWLEDGE_CARBON_LOGIN_URL` (a bare https URL) is set; `release.py` does
+  not accept that key yet, so until the receiver deployment wiring lands the
+  page shows the instruction without a link.
+- `{"mode": "workspace-equivalent", "accessLevel": "<IAP access level>"}`:
+  the operator has recorded, in the decision record for the production
+  verification, that Workspace 2-step verification plus that access level is
+  accepted as equivalent. The verifier then requires the level in the
+  assertion's `google.access_levels` and refuses the request without it; it
+  never falls back to `carbon-mfa`.
+
+There is no third mode and nothing is inferred from an email or a domain. The
+delegated path never marks a Carbon session as verified. A company that does
+not require MFA is unaffected by either mode.
+
 ## Runtime requirements
 
 `release.py` requires the exact environment and pinned-secret sets declared in

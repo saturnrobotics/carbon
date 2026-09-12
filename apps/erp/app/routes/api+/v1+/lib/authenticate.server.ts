@@ -114,7 +114,8 @@ export async function resolveApiContext(
       allowedOperations: authorized.allowedOperations,
       capabilities: authorized.principal.capabilities,
       permissions: authorized.permissions,
-      policyVersion: authorized.principal.policyVersion
+      policyVersion: authorized.principal.policyVersion,
+      assurance: authorized.principal.assurance
     }
   };
 }

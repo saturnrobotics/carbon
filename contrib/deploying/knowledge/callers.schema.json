@@ -9,6 +9,27 @@
       "minLength": 1,
       "maxLength": 2048,
       "pattern": "\\S"
+    },
+    "assurance": {
+      "description": "How the caller's requests satisfy Carbon's MFA requirement. Omitted means carbon-mfa. workspace-equivalent names the IAP access level the operator has documented as equivalent to Carbon MFA; the verifier requires it in google.access_levels. There is no third mode.",
+      "type": "object",
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mode"],
+          "properties": { "mode": { "const": "carbon-mfa" } }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mode", "accessLevel"],
+          "properties": {
+            "mode": { "const": "workspace-equivalent" },
+            "accessLevel": { "$ref": "#/$defs/boundedString" }
+          }
+        }
+      ]
     }
   },
   "type": "object",
@@ -59,7 +80,8 @@
             "type": "array",
             "maxItems": 20,
             "items": { "$ref": "#/$defs/boundedString" }
-          }
+          },
+          "assurance": { "$ref": "#/$defs/assurance" }
         }
       }
     }

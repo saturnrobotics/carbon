@@ -49,7 +49,8 @@
     "./query/deadline.server": "./src/query/deadline.server.ts",
     "./query/request-boundary.server": "./src/query/request-boundary.server.ts",
     "./release-profile": "./src/release-profile.ts",
-    "./provider-policy": "./src/provider-policy.ts"
+    "./provider-policy": "./src/provider-policy.ts",
+    "./step-up": "./src/step-up.ts"
   },
   "scripts": {
     "callers:validate": "tsx scripts/validate-callers.ts",

@@ -35,6 +35,10 @@ import {
 } from "@carbon/knowledge/retrieval/lexical.server";
 import { vectorSearch } from "@carbon/knowledge/retrieval/vector.server";
 import type { SourceRegistryConfiguration } from "@carbon/knowledge/sources/registry.server";
+import {
+  StepUpRequiredError,
+  stepUpRequiredResponse
+} from "@carbon/knowledge/step-up";
 import type { Telemetry } from "@carbon/knowledge/telemetry";
 import type { Pool } from "pg";
 import {
@@ -356,7 +360,10 @@ export function createReadHandler(
         { ...result, requestId: query.requestId },
         { headers: { "cache-control": "no-store" } }
       );
-    } catch {
+    } catch (error) {
+      // A source that requires Carbon MFA is the one failure the portal must
+      // be able to name; everything else stays an opaque unavailability.
+      if (error instanceof StepUpRequiredError) return stepUpRequiredResponse();
       return Response.json(
         { error: "query_unavailable" },
         { status: 503, headers: { "cache-control": "no-store" } }

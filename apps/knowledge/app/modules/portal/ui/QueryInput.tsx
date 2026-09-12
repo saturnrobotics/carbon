@@ -1,6 +1,16 @@
 import type { QueryResult } from "@carbon/knowledge/query";
+import { isStepUpRequiredBody } from "@carbon/knowledge/step-up";
 import { useEffect, useState } from "react";
 import { EvidenceCard } from "./EvidenceCard";
+
+async function requiresStepUp(response: Response): Promise<boolean> {
+  if (response.status !== 403) return false;
+  try {
+    return isStepUpRequiredBody(await response.json());
+  } catch {
+    return false;
+  }
+}
 
 export function QueryInput({
   sourceDisplayName
@@ -46,7 +56,15 @@ export function QueryInput({
           locale: navigator.language || "en-US"
         })
       });
-      if (!response.ok) throw new Error("Manual search is unavailable.");
+      if (!response.ok) {
+        if (await requiresStepUp(response)) {
+          // A document navigation: the step-up page is server-rendered with
+          // a 403 status and needs no client-side router state.
+          window.location.assign("/step-up");
+          return;
+        }
+        throw new Error("Manual search is unavailable.");
+      }
       setResult((await response.json()) as QueryResult);
     } catch (cause) {
       setError(

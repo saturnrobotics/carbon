@@ -226,6 +226,71 @@ const fixtures: {
     // schema and validate-callers.ts both reject it.
     runtime: false,
     schema: true
+  },
+  {
+    name: "a caller without assurance (defaults to carbon-mfa)",
+    document: variant((registry) => {
+      delete callerAt(registry, 0).assurance;
+    }),
+    runtime: true,
+    schema: true
+  },
+  {
+    name: "an explicit carbon-mfa assurance",
+    document: variant((registry) => {
+      callerAt(registry, 0).assurance = { mode: "carbon-mfa" };
+    }),
+    runtime: true,
+    schema: true
+  },
+  {
+    name: "a third assurance mode",
+    document: variant((registry) => {
+      callerAt(registry, 0).assurance = { mode: "iap-signature" };
+    }),
+    runtime: false,
+    schema: false
+  },
+  {
+    name: "workspace-equivalent without an access level",
+    document: variant((registry) => {
+      callerAt(registry, 0).assurance = { mode: "workspace-equivalent" };
+    }),
+    runtime: false,
+    schema: false
+  },
+  {
+    name: "workspace-equivalent with a whitespace access level",
+    document: variant((registry) => {
+      callerAt(registry, 0).assurance = {
+        mode: "workspace-equivalent",
+        accessLevel: "  "
+      };
+    }),
+    runtime: false,
+    schema: false
+  },
+  {
+    name: "carbon-mfa with an access level",
+    document: variant((registry) => {
+      callerAt(registry, 0).assurance = {
+        mode: "carbon-mfa",
+        accessLevel: "accessPolicies/123456789012/accessLevels/workspace_2sv"
+      };
+    }),
+    runtime: false,
+    schema: false
+  },
+  {
+    name: "an assurance with an unknown key",
+    document: variant((registry) => {
+      callerAt(registry, 0).assurance = {
+        mode: "carbon-mfa",
+        inferFromDomain: true
+      };
+    }),
+    runtime: false,
+    schema: false
   }
 ];
 
@@ -278,8 +343,33 @@ describe("validate-callers", () => {
     });
     expect(report.summary).toEqual([
       "receiver knowledge-query: audience=https://knowledge-query.example.com",
-      "caller knowledge-web: subject=100000000000000000001 iapAudience=/projects/123456789012/locations/us-central1/services/knowledge-web operations=knowledge.identity,knowledge.query capabilities=knowledge.read requiredAccessLevels=accessPolicies/123456789012/accessLevels/managed_device",
-      "caller knowledge-ingest: subject=100000000000000000002 iapAudience=/projects/123456789012/locations/us-central1/services/knowledge-web operations=knowledge.identity capabilities=knowledge.read,knowledge.intake.capture,knowledge.intake.review,knowledge.intake.publish,knowledge.document.delete,knowledge.document.download requiredAccessLevels=accessPolicies/123456789012/accessLevels/managed_device"
+      "caller knowledge-web: subject=100000000000000000001 iapAudience=/projects/123456789012/locations/us-central1/services/knowledge-web operations=knowledge.identity,knowledge.query capabilities=knowledge.read requiredAccessLevels=accessPolicies/123456789012/accessLevels/managed_device assurance=workspace-equivalent(accessPolicies/123456789012/accessLevels/workspace_2sv)",
+      "caller knowledge-ingest: subject=100000000000000000002 iapAudience=/projects/123456789012/locations/us-central1/services/knowledge-web operations=knowledge.identity capabilities=knowledge.read,knowledge.intake.capture,knowledge.intake.review,knowledge.intake.publish,knowledge.document.delete,knowledge.document.download requiredAccessLevels=accessPolicies/123456789012/accessLevels/managed_device assurance=carbon-mfa"
+    ]);
+  });
+
+  it("reports the default assurance for a caller that omits it", () => {
+    const report = validateCallerRegistry(
+      variant((registry) => {
+        delete callerAt(registry, 1).assurance;
+      }),
+      schema
+    );
+    expect(report.runtimeIssues).toEqual([]);
+    expect(report.schemaIssues).toEqual([]);
+    expect(report.summary[2]).toMatch(/ assurance=carbon-mfa$/);
+  });
+
+  it("names the assurance branch that failed", () => {
+    const report = validateCallerRegistry(
+      variant((registry) => {
+        callerAt(registry, 0).assurance = { mode: "workspace-equivalent" };
+      }),
+      schema
+    );
+    expect(report.runtimeIssues.length).toBeGreaterThan(0);
+    expect(report.schemaIssues).toEqual([
+      "$.callers[0].assurance: must match exactly one of 2 schemas (matched 0)"
     ]);
   });
 

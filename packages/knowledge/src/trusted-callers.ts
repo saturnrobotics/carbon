@@ -36,6 +36,7 @@ const SUPPORTED_KEYWORDS = new Set([
   "$ref",
   "type",
   "const",
+  "oneOf",
   "properties",
   "required",
   "additionalProperties",
@@ -112,6 +113,23 @@ export function jsonSchemaIssues(
   }
 
   const issues: string[] = [];
+  if (node.oneOf !== undefined) {
+    if (!Array.isArray(node.oneOf) || node.oneOf.length === 0) {
+      throw new Error(
+        `Unsupported oneOf at ${path}: expected a non-empty array`
+      );
+    }
+    const matching = node.oneOf.filter(
+      (branch, index) =>
+        jsonSchemaIssues(branch, value, rootNode, `${path}<${index}>`)
+          .length === 0
+    ).length;
+    if (matching !== 1) {
+      issues.push(
+        `${path}: must match exactly one of ${node.oneOf.length} schemas (matched ${matching})`
+      );
+    }
+  }
   if ("const" in node) {
     if (isJsonObject(node.const) || Array.isArray(node.const)) {
       throw new Error(`Unsupported non-primitive const at ${path}`);
@@ -250,8 +268,12 @@ export function validateCallerRegistry(
     const { receiver, callers } = parsed.data;
     summary.push(`receiver ${receiver.id}: audience=${receiver.audience}`);
     for (const caller of callers) {
+      const assurance =
+        caller.assurance.mode === "workspace-equivalent"
+          ? `workspace-equivalent(${caller.assurance.accessLevel})`
+          : caller.assurance.mode;
       summary.push(
-        `caller ${caller.callerId}: subject=${caller.serviceAccountSubject} iapAudience=${caller.sourceIapAudience} operations=${caller.operations.join(",")} capabilities=${caller.capabilities.join(",") || "-"} requiredAccessLevels=${caller.requiredAccessLevels.join(",") || "-"}`
+        `caller ${caller.callerId}: subject=${caller.serviceAccountSubject} iapAudience=${caller.sourceIapAudience} operations=${caller.operations.join(",")} capabilities=${caller.capabilities.join(",") || "-"} requiredAccessLevels=${caller.requiredAccessLevels.join(",") || "-"} assurance=${assurance}`
       );
     }
   }

@@ -27,6 +27,44 @@ const FORBIDDEN_IDENTITY_HEADERS = [
 ] as const;
 
 const boundedString = z.string().trim().min(1).max(2_048);
+
+/**
+ * How a caller's requests satisfy Carbon's MFA requirement. An IAP signature
+ * proves admission, never assurance, so there is no third mode and nothing is
+ * inferred from an email or a domain.
+ *
+ * - `carbon-mfa` (the default): the actor must satisfy Carbon's own MFA gate.
+ * - `workspace-equivalent`: the operator has documented that Workspace 2-step
+ *   verification plus the named IAP access level is accepted as equivalent;
+ *   the verifier then requires that access level in `google.access_levels`.
+ */
+const callerAssuranceSchema = z.discriminatedUnion("mode", [
+  z.object({ mode: z.literal("carbon-mfa") }).strict(),
+  z
+    .object({
+      mode: z.literal("workspace-equivalent"),
+      accessLevel: boundedString
+    })
+    .strict()
+]);
+export const DEFAULT_CALLER_ASSURANCE = { mode: "carbon-mfa" } as const;
+export type CallerAssurance = z.infer<typeof callerAssuranceSchema>;
+export type AssuranceMode = CallerAssurance["mode"];
+
+/**
+ * The verdict Carbon attaches to a delegated principal once the company's MFA
+ * requirement and the actor's factor state are known. `verifyWorkforceRequest`
+ * cannot produce it: only the Carbon receiver can read those.
+ */
+export interface PrincipalAssurance {
+  /** Carbon requires MFA for this company, or the deployment is controlled. */
+  required: boolean;
+  /** The request meets that requirement; always true when nothing is required. */
+  satisfied: boolean;
+  /** The caller's configured assurance mode that produced the verdict. */
+  method: AssuranceMode;
+}
+
 const callerSchema = z
   .object({
     callerId: boundedString,
@@ -34,7 +72,8 @@ const callerSchema = z
     sourceIapAudience: boundedString,
     operations: z.array(boundedString).min(1).max(100),
     capabilities: z.array(boundedString).max(100),
-    requiredAccessLevels: z.array(boundedString).max(20)
+    requiredAccessLevels: z.array(boundedString).max(20),
+    assurance: callerAssuranceSchema.default(DEFAULT_CALLER_ASSURANCE)
   })
   .strict();
 
@@ -80,7 +119,12 @@ export interface TrustedTokenVerifier {
   ): Promise<VerifiedTokenClaims>;
 }
 
-export type TrustedCallerConfiguration = z.infer<
+/** A registry as written: `assurance` may be omitted and defaults to `carbon-mfa`. */
+export type TrustedCallerConfiguration = z.input<
+  typeof trustedCallerConfigurationSchema
+>;
+/** A registry after parsing: every caller carries its assurance mode. */
+export type ParsedTrustedCallerConfiguration = z.output<
   typeof trustedCallerConfigurationSchema
 >;
 
@@ -109,6 +153,8 @@ export interface VerifiedWorkforceIdentity {
   companyGroupId: string;
   allowedOperations: string[];
   accessLevels: string[];
+  /** The caller's registered mode; `workspace-equivalent` is enforced before this is returned. */
+  assurance: CallerAssurance;
 }
 
 export interface VerifiedIapBrowserRequest {
@@ -289,7 +335,7 @@ export class GoogleWorkforceTokenVerifier implements TrustedTokenVerifier {
 
 export function parseTrustedCallerConfiguration(
   value: string | unknown
-): TrustedCallerConfiguration {
+): ParsedTrustedCallerConfiguration {
   const parsed = typeof value === "string" ? JSON.parse(value) : value;
   return trustedCallerConfigurationSchema.parse(parsed);
 }
@@ -360,6 +406,14 @@ export async function verifyWorkforceRequest(options: {
     ) {
       throw unauthorized();
     }
+    // The documented equivalence holds only for the named access level. A
+    // request without it is refused, never downgraded to carbon-mfa.
+    if (
+      caller.assurance.mode === "workspace-equivalent" &&
+      !accessLevels.includes(caller.assurance.accessLevel)
+    ) {
+      throw unauthorized();
+    }
 
     const binding = await options.identityStore.resolveHuman({
       issuer: userClaims.iss,
@@ -394,7 +448,8 @@ export async function verifyWorkforceRequest(options: {
       },
       companyGroupId: binding.companyGroupId,
       allowedOperations: [...caller.operations],
-      accessLevels: [...accessLevels]
+      accessLevels: [...accessLevels],
+      assurance: { ...caller.assurance }
     };
   } catch {
     throw unauthorized();

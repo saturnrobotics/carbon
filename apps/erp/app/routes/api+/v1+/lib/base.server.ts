@@ -3,6 +3,8 @@
 import type { ManifestEntry, ToolPermission } from "@carbon/api";
 import type { Permission } from "@carbon/auth";
 import type { Database } from "@carbon/database";
+import type { PrincipalAssurance } from "@carbon/knowledge/identity.server";
+import { STEP_UP_REQUIRED_CODE } from "@carbon/knowledge/step-up";
 import { ORPCError, os } from "@orpc/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { isMcpBlockedTool } from "../../mcp+/lib/mcp-blocked-tools";
@@ -30,6 +32,8 @@ export interface AuthedContext {
     capabilities: readonly string[];
     permissions: Record<string, Permission>;
     policyVersion: string;
+    /** Carbon's MFA verdict for the delegated actor (`authorizeWorkforceRequest`). */
+    assurance: PrincipalAssurance;
   };
 }
 
@@ -94,6 +98,17 @@ export function assertWorkforceAuthorization(
         message: "Current user permission does not authorize this operation"
       });
     }
+  }
+  // Checked last so the step-up message is shown only when MFA is the one
+  // thing missing. The structured `data.code` is what the knowledge services
+  // and the portal recognise; API callers see the same 403 JSON envelope.
+  const { assurance } = workforce;
+  if (assurance.required && !assurance.satisfied) {
+    throw new ORPCError("FORBIDDEN", {
+      message:
+        "This request requires a Carbon sign-in with two-factor authentication",
+      data: { code: STEP_UP_REQUIRED_CODE, method: assurance.method }
+    });
   }
 }
 
