@@ -9,6 +9,7 @@ import { postgresIdentityStore } from "@carbon/knowledge/identity-store.server";
 import { requestBoundary } from "@carbon/knowledge/query/request-boundary.server";
 import { readManualSourceConfiguration } from "@carbon/knowledge/release-profile";
 import { Pool } from "pg";
+import { startCacheIsolationProbe } from "./cache-probe";
 import { handleIdentityRequest } from "./identity.server";
 import { createReadHandler } from "./query.server";
 
@@ -147,5 +148,11 @@ export function startServer(
   return server.listen(port, "0.0.0.0");
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href)
+if (
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(process.argv[1]).href
+) {
   startServer();
+  // Periodic cache-leakage self-test; its verdict feeds the security alert policy.
+  startCacheIsolationProbe();
+}

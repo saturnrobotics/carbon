@@ -24,6 +24,27 @@ describe("content-free service telemetry", () => {
     ]);
     expect(() => trace.record("raw prompt" as never, "allow")).toThrow();
   });
+  it("carries the backlog ages and security outcome the alert policies read", () => {
+    const records: unknown[] = [];
+    const trace = createTelemetry("worker", (record) => records.push(record));
+    trace.record("indexing", "success", {
+      count: 3,
+      lagSeconds: 912.3456,
+      queueSeconds: -1,
+      documentId: "doc-secret"
+    } as never);
+    trace.record("security", "error");
+    expect(records).toEqual([
+      expect.objectContaining({
+        stage: "indexing",
+        outcome: "success",
+        count: 3,
+        lagSeconds: 912.346
+      }),
+      expect.objectContaining({ stage: "security", outcome: "error" })
+    ]);
+    expect(JSON.stringify(records)).not.toMatch(/queueSeconds|documentId/);
+  });
   it("uses an internally generated correlation ID and contains failed sinks", async () => {
     const trace = createTelemetry("query", () => {
       throw Error("logging unavailable");

@@ -11,7 +11,8 @@ const stages = [
   "model",
   "embedding",
   "indexing",
-  "retention"
+  "retention",
+  "security"
 ] as const;
 const outcomes = [
   "allow",
@@ -25,13 +26,29 @@ const outcomes = [
 ] as const;
 type Stage = (typeof stages)[number];
 type Outcome = (typeof outcomes)[number];
+/**
+ * Numeric-only allowlist. `lagSeconds` is the age of the oldest undelivered
+ * outbox row (index/ACL staleness); `queueSeconds` is the age of the oldest
+ * row that is claimable but unclaimed (worker starvation). Both feed alerts.
+ */
 type Metrics = {
   durationMs?: number;
   count?: number;
   tokens?: number;
   microUsd?: number;
   status?: number;
+  lagSeconds?: number;
+  queueSeconds?: number;
 };
+const metricKeys = [
+  "durationMs",
+  "count",
+  "tokens",
+  "microUsd",
+  "status",
+  "lagSeconds",
+  "queueSeconds"
+] as const;
 export type TelemetryRecord = Metrics & {
   schemaVersion: 1;
   service: "query" | "actions" | "worker";
@@ -62,13 +79,7 @@ export function createTelemetry(
       stage,
       outcome
     };
-    for (const key of [
-      "durationMs",
-      "count",
-      "tokens",
-      "microUsd",
-      "status"
-    ] as const) {
+    for (const key of metricKeys) {
       const value = metrics[key];
       if (
         typeof value === "number" &&

@@ -35,6 +35,7 @@
     "./query/conversation": "./src/query/conversation.ts",
     "./cache": "./src/cache/cache.server.ts",
     "./cache/epochs.server": "./src/cache/epochs.server.ts",
+    "./cache/isolation.server": "./src/cache/isolation.server.ts",
     "./cache/redis.server": "./src/cache/redis.server.ts",
     "./retrieval/lexical.server": "./src/retrieval/lexical.server.ts",
     "./retrieval/vector.server": "./src/retrieval/vector.server.ts",

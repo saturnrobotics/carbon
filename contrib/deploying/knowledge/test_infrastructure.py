@@ -439,10 +439,22 @@ class FoundationTests(unittest.TestCase):
 
     def test_content_free_operational_alerts_cover_critical_stages(self):
         monitoring = (HERE / "monitoring.tf").read_text()
-        for signal in ("authentication", "source", "model", "cache", "indexing", "retention"):
+        for signal in ("authentication", "source", "model", "cache", "indexing", "retention", "security"):
             with self.subTest(signal=signal):
                 self.assertIn(f'jsonPayload.stage=\\"{signal}\\"', monitoring)
         self.assertIn("database_connection_utilization_metric_type", monitoring)
+        # Backlog ages and latency are read from the flat telemetry record, never from a nested object.
+        self.assertIn("EXTRACT(jsonPayload.durationMs)", monitoring)
+        self.assertIn("EXTRACT(jsonPayload.${each.value.field})", monitoring)
+        for metric in ("lagSeconds", "queueSeconds"):
+            with self.subTest(metric=metric):
+                self.assertIn(f'field       = "{metric}"', monitoring)
+        self.assertNotIn("jsonPayload.metrics.", monitoring)
+        self.assertIn('jsonPayload.stage=\\"security\\" AND jsonPayload.outcome=\\"error\\"', monitoring)
+        telemetry = (HERE.parents[2] / "packages/knowledge/src/telemetry.ts").read_text()
+        for token in ('"security"', '"lagSeconds"', '"queueSeconds"'):
+            with self.subTest(token=token):
+                self.assertIn(token, telemetry)
 
     def test_revision_specs_are_controller_owned_and_the_controller_is_not_a_terraform_service(self):
         self.assertIn("revision fields are controller-owned", (HERE / "services.tf").read_text())

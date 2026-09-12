@@ -1,6 +1,9 @@
 import { createServer } from "node:http";
 import { pathToFileURL } from "node:url";
+import { outboxBacklog } from "@carbon/knowledge/indexing/outbox.server";
+import { createTelemetry } from "@carbon/knowledge/telemetry";
 import { serve } from "inngest/node";
+import { createBacklogObserver } from "./backlog";
 import { createOutboxDeliveryFunction } from "./functions";
 import { knowledgeInngest } from "./inngest";
 import { createOutboxInvalidationFunction } from "./invalidation";
@@ -67,6 +70,11 @@ export function startServer(
           workerId: environment.K_REVISION ?? `knowledge-worker-${process.pid}`,
           sourceId: dependencies.manualSource.sourceId,
           embeddingProfile: "manual-v1",
+          observeBacklog: createBacklogObserver({
+            telemetry: createTelemetry("worker"),
+            backlog: (principal) =>
+              outboxBacklog(dependencies.ingestPool, principal)
+          }),
           process: (principal, event) =>
             processKnowledgeOutbox(
               {

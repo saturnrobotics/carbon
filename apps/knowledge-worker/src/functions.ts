@@ -19,6 +19,12 @@ export function createOutboxDeliveryFunction(runtime: {
     event: LeasedOutboxEvent,
     attempt: number
   ) => Promise<void>;
+  /** Backlog telemetry after each company's pass; see `createBacklogObserver`. */
+  observeBacklog?: (principal: {
+    companyId: string;
+    callerId: string;
+    sourceId?: string;
+  }) => Promise<void>;
 }) {
   return knowledgeInngest.createFunction(
     {
@@ -75,6 +81,11 @@ export function createOutboxDeliveryFunction(runtime: {
           );
           delivered += 1;
         }
+        const observeBacklog = runtime.observeBacklog;
+        if (observeBacklog)
+          await step.run(`observe-${company.companyId}`, () =>
+            observeBacklog(principal)
+          );
       }
       return { delivered };
     }

@@ -311,8 +311,47 @@ python3 contrib/deploying/knowledge/release.py \
   --plan contrib/deploying/knowledge/.local/release-plan.json \
   --current contrib/deploying/knowledge/.local/release-manifest.json \
   --foundation-outputs contrib/deploying/knowledge/.local/foundation-outputs.json \
+  --schema-ledger contrib/deploying/knowledge/.local/schema-ledger.json \
   --project example-project --region us-central1
 ```
+
+### Compatible migration window
+
+Every unit holding a database credential (`DATABASE_UNITS`: query, ingest,
+schema, retention) declares in its plan entry the knowledge migrations its build
+was verified against, as bare migration names (`<14-digit timestamp>_<slug>`,
+the file name without `.sql`):
+
+```json
+"migrations": {
+  "minimum": "20260908000245_knowledge-foundation",
+  "maximum": "20260908050421_ingest-source-visibility-execute"
+}
+```
+
+Migrations apply in name order, so the window compares as strings. Before
+promoting such a unit the controller needs the deployed ledger head and refuses
+a unit whose window does not contain it: below `minimum` means the schema job
+must run first, above `maximum` means the build predates the schema and a
+verified build must be selected instead. A ledger with no applied migration
+admits only `knowledge-schema`. Web and parser hold no credential and must not
+declare a window. The window is recorded next to the revision in the private
+manifest.
+
+Carbon's listener is reachable only over the private path, so the controller
+does not read the ledger itself. Export it through the same authenticated
+operator connection used for the CA copy, verbatim (the runner records file
+names with their `.sql` suffix, which the controller normalizes):
+
+```bash
+psql "$KNOWLEDGE_OPERATOR_DATABASE_URL" -X -At -c \
+  "SELECT json_build_object('schema_version', 1, 'names', coalesce(json_agg(name ORDER BY name), '[]'::json)) FROM knowledge_migrations.ledger" \
+  > contrib/deploying/knowledge/.local/schema-ledger.json
+```
+
+Additive changes keep the previous build inside the new window, so query and
+ingestion can straddle a schema release; a destructive contraction is a later
+explicit maintenance release that narrows `minimum`.
 
 ## Release validation: local first
 
@@ -378,6 +417,31 @@ supply local identity and job-transport adapters. The browser portal runs the
 application through its Vite test configuration. Production entry points also
 require separate runtime smoke checks; browser success alone does not establish
 that production configuration is correct.
+
+### Base images and the license boundary
+
+Every `Dockerfile.*` builds from `${NODE_IMAGE}`, whose default is the reviewed
+multi-platform digest recorded once in `base-images.json`;
+`test_base_image_pins.py` fails on a floating tag, an unreviewed `FROM`, or a
+Dockerfile whose default drifts from the record. Refresh the pin by updating the
+record and every Dockerfile default together (`docker buildx imagetools inspect
+node:22-alpine` reports the current index digest); the build scripts pass no
+override.
+
+Carbon's LICENSE reserves commercial terms for `packages/ee` and files with
+`.ee` in their names. `verify-license-boundary.py` walks the workspace closure
+each Dockerfile prunes and refuses the enterprise package anywhere in the build
+closure or a `.ee.` file in what `pnpm deploy --prod` ships, and requires the
+shipped `runtime`/`e2e` stages to copy `LICENSE` (and `NOTICE` when one exists)
+beside the code. With `--image` it inspects a built image through
+`docker export` without running it. CI runs the static check with the
+foundation tests and the image check against the six production images.
+
+```bash
+python3 contrib/deploying/knowledge/verify-license-boundary.py
+python3 contrib/deploying/knowledge/verify-license-boundary.py \
+  --image knowledge-manual-local-query:manual-v1
+```
 
 Verify private build-context exclusions and run the parser proof independently
 of the browser stack:
