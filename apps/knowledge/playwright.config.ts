@@ -11,6 +11,13 @@ export default defineConfig({
   testDir: "./tests",
   testMatch: "**/*.spec.ts",
   globalSetup: "./tests/setup.ts",
+  // One worker: every spec drives the SAME synthetic company and the same two
+  // fixture users, and the gateway's test endpoints mutate them globally —
+  // `/__e2e/grant/bob/{review,admin}` swaps the publisher's library grant,
+  // `/__e2e/revoke/bob` deactivates the user, and `/__e2e/cleanup` deletes
+  // every intake captured since the fixture started. Run in parallel, one
+  // spec's authorization experiment is another spec's unexplained denial.
+  workers: 1,
   use: {
     baseURL: externalBaseUrl ?? "https://localhost:4200",
     ignoreHTTPSErrors: true,
