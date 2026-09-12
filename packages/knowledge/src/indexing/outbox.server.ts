@@ -9,8 +9,22 @@ export type OutboxEvent = {
   entityType: string;
   entityId: string;
   sourceVersion: string;
-  eventType: "upsert" | "delete" | "acl-change";
+  eventType: OutboxEventType;
 };
+export const OUTBOX_EVENT_TYPES = [
+  "upsert",
+  "delete",
+  "acl-change",
+  "correction",
+  "board-change",
+  "index-version"
+] as const;
+export type OutboxEventType = (typeof OUTBOX_EVENT_TYPES)[number];
+/**
+ * Indexing delivery owns upserts; every other kind is an invalidation the
+ * cache consumer leases (see `INVALIDATION_EVENT_TYPES` in cache/epochs.server).
+ */
+export const DELIVERY_EVENT_TYPES: readonly OutboxEventType[] = ["upsert"];
 export function outboxDedupeKey(event: OutboxEvent): string {
   return [
     event.sourceId,
@@ -30,23 +44,51 @@ export function prioritizeOutbox(
 }
 
 export type LeasedOutboxEvent = OutboxEvent & { id: string; payload: unknown };
+/**
+ * Leases pending events for one consumer. `eventTypes` partitions the outbox
+ * between consumers (indexing delivery vs. cache invalidation); each event is
+ * leased by exactly one of them. Revocations and tombstones sort first.
+ */
 export async function claimOutbox(
   pool: Pool,
   principal: DatabasePrincipal,
   workerId: string,
-  limit = 50
+  limit = 50,
+  eventTypes: readonly OutboxEventType[] = OUTBOX_EVENT_TYPES
 ): Promise<LeasedOutboxEvent[]> {
+  if (!eventTypes.length) return [];
   return withKnowledgeTransaction(pool, principal, "write", async (client) => {
-    const result = await client.query<LeasedOutboxEvent>(
-      `WITH claimable AS (
-        SELECT id FROM knowledge.outbox WHERE "companyId"=$1 AND "deliveredAt" IS NULL AND "availableAt"<=now()
-          AND ("leaseUntil" IS NULL OR "leaseUntil"<now())
-        ORDER BY CASE WHEN "eventType" IN ('delete','acl-change') THEN 0 ELSE 1 END, "createdAt" LIMIT $2 FOR UPDATE SKIP LOCKED
-      ) UPDATE knowledge.outbox SET "leaseOwner"=$3,"leaseUntil"=now()+interval '5 minutes',attempts=attempts+1,version=version+1
-      WHERE id IN (SELECT id FROM claimable) RETURNING id,"sourceId" AS "sourceId","entityType" AS "entityType","entityId" AS "entityId","sourceVersion" AS "sourceVersion","eventType" AS "eventType",payload`,
-      [principal.companyId, Math.min(Math.max(limit, 1), 100), workerId]
+    // UPDATE ... RETURNING does not preserve the locking query's order, so the
+    // priority is carried through as an ordinal and restored before returning.
+    const result = await client.query<LeasedOutboxEvent & { ordinal: string }>(
+      `WITH locked AS (
+        SELECT id,"createdAt",CASE WHEN "eventType" IN ('delete','acl-change') THEN 0 WHEN "eventType"='upsert' THEN 2 ELSE 1 END AS priority
+        FROM knowledge.outbox WHERE "companyId"=$1 AND "deliveredAt" IS NULL AND "availableAt"<=now()
+          AND ("leaseUntil" IS NULL OR "leaseUntil"<now()) AND "eventType"=ANY($4::text[])
+        ORDER BY 3, "createdAt" LIMIT $2 FOR UPDATE SKIP LOCKED
+      ), claimable AS (
+        SELECT id,row_number() OVER (ORDER BY priority,"createdAt",id) AS ordinal FROM locked
+      ) UPDATE knowledge.outbox o SET "leaseOwner"=$3,"leaseUntil"=now()+interval '5 minutes',attempts=attempts+1,version=version+1
+      FROM claimable WHERE o.id=claimable.id AND o."companyId"=$1
+      RETURNING o.id,o."sourceId" AS "sourceId",o."entityType" AS "entityType",o."entityId" AS "entityId",o."sourceVersion" AS "sourceVersion",o."eventType" AS "eventType",o.payload,claimable.ordinal`,
+      [
+        principal.companyId,
+        Math.min(Math.max(limit, 1), 100),
+        workerId,
+        [...new Set(eventTypes)]
+      ]
     );
-    return result.rows;
+    return result.rows
+      .sort((left, right) => Number(left.ordinal) - Number(right.ordinal))
+      .map((row) => ({
+        id: row.id,
+        sourceId: row.sourceId,
+        entityType: row.entityType,
+        entityId: row.entityId,
+        sourceVersion: row.sourceVersion,
+        eventType: row.eventType,
+        payload: row.payload
+      }));
   });
 }
 

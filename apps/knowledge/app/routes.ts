@@ -4,6 +4,7 @@ import { route } from "@react-router/dev/routes";
 export default [
   route("", "routes/_index.tsx"),
   route("health", "routes/health.ts"),
+  route("logout", "routes/logout.ts"),
   route("api/query", "routes/api.query.ts"),
   route("intake", "routes/intake.tsx"),
   route("intake/:id", "routes/intake.$id.tsx"),

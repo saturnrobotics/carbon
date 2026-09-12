@@ -3,6 +3,7 @@ import { pathToFileURL } from "node:url";
 import { serve } from "inngest/node";
 import { createOutboxDeliveryFunction } from "./functions";
 import { knowledgeInngest } from "./inngest";
+import { createOutboxInvalidationFunction } from "./invalidation";
 import { invokeCloudRunParserJob } from "./parser";
 import { processKnowledgeOutbox } from "./processor";
 import { configuredWorkerDependencies, createWorkerHandler } from "./server";
@@ -84,6 +85,12 @@ export function startServer(
               principal,
               event
             )
+        }),
+        createOutboxInvalidationFunction({
+          pool: dependencies.ingestPool,
+          companies: workerCompanies,
+          workerId: environment.K_REVISION ?? `knowledge-worker-${process.pid}`,
+          sourceId: dependencies.manualSource.sourceId
         })
       ]
     : [];
