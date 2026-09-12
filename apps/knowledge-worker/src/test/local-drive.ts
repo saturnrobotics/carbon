@@ -164,7 +164,8 @@ function principal(actor: "bob" | "alice"): VerifiedWorkforceIdentity {
     },
     companyGroupId: localCompanyId,
     allowedOperations: ["knowledge.query", "knowledge.read"],
-    accessLevels: ["e2e-test"]
+    accessLevels: ["e2e-test"],
+    assurance: { mode: "carbon-mfa" }
   };
 }
 

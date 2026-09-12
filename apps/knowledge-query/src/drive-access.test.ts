@@ -20,7 +20,8 @@ const identity: VerifiedWorkforceIdentity = {
   },
   companyGroupId: "company-a",
   allowedOperations: ["knowledge.query"],
-  accessLevels: []
+  accessLevels: [],
+  assurance: { mode: "carbon-mfa" }
 };
 
 function chunk(id: string, sourceKind: string): RetrievedChunk {

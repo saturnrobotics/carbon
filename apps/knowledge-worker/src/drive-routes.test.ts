@@ -54,7 +54,8 @@ const identity: VerifiedWorkforceIdentity = {
   },
   companyGroupId: "company-a",
   allowedOperations: ["knowledge.read"],
-  accessLevels: []
+  accessLevels: [],
+  assurance: { mode: "carbon-mfa" }
 };
 
 function dependencies(
