@@ -17,6 +17,10 @@ import {
 } from "./local-fixture";
 import { startLocalHttpServer } from "./local-http";
 
+/** Evidence links open the portal, which the local stack publishes on a
+ * configurable port (see compose.local.yaml). Unset keeps the historical 4200. */
+const portalOrigin = `https://localhost:${process.env.KNOWLEDGE_E2E_PORTAL_PORT ?? "4200"}`;
+
 function required(name: string): string {
   const value = process.env[name]?.trim();
   if (!value) throw new Error(`${name} is required for the local fixture`);
@@ -63,7 +67,7 @@ async function main() {
         await redis.store.set(key, value, ttlSeconds);
       }
     },
-    origin: "https://localhost:4200",
+    origin: portalOrigin,
     businessTimezone: "UTC",
     manualSourceId: localSourceId,
     conversationStore: createConversationStore(conversations.store)

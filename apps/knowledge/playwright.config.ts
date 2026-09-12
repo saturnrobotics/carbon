@@ -1,11 +1,11 @@
 import { defineConfig } from "@playwright/test";
+import { loopbackTestOrigin } from "./tests/setup";
 
 const externalBaseUrl = process.env.KNOWLEDGE_E2E_BASE_URL;
-if (
-  externalBaseUrl &&
-  new URL(externalBaseUrl).href !== "https://localhost:4200/"
-)
-  throw new Error("KNOWLEDGE_E2E_BASE_URL must be the fixed local test origin");
+// Only the scheme and the loopback host are fixed; the port follows whichever
+// synthetic stack published the portal (see tests/setup.ts).
+if (externalBaseUrl)
+  loopbackTestOrigin("KNOWLEDGE_E2E_BASE_URL", externalBaseUrl, "https:");
 
 export default defineConfig({
   testDir: "./tests",

@@ -4,20 +4,35 @@ const container =
   process.env.KNOWLEDGE_E2E_DATABASE_CONTAINER ?? "knowledge-schema-test";
 const expectedPort = process.env.KNOWLEDGE_E2E_DATABASE_PORT ?? "59910";
 
-function fixedLocalUrl(
+const LOOPBACK_HOSTNAMES = new Set(["localhost", "127.0.0.1", "[::1]"]);
+
+/** A browser-test origin must be a bare loopback origin on the expected
+ * scheme: no credentials, no path, no query, no fragment, no other host. The
+ * PORT is deliberately free, so a second synthetic stack can run beside one
+ * that is already up; what keeps the suite off real data is the labelled
+ * disposable database below, not the port number. */
+export function loopbackTestOrigin(
   name: string,
   fallback: string,
-  expected: string
+  protocol: "http:" | "https:"
 ): string {
   const value = process.env[name] ?? fallback;
   let parsed: URL;
   try {
     parsed = new URL(value);
   } catch {
-    throw new Error(`${name} must be the fixed local test origin`);
+    throw new Error(`${name} must be a loopback test origin`);
   }
-  if (parsed.href !== expected)
-    throw new Error(`${name} must be the fixed local test origin`);
+  if (
+    parsed.protocol !== protocol ||
+    !LOOPBACK_HOSTNAMES.has(parsed.hostname) ||
+    parsed.username ||
+    parsed.password ||
+    parsed.pathname !== "/" ||
+    parsed.search ||
+    parsed.hash
+  )
+    throw new Error(`${name} must be a loopback test origin`);
   return parsed.href;
 }
 
@@ -73,20 +88,20 @@ async function requireHealthy(url: string) {
 }
 
 export default async function requireLocalSyntheticFixtures() {
-  fixedLocalUrl(
+  loopbackTestOrigin(
     "KNOWLEDGE_E2E_BASE_URL",
     "https://localhost:4200",
-    "https://localhost:4200/"
+    "https:"
   );
-  const gatewayUrl = fixedLocalUrl(
+  const gatewayUrl = loopbackTestOrigin(
     "KNOWLEDGE_E2E_GATEWAY_URL",
     "http://127.0.0.1:4301",
-    "http://127.0.0.1:4301/"
+    "http:"
   );
-  const queryUrl = fixedLocalUrl(
+  const queryUrl = loopbackTestOrigin(
     "KNOWLEDGE_E2E_QUERY_FIXTURE_URL",
     "http://127.0.0.1:4302",
-    "http://127.0.0.1:4302/"
+    "http:"
   );
   assertDisposableFixture();
   await Promise.all([
