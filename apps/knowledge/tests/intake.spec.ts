@@ -2,6 +2,7 @@ import { expect, type Page, test } from "@playwright/test";
 import {
   actorPage,
   e2eGateway,
+  submitSearch,
   textPdf,
   waitForClientNavigation,
   waitForEvidence
@@ -127,8 +128,8 @@ test.describe("intake review", () => {
       ).toBeDisabled();
 
       await page.goto("/");
-      await page.getByLabel("Search manuals").fill(filePart);
-      await page.getByRole("button", { name: "Search manuals" }).click();
+      await waitForClientNavigation(page);
+      await submitSearch(page, filePart);
       await expect(
         page.getByRole("link", { name: "Download original", exact: true })
       ).toBeVisible();

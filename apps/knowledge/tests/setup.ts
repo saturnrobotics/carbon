@@ -1,4 +1,6 @@
 import { execFileSync } from "node:child_process";
+import { chromium } from "@playwright/test";
+import { waitForClientNavigation } from "./harness/browser";
 
 const container =
   process.env.KNOWLEDGE_E2E_DATABASE_CONTAINER ?? "knowledge-schema-test";
@@ -87,8 +89,41 @@ async function requireHealthy(url: string) {
   if (!response.ok) throw new Error(`Local fixture is unhealthy: ${url}`);
 }
 
+/** Loads and hydrates both portal routes once, before any spec runs.
+ *
+ * The browser fixture is a Vite dev server, so the FIRST client load of a
+ * route is also when its packages are discovered and pre-bundled — and the
+ * optimizer's re-bundle invalidates `node_modules/.vite/deps` underneath the
+ * imports already in flight, which can leave that first page permanently
+ * server-rendered. Paying it here means no spec is the one that pays it, and
+ * a portal that cannot hydrate at all says so once, before six specs fail
+ * for six different-looking reasons. */
+async function warmPortalRoutes(baseUrl: string) {
+  const browser = await chromium.launch();
+  try {
+    const context = await browser.newContext({ ignoreHTTPSErrors: true });
+    await context.addCookies([
+      {
+        name: "knowledge_e2e_actor",
+        value: "bob",
+        domain: new URL(baseUrl).hostname,
+        path: "/",
+        secure: true,
+        sameSite: "Lax"
+      }
+    ]);
+    const page = await context.newPage();
+    for (const route of ["/", "/intake"]) {
+      await page.goto(new URL(route, baseUrl).href);
+      await waitForClientNavigation(page);
+    }
+  } finally {
+    await browser.close();
+  }
+}
+
 export default async function requireLocalSyntheticFixtures() {
-  loopbackTestOrigin(
+  const baseUrl = loopbackTestOrigin(
     "KNOWLEDGE_E2E_BASE_URL",
     "https://localhost:4200",
     "https:"
@@ -108,4 +143,5 @@ export default async function requireLocalSyntheticFixtures() {
     requireHealthy(new URL("/health", gatewayUrl).href),
     requireHealthy(new URL("/health", queryUrl).href)
   ]);
+  await warmPortalRoutes(baseUrl);
 }

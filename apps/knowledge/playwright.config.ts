@@ -21,6 +21,13 @@ export default defineConfig({
   use: {
     baseURL: externalBaseUrl ?? "https://localhost:4200",
     ignoreHTTPSErrors: true,
+    // Playwright leaves both of these unlimited by default, so one action that
+    // can never succeed — a click on a button that stays disabled, a redirect
+    // that never comes — spends the entire test timeout and reports itself as
+    // whatever the cleanup block failed on afterwards. Bounded, the failure
+    // names the locator it was waiting for, well inside the test budget.
+    actionTimeout: 20_000,
+    navigationTimeout: 45_000,
     trace: "retain-on-failure"
   },
   webServer: externalBaseUrl
