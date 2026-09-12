@@ -25,10 +25,10 @@ msgid "Add a document"
 msgstr "문서 추가"
 
 msgid "Additional proposed fields"
-msgstr ""
+msgstr "추가 제안된 필드"
 
 msgid "Also proposed"
-msgstr ""
+msgstr "역시 제안됨"
 
 msgid "Answer"
 msgstr "답변"
@@ -68,7 +68,7 @@ msgid "Confirm removal"
 msgstr "제거 확인"
 
 msgid "Confirm this field against the source evidence."
-msgstr ""
+msgstr "이 필드를 원본 증거와 대조하여 확인하세요."
 
 msgid "Corrections are saved. The document can be published."
 msgstr "수정 사항이 저장되었습니다. 문서를 게시할 수 있습니다."
@@ -89,7 +89,7 @@ msgid "Drag and drop a PDF or image here, or choose a file."
 msgstr "PDF 또는 이미지를 여기로 끌어서 놓거나 파일을 선택하십시오."
 
 msgid "Drive sources are enrolled by an administrator with a read-only connector credential held in Secret Manager. Signing into this portal does not authorize Drive access: a document is delivered only after a live check with your own Drive permissions."
-msgstr ""
+msgstr "Drive 소스는 Secret Manager에 저장된 읽기 전용 커넥터 자격증명을 가진 관리자가 등록합니다. 이 포털에 로그인하는 것만으로는 Drive 접근 권한이 부여되지 않습니다. 문서는 사용자의 Drive 권한과의 실시간 확인 후에만 제공됩니다."
 
 msgid "Existing item"
 msgstr "기존 품목"
@@ -110,7 +110,7 @@ msgid "Find the right manual."
 msgstr "올바른 설명서를 찾으십시오."
 
 msgid "Google Drive sources"
-msgstr ""
+msgstr "Google Drive 소스"
 
 msgid "I reviewed this evidence"
 msgstr "이 증거를 검토했습니다."

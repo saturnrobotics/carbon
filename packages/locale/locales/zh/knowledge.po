@@ -25,10 +25,10 @@ msgid "Add a document"
 msgstr "添加文件"
 
 msgid "Additional proposed fields"
-msgstr ""
+msgstr "其他建议字段"
 
 msgid "Also proposed"
-msgstr ""
+msgstr "同样建议"
 
 msgid "Answer"
 msgstr "回答"
@@ -68,7 +68,7 @@ msgid "Confirm removal"
 msgstr "确认删除"
 
 msgid "Confirm this field against the source evidence."
-msgstr ""
+msgstr "根据源证据确认此字段。"
 
 msgid "Corrections are saved. The document can be published."
 msgstr "更正已保存。文件可以发布。"
@@ -89,7 +89,7 @@ msgid "Drag and drop a PDF or image here, or choose a file."
 msgstr "将PDF或图像拖放到此处，或选择文件。"
 
 msgid "Drive sources are enrolled by an administrator with a read-only connector credential held in Secret Manager. Signing into this portal does not authorize Drive access: a document is delivered only after a live check with your own Drive permissions."
-msgstr ""
+msgstr "Drive源由管理员使用存储在Secret Manager中的只读连接器凭证进行注册。登录此门户不会授权Drive访问——仅在对您自己的Drive权限进行实时检查后,文件才会被交付。"
 
 msgid "Existing item"
 msgstr "现有物料"
@@ -110,7 +110,7 @@ msgid "Find the right manual."
 msgstr "找到正确的手册。"
 
 msgid "Google Drive sources"
-msgstr ""
+msgstr "Google Drive源"
 
 msgid "I reviewed this evidence"
 msgstr "我已审查此证据"

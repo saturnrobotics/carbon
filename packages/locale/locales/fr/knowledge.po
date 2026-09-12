@@ -25,10 +25,10 @@ msgid "Add a document"
 msgstr "Ajouter un document"
 
 msgid "Additional proposed fields"
-msgstr ""
+msgstr "Champs proposés supplémentaires"
 
 msgid "Also proposed"
-msgstr ""
+msgstr "Également proposé"
 
 msgid "Answer"
 msgstr "Réponse"
@@ -68,7 +68,7 @@ msgid "Confirm removal"
 msgstr "Confirmer la suppression"
 
 msgid "Confirm this field against the source evidence."
-msgstr ""
+msgstr "Vérifiez ce champ par rapport à la source."
 
 msgid "Corrections are saved. The document can be published."
 msgstr "Les corrections sont enregistrées. Le document peut être publié."
@@ -89,7 +89,7 @@ msgid "Drag and drop a PDF or image here, or choose a file."
 msgstr "Glissez-déposez ici un PDF ou une image, ou sélectionnez un fichier."
 
 msgid "Drive sources are enrolled by an administrator with a read-only connector credential held in Secret Manager. Signing into this portal does not authorize Drive access: a document is delivered only after a live check with your own Drive permissions."
-msgstr ""
+msgstr "Les sources Drive sont enregistrées par un administrateur avec une credential de connecteur en lecture seule conservée dans Secret Manager. La connexion à ce portail n'autorise pas l'accès à Drive : un document n'est fourni qu'après une vérification en temps réel de vos propres autorisations Drive."
 
 msgid "Existing item"
 msgstr "Article existant"
@@ -110,7 +110,7 @@ msgid "Find the right manual."
 msgstr "Trouver le bon manuel."
 
 msgid "Google Drive sources"
-msgstr ""
+msgstr "Sources Google Drive"
 
 msgid "I reviewed this evidence"
 msgstr "J'ai examiné cette preuve"

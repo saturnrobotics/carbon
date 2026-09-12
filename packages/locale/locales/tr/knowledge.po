@@ -25,10 +25,10 @@ msgid "Add a document"
 msgstr "Belge Ekle"
 
 msgid "Additional proposed fields"
-msgstr ""
+msgstr "Ek olarak önerilen alanlar"
 
 msgid "Also proposed"
-msgstr ""
+msgstr "Ayrıca önerilen"
 
 msgid "Answer"
 msgstr "Yanıt"
@@ -68,7 +68,7 @@ msgid "Confirm removal"
 msgstr "Kaldırılmayı onaylayın"
 
 msgid "Confirm this field against the source evidence."
-msgstr ""
+msgstr "Bu alanı kaynak kanıtlara karşı doğrulayın."
 
 msgid "Corrections are saved. The document can be published."
 msgstr "Düzeltmeler kaydedildi. Belge yayınlanabilir."
@@ -89,7 +89,7 @@ msgid "Drag and drop a PDF or image here, or choose a file."
 msgstr "Bir PDF veya görüntü sürükleyip buraya bırakın veya bir dosya seçin."
 
 msgid "Drive sources are enrolled by an administrator with a read-only connector credential held in Secret Manager. Signing into this portal does not authorize Drive access: a document is delivered only after a live check with your own Drive permissions."
-msgstr ""
+msgstr "Drive kaynakları, Secret Manager'da tutulan salt okunur bir bağlayıcı kimlik bilgisiyle bir yönetici tarafından kaydedilir. Bu portala oturum açmak Drive erişimini yetkilendirmez: belge yalnızca kendi Drive izinlerinizle canlı bir kontrol yapıldıktan sonra iletilir."
 
 msgid "Existing item"
 msgstr "Mevcut stok kartı"
@@ -110,7 +110,7 @@ msgid "Find the right manual."
 msgstr "Doğru kılavuzu bulun."
 
 msgid "Google Drive sources"
-msgstr ""
+msgstr "Google Drive kaynakları"
 
 msgid "I reviewed this evidence"
 msgstr "Bu kanıtı inceledim"

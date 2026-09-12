@@ -25,10 +25,10 @@ msgid "Add a document"
 msgstr "文書を追加"
 
 msgid "Additional proposed fields"
-msgstr ""
+msgstr "提案された追加フィールド"
 
 msgid "Also proposed"
-msgstr ""
+msgstr "同様に提案されました"
 
 msgid "Answer"
 msgstr "回答"
@@ -68,7 +68,7 @@ msgid "Confirm removal"
 msgstr "削除を確認"
 
 msgid "Confirm this field against the source evidence."
-msgstr ""
+msgstr "このフィールドをソース証拠に照らして確認してください。"
 
 msgid "Corrections are saved. The document can be published."
 msgstr "修正が保存されました。文書を公開できます。"
@@ -89,7 +89,7 @@ msgid "Drag and drop a PDF or image here, or choose a file."
 msgstr "PDFまたは画像をここにドラッグアンドドロップするか、ファイルを選択してください。"
 
 msgid "Drive sources are enrolled by an administrator with a read-only connector credential held in Secret Manager. Signing into this portal does not authorize Drive access: a document is delivered only after a live check with your own Drive permissions."
-msgstr ""
+msgstr "ドライブソースは、Secret Managerに保持された読み取り専用のコネクタ認証情報を持つ管理者によって登録されます。このポータルにサインインしても、Driveアクセスは認可されません。文書はお客様自身のDrive権限によるライブチェック後にのみ配信されます。"
 
 msgid "Existing item"
 msgstr "既存の品目"
@@ -110,7 +110,7 @@ msgid "Find the right manual."
 msgstr "適切なマニュアルを探してください。"
 
 msgid "Google Drive sources"
-msgstr ""
+msgstr "Google Driveソース"
 
 msgid "I reviewed this evidence"
 msgstr "このエビデンスを確認しました"
