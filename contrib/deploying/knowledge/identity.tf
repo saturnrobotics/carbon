@@ -6,6 +6,7 @@ locals {
     "knowledge-ingest-db-url",
     "knowledge-migration-db-url",
     "knowledge-maintenance-db-url",
+    "knowledge-source-database-ca",
     "knowledge-redis-url",
     "knowledge-inngest-signing-key",
   ])
@@ -57,14 +58,18 @@ resource "google_secret_manager_secret" "runtime" {
   }
 }
 
+# knowledge-source-database-ca holds only Carbon's private PostgreSQL CA
+# certificate (ca.crt), so database clients can require sslmode=verify-full
+# against the listener's IP SAN. Every identity that holds a database URL holds
+# the CA; web and parser hold neither.
 locals {
   secret_access = {
     web         = []
-    query       = ["knowledge-read-db-url", "knowledge-redis-url"]
-    ingest      = ["knowledge-review-db-url", "knowledge-read-db-url", "knowledge-ingest-db-url", "knowledge-inngest-signing-key"]
+    query       = ["knowledge-read-db-url", "knowledge-source-database-ca", "knowledge-redis-url"]
+    ingest      = ["knowledge-review-db-url", "knowledge-read-db-url", "knowledge-ingest-db-url", "knowledge-source-database-ca", "knowledge-inngest-signing-key"]
     parser      = []
-    migration   = ["knowledge-migration-db-url"]
-    maintenance = ["knowledge-maintenance-db-url"]
+    migration   = ["knowledge-migration-db-url", "knowledge-source-database-ca"]
+    maintenance = ["knowledge-maintenance-db-url", "knowledge-source-database-ca"]
   }
   secret_grants = merge([for identity, secrets in local.secret_access : { for secret in secrets : "${identity}/${secret}" => { identity = identity, secret = secret } }]...)
 }
@@ -75,6 +80,30 @@ resource "google_secret_manager_secret_iam_member" "runtime" {
   secret_id = google_secret_manager_secret.runtime[each.value.secret].secret_id
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${google_service_account.runtime[each.value.identity].email}"
+}
+
+# Employee forwarding edges (platform plan §1.4). Each caller may invoke exactly
+# one named receiver; the receiver still verifies the service token and the
+# forwarded IAP assertion itself. Receivers are controller-created, so the grant
+# is a project member bound by an exact resource.name condition rather than a
+# service-level binding that cannot exist before the first release.
+locals {
+  invoker_edges = {
+    "web-query"    = { caller = "web", receiver = "knowledge-query" }
+    "web-actions"  = { caller = "web", receiver = "knowledge-actions" }
+    "ingest-query" = { caller = "ingest", receiver = "knowledge-query" }
+  }
+}
+
+resource "google_project_iam_member" "service_invoker" {
+  for_each = local.invoker_edges
+  project  = var.project_id
+  role     = "roles/run.invoker"
+  member   = "serviceAccount:${google_service_account.runtime[each.value.caller].email}"
+  condition {
+    title      = "knowledge_${replace(each.key, "-", "_")}_only"
+    expression = "resource.name == 'projects/${var.project_id}/locations/${var.region}/services/${each.value.receiver}'"
+  }
 }
 
 # The ingestion worker can start only the parser job. Operation polling is a
@@ -137,3 +166,9 @@ resource "google_cloud_scheduler_job" "retention" {
   }
   depends_on = [google_project_service.apis, google_project_iam_member.maintenance_retention_invoker]
 }
+
+# There is deliberately no google_iap_client or google_iap_brand here. IAP on
+# Cloud Run uses a Google-managed OAuth client for in-organization Workspace
+# users, which is the only admission this deployment allows, and the provider
+# marks both resources deprecated: the IAP OAuth Admin API behind them stopped
+# functioning after July 2025. See README "IAP client and audiences".
