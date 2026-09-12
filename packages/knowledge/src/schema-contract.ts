@@ -17,7 +17,9 @@ export const KNOWLEDGE_TABLES = [
   "outbox",
   "command",
   "conversation",
-  "audit"
+  "audit",
+  "driveEnrollment",
+  "driveItem"
 ] as const;
 /** Non-tenant metadata tables: no companyId, no row policies, owner-only access. */
 export const KNOWLEDGE_METADATA_TABLES = ["extensionVersion"] as const;

@@ -111,6 +111,102 @@ machine caller with `source.index.read`, the enrolled company and source only;
 its caller ID and database login must match the source `providerPolicy` values.
 Validate trusted-caller JSON against `callers.schema.json` before release.
 
+## Google Drive enrollment (deferred connector)
+
+Drive synchronization is not part of `manual-v1`; `release.py` still rejects its
+environment. The connector exists in the repository behind an explicit
+enrollment so that a later release can enable it without a schema change.
+Enrolling a Shared Drive or a set of folders is the same privileged
+administrator action as enrolling the upload library. It never happens from
+the portal, and signing into the portal never authorizes Drive access.
+
+An enrollment records, in one transaction:
+
+1. one active `drive` source whose `externalId` is the Drive scope identity,
+   with the machine caller and ingest login that may synchronize it;
+2. one `knowledge."driveEnrollment"` row naming the corpus (`drive` with a
+   shared-drive id, or `user` with at least one root folder), the read-only
+   connector scope (`drive.readonly` is the only value the table accepts), the
+   Secret Manager **reference** of the OAuth refresh credential (never its
+   value), the minimum scope the reader-delegated live check uses
+   (`drive.metadata.readonly` by default), and `domainWideDelegation = false`
+   (the worker refuses to sync an enrollment that sets it);
+3. a `sourceUserBinding` for every employee whose Drive identity is known, so
+   file permissions can be mapped to a canonical user (an unbound Drive
+   principal receives no grant);
+4. explicit local grants that admit employees to the source. A source-scoped
+   local grant is required for a reader to see the source at all; the
+   connector's per-file source grants are intersected with it, and a
+   source-scoped **source** grant (the shared-drive membership the
+   administrator vouches for) is what lets a reader list the source under
+   Settings. The connector itself writes only file-level source grants and
+   never broadens access.
+
+```sql
+BEGIN;
+
+INSERT INTO knowledge.source (
+  id, "companyId", "createdBy", kind, "externalId", "displayName",
+  "ownerId", classification, "providerPolicy", status
+) VALUES (
+  '<drive-source-id>', '<company-id>', '<existing-user-id>', 'drive',
+  '<shared-drive-id>', '<friendly-drive-name>', '<existing-user-id>',
+  'source-restricted',
+  jsonb_build_object(
+    'machineCallers', jsonb_build_array('<drive-sync-caller-id>'),
+    'ingestDatabaseRoles', jsonb_build_array('<ingest-session-user>'),
+    'allowedProviders', jsonb_build_array(),
+    'allowedClassifications', jsonb_build_array()
+  ),
+  'active'
+);
+
+INSERT INTO knowledge."driveEnrollment" (
+  "companyId", "createdBy", "sourceId", corpora, "driveId", "rootFolderIds",
+  "oauthScope", "credentialSecretRef", "userAccessScope",
+  "notificationChannelId", "notificationTokenHash", "reconcileAfterHours"
+) VALUES (
+  '<company-id>', '<existing-user-id>', '<drive-source-id>', 'drive',
+  '<shared-drive-id>', ARRAY['<folder-id>']::text[],
+  'https://www.googleapis.com/auth/drive.readonly',
+  'projects/<project>/secrets/<secret>/versions/<n>',
+  'https://www.googleapis.com/auth/drive.metadata.readonly',
+  '<channel-id>', encode(sha256('<channel-token>'::bytea), 'hex'), 24
+);
+
+INSERT INTO knowledge."sourceUserBinding" (
+  id, "companyId", "createdBy", "sourceId", "canonicalUserId", "sourceUserId", active
+) VALUES (
+  '<binding-id>', '<company-id>', '<existing-user-id>', '<drive-source-id>',
+  '<existing-user-id>', '<employee@example.com>', true
+);
+
+INSERT INTO knowledge."grant" (
+  id, "companyId", "createdBy", "sourceId", "subjectKind", "subjectId",
+  capability, origin, "policyVersion"
+) VALUES
+  ('<local-grant-id>', '<company-id>', '<existing-user-id>', '<drive-source-id>',
+   'user', '<existing-user-id>', 'read', 'local', 1),
+  ('<member-grant-id>', '<company-id>', '<existing-user-id>', '<drive-source-id>',
+   'user', '<existing-user-id>', 'read', 'source', 1);
+
+COMMIT;
+```
+
+The worker synchronizes an enrolled source only when both
+`KNOWLEDGE_DRIVE_TOKEN_BROKER_URL` and `KNOWLEDGE_DRIVE_TOKEN_BROKER_AUDIENCE`
+are set and its machine caller configuration lists the source with
+`source.changes.read`. The broker exchanges the Secret Manager reference for a
+short-lived connector token (`kind: "connector"`) and, for the live check that
+runs before any restricted Drive text is delivered, cached or disclosed to a
+provider, a token delegated by the reader (`kind: "user"`) — without one the
+document is not delivered. Push notifications are registered with the
+enrollment's channel id and token and addressed to
+`/v1/drive/<source-id>/notifications?company=<company-id>`; a valid hint only
+schedules the cursor-based sync that the five-minute cron runs anyway. A
+reader's ingestion caller must also be allowed the `knowledge.read` operation
+so the query service can perform the live check.
+
 ## Runtime requirements
 
 `release.py` requires the exact environment and pinned-secret sets declared in
