@@ -16,6 +16,8 @@
     "./commands/procurement": "./src/commands/procurement.ts",
     "./intake": "./src/intake/intake.server.ts",
     "./intake/extraction": "./src/intake/extraction.server.ts",
+    "./intake/contracts": "./src/intake/contracts.ts",
+    "./intake/confidence": "./src/intake/confidence.ts",
     "./intake/reconciliation": "./src/intake/reconciliation.ts",
     "./intake/publish.server": "./src/intake/publish.server.ts",
     "./sources/drive.server": "./src/sources/drive.server.ts",

@@ -1,3 +1,4 @@
+import { proposedFieldsSchema } from "@carbon/knowledge/intake/contracts";
 import { redirect, useLoaderData } from "react-router";
 import { manualMetadataSchema } from "../modules/intake/intake.models";
 import { forwardIntakeRequest } from "../modules/intake/intake.service";
@@ -75,6 +76,7 @@ export default function IntakeReviewRoute() {
       extraction?: Record<string, string>;
       extractionOutput?: {
         evidence?: Record<string, Array<{ page: number; text: string }>>;
+        proposed?: unknown;
       };
       reviewDecisions?: Record<string, { value?: string }>;
       reviewedMetadata?: Record<string, string>;
@@ -93,6 +95,10 @@ export default function IntakeReviewRoute() {
   const sourcePages = Object.values(intake.extractionOutput?.evidence ?? {})
     .flat()
     .slice(0, 100);
+  // A version-1 generation has no typed proposals; a malformed one renders none.
+  const proposedFields = proposedFieldsSchema.safeParse(
+    intake.extractionOutput?.proposed
+  );
   return (
     <main className="page-shell">
       <a className="back-link" href="/">
@@ -108,6 +114,9 @@ export default function IntakeReviewRoute() {
           title: intake.extraction?.title ?? "Captured document",
           proposed: intake.extraction ?? {},
           corrected,
+          proposedFields: proposedFields.success
+            ? proposedFields.data
+            : undefined,
           unresolved: intake.unresolved ?? [],
           sourcePages
         }}

@@ -1,28 +1,80 @@
+import { confidenceBucket } from "@carbon/knowledge/intake/confidence";
+import type { ProposedField } from "@carbon/knowledge/intake/contracts";
 import { useMemo, useState } from "react";
 import type { IntakeReviewModel } from "../intake.models";
-import { displayField } from "../intake.models";
+import {
+  additionalProposals,
+  displayField,
+  formatProposal,
+  proposalFor,
+  reviewFields,
+  unresolvedNamesFor
+} from "../intake.models";
 
-const fields = [
-  ["title", "Title"],
-  ["manufacturer", "Manufacturer"],
-  ["partNumber", "Part number"],
-  ["revision", "Revision"],
-  ["machine", "Machine"]
-] as const;
+const percent = new Intl.NumberFormat(undefined, { style: "percent" });
+
+function ProposalNote({ proposal }: { proposal: ProposedField }) {
+  const pages = [...new Set(proposal.evidence.map((entry) => entry.page))];
+  return (
+    <small>
+      Proposed {formatProposal(proposal)} (
+      {confidenceBucket(proposal.confidence)},{" "}
+      {percent.format(proposal.confidence)} confidence)
+      {pages.length > 0
+        ? ` from page ${pages.join(", ")}`
+        : " without page evidence"}
+    </small>
+  );
+}
+
+function Acknowledge({
+  id,
+  names,
+  acknowledged,
+  onToggle
+}: {
+  id: string;
+  names: readonly string[];
+  acknowledged: readonly string[];
+  onToggle: (names: readonly string[], checked: boolean) => void;
+}) {
+  return (
+    <small id={id}>
+      Confirm this field against the source evidence.{" "}
+      <label>
+        <input
+          type="checkbox"
+          checked={names.every((name) => acknowledged.includes(name))}
+          onChange={(event) => onToggle(names, event.target.checked)}
+        />
+        I reviewed this evidence
+      </label>
+    </small>
+  );
+}
 
 export function IntakeReview({ model }: { model: IntakeReviewModel }) {
   const initial = useMemo(
     () =>
       Object.fromEntries(
-        fields.map(([field]) => [field, displayField(model, field)])
+        reviewFields.map(([field]) => [field, displayField(model, field)])
       ),
     [model]
   );
   const [values, setValues] = useState(initial);
   const [acknowledged, setAcknowledged] = useState<string[]>([]);
   const unresolved = model.unresolved.filter(
-    (field) => !acknowledged.includes(field)
+    (name) => !acknowledged.includes(name)
   );
+  const pendingFor = (names: readonly string[]) =>
+    names.filter((name) => model.unresolved.includes(name));
+  const toggle = (names: readonly string[], checked: boolean) =>
+    setAcknowledged((current) =>
+      checked
+        ? [...new Set([...current, ...names])]
+        : current.filter((name) => !names.includes(name))
+    );
+  const extras = additionalProposals(model);
   return (
     <section aria-label="Intake review">
       <p>
@@ -51,46 +103,59 @@ export function IntakeReview({ model }: { model: IntakeReviewModel }) {
           name="unresolved"
           value={JSON.stringify(unresolved)}
         />
-        {fields.map(([field, label]) => (
-          <label key={field}>
-            {label}
-            <input
-              maxLength={field === "title" ? 500 : 256}
-              required={field === "title"}
-              value={values[field] ?? ""}
-              onChange={(event) =>
-                setValues((current) => ({
-                  ...current,
-                  [field]: event.target.value
-                }))
-              }
-              aria-describedby={
-                model.unresolved.includes(field)
-                  ? `${field}-unresolved`
-                  : undefined
-              }
-            />
-            {model.unresolved.includes(field) && (
-              <small id={`${field}-unresolved`}>
-                New evidence changed this field.{" "}
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={acknowledged.includes(field)}
-                    onChange={(event) =>
-                      setAcknowledged((current) =>
-                        event.target.checked
-                          ? [...current, field]
-                          : current.filter((value) => value !== field)
-                      )
-                    }
-                  />
-                  I reviewed this evidence
-                </label>
-              </small>
-            )}
-          </label>
-        ))}
+        {reviewFields.map(([field, label]) => {
+          const proposal = proposalFor(model, field);
+          const pending = pendingFor(unresolvedNamesFor(field));
+          return (
+            <label key={field}>
+              {label}
+              <input
+                maxLength={field === "title" ? 500 : 256}
+                required={field === "title"}
+                value={values[field] ?? ""}
+                onChange={(event) =>
+                  setValues((current) => ({
+                    ...current,
+                    [field]: event.target.value
+                  }))
+                }
+                aria-describedby={
+                  pending.length > 0 ? `${field}-unresolved` : undefined
+                }
+              />
+              {proposal && <ProposalNote proposal={proposal} />}
+              {pending.length > 0 && (
+                <Acknowledge
+                  id={`${field}-unresolved`}
+                  names={pending}
+                  acknowledged={acknowledged}
+                  onToggle={toggle}
+                />
+              )}
+            </label>
+          );
+        })}
+        {extras.length > 0 && (
+          <fieldset aria-label="Additional proposed fields">
+            <legend>Also proposed</legend>
+            {extras.map(({ name, label, proposal }) => {
+              const pending = pendingFor([name]);
+              return (
+                <p key={name}>
+                  {label}: <ProposalNote proposal={proposal} />
+                  {pending.length > 0 && (
+                    <Acknowledge
+                      id={`${name}-unresolved`}
+                      names={pending}
+                      acknowledged={acknowledged}
+                      onToggle={toggle}
+                    />
+                  )}
+                </p>
+              );
+            })}
+          </fieldset>
+        )}
         <button name="intent" value="review" type="submit">
           Save review
         </button>
