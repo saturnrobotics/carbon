@@ -13,7 +13,7 @@ msgstr ""
 "Plural-Forms: \n"
 
 msgid "A follow-up question keeps the evidence shown here in context."
-msgstr ""
+msgstr "Дополнительный вопрос сохраняет контекст показанных здесь доказательств."
 
 msgid "Access to this document was revoked."
 msgstr "Доступ к этому документу был отозван."
@@ -31,7 +31,7 @@ msgid "Also proposed"
 msgstr ""
 
 msgid "Answer"
-msgstr ""
+msgstr "Ответ"
 
 msgid "Back to company knowledge"
 msgstr "Вернуться к базе знаний организации"
@@ -49,7 +49,7 @@ msgid "Check freshness"
 msgstr "Проверить актуальность"
 
 msgid "Choices"
-msgstr ""
+msgstr "Варианты"
 
 msgid "Choose either a file or a URL, not both."
 msgstr "Выберите либо файл, либо URL, но не оба."
@@ -62,7 +62,7 @@ msgstr "База знаний организации"
 
 #. placeholder {0}: evidence.length
 msgid "Composing an answer from {0} evidence blocks…"
-msgstr ""
+msgstr "Составление ответа из {0} блоков доказательств…"
 
 msgid "Confirm removal"
 msgstr "Подтвердить удаление"
@@ -137,7 +137,7 @@ msgid "Link this document to one existing item, or keep it as a generic document
 msgstr "Свяжите этот документ с одной существующей номенклатурой или оставьте его как универсальный документ. Связывание никогда не создаёт и не изменяет номенклатуру."
 
 msgid "Live record"
-msgstr ""
+msgstr "Текущая запись"
 
 msgid "Machine"
 msgstr "Станок"
@@ -189,7 +189,7 @@ msgid "Only the first candidates are shown; narrow the search."
 msgstr "Показаны только первые кандидаты; сузьте поиск."
 
 msgid "Open record"
-msgstr ""
+msgstr "Открыть запись"
 
 #. placeholder {0}: selected?.classification ?? ""
 msgid "Owner: {actorId}. Access: {0}. Readers of this library can find the document once it is reviewed and published."
@@ -197,7 +197,7 @@ msgstr "Ответственный: {actorId}. Доступ: {0}. Читател
 
 #. placeholder {0}: source.page
 msgid "page {0}"
-msgstr ""
+msgstr "страница {0}"
 
 msgid "Page {page}"
 msgstr "Страница {page}"
@@ -212,7 +212,7 @@ msgid "Part number, MPN, or name"
 msgstr "Номер детали, MPN или название"
 
 msgid "Partial source answer"
-msgstr ""
+msgstr "Частичный ответ источника"
 
 msgid "PDF and image files are captured with their immutable object version before extraction."
 msgstr "PDF и файлы изображений захватываются с их неизменяемой версией объекта перед извлечением."
@@ -270,13 +270,13 @@ msgid "Search published company manuals by manufacturer, part number, revision, 
 msgstr "Поиск опубликованных руководств организации по производителю, номеру детали, ревизии, станку или ключевому слову. Откройте точную исходную версию из каждого результата."
 
 msgid "Searching authorized sources…"
-msgstr ""
+msgstr "Поиск в авторизованных источниках…"
 
 msgid "Searching…"
 msgstr "Поиск…"
 
 msgid "see evidence"
-msgstr ""
+msgstr "посмотреть доказательства"
 
 msgid "Selected: {fileName}"
 msgstr "Выбран: {fileName}"
@@ -288,7 +288,7 @@ msgid "Some authorized manuals were unavailable."
 msgstr "Некоторые авторизованные руководства были недоступны."
 
 msgid "Some sources did not answer; results may be partial."
-msgstr ""
+msgstr "Некоторые источники не ответили; результаты могут быть частичными."
 
 msgid "Source details"
 msgstr "Детали источника"
@@ -304,7 +304,7 @@ msgid "Source revision: {0}"
 msgstr "Исходная ревизия: {0}"
 
 msgid "Source unavailable"
-msgstr ""
+msgstr "Источник недоступен"
 
 msgid "Source URL"
 msgstr "Исходный URL"
@@ -313,7 +313,7 @@ msgid "Sources"
 msgstr "Источники"
 
 msgid "Start a new question"
-msgstr ""
+msgstr "Задать новый вопрос"
 
 msgid "State:"
 msgstr "Состояние:"
@@ -349,7 +349,7 @@ msgid "The knowledge service could not complete this request."
 msgstr "Служба знаний не смогла выполнить этот запрос."
 
 msgid "The request did not complete within its time budget."
-msgstr ""
+msgstr "Запрос не завершился в отведенное время."
 
 msgid "The request was not valid."
 msgstr "Запрос был недействительным."
@@ -421,7 +421,7 @@ msgid "You cannot add documents to any library. Ask an administrator for a libra
 msgstr "Вы не можете добавлять документы в какую-либо библиотеку. Попросите администратора предоставить доступ к библиотеке."
 
 msgid "You do not have permission for this action in this library."
-msgstr ""
+msgstr "Вы не имеете прав доступа для этого действия в этой библиотеке."
 
 msgid "Your access changed while this request ran. Search again."
-msgstr "Вы не имеете прав доступа для этого действия в этой библиотеке."
+msgstr "Ваш доступ изменился во время выполнения этого запроса. Повторите поиск."

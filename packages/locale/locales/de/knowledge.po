@@ -13,7 +13,7 @@ msgstr ""
 "Plural-Forms: \n"
 
 msgid "A follow-up question keeps the evidence shown here in context."
-msgstr ""
+msgstr "Eine Anschlussfrage behält die hier angezeigten Belege im Kontext."
 
 msgid "Access to this document was revoked."
 msgstr "Der Zugriff auf dieses Dokument wurde widerrufen."
@@ -31,7 +31,7 @@ msgid "Also proposed"
 msgstr ""
 
 msgid "Answer"
-msgstr ""
+msgstr "Antwort"
 
 msgid "Back to company knowledge"
 msgstr "Zurück zur Unternehmenskenntnis"
@@ -49,7 +49,7 @@ msgid "Check freshness"
 msgstr "Aktualität überprüfen"
 
 msgid "Choices"
-msgstr ""
+msgstr "Optionen"
 
 msgid "Choose either a file or a URL, not both."
 msgstr "Wählen Sie entweder eine Datei oder eine URL, aber nicht beides."
@@ -62,7 +62,7 @@ msgstr "Unternehmenskenntnis"
 
 #. placeholder {0}: evidence.length
 msgid "Composing an answer from {0} evidence blocks…"
-msgstr ""
+msgstr "Antwort aus {0} Belegtexten wird zusammengestellt…"
 
 msgid "Confirm removal"
 msgstr "Entfernung bestätigen"
@@ -137,7 +137,7 @@ msgid "Link this document to one existing item, or keep it as a generic document
 msgstr "Verknüpfen Sie dieses Dokument mit einem vorhandenen Artikel, oder behalten Sie es als generisches Dokument. Das Verknüpfen erstellt oder ändert Artikel nie."
 
 msgid "Live record"
-msgstr ""
+msgstr "Live-Datensatz"
 
 msgid "Machine"
 msgstr "Maschine"
@@ -189,7 +189,7 @@ msgid "Only the first candidates are shown; narrow the search."
 msgstr "Nur die ersten Kandidaten werden angezeigt; grenzen Sie die Suche ein."
 
 msgid "Open record"
-msgstr ""
+msgstr "Datensatz öffnen"
 
 #. placeholder {0}: selected?.classification ?? ""
 msgid "Owner: {actorId}. Access: {0}. Readers of this library can find the document once it is reviewed and published."
@@ -197,7 +197,7 @@ msgstr "Verantwortlicher: {actorId}. Zugriff: {0}. Leser dieser Bibliothek könn
 
 #. placeholder {0}: source.page
 msgid "page {0}"
-msgstr ""
+msgstr "Seite {0}"
 
 msgid "Page {page}"
 msgstr "Seite {page}"
@@ -212,7 +212,7 @@ msgid "Part number, MPN, or name"
 msgstr "Teilenummer, MPN oder Name"
 
 msgid "Partial source answer"
-msgstr ""
+msgstr "Teilweise Quellantwort"
 
 msgid "PDF and image files are captured with their immutable object version before extraction."
 msgstr "PDF- und Bilddateien werden mit ihrer unveränderlichen Objektversion vor der Extraktion erfasst."
@@ -270,13 +270,13 @@ msgid "Search published company manuals by manufacturer, part number, revision, 
 msgstr "Durchsuchen Sie veröffentlichte Unternehmenshandbücher nach Hersteller, Teilenummer, Revision, Maschine oder Stichwort. Öffnen Sie die genaue Originalversion von jedem Ergebnis."
 
 msgid "Searching authorized sources…"
-msgstr ""
+msgstr "Autorisierte Quellen werden durchsucht…"
 
 msgid "Searching…"
 msgstr "Wird gesucht…"
 
 msgid "see evidence"
-msgstr ""
+msgstr "Belege anzeigen"
 
 msgid "Selected: {fileName}"
 msgstr "Ausgewählt: {fileName}"
@@ -288,7 +288,7 @@ msgid "Some authorized manuals were unavailable."
 msgstr "Einige autorisierte Handbücher waren nicht verfügbar."
 
 msgid "Some sources did not answer; results may be partial."
-msgstr ""
+msgstr "Einige Quellen haben nicht geantwortet; Ergebnisse können teilweise sein."
 
 msgid "Source details"
 msgstr "Quellendetails"
@@ -304,7 +304,7 @@ msgid "Source revision: {0}"
 msgstr "Quellrevision: {0}"
 
 msgid "Source unavailable"
-msgstr ""
+msgstr "Quelle nicht verfügbar"
 
 msgid "Source URL"
 msgstr "Quell-URL"
@@ -313,7 +313,7 @@ msgid "Sources"
 msgstr "Quellen"
 
 msgid "Start a new question"
-msgstr ""
+msgstr "Neue Frage stellen"
 
 msgid "State:"
 msgstr "Zustand:"
@@ -349,7 +349,7 @@ msgid "The knowledge service could not complete this request."
 msgstr "Der Wissensdienst konnte diese Anfrage nicht abschließen."
 
 msgid "The request did not complete within its time budget."
-msgstr ""
+msgstr "Die Anfrage wurde nicht innerhalb des Zeitbudgets abgeschlossen."
 
 msgid "The request was not valid."
 msgstr "Die Anfrage war nicht gültig."
@@ -421,7 +421,7 @@ msgid "You cannot add documents to any library. Ask an administrator for a libra
 msgstr "Sie können keine Dokumente zu einer Bibliothek hinzufügen. Fragen Sie einen Administrator nach einer Bibliotheksberechtigung."
 
 msgid "You do not have permission for this action in this library."
-msgstr ""
+msgstr "Sie haben keine Berechtigung für diese Aktion in dieser Bibliothek."
 
 msgid "Your access changed while this request ran. Search again."
-msgstr "Sie haben keine Berechtigung für diese Aktion in dieser Bibliothek."
+msgstr "Ihre Zugriffsberechtigung hat sich während der Anfrage geändert. Bitte erneut suchen."

@@ -13,7 +13,7 @@ msgstr ""
 "Plural-Forms: \n"
 
 msgid "A follow-up question keeps the evidence shown here in context."
-msgstr ""
+msgstr "追问问题在此保持所显示证据的上下文。"
 
 msgid "Access to this document was revoked."
 msgstr "对该文件的访问权限已被撤销。"
@@ -31,7 +31,7 @@ msgid "Also proposed"
 msgstr ""
 
 msgid "Answer"
-msgstr ""
+msgstr "回答"
 
 msgid "Back to company knowledge"
 msgstr "返回公司知识库"
@@ -49,7 +49,7 @@ msgid "Check freshness"
 msgstr "检查新鲜度"
 
 msgid "Choices"
-msgstr ""
+msgstr "选项"
 
 msgid "Choose either a file or a URL, not both."
 msgstr "选择文件或URL，不能同时选择两个。"
@@ -62,7 +62,7 @@ msgstr "公司知识库"
 
 #. placeholder {0}: evidence.length
 msgid "Composing an answer from {0} evidence blocks…"
-msgstr ""
+msgstr "正在从 {0} 个证据块组合回答…"
 
 msgid "Confirm removal"
 msgstr "确认删除"
@@ -137,7 +137,7 @@ msgid "Link this document to one existing item, or keep it as a generic document
 msgstr "将此文件链接到现有物料，或将其作为通用文件保存。链接不会创建或更改物料。"
 
 msgid "Live record"
-msgstr ""
+msgstr "实时记录"
 
 msgid "Machine"
 msgstr "机器"
@@ -189,7 +189,7 @@ msgid "Only the first candidates are shown; narrow the search."
 msgstr "仅显示前几个候选项；缩小搜索范围。"
 
 msgid "Open record"
-msgstr ""
+msgstr "打开记录"
 
 #. placeholder {0}: selected?.classification ?? ""
 msgid "Owner: {actorId}. Access: {0}. Readers of this library can find the document once it is reviewed and published."
@@ -197,7 +197,7 @@ msgstr "负责人：{actorId}。访问权限：{0}。此库的读者在文件被
 
 #. placeholder {0}: source.page
 msgid "page {0}"
-msgstr ""
+msgstr "第 {0} 页"
 
 msgid "Page {page}"
 msgstr "第 {page} 页"
@@ -212,7 +212,7 @@ msgid "Part number, MPN, or name"
 msgstr "零件编号、MPN 或名称"
 
 msgid "Partial source answer"
-msgstr ""
+msgstr "部分来源答案"
 
 msgid "PDF and image files are captured with their immutable object version before extraction."
 msgstr "PDF 和图像文件在提取前已使用其不可变对象版本捕获。"
@@ -270,13 +270,13 @@ msgid "Search published company manuals by manufacturer, part number, revision, 
 msgstr "按制造商、零件编号、修订版、机器或关键字搜索已发布的公司手册。从每个结果中打开精确的原始版本。"
 
 msgid "Searching authorized sources…"
-msgstr ""
+msgstr "搜索授权来源…"
 
 msgid "Searching…"
 msgstr "搜索中…"
 
 msgid "see evidence"
-msgstr ""
+msgstr "查看证据"
 
 msgid "Selected: {fileName}"
 msgstr "已选择：{fileName}"
@@ -288,7 +288,7 @@ msgid "Some authorized manuals were unavailable."
 msgstr "某些授权手册不可用。"
 
 msgid "Some sources did not answer; results may be partial."
-msgstr ""
+msgstr "某些来源未回答；结果可能是部分的。"
 
 msgid "Source details"
 msgstr "源详情"
@@ -304,7 +304,7 @@ msgid "Source revision: {0}"
 msgstr "源修订版: {0}"
 
 msgid "Source unavailable"
-msgstr ""
+msgstr "来源不可用"
 
 msgid "Source URL"
 msgstr "源URL"
@@ -313,7 +313,7 @@ msgid "Sources"
 msgstr "来源"
 
 msgid "Start a new question"
-msgstr ""
+msgstr "开始新的提问"
 
 msgid "State:"
 msgstr "状态:"
@@ -349,7 +349,7 @@ msgid "The knowledge service could not complete this request."
 msgstr "知识服务无法完成此请求。"
 
 msgid "The request did not complete within its time budget."
-msgstr ""
+msgstr "请求未在时间预算内完成。"
 
 msgid "The request was not valid."
 msgstr "请求无效。"
@@ -421,7 +421,7 @@ msgid "You cannot add documents to any library. Ask an administrator for a libra
 msgstr "您无法向任何库添加文档。请向管理员申请库权限。"
 
 msgid "You do not have permission for this action in this library."
-msgstr ""
+msgstr "您没有在此库中执行此操作的权限。"
 
 msgid "Your access changed while this request ran. Search again."
-msgstr "您没有在此库中执行此操作的权限。"
+msgstr "此请求运行期间您的访问权限已更改。请再次搜索。"

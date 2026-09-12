@@ -13,7 +13,7 @@ msgstr ""
 "Plural-Forms: \n"
 
 msgid "A follow-up question keeps the evidence shown here in context."
-msgstr ""
+msgstr "フォローアップの質問は、ここに表示されたエビデンスを文脈内に保ちます。"
 
 msgid "Access to this document was revoked."
 msgstr "このドキュメントへのアクセスが取り消されました。"
@@ -31,7 +31,7 @@ msgid "Also proposed"
 msgstr ""
 
 msgid "Answer"
-msgstr ""
+msgstr "回答"
 
 msgid "Back to company knowledge"
 msgstr "会社ナレッジに戻る"
@@ -49,7 +49,7 @@ msgid "Check freshness"
 msgstr "鮮度を確認"
 
 msgid "Choices"
-msgstr ""
+msgstr "選択肢"
 
 msgid "Choose either a file or a URL, not both."
 msgstr "ファイルまたはURLのいずれかを選択してください。両方は選択できません。"
@@ -62,7 +62,7 @@ msgstr "会社ナレッジ"
 
 #. placeholder {0}: evidence.length
 msgid "Composing an answer from {0} evidence blocks…"
-msgstr ""
+msgstr "{0}個のエビデンスブロックから回答を作成中…"
 
 msgid "Confirm removal"
 msgstr "削除を確認"
@@ -137,7 +137,7 @@ msgid "Link this document to one existing item, or keep it as a generic document
 msgstr "このドキュメントを既存の品目にリンクするか、汎用ドキュメントとして保持してください。リンク作成によって品目が作成または変更されることはありません。"
 
 msgid "Live record"
-msgstr ""
+msgstr "ライブレコード"
 
 msgid "Machine"
 msgstr "機械"
@@ -189,7 +189,7 @@ msgid "Only the first candidates are shown; narrow the search."
 msgstr "最初の候補のみが表示されています。検索を絞り込んでください。"
 
 msgid "Open record"
-msgstr ""
+msgstr "レコードを開く"
 
 #. placeholder {0}: selected?.classification ?? ""
 msgid "Owner: {actorId}. Access: {0}. Readers of this library can find the document once it is reviewed and published."
@@ -197,7 +197,7 @@ msgstr "責任者: {actorId}。アクセス: {0}。このライブラリの読�
 
 #. placeholder {0}: source.page
 msgid "page {0}"
-msgstr ""
+msgstr "ページ {0}"
 
 msgid "Page {page}"
 msgstr "ページ {page}"
@@ -212,7 +212,7 @@ msgid "Part number, MPN, or name"
 msgstr "部品番号、MPN、または名前"
 
 msgid "Partial source answer"
-msgstr ""
+msgstr "一部のソースからの回答"
 
 msgid "PDF and image files are captured with their immutable object version before extraction."
 msgstr "PDF および画像ファイルは抽出前に変更不可オブジェクトバージョンでキャプチャされます。"
@@ -270,13 +270,13 @@ msgid "Search published company manuals by manufacturer, part number, revision, 
 msgstr "公開済会社マニュアルを、製造元、部品番号、リビジョン、機械、またはキーワードで検索します。各結果から正確なオリジナルバージョンを開きます。"
 
 msgid "Searching authorized sources…"
-msgstr ""
+msgstr "認可されたソースを検索中…"
 
 msgid "Searching…"
 msgstr "検索中…"
 
 msgid "see evidence"
-msgstr ""
+msgstr "エビデンスを表示"
 
 msgid "Selected: {fileName}"
 msgstr "選択: {fileName}"
@@ -288,7 +288,7 @@ msgid "Some authorized manuals were unavailable."
 msgstr "一部の認可されたマニュアルが利用できませんでした。"
 
 msgid "Some sources did not answer; results may be partial."
-msgstr ""
+msgstr "一部のソースが回答しませんでした。結果は一部となる可能性があります。"
 
 msgid "Source details"
 msgstr "ソースの詳細"
@@ -304,7 +304,7 @@ msgid "Source revision: {0}"
 msgstr "ソースリビジョン: {0}"
 
 msgid "Source unavailable"
-msgstr ""
+msgstr "ソースが利用できません"
 
 msgid "Source URL"
 msgstr "ソースURL"
@@ -313,7 +313,7 @@ msgid "Sources"
 msgstr "ソース"
 
 msgid "Start a new question"
-msgstr ""
+msgstr "新しい質問を開始"
 
 msgid "State:"
 msgstr "状態:"
@@ -349,7 +349,7 @@ msgid "The knowledge service could not complete this request."
 msgstr "ナレッジサービスがこのリクエストを完了できませんでした。"
 
 msgid "The request did not complete within its time budget."
-msgstr ""
+msgstr "リクエストが時間予算内に完了しませんでした。"
 
 msgid "The request was not valid."
 msgstr "リクエストは有効ではありませんでした。"
@@ -421,7 +421,7 @@ msgid "You cannot add documents to any library. Ask an administrator for a libra
 msgstr "どのライブラリにもドキュメントを追加できません。管理者にライブラリアクセス権をリクエストしてください。"
 
 msgid "You do not have permission for this action in this library."
-msgstr ""
+msgstr "このライブラリでこのアクションの権限がありません。"
 
 msgid "Your access changed while this request ran. Search again."
-msgstr "このライブラリでこのアクションの権限がありません。"
+msgstr "このリクエスト実行中にアクセス権限が変更されました。もう一度検索してください。"

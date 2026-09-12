@@ -13,7 +13,7 @@ msgstr ""
 "Plural-Forms: \n"
 
 msgid "A follow-up question keeps the evidence shown here in context."
-msgstr ""
+msgstr "Takip sorusu, burada gösterilen kanıtları bağlamda tutar."
 
 msgid "Access to this document was revoked."
 msgstr "Bu belgeye erişim iptal edildi."
@@ -31,7 +31,7 @@ msgid "Also proposed"
 msgstr ""
 
 msgid "Answer"
-msgstr ""
+msgstr "Yanıt"
 
 msgid "Back to company knowledge"
 msgstr "Şirket bilgisine geri dön"
@@ -49,7 +49,7 @@ msgid "Check freshness"
 msgstr "Tazeliği kontrol et"
 
 msgid "Choices"
-msgstr ""
+msgstr "Seçenekler"
 
 msgid "Choose either a file or a URL, not both."
 msgstr "Ya bir dosya ya da bir URL seçin, her ikisini değil."
@@ -62,7 +62,7 @@ msgstr "Şirket bilgisi"
 
 #. placeholder {0}: evidence.length
 msgid "Composing an answer from {0} evidence blocks…"
-msgstr ""
+msgstr "{0} kanıt bloğundan yanıt oluşturuluyor…"
 
 msgid "Confirm removal"
 msgstr "Kaldırılmayı onaylayın"
@@ -137,7 +137,7 @@ msgid "Link this document to one existing item, or keep it as a generic document
 msgstr "Bu belgeyi mevcut bir stok kartısına bağlayın veya jenerik belge olarak tutun. Bağlama hiçbir zaman stok kartları oluşturmaz veya değiştirmez."
 
 msgid "Live record"
-msgstr ""
+msgstr "Canlı kayıt"
 
 msgid "Machine"
 msgstr "Makine"
@@ -189,7 +189,7 @@ msgid "Only the first candidates are shown; narrow the search."
 msgstr "Yalnızca ilk adaylar gösterilir; aramayı daraltın."
 
 msgid "Open record"
-msgstr ""
+msgstr "Açık kayıt"
 
 #. placeholder {0}: selected?.classification ?? ""
 msgid "Owner: {actorId}. Access: {0}. Readers of this library can find the document once it is reviewed and published."
@@ -197,7 +197,7 @@ msgstr "Sahip: {actorId}. Erişim: {0}. Bu kitaplığın okuyucuları belgeyi in
 
 #. placeholder {0}: source.page
 msgid "page {0}"
-msgstr ""
+msgstr "sayfa {0}"
 
 msgid "Page {page}"
 msgstr "Sayfa {page}"
@@ -212,7 +212,7 @@ msgid "Part number, MPN, or name"
 msgstr "Parça numarası, MPN veya adı"
 
 msgid "Partial source answer"
-msgstr ""
+msgstr "Kısmi kaynak yanıtı"
 
 msgid "PDF and image files are captured with their immutable object version before extraction."
 msgstr "PDF ve görüntü dosyaları, çıkarılmadan önce değişmez nesne sürümleriyle yaklanır."
@@ -270,13 +270,13 @@ msgid "Search published company manuals by manufacturer, part number, revision, 
 msgstr "Üretici, parça numarası, revizyon, makine veya anahtar kelimeye göre yayınlanan şirket kılavuzlarını arayın. Her sonuçtan tam orijinal sürümü açın."
 
 msgid "Searching authorized sources…"
-msgstr ""
+msgstr "Yetkili kaynaklar aranıyor…"
 
 msgid "Searching…"
 msgstr "Aranıyor…"
 
 msgid "see evidence"
-msgstr ""
+msgstr "kanıtı gör"
 
 msgid "Selected: {fileName}"
 msgstr "Seçili: {fileName}"
@@ -288,7 +288,7 @@ msgid "Some authorized manuals were unavailable."
 msgstr "Bazı yetkili kılavuzlar kullanılamadı."
 
 msgid "Some sources did not answer; results may be partial."
-msgstr ""
+msgstr "Bazı kaynaklar yanıt vermedi; sonuçlar kısmi olabilir."
 
 msgid "Source details"
 msgstr "Kaynak ayrıntıları"
@@ -304,7 +304,7 @@ msgid "Source revision: {0}"
 msgstr "Kaynak Revizyon: {0}"
 
 msgid "Source unavailable"
-msgstr ""
+msgstr "Kaynak kullanılamıyor"
 
 msgid "Source URL"
 msgstr "Kaynak URL"
@@ -313,7 +313,7 @@ msgid "Sources"
 msgstr "Kaynaklar"
 
 msgid "Start a new question"
-msgstr ""
+msgstr "Yeni soru başlat"
 
 msgid "State:"
 msgstr "Durum:"
@@ -349,7 +349,7 @@ msgid "The knowledge service could not complete this request."
 msgstr "Bilgi Hizmeti bu istemi tamamlayamadı."
 
 msgid "The request did not complete within its time budget."
-msgstr ""
+msgstr "İstek, zaman bütçesinde tamamlanmadı."
 
 msgid "The request was not valid."
 msgstr "İstek geçerli değildi."
@@ -421,7 +421,7 @@ msgid "You cannot add documents to any library. Ask an administrator for a libra
 msgstr "Hiçbir kütüphaneye belge ekleyemezsiniz. Bir kütüphane izni için yöneticiye sorun."
 
 msgid "You do not have permission for this action in this library."
-msgstr ""
+msgstr "Bu kütüphanede bu işlem için izniniz yok."
 
 msgid "Your access changed while this request ran. Search again."
-msgstr "Bu kütüphanede bu işlem için izniniz yok."
+msgstr "Bu istek çalışırken erişiminiz değişti. Tekrar ara."

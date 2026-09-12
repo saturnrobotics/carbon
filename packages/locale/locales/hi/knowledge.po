@@ -13,7 +13,7 @@ msgstr ""
 "Plural-Forms: \n"
 
 msgid "A follow-up question keeps the evidence shown here in context."
-msgstr ""
+msgstr "एक अनुवर्ती प्रश्न यहाँ दिखाए गए साक्ष्य को संदर्भ में रखता है।"
 
 msgid "Access to this document was revoked."
 msgstr "इस दस्तावेज़ तक पहुंच रद्द कर दी गई।"
@@ -31,7 +31,7 @@ msgid "Also proposed"
 msgstr ""
 
 msgid "Answer"
-msgstr ""
+msgstr "उत्तर"
 
 msgid "Back to company knowledge"
 msgstr "कंपनी ज्ञान पर वापस जाएं"
@@ -49,7 +49,7 @@ msgid "Check freshness"
 msgstr "ताज़ापन जांचें"
 
 msgid "Choices"
-msgstr ""
+msgstr "विकल्प"
 
 msgid "Choose either a file or a URL, not both."
 msgstr "एक फ़ाइल या URL चुनें, दोनों नहीं।"
@@ -62,7 +62,7 @@ msgstr "कंपनी ज्ञान"
 
 #. placeholder {0}: evidence.length
 msgid "Composing an answer from {0} evidence blocks…"
-msgstr ""
+msgstr "{0} साक्ष्य ब्लॉक से उत्तर तैयार किया जा रहा है…"
 
 msgid "Confirm removal"
 msgstr "हटाने की पुष्टि करें"
@@ -137,7 +137,7 @@ msgid "Link this document to one existing item, or keep it as a generic document
 msgstr "इस दस्तावेज़ को एक मौजूदा आइटम से जोड़ें, या इसे एक सामान्य दस्तावेज़ के रूप में रखें। जोड़ना कभी आइटम बनाता या बदलता नहीं है।"
 
 msgid "Live record"
-msgstr ""
+msgstr "लाइव रिकॉर्ड"
 
 msgid "Machine"
 msgstr "मशीन"
@@ -189,7 +189,7 @@ msgid "Only the first candidates are shown; narrow the search."
 msgstr "केवल पहले उम्मीदवार दिखाए जाते हैं; खोज को संकीर्ण करें।"
 
 msgid "Open record"
-msgstr ""
+msgstr "खुला रिकॉर्ड"
 
 #. placeholder {0}: selected?.classification ?? ""
 msgid "Owner: {actorId}. Access: {0}. Readers of this library can find the document once it is reviewed and published."
@@ -197,7 +197,7 @@ msgstr "स्वामी: {actorId}। पहुंच: {0}। इस ला�
 
 #. placeholder {0}: source.page
 msgid "page {0}"
-msgstr ""
+msgstr "पृष्ठ {0}"
 
 msgid "Page {page}"
 msgstr "पृष्ठ {page}"
@@ -212,7 +212,7 @@ msgid "Part number, MPN, or name"
 msgstr "पार्ट संख्या, MPN, या नाम"
 
 msgid "Partial source answer"
-msgstr ""
+msgstr "आंशिक स्रोत उत्तर"
 
 msgid "PDF and image files are captured with their immutable object version before extraction."
 msgstr "PDF और चित्र फाइलों को निकालने से पहले उनके अपरिवर्तनीय वस्तु संस्करण के साथ कैप्चर किया जाता है।"
@@ -270,13 +270,13 @@ msgid "Search published company manuals by manufacturer, part number, revision, 
 msgstr "निर्माता, पार्ट संख्या, रिवीजन, मशीन, या कीवर्ड द्वारा प्रकाशित कंपनी मैनुअल खोजें। प्रत्येक परिणाम से सटीक मूल संस्करण खोलें।"
 
 msgid "Searching authorized sources…"
-msgstr ""
+msgstr "अधिकृत स्रोत खोजे जा रहे हैं…"
 
 msgid "Searching…"
 msgstr "खोज रहे हैं…"
 
 msgid "see evidence"
-msgstr ""
+msgstr "साक्ष्य देखें"
 
 msgid "Selected: {fileName}"
 msgstr "चयनित: {fileName}"
@@ -288,7 +288,7 @@ msgid "Some authorized manuals were unavailable."
 msgstr "कुछ अधिकृत मैनुअल अनुपलब्ध थे।"
 
 msgid "Some sources did not answer; results may be partial."
-msgstr ""
+msgstr "कुछ स्रोतों ने उत्तर नहीं दिया; परिणाम आंशिक हो सकते हैं।"
 
 msgid "Source details"
 msgstr "स्रोत विवरण"
@@ -304,7 +304,7 @@ msgid "Source revision: {0}"
 msgstr "स्रोत रिवीजन: {0}"
 
 msgid "Source unavailable"
-msgstr ""
+msgstr "स्रोत अनुपलब्ध है"
 
 msgid "Source URL"
 msgstr "स्रोत URL"
@@ -313,7 +313,7 @@ msgid "Sources"
 msgstr "स्रोत"
 
 msgid "Start a new question"
-msgstr ""
+msgstr "नया प्रश्न शुरू करें"
 
 msgid "State:"
 msgstr "स्थिति:"
@@ -349,7 +349,7 @@ msgid "The knowledge service could not complete this request."
 msgstr "ज्ञान सेवा इस अनुरोध को पूरा नहीं कर सकी।"
 
 msgid "The request did not complete within its time budget."
-msgstr ""
+msgstr "अनुरोध अपने समय बजट के भीतर पूरा नहीं हुआ।"
 
 msgid "The request was not valid."
 msgstr "अनुरोध मान्य नहीं था।"
@@ -421,7 +421,7 @@ msgid "You cannot add documents to any library. Ask an administrator for a libra
 msgstr "आप किसी भी लाइब्रेरी में दस्तावेज़ नहीं जोड़ सकते। लाइब्रेरी अनुदान के लिए प्रशासक से पूछें।"
 
 msgid "You do not have permission for this action in this library."
-msgstr ""
+msgstr "आपको इस लाइब्रेरी में इस क्रिया के लिए अनुमति नहीं है।"
 
 msgid "Your access changed while this request ran. Search again."
-msgstr "आपको इस लाइब्रेरी में इस क्रिया के लिए अनुमति नहीं है।"
+msgstr "इस अनुरोध के चलते समय आपकी पहुंच बदल गई। फिर से खोजें।"

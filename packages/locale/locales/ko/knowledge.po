@@ -13,7 +13,7 @@ msgstr ""
 "Plural-Forms: \n"
 
 msgid "A follow-up question keeps the evidence shown here in context."
-msgstr ""
+msgstr "후속 질문은 여기에 표시된 증거를 문맥과 함께 유지합니다."
 
 msgid "Access to this document was revoked."
 msgstr "이 문서에 대한 접근 권한이 취소되었습니다."
@@ -31,7 +31,7 @@ msgid "Also proposed"
 msgstr ""
 
 msgid "Answer"
-msgstr ""
+msgstr "답변"
 
 msgid "Back to company knowledge"
 msgstr "회사 지식으로 돌아가기"
@@ -49,7 +49,7 @@ msgid "Check freshness"
 msgstr "신선도 확인"
 
 msgid "Choices"
-msgstr ""
+msgstr "선택지"
 
 msgid "Choose either a file or a URL, not both."
 msgstr "파일 또는 URL 중 하나를 선택하십시오. 둘 다는 선택할 수 없습니다."
@@ -62,7 +62,7 @@ msgstr "회사 지식"
 
 #. placeholder {0}: evidence.length
 msgid "Composing an answer from {0} evidence blocks…"
-msgstr ""
+msgstr "{0}개의 증거 블록으로 답변 작성 중…"
 
 msgid "Confirm removal"
 msgstr "제거 확인"
@@ -137,7 +137,7 @@ msgid "Link this document to one existing item, or keep it as a generic document
 msgstr "이 문서를 기존 품목과 연결하거나 일반 문서로 유지하십시오. 연결은 품목을 만들거나 변경하지 않습니다."
 
 msgid "Live record"
-msgstr ""
+msgstr "실시간 기록"
 
 msgid "Machine"
 msgstr "기계"
@@ -189,7 +189,7 @@ msgid "Only the first candidates are shown; narrow the search."
 msgstr "처음 몇 개의 후보만 표시됩니다. 검색을 좁혀보세요."
 
 msgid "Open record"
-msgstr ""
+msgstr "기록 열기"
 
 #. placeholder {0}: selected?.classification ?? ""
 msgid "Owner: {actorId}. Access: {0}. Readers of this library can find the document once it is reviewed and published."
@@ -197,7 +197,7 @@ msgstr "책임자: {actorId}. 접근: {0}. 이 라이브러리의 읽기 권한�
 
 #. placeholder {0}: source.page
 msgid "page {0}"
-msgstr ""
+msgstr "페이지 {0}"
 
 msgid "Page {page}"
 msgstr "페이지 {page}"
@@ -212,7 +212,7 @@ msgid "Part number, MPN, or name"
 msgstr "부품 번호, MPN 또는 이름"
 
 msgid "Partial source answer"
-msgstr ""
+msgstr "부분 소스 답변"
 
 msgid "PDF and image files are captured with their immutable object version before extraction."
 msgstr "PDF 및 이미지 파일은 추출 전에 변경 불가능한 객체 버전으로 캡처됩니다."
@@ -270,13 +270,13 @@ msgid "Search published company manuals by manufacturer, part number, revision, 
 msgstr "제조업체, 부품 번호, 리비전, 기계 또는 키워드로 게시된 회사 매뉴얼을 검색하세요. 모든 결과에서 정확한 원본 버전을 열 수 있습니다."
 
 msgid "Searching authorized sources…"
-msgstr ""
+msgstr "승인된 소스 검색 중…"
 
 msgid "Searching…"
 msgstr "검색 중…"
 
 msgid "see evidence"
-msgstr ""
+msgstr "증거 보기"
 
 msgid "Selected: {fileName}"
 msgstr "선택됨: {fileName}"
@@ -288,7 +288,7 @@ msgid "Some authorized manuals were unavailable."
 msgstr "일부 인증된 매뉴얼을 사용할 수 없었습니다."
 
 msgid "Some sources did not answer; results may be partial."
-msgstr ""
+msgstr "일부 소스에서 응답하지 않았습니다. 결과가 부분적일 수 있습니다."
 
 msgid "Source details"
 msgstr "소스 세부 정보"
@@ -304,7 +304,7 @@ msgid "Source revision: {0}"
 msgstr "소스 리비전: {0}"
 
 msgid "Source unavailable"
-msgstr ""
+msgstr "소스를 사용할 수 없음"
 
 msgid "Source URL"
 msgstr "소스 URL"
@@ -313,7 +313,7 @@ msgid "Sources"
 msgstr "소스"
 
 msgid "Start a new question"
-msgstr ""
+msgstr "새 질문 시작"
 
 msgid "State:"
 msgstr "상태:"
@@ -349,7 +349,7 @@ msgid "The knowledge service could not complete this request."
 msgstr "지식 서비스가 이 요청을 완료할 수 없습니다."
 
 msgid "The request did not complete within its time budget."
-msgstr ""
+msgstr "요청이 시간 제한 내에 완료되지 않았습니다."
 
 msgid "The request was not valid."
 msgstr "요청이 유효하지 않습니다."
@@ -421,7 +421,7 @@ msgid "You cannot add documents to any library. Ask an administrator for a libra
 msgstr "어떤 라이브러리에도 문서를 추가할 수 없습니다. 라이브러리 권한에 대해 관리자에게 문의하세요."
 
 msgid "You do not have permission for this action in this library."
-msgstr ""
+msgstr "이 라이브러리에서 이 작업에 대한 권한이 없습니다."
 
 msgid "Your access changed while this request ran. Search again."
-msgstr "이 라이브러리에서 이 작업에 대한 권한이 없습니다."
+msgstr "이 요청이 실행되는 동안 액세스 권한이 변경되었습니다. 다시 검색하세요."
