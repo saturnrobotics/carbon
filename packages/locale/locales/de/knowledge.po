@@ -13,359 +13,359 @@ msgstr ""
 "Plural-Forms: \n"
 
 msgid "Access to this document was revoked."
-msgstr ""
+msgstr "Der Zugriff auf dieses Dokument wurde widerrufen."
 
 msgid "Acknowledge the changed evidence before publishing."
-msgstr ""
+msgstr "Bestätigen Sie die geänderten Nachweise vor der Veröffentlichung."
 
 msgid "Add a document"
-msgstr ""
+msgstr "Dokument hinzufügen"
 
 msgid "Back to company knowledge"
-msgstr ""
+msgstr "Zurück zur Unternehmenskenntnis"
 
 msgid "Back to manual search"
-msgstr ""
+msgstr "Zurück zur manuellen Suche"
 
 msgid "Captured"
-msgstr ""
+msgstr "Erfasst"
 
 msgid "Captured document"
-msgstr ""
+msgstr "Erfasstes Dokument"
 
 msgid "Check freshness"
-msgstr ""
+msgstr "Aktualität überprüfen"
 
 msgid "Choose either a file or a URL, not both."
-msgstr ""
+msgstr "Wählen Sie entweder eine Datei oder eine URL, aber nicht beides."
 
 msgid "Choose one PDF, image, photo, or HTTPS address."
-msgstr ""
+msgstr "Wählen Sie eine PDF, ein Bild, ein Foto oder eine HTTPS-Adresse."
 
 msgid "Company knowledge"
-msgstr ""
+msgstr "Unternehmenskenntnis"
 
 msgid "Confirm removal"
-msgstr ""
+msgstr "Entfernung bestätigen"
 
 msgid "Corrections are saved. The document can be published."
-msgstr ""
+msgstr "Korrektionen wurden gespeichert. Das Dokument kann veröffentlicht werden."
 
 msgid "Current version"
-msgstr ""
+msgstr "Aktuelle Version"
 
 msgid "Document"
-msgstr ""
+msgstr "Dokument"
 
 msgid "Download original"
-msgstr ""
+msgstr "Original herunterladen"
 
 msgid "Download original · page {page}"
-msgstr ""
+msgstr "Original herunterladen · Seite {page}"
 
 msgid "Drag and drop a PDF or image here, or choose a file."
-msgstr ""
+msgstr "Ziehen Sie eine PDF oder ein Bild hierher, oder wählen Sie eine Datei."
 
 msgid "Drive sources are enrolled by an administrator. Portal sign-in does not authorize Drive access."
-msgstr ""
+msgstr "Laufwerkquellen werden von einem Administrator registriert. Die Portal-Anmeldung autorisiert keinen Laufwerkzugriff."
 
 msgid "Existing item"
-msgstr ""
+msgstr "Vorhandener Artikel"
 
 msgid "Extracted text anchored to page numbers. Page images are not available for this document; download the original to see the layout."
-msgstr ""
+msgstr "Extrahierter Text mit Seitennummern verankert. Seitenbilder sind für dieses Dokument nicht verfügbar; laden Sie das Original herunter, um das Layout anzuzeigen."
 
 msgid "Extracting"
-msgstr ""
+msgstr "Wird extrahiert"
 
 msgid "Extraction failed"
-msgstr ""
+msgstr "Extraktion fehlgeschlagen"
 
 msgid "Fetched from"
-msgstr ""
+msgstr "Abgerufen von"
 
 msgid "Find the right manual."
-msgstr ""
+msgstr "Finden Sie das richtige Handbuch."
 
 msgid "I reviewed this evidence"
-msgstr ""
+msgstr "Ich habe diese Nachweise überprüft"
 
 msgid "Intake review"
-msgstr ""
+msgstr "Eingangsüberprüfung"
 
 msgid "Item association"
-msgstr ""
+msgstr "Artikelzuordnung"
 
 msgid "Item lookup is not available for this library. The document can still be published as a generic document."
-msgstr ""
+msgstr "Artikelsuche ist für diese Bibliothek nicht verfügbar. Das Dokument kann trotzdem als generisches Dokument veröffentlicht werden."
 
 msgid "Item lookup is unavailable right now."
-msgstr ""
+msgstr "Artikelsuche ist derzeit nicht verfügbar."
 
 msgid "Library"
-msgstr ""
+msgstr "Bibliothek"
 
 msgid "Library and access"
-msgstr ""
+msgstr "Bibliothek und Zugriff"
 
 msgid "Link this document to one existing item, or keep it as a generic document. Linking never creates or changes items."
-msgstr ""
+msgstr "Verknüpfen Sie dieses Dokument mit einem vorhandenen Artikel, oder behalten Sie es als generisches Dokument. Das Verknüpfen erstellt oder ändert Artikel nie."
 
 msgid "Machine"
-msgstr ""
+msgstr "Maschine"
 
 msgid "Manual file"
-msgstr ""
+msgstr "Manuelle Datei"
 
 msgid "Manual search is unavailable."
-msgstr ""
+msgstr "Manuelle Suche ist nicht verfügbar."
 
 msgid "Manufacturer"
-msgstr ""
+msgstr "Hersteller"
 
 msgid "Manufacturer, part number, revision, machine, or keyword"
-msgstr ""
+msgstr "Hersteller, Teilenummer, Revision, Maschine oder Stichwort"
 
 msgid "Needs review"
-msgstr ""
+msgstr "Überprüfung erforderlich"
 
 msgid "New evidence changed this field after it was reviewed."
-msgstr ""
+msgstr "Neue Nachweise haben dieses Feld nach der Überprüfung geändert."
 
 msgid "No evidence on any page"
-msgstr ""
+msgstr "Keine Nachweise auf einer Seite"
 
 msgid "No item association (generic document)"
-msgstr ""
+msgstr "Keine Artikel-Zuordnung (generisches Dokument)"
 
 msgid "No matching items."
-msgstr ""
+msgstr "Keine passenden Artikel."
 
 msgid "No matching manuals found."
-msgstr ""
+msgstr "Keine passenden Handbücher gefunden."
 
 msgid "No text has been extracted yet."
-msgstr ""
+msgstr "Es wurde noch kein Text extrahiert."
 
 msgid "Not set"
-msgstr ""
+msgstr "Nicht gesetzt"
 
 msgid "Not yet decided. Saving the review records your choice."
-msgstr ""
+msgstr "Noch nicht entschieden. Das Speichern der Überprüfung speichert Ihre Wahl."
 
 #. placeholder {0}: entity.observedAt
 msgid "Observed {0}"
-msgstr ""
+msgstr "Beobachtet {0}"
 
 msgid "Only public HTTPS addresses are fetched, through the server's fetch policy, and the fetched copy is stored immutably."
-msgstr ""
+msgstr "Es werden nur öffentliche HTTPS-Adressen über die Abrufrichtlinie des Servers abgerufen, und die abgerufene Kopie wird unveränderlich gespeichert."
 
 msgid "Only the first candidates are shown; narrow the search."
-msgstr ""
+msgstr "Nur die ersten Kandidaten werden angezeigt; grenzen Sie die Suche ein."
 
 #. placeholder {0}: selected?.classification ?? ""
 msgid "Owner: {actorId}. Access: {0}. Readers of this library can find the document once it is reviewed and published."
-msgstr ""
+msgstr "Verantwortlicher: {actorId}. Zugriff: {0}. Leser dieser Bibliothek können das Dokument finden, sobald es überprüft und veröffentlicht ist."
 
 msgid "Page {page}"
-msgstr ""
+msgstr "Seite {page}"
 
 msgid "Page not found."
-msgstr ""
+msgstr "Seite nicht gefunden."
 
 msgid "Part number"
-msgstr ""
+msgstr "Teilenummer"
 
 msgid "Part number, MPN, or name"
-msgstr ""
+msgstr "Teilenummer, MPN oder Name"
 
 msgid "PDF and image files are captured with their immutable object version before extraction."
-msgstr ""
+msgstr "PDF- und Bilddateien werden mit ihrer unveränderlichen Objektversion vor der Extraktion erfasst."
 
 msgid "Proposed fields"
-msgstr ""
+msgstr "Vorgeschlagene Felder"
 
 msgid "Proposed fields are ready. Confirm or correct them, then save."
-msgstr ""
+msgstr "Vorgeschlagene Felder sind bereit. Bestätigen oder korrigieren Sie sie und speichern Sie dann."
 
 #. placeholder {0}: model.proposed[field]
 msgid "Proposed: {0}"
-msgstr ""
+msgstr "Vorgeschlagen: {0}"
 
 msgid "Publish manual"
-msgstr ""
+msgstr "Handbuch veröffentlichen"
 
 msgid "Published"
-msgstr ""
+msgstr "Veröffentlicht"
 
 msgid "Remove manual"
-msgstr ""
+msgstr "Handbuch entfernen"
 
 msgid "Remove this manual?"
-msgstr ""
+msgstr "Dieses Handbuch entfernen?"
 
 msgid "Request unavailable"
-msgstr ""
+msgstr "Anforderung nicht verfügbar"
 
 msgid "Review document"
-msgstr ""
+msgstr "Dokument überprüfen"
 
 msgid "Reviewed"
-msgstr ""
+msgstr "Überprüft"
 
 msgid "Revision"
-msgstr ""
+msgstr "Revision"
 
 msgid "Save review"
-msgstr ""
+msgstr "Überprüfung speichern"
 
 msgid "Save the review before publishing."
-msgstr ""
+msgstr "Speichern Sie die Überprüfung vor dem Veröffentlichen."
 
 msgid "Saved correction"
-msgstr ""
+msgstr "Gespeicherte Korrektur"
 
 msgid "Search items"
-msgstr ""
+msgstr "Artikel durchsuchen"
 
 msgid "Search manuals"
-msgstr ""
+msgstr "Handbücher durchsuchen"
 
 msgid "Search published company manuals by manufacturer, part number, revision, machine, or keyword. Open the exact original version from every result."
-msgstr ""
+msgstr "Durchsuchen Sie veröffentlichte Unternehmenshandbücher nach Hersteller, Teilenummer, Revision, Maschine oder Stichwort. Öffnen Sie die genaue Originalversion von jedem Ergebnis."
 
 msgid "Searching…"
-msgstr ""
+msgstr "Wird gesucht…"
 
 msgid "Selected: {fileName}"
-msgstr ""
+msgstr "Ausgewählt: {fileName}"
 
 msgid "Show evidence ({evidenceCount})"
-msgstr ""
+msgstr "Nachweise anzeigen ({evidenceCount})"
 
 msgid "Some authorized manuals were unavailable."
-msgstr ""
+msgstr "Einige autorisierte Handbücher waren nicht verfügbar."
 
 msgid "Source details"
-msgstr ""
+msgstr "Quellendetails"
 
 msgid "Source evidence"
-msgstr ""
+msgstr "Quellennachweise"
 
 msgid "Source pages"
-msgstr ""
+msgstr "Quellseiten"
 
 #. placeholder {0}: entity.sourceRevision
 msgid "Source revision: {0}"
-msgstr ""
+msgstr "Quellrevision: {0}"
 
 msgid "Source URL"
-msgstr ""
+msgstr "Quell-URL"
 
 msgid "Sources"
-msgstr ""
+msgstr "Quellen"
 
 msgid "State:"
-msgstr ""
+msgstr "Zustand:"
 
 msgid "Status {status}"
-msgstr ""
+msgstr "Status {status}"
 
 msgid "Take a photo of a nameplate or label"
-msgstr ""
+msgstr "Fotografieren Sie ein Typenschild oder Etikett"
 
 msgid "Text is being extracted from the document."
-msgstr ""
+msgstr "Der Text wird aus dem Dokument extrahiert."
 
 msgid "The document could not be fetched from that address."
-msgstr ""
+msgstr "Das Dokument konnte nicht von dieser Adresse abgerufen werden."
 
 msgid "The document could not be fetched from that address. Check that it is a public HTTPS link to a PDF or image, or upload the file instead."
-msgstr ""
+msgstr "Das Dokument konnte nicht von dieser Adresse abgerufen werden. Prüfen Sie, ob es sich um einen öffentlichen HTTPS-Link zu einem PDF oder Bild handelt, oder laden Sie die Datei stattdessen hoch."
 
 msgid "The document is queued for extraction."
-msgstr ""
+msgstr "Das Dokument steht in der Warteschlange zur Extraktion."
 
 msgid "The document is stored and waiting for extraction."
-msgstr ""
+msgstr "Das Dokument wird gespeichert und wartet auf die Extraktion."
 
 msgid "The document was captured, but text could not be extracted. Review cannot start until extraction succeeds."
-msgstr ""
+msgstr "Das Dokument wurde erfasst, aber der Text konnte nicht extrahiert werden. Die Überprüfung kann nicht beginnen, bis die Extraktion erfolgreich ist."
 
 msgid "The knowledge company is not configured."
-msgstr ""
+msgstr "Das Wissensunternehmen ist nicht konfiguriert."
 
 msgid "The knowledge service could not complete this request."
-msgstr ""
+msgstr "Der Wissensdienst konnte diese Anfrage nicht abschließen."
 
 msgid "The request was not valid."
-msgstr ""
+msgstr "Die Anfrage war nicht gültig."
 
 msgid "The review could not be saved. Check the fields and unresolved evidence."
-msgstr ""
+msgstr "Die Überprüfung konnte nicht gespeichert werden. Prüfen Sie die Felder und ungelösten Nachweise."
 
 msgid "The review service is unavailable. Nothing was changed."
-msgstr ""
+msgstr "Der Überprüfungsdienst ist nicht verfügbar. Nichts wurde geändert."
 
 msgid "The upload could not be captured."
-msgstr ""
+msgstr "Das Hochladen konnte nicht erfasst werden."
 
 msgid "The upload service is unavailable. The document was not captured."
-msgstr ""
+msgstr "Der Hochlade-Dienst ist nicht verfügbar. Das Dokument wurde nicht erfasst."
 
 msgid "This action is not configured for the library."
-msgstr ""
+msgstr "Diese Aktion ist nicht für die Bibliothek konfiguriert."
 
 msgid "This document changed since you opened it, or the same content was already reviewed. Reload and check before saving again."
-msgstr ""
+msgstr "Dieses Dokument hat sich geändert, seit Sie es geöffnet haben, oder der gleiche Inhalt wurde bereits überprüft. Laden Sie es neu und prüfen Sie, bevor Sie es erneut speichern."
 
 msgid "This document changed while you were working. Reload it and try again."
-msgstr ""
+msgstr "Dieses Dokument hat sich geändert, während Sie daran gearbeitet haben. Laden Sie es neu und versuchen Sie es erneut."
 
 msgid "This document is not available for review."
-msgstr ""
+msgstr "Dieses Dokument ist nicht zur Überprüfung verfügbar."
 
 msgid "This document version is not available."
-msgstr ""
+msgstr "Diese Dokumentversion ist nicht verfügbar."
 
 msgid "This removes the manual from {sourceDisplayName} search and blocks its original version from download."
-msgstr ""
+msgstr "Dies entfernt das Handbuch aus der Suche in {sourceDisplayName} und blockiert das Herunterladen seiner ursprünglichen Version."
 
 msgid "This review was published; it is now read-only."
-msgstr ""
+msgstr "Diese Überprüfung wurde veröffentlicht und ist jetzt schreibgeschützt."
 
 msgid "Title"
-msgstr ""
+msgstr "Titel"
 
 msgid "Upload a manual"
-msgstr ""
+msgstr "Ein Handbuch hochladen"
 
 msgid "Upload a manual, photograph a nameplate, or point at a public address. Access follows the library you choose."
-msgstr ""
+msgstr "Laden Sie ein Handbuch hoch, fotografieren Sie ein Typenschild oder geben Sie eine öffentliche Adresse an. Der Zugriff folgt der von Ihnen gewählten Bibliothek."
 
 msgid "Upload manual"
-msgstr ""
+msgstr "Handbuch hochladen"
 
 msgid "Valid review fields are required."
-msgstr ""
+msgstr "Gültige Überprüfungsfelder sind erforderlich."
 
 msgid "You are not allowed to add documents to the selected library."
-msgstr ""
+msgstr "Sie dürfen keine Dokumente zur ausgewählten Bibliothek hinzufügen."
 
 msgid "You are not allowed to add documents to this library."
-msgstr ""
+msgstr "Sie dürfen keine Dokumente zu dieser Bibliothek hinzufügen."
 
 msgid "You are not allowed to publish in this library. The review was kept."
-msgstr ""
+msgstr "Sie dürfen in dieser Bibliothek nicht veröffentlichen. Die Überprüfung wurde beibehalten."
 
 msgid "You are not allowed to review documents in this library."
-msgstr ""
+msgstr "Sie dürfen Dokumente in dieser Bibliothek nicht überprüfen."
 
 msgid "You are not signed in to this library, or your access was revoked."
-msgstr ""
+msgstr "Sie sind nicht in dieser Bibliothek angemeldet, oder Ihr Zugriff wurde widerrufen."
 
 msgid "You cannot add documents to any library. Ask an administrator for a library grant."
-msgstr ""
+msgstr "Sie können keine Dokumente zu einer Bibliothek hinzufügen. Fragen Sie einen Administrator nach einer Bibliotheksberechtigung."
 
 msgid "You do not have permission for this action in this library."
-msgstr ""
+msgstr "Sie haben keine Berechtigung für diese Aktion in dieser Bibliothek."

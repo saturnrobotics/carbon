@@ -13,359 +13,359 @@ msgstr ""
 "Plural-Forms: \n"
 
 msgid "Access to this document was revoked."
-msgstr ""
+msgstr "Bu belgeye erişim iptal edildi."
 
 msgid "Acknowledge the changed evidence before publishing."
-msgstr ""
+msgstr "Yayınlanmadan önce değişen kanıtı onaylayın."
 
 msgid "Add a document"
-msgstr ""
+msgstr "Belge Ekle"
 
 msgid "Back to company knowledge"
-msgstr ""
+msgstr "Şirket bilgisine geri dön"
 
 msgid "Back to manual search"
-msgstr ""
+msgstr "Elle aramaya geri dön"
 
 msgid "Captured"
-msgstr ""
+msgstr "Yakalandı"
 
 msgid "Captured document"
-msgstr ""
+msgstr "Yakalanan belge"
 
 msgid "Check freshness"
-msgstr ""
+msgstr "Tazeliği kontrol et"
 
 msgid "Choose either a file or a URL, not both."
-msgstr ""
+msgstr "Ya bir dosya ya da bir URL seçin, her ikisini değil."
 
 msgid "Choose one PDF, image, photo, or HTTPS address."
-msgstr ""
+msgstr "Bir PDF, görüntü, fotoğraf veya HTTPS adresi seçin."
 
 msgid "Company knowledge"
-msgstr ""
+msgstr "Şirket bilgisi"
 
 msgid "Confirm removal"
-msgstr ""
+msgstr "Kaldırılmayı onaylayın"
 
 msgid "Corrections are saved. The document can be published."
-msgstr ""
+msgstr "Düzeltmeler kaydedildi. Belge yayınlanabilir."
 
 msgid "Current version"
-msgstr ""
+msgstr "Geçerli sürüm"
 
 msgid "Document"
-msgstr ""
+msgstr "Belge"
 
 msgid "Download original"
-msgstr ""
+msgstr "Orijinalini İndir"
 
 msgid "Download original · page {page}"
-msgstr ""
+msgstr "Orijinalini İndir · sayfa {page}"
 
 msgid "Drag and drop a PDF or image here, or choose a file."
-msgstr ""
+msgstr "Bir PDF veya görüntü sürükleyip buraya bırakın veya bir dosya seçin."
 
 msgid "Drive sources are enrolled by an administrator. Portal sign-in does not authorize Drive access."
-msgstr ""
+msgstr "Sürücü kaynakları bir yönetici tarafından kaydedilir. Portal oturumu Drive erişimini yetkilendirmez."
 
 msgid "Existing item"
-msgstr ""
+msgstr "Mevcut stok kartı"
 
 msgid "Extracted text anchored to page numbers. Page images are not available for this document; download the original to see the layout."
-msgstr ""
+msgstr "Çıkartılan metin sayfa numaralarına bağlıdır. Bu belge için sayfa görüntüleri mevcut değildir; düzeni görmek için orijinalini indirin."
 
 msgid "Extracting"
-msgstr ""
+msgstr "Çıkartılıyor"
 
 msgid "Extraction failed"
-msgstr ""
+msgstr "Çıkartma başarısız"
 
 msgid "Fetched from"
-msgstr ""
+msgstr "Şuradan alındı"
 
 msgid "Find the right manual."
-msgstr ""
+msgstr "Doğru kılavuzu bulun."
 
 msgid "I reviewed this evidence"
-msgstr ""
+msgstr "Bu kanıtı inceledim"
 
 msgid "Intake review"
-msgstr ""
+msgstr "Giriş İncelemesi"
 
 msgid "Item association"
-msgstr ""
+msgstr "Stok kartı ilişkisi"
 
 msgid "Item lookup is not available for this library. The document can still be published as a generic document."
-msgstr ""
+msgstr "Bu kütüphane için stok kartı araması mevcut değildir. Belge yine de jenerik belge olarak yayınlanabilir."
 
 msgid "Item lookup is unavailable right now."
-msgstr ""
+msgstr "Stok kartı araması şu anda kullanılamıyor."
 
 msgid "Library"
-msgstr ""
+msgstr "Kütüphane"
 
 msgid "Library and access"
-msgstr ""
+msgstr "Kütüphane ve erişim"
 
 msgid "Link this document to one existing item, or keep it as a generic document. Linking never creates or changes items."
-msgstr ""
+msgstr "Bu belgeyi mevcut bir stok kartısına bağlayın veya jenerik belge olarak tutun. Bağlama hiçbir zaman stok kartları oluşturmaz veya değiştirmez."
 
 msgid "Machine"
-msgstr ""
+msgstr "Makine"
 
 msgid "Manual file"
-msgstr ""
+msgstr "Manuel dosya"
 
 msgid "Manual search is unavailable."
-msgstr ""
+msgstr "Elle arama kullanılamıyor."
 
 msgid "Manufacturer"
-msgstr ""
+msgstr "Üretici"
 
 msgid "Manufacturer, part number, revision, machine, or keyword"
-msgstr ""
+msgstr "Üretici, parça numarası, revizyon, makine veya anahtar kelime"
 
 msgid "Needs review"
-msgstr ""
+msgstr "İnceleme gerektirir"
 
 msgid "New evidence changed this field after it was reviewed."
-msgstr ""
+msgstr "Yeni kanıt, bu alan incelendikten sonra değiştirildi."
 
 msgid "No evidence on any page"
-msgstr ""
+msgstr "Herhangi bir sayfada kanıt yok"
 
 msgid "No item association (generic document)"
-msgstr ""
+msgstr "Stok kartı ilişkisi yok (genel belge)"
 
 msgid "No matching items."
-msgstr ""
+msgstr "Eşleşen stok kartı yok."
 
 msgid "No matching manuals found."
-msgstr ""
+msgstr "Eşleşen kılavuz bulunamadı."
 
 msgid "No text has been extracted yet."
-msgstr ""
+msgstr "Henüz hiçbir metin çıkarılmadı."
 
 msgid "Not set"
-msgstr ""
+msgstr "Ayarlanmadı"
 
 msgid "Not yet decided. Saving the review records your choice."
-msgstr ""
+msgstr "Henüz karar verilmedi. İnceleme kaydını kaydetmek seçiminizi kaydeder."
 
 #. placeholder {0}: entity.observedAt
 msgid "Observed {0}"
-msgstr ""
+msgstr "Gözlemlenen {0}"
 
 msgid "Only public HTTPS addresses are fetched, through the server's fetch policy, and the fetched copy is stored immutably."
-msgstr ""
+msgstr "Yalnızca genel HTTPS adresleri sunucunun getirme ilkesiyle alınır ve alınan kopya değişmez şekilde depolanır."
 
 msgid "Only the first candidates are shown; narrow the search."
-msgstr ""
+msgstr "Yalnızca ilk adaylar gösterilir; aramayı daraltın."
 
 #. placeholder {0}: selected?.classification ?? ""
 msgid "Owner: {actorId}. Access: {0}. Readers of this library can find the document once it is reviewed and published."
-msgstr ""
+msgstr "Sahip: {actorId}. Erişim: {0}. Bu kitaplığın okuyucuları belgeyi inceldikten ve yayınlandıktan sonra bulabilirler."
 
 msgid "Page {page}"
-msgstr ""
+msgstr "Sayfa {page}"
 
 msgid "Page not found."
-msgstr ""
+msgstr "Sayfa bulunamadı."
 
 msgid "Part number"
-msgstr ""
+msgstr "Parça numarası"
 
 msgid "Part number, MPN, or name"
-msgstr ""
+msgstr "Parça numarası, MPN veya adı"
 
 msgid "PDF and image files are captured with their immutable object version before extraction."
-msgstr ""
+msgstr "PDF ve görüntü dosyaları, çıkarılmadan önce değişmez nesne sürümleriyle yaklanır."
 
 msgid "Proposed fields"
-msgstr ""
+msgstr "Önerilen alanlar"
 
 msgid "Proposed fields are ready. Confirm or correct them, then save."
-msgstr ""
+msgstr "Önerilen alanlar hazır. Bunları onaylayın veya düzeltin, ardından kaydedin."
 
 #. placeholder {0}: model.proposed[field]
 msgid "Proposed: {0}"
-msgstr ""
+msgstr "Önerilen: {0}"
 
 msgid "Publish manual"
-msgstr ""
+msgstr "Kılavuzu yayınla"
 
 msgid "Published"
-msgstr ""
+msgstr "Yayınlandı"
 
 msgid "Remove manual"
-msgstr ""
+msgstr "Kılavuzu kaldır"
 
 msgid "Remove this manual?"
-msgstr ""
+msgstr "Bu kılavuzu kaldırmak istiyor musunuz?"
 
 msgid "Request unavailable"
-msgstr ""
+msgstr "İstek kullanılamıyor"
 
 msgid "Review document"
-msgstr ""
+msgstr "Belgeyi incele"
 
 msgid "Reviewed"
-msgstr ""
+msgstr "İncelendi"
 
 msgid "Revision"
-msgstr ""
+msgstr "Revizyon"
 
 msgid "Save review"
-msgstr ""
+msgstr "İncelemeyi kaydet"
 
 msgid "Save the review before publishing."
-msgstr ""
+msgstr "Yayınlamadan önce incelemeyi kaydedin."
 
 msgid "Saved correction"
-msgstr ""
+msgstr "Kaydedilen düzeltme"
 
 msgid "Search items"
-msgstr ""
+msgstr "Stok kartlarını ara"
 
 msgid "Search manuals"
-msgstr ""
+msgstr "Kılavuzları ara"
 
 msgid "Search published company manuals by manufacturer, part number, revision, machine, or keyword. Open the exact original version from every result."
-msgstr ""
+msgstr "Üretici, parça numarası, revizyon, makine veya anahtar kelimeye göre yayınlanan şirket kılavuzlarını arayın. Her sonuçtan tam orijinal sürümü açın."
 
 msgid "Searching…"
-msgstr ""
+msgstr "Aranıyor…"
 
 msgid "Selected: {fileName}"
-msgstr ""
+msgstr "Seçili: {fileName}"
 
 msgid "Show evidence ({evidenceCount})"
-msgstr ""
+msgstr "Kanıtları göster ({evidenceCount})"
 
 msgid "Some authorized manuals were unavailable."
-msgstr ""
+msgstr "Bazı yetkili kılavuzlar kullanılamadı."
 
 msgid "Source details"
-msgstr ""
+msgstr "Kaynak ayrıntıları"
 
 msgid "Source evidence"
-msgstr ""
+msgstr "Kaynak kanıtı"
 
 msgid "Source pages"
-msgstr ""
+msgstr "Kaynak sayfaları"
 
 #. placeholder {0}: entity.sourceRevision
 msgid "Source revision: {0}"
-msgstr ""
+msgstr "Kaynak Revizyon: {0}"
 
 msgid "Source URL"
-msgstr ""
+msgstr "Kaynak URL"
 
 msgid "Sources"
-msgstr ""
+msgstr "Kaynaklar"
 
 msgid "State:"
-msgstr ""
+msgstr "Durum:"
 
 msgid "Status {status}"
-msgstr ""
+msgstr "Durum {status}"
 
 msgid "Take a photo of a nameplate or label"
-msgstr ""
+msgstr "Ad plakasının veya etiketinin fotoğrafını çekin"
 
 msgid "Text is being extracted from the document."
-msgstr ""
+msgstr "Belgeden metin çıkarılıyor."
 
 msgid "The document could not be fetched from that address."
-msgstr ""
+msgstr "Belge o adresten getirilemedi."
 
 msgid "The document could not be fetched from that address. Check that it is a public HTTPS link to a PDF or image, or upload the file instead."
-msgstr ""
+msgstr "Belge o adresten getirilemedi. Bunun genel bir HTTPS bağlantısı olduğunu kontrol edin; PDF veya resim olmalıdır ya da bunun yerine dosyayı yükleyin."
 
 msgid "The document is queued for extraction."
-msgstr ""
+msgstr "Belge çıkarma için kuyrukta."
 
 msgid "The document is stored and waiting for extraction."
-msgstr ""
+msgstr "Belge depolanmış ve çıkarma için bekleniyor."
 
 msgid "The document was captured, but text could not be extracted. Review cannot start until extraction succeeds."
-msgstr ""
+msgstr "Belge yakalandı ancak metin çıkarılamadı. İnceleme başlamadan önce çıkarma başarılı olmalıdır."
 
 msgid "The knowledge company is not configured."
-msgstr ""
+msgstr "Bilgi şirketi yapılandırılmamıştır."
 
 msgid "The knowledge service could not complete this request."
-msgstr ""
+msgstr "Bilgi Hizmeti bu istemi tamamlayamadı."
 
 msgid "The request was not valid."
-msgstr ""
+msgstr "İstek geçerli değildi."
 
 msgid "The review could not be saved. Check the fields and unresolved evidence."
-msgstr ""
+msgstr "İnceleme kaydedilemedi. Alanları ve çözülmemiş kanıtları kontrol edin."
 
 msgid "The review service is unavailable. Nothing was changed."
-msgstr ""
+msgstr "İnceleme Hizmeti kullanılamıyor. Hiçbir şey değiştirilmedi."
 
 msgid "The upload could not be captured."
-msgstr ""
+msgstr "Yükleme yakalanmadı."
 
 msgid "The upload service is unavailable. The document was not captured."
-msgstr ""
+msgstr "Yükleme Hizmeti kullanılamıyor. Belge yakalanmadı."
 
 msgid "This action is not configured for the library."
-msgstr ""
+msgstr "Bu işlem kütüphane için yapılandırılmamıştır."
 
 msgid "This document changed since you opened it, or the same content was already reviewed. Reload and check before saving again."
-msgstr ""
+msgstr "Açtığınız dönem içinde bu belge değişti ya da aynı içerik zaten incelenmişti. Yeniden kaydetmeden önce yeniden yükleyin ve kontrol edin."
 
 msgid "This document changed while you were working. Reload it and try again."
-msgstr ""
+msgstr "Çalışırken bu belge değişti. Yeniden yükleyin ve tekrar deneyin."
 
 msgid "This document is not available for review."
-msgstr ""
+msgstr "Bu belge inceleme için kullanılamıyor."
 
 msgid "This document version is not available."
-msgstr ""
+msgstr "Bu belge sürümü kullanılamıyor."
 
 msgid "This removes the manual from {sourceDisplayName} search and blocks its original version from download."
-msgstr ""
+msgstr "Bu, kılavuzu {sourceDisplayName} aramasından kaldırır ve orijinal sürümünün indirilmesini engeller."
 
 msgid "This review was published; it is now read-only."
-msgstr ""
+msgstr "Bu inceleme yayınlandı; şimdi salt okunurdur."
 
 msgid "Title"
-msgstr ""
+msgstr "Başlık"
 
 msgid "Upload a manual"
-msgstr ""
+msgstr "Bir kılavuz yükleyin"
 
 msgid "Upload a manual, photograph a nameplate, or point at a public address. Access follows the library you choose."
-msgstr ""
+msgstr "Bir kılavuz yükleyin, bir ad plakasının fotoğrafını çekin veya herkese açık bir adrese işaret edin. Erişim, seçtiğiniz kütüphaneyi takip eder."
 
 msgid "Upload manual"
-msgstr ""
+msgstr "Kılavuz Yükle"
 
 msgid "Valid review fields are required."
-msgstr ""
+msgstr "Geçerli inceleme alanları gereklidir."
 
 msgid "You are not allowed to add documents to the selected library."
-msgstr ""
+msgstr "Seçilen kütüphaneye belgeler eklemenize izin verilmiyor."
 
 msgid "You are not allowed to add documents to this library."
-msgstr ""
+msgstr "Bu kütüphaneye belgeler eklemenize izin verilmiyor."
 
 msgid "You are not allowed to publish in this library. The review was kept."
-msgstr ""
+msgstr "Bu kütüphanede yayınlamanıza izin verilmiyor. İnceleme tutuldu."
 
 msgid "You are not allowed to review documents in this library."
-msgstr ""
+msgstr "Bu kütüphanedeki belgeleri incelemenize izin verilmiyor."
 
 msgid "You are not signed in to this library, or your access was revoked."
-msgstr ""
+msgstr "Bu kütüphaneye oturum açmamışsınız veya erişiminiz iptal edilmiştir."
 
 msgid "You cannot add documents to any library. Ask an administrator for a library grant."
-msgstr ""
+msgstr "Hiçbir kütüphaneye belge ekleyemezsiniz. Bir kütüphane izni için yöneticiye sorun."
 
 msgid "You do not have permission for this action in this library."
-msgstr ""
+msgstr "Bu kütüphanede bu işlem için izniniz yok."
