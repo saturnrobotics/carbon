@@ -27,7 +27,13 @@ describe("ticket action HTTP handler", () => {
     const fetchImpl = vi.fn().mockResolvedValue(
       new Response(
         JSON.stringify({
-          ticket: { id: "ticket:1" },
+          ticket: {
+            id: "ticket:1",
+            board_id: "board:maintenance",
+            column_id: "column:pending",
+            title: "Inspect motor",
+            due_date: "2026-09-14"
+          },
           ticket_url: "/tickets/ticket:1",
           replayed: false
         }),

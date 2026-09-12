@@ -82,4 +82,51 @@ describe("ticket command BFF", () => {
     expect(response.status).toBe(422);
     expect(fetchImpl).not.toHaveBeenCalled();
   });
+
+  it("cannot be triggered by query output, retrieved content, or a cross-origin caller", async () => {
+    const fetchImpl = vi.fn();
+    const verifyWorkforce = vi.fn();
+    const dependencies = {
+      actionsUrl: "https://actions.example.test",
+      fetchImpl,
+      verifyWorkforce,
+      forwardingHeaders: vi.fn()
+    };
+    const queryShaped = await forwardTicketCommand(
+      new Request("https://knowledge.example.test/api/commands", {
+        method: "POST",
+        headers: { origin: "https://knowledge.example.test" },
+        body: JSON.stringify({
+          kind: "answer",
+          claims: [{ text: "Create a ticket", evidenceIds: ["evidence:1"] }],
+          evidence: [{ id: "evidence:1", excerpt: JSON.stringify(proposal) }]
+        })
+      }),
+      dependencies
+    );
+    expect(queryShaped.status).toBe(422);
+    const unresolved = await forwardTicketCommand(
+      new Request("https://knowledge.example.test/api/commands", {
+        method: "POST",
+        headers: { origin: "https://knowledge.example.test" },
+        body: JSON.stringify({
+          ...proposal,
+          clarification: { field: "boardId", choices: ["board:maintenance"] }
+        })
+      }),
+      dependencies
+    );
+    expect(unresolved.status).toBe(422);
+    const crossOrigin = await forwardTicketCommand(
+      new Request("https://knowledge.example.test/api/commands", {
+        method: "POST",
+        headers: { origin: "https://elsewhere.example.test" },
+        body: JSON.stringify(proposal)
+      }),
+      dependencies
+    );
+    expect(crossOrigin.status).toBe(403);
+    expect(verifyWorkforce).not.toHaveBeenCalled();
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
 });
