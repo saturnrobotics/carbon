@@ -291,7 +291,9 @@ export const evidenceSchema = z
     observedAt: timestampSchema,
     effectiveAt: timestampSchema.optional(),
     policyVersion: boundedIdentifierSchema,
-    freshness: z.enum(["current", "cached", "partial", "unavailable"])
+    freshness: z.enum(["current", "cached", "partial", "unavailable"]),
+    /** Which ranking produced the block; a vector block says whether the index or the exact baseline ran. */
+    retrievalPath: z.enum(["lexical", "vector-exact", "vector-ann"]).optional()
   })
   .strict();
 
