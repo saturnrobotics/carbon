@@ -360,13 +360,25 @@ exports into the same module namespace), and writes `apps/erp/app/routes/api+/mc
   the service is called; `call_tool.arguments` is `z.any()`, so the dispatch is the gate.
   Pinned by `dispatch-parity.test.ts` (cases o/p/q) and `mcp-tool-metadata.test.ts`.
 
-## The 15 modules (current `tool-metadata.json`)
+## The 16 modules (current `tool-metadata.json`)
 
 `account` · `accounting` · `documents` · `inventory` · `invoicing` · `items` ·
-`people` · `production` · `purchasing` · `quality` · `resources` · `sales` ·
-`settings` · `shared` · `users`. Each maps 1:1 to a
+`knowledge` · `people` · `production` · `purchasing` · `quality` · `resources` ·
+`sales` · `settings` · `shared` · `users`. Each maps 1:1 to a
 `apps/erp/app/modules/<module>/<module>.service.ts` namespace (accounting is the
 `.ee`-licensed `accounting.ee.service.ts`; the registry key stays `accounting`).
+
+`knowledge` is in the manifest but is **not disclosed**: its operations serve
+only the delegated `workforce` auth kind (the v1 gate answers NOT_FOUND to API
+keys, OAuth connectors and in-process sessions), so `isDisclosedOperation` /
+`DISCLOSED_OPERATIONS` in `api+/v1+/lib/operations.server.ts` withhold it from
+`search_tools` (the filter is inside `createCatalogSearch`), `describe_tool`
+(`disclosedOperationsByName`), `/.well-known/mcp.json`, the server instructions
+and `/api/v1/openapi.json` (generated from `disclosedRouter`). It stays in
+`OPERATIONS`, the full `router` and the committed digest so the permission pin
+still covers it. The module's own allowlist (`KNOWLEDGE_OPERATIONS` in
+`~/modules/knowledge/knowledge.server.ts`) maps each operation to its workforce
+capability; pinned by `api+/v1+/lib/knowledge.gate.test.ts`.
 
 <!-- UNVERIFIED: exact per-module/total tool counts (~1200) drift on every regen — read tool-metadata.json for the live number, don't trust a hardcoded count. -->
 

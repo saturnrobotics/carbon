@@ -7,6 +7,10 @@ import type { PrincipalAssurance } from "@carbon/knowledge/identity.server";
 import { STEP_UP_REQUIRED_CODE } from "@carbon/knowledge/step-up";
 import { ORPCError, os } from "@orpc/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import {
+  isKnowledgeOperation,
+  knowledgeCapabilityFor
+} from "~/modules/knowledge/knowledge.server";
 import { isMcpBlockedTool } from "../../mcp+/lib/mcp-blocked-tools";
 
 /**
@@ -61,22 +65,19 @@ export function assertScopes(
   }
 }
 
-const WORKFORCE_CAPABILITIES: Readonly<Record<string, string>> = {
-  knowledge_resolveItems: "knowledge.read",
-  knowledge_getRecentReceipts: "knowledge.read",
-  knowledge_getRecentReceiptItems: "knowledge.read",
-  knowledge_getItemIdentity: "knowledge.read",
-  knowledge_getDocumentReferences: "knowledge.read",
-  knowledge_getPurchaseStatus: "knowledge.read",
-  knowledge_createProcurementDraft: "carbon.procurement.draft"
-};
-
+/**
+ * A delegated workforce caller may run an operation only when the caller
+ * registry names it, the principal holds the capability the knowledge module
+ * assigns to it (`KNOWLEDGE_OPERATIONS` — the one allowlist), and the user's
+ * fresh Carbon permissions cover the operation for the active company. An
+ * operation the module does not list has no capability and is refused.
+ */
 export function assertWorkforceAuthorization(
   context: AuthedContext,
   meta: ManifestEntry
 ): void {
   const workforce = context.workforce;
-  const capability = WORKFORCE_CAPABILITIES[meta.name];
+  const capability = knowledgeCapabilityFor(meta.name);
   if (
     !workforce ||
     !capability ||
@@ -115,11 +116,17 @@ export function assertWorkforceAuthorization(
 /** Per-operation gate middleware — runs the scope check for API-key callers.
  *  The blocked-name guard is belt-and-braces: blocked tools are already excluded
  *  from the manifest at generation time, so this only fires if that exclusion
- *  ever regresses — the surface stays closed instead of silently opening. */
+ *  ever regresses — the surface stays closed instead of silently opening.
+ *
+ *  Knowledge operations exist only for delegated workforce callers. Every other
+ *  kind — API key, OAuth connector, in-process session — gets NOT_FOUND rather
+ *  than FORBIDDEN, so to them the surface is invisible, not merely closed; the
+ *  same rule keeps those operations out of MCP discovery and the public OpenAPI
+ *  document (`isDisclosedOperation` in operations.server.ts). */
 export const gate = (meta: ManifestEntry) =>
   base.middleware(async ({ context, next }) => {
     if (isMcpBlockedTool(meta.name)) throw new ORPCError("NOT_FOUND");
-    if (meta.module === "knowledge" && context.authKind !== "workforce") {
+    if (isKnowledgeOperation(meta) && context.authKind !== "workforce") {
       throw new ORPCError("NOT_FOUND");
     }
     if (context.authKind === "api-key") {

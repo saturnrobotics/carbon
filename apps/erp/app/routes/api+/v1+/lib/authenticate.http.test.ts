@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => ({
   getCarbonServiceRole: vi.fn(),
   getUserScopedClient: vi.fn(),
   getFreshUserClaims: vi.fn(),
+  userHasVerifiedTotpFactor: vi.fn(),
   verifyServiceToken: vi.fn(),
   verifyIapToken: vi.fn(),
   resolveItems: vi.fn()
@@ -51,6 +52,12 @@ vi.mock("@carbon/auth/client.server", () => ({
 }));
 vi.mock("@carbon/auth/users.server", () => ({
   getFreshUserClaims: mocks.getFreshUserClaims
+}));
+// The assurance step (Task 03) reads the actor's factor state through Redis and
+// the service-role client; it runs only after a verified identity, which no case
+// here reaches. Replaced at the same boundary as the other infrastructure.
+vi.mock("@carbon/auth/mfa.server", () => ({
+  userHasVerifiedTotpFactor: mocks.userHasVerifiedTotpFactor
 }));
 vi.mock("@carbon/knowledge/identity.server", async (importOriginal) => {
   const actual =
