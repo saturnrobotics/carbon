@@ -52,6 +52,12 @@ vi.mock("@carbon/auth/client.server", () => ({
 vi.mock("@carbon/auth/users.server", () => ({
   getFreshUserClaims: mocks.getFreshUserClaims
 }));
+// The assurance check imports the MFA service, whose Supabase barrel reaches
+// @carbon/react and the Lingui macros vitest cannot compile. None of these
+// cases gets past verification, so the verdict itself is never consulted.
+vi.mock("@carbon/auth/mfa.server", () => ({
+  userHasVerifiedTotpFactor: vi.fn(async () => false)
+}));
 vi.mock("@carbon/knowledge/identity.server", async (importOriginal) => {
   const actual =
     await importOriginal<typeof import("@carbon/knowledge/identity.server")>();
