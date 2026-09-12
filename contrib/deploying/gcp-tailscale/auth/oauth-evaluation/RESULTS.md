@@ -10,10 +10,17 @@ Adoption gate: **failed**
 {
   "adoption_gate": "failed",
   "metadata": {
-    "compose_project": "carbon-oauth-evaluation-4dffe95d",
+    "compose_project": "carbon-oauth-evaluation-609d05ff",
     "firebase_live_verification": "untested",
+    "fixtures": {
+      "realtime_tenant_host": "realtime-dev.localhost",
+      "storage_denied_bucket": "evaluation",
+      "storage_granted_bucket": "evaluation-granted"
+    },
     "gate_failures": [
       "postgrest_rpc_replay",
+      "storage_write_replay_granted_policy",
+      "realtime_write_replay",
       "privileged_function_replay",
       "gotrue_user_mutation_replay",
       "wrong_audience",
@@ -46,9 +53,57 @@ Adoption gate: **failed**
     },
     {
       "evidence": {
+        "body": null,
+        "status": 200
+      },
+      "expected": "200",
+      "id": "storage_health",
+      "observed": "200",
+      "status": "pass"
+    },
+    {
+      "evidence": {
+        "body": {
+          "allowed_mime_types": null,
+          "created_at": "2026-09-11T21:04:18.433Z",
+          "file_size_limit": null,
+          "id": "evaluation-granted",
+          "name": "evaluation-granted",
+          "owner": "",
+          "public": false,
+          "updated_at": "2026-09-11T21:04:18.433Z"
+        },
+        "status": 200
+      },
+      "expected": "200 (storage-init seeded both buckets)",
+      "id": "storage_fixture",
+      "observed": "200",
+      "status": "pass"
+    },
+    {
+      "evidence": {
+        "body": {
+          "data": {
+            "connected_cluster": 0,
+            "db_connected": false,
+            "healthy": true,
+            "node": "realtime@127.0.0.1",
+            "region": null,
+            "replication_connected": false
+          }
+        },
+        "status": 200
+      },
+      "expected": "200",
+      "id": "realtime_health",
+      "observed": "200",
+      "status": "pass"
+    },
+    {
+      "evidence": {
         "body": {
           "access_token": "<redacted>",
-          "expires_at": 1788832297,
+          "expires_at": 1789164258,
           "expires_in": 3600,
           "refresh_token": "<redacted>",
           "token_type": "bearer",
@@ -60,34 +115,34 @@ Adoption gate: **failed**
               ]
             },
             "aud": "authenticated",
-            "confirmed_at": "2026-09-08T00:51:37.366169Z",
-            "created_at": "2026-09-08T00:51:37.363716Z",
+            "confirmed_at": "2026-09-11T21:04:18.542288Z",
+            "created_at": "2026-09-11T21:04:18.539918Z",
             "email": "oauth-evaluation@example.com",
-            "email_confirmed_at": "2026-09-08T00:51:37.366169Z",
-            "id": "db87c044-12a4-42e5-b400-6af285ba7483",
+            "email_confirmed_at": "2026-09-11T21:04:18.542288Z",
+            "id": "deda88fe-c6d1-4316-a856-1b0177482389",
             "identities": [
               {
-                "created_at": "2026-09-08T00:51:37.365018Z",
+                "created_at": "2026-09-11T21:04:18.541205Z",
                 "email": "oauth-evaluation@example.com",
-                "id": "db87c044-12a4-42e5-b400-6af285ba7483",
+                "id": "deda88fe-c6d1-4316-a856-1b0177482389",
                 "identity_data": {
                   "email": "oauth-evaluation@example.com",
                   "email_verified": false,
                   "phone_verified": false,
-                  "sub": "db87c044-12a4-42e5-b400-6af285ba7483"
+                  "sub": "deda88fe-c6d1-4316-a856-1b0177482389"
                 },
-                "identity_id": "42b6f6e9-41e8-4dc4-9e0c-ac562b7c90d4",
-                "last_sign_in_at": "2026-09-08T00:51:37.365001Z",
+                "identity_id": "55faa742-335d-44a7-af4c-576d1b0661f9",
+                "last_sign_in_at": "2026-09-11T21:04:18.541191Z",
                 "provider": "email",
-                "updated_at": "2026-09-08T00:51:37.365018Z",
-                "user_id": "db87c044-12a4-42e5-b400-6af285ba7483"
+                "updated_at": "2026-09-11T21:04:18.541205Z",
+                "user_id": "deda88fe-c6d1-4316-a856-1b0177482389"
               }
             ],
             "is_anonymous": false,
-            "last_sign_in_at": "2026-09-08T00:51:37.431602963Z",
+            "last_sign_in_at": "2026-09-11T21:04:18.604573544Z",
             "phone": "",
             "role": "authenticated",
-            "updated_at": "2026-09-08T00:51:37.432959Z",
+            "updated_at": "2026-09-11T21:04:18.60573Z",
             "user_metadata": {
               "email_verified": true
             }
@@ -114,14 +169,14 @@ Adoption gate: **failed**
     {
       "evidence": {
         "authorize": {
-          "body": "<a href=\"http://127.0.0.1:18999/oauth/authorizations?authorization_id=vf3n6s26on7liscngymp5pjjerrmojdq\">Found</a>.\n\n",
-          "location": "http://127.0.0.1:18999/oauth/authorizations?authorization_id=vf3n6s26on7liscngymp5pjjerrmojdq",
+          "body": "<a href=\"http://127.0.0.1:18999/oauth/authorizations?authorization_id=5l7qtigqmsr3m6quc2ns7ke4bcpvtvfa\">Found</a>.\n\n",
+          "location": "http://127.0.0.1:18999/oauth/authorizations?authorization_id=5l7qtigqmsr3m6quc2ns7ke4bcpvtvfa",
           "status": 302
         },
         "code_issued": true,
         "consent": {
           "body": {
-            "redirect_url": "http://127.0.0.1:18994/callback\\1<redacted>&state=synthetic-state"
+            "redirect_url": "http://127.0.0.1:18994/callback?code=<redacted>&state=synthetic-state"
           },
           "status": 200
         }
@@ -135,10 +190,10 @@ Adoption gate: **failed**
       "evidence": {
         "claims": {
           "aud": "authenticated",
-          "client_id": "f1c2f10a-e6a4-4c91-8969-c7b2fdb7aead",
+          "client_id": "774306e5-53fb-456c-b043-ab78b66f7f96",
           "role": "authenticated",
           "scope": "email profile",
-          "sub": "db87c044-12a4-42e5-b400-6af285ba7483"
+          "sub": "deda88fe-c6d1-4316-a856-1b0177482389"
         },
         "header_alg": "HS256",
         "response": {
@@ -195,25 +250,85 @@ Adoption gate: **failed**
     },
     {
       "evidence": {
-        "error": "Remote end closed connection without response",
-        "status": null
+        "lookup": {
+          "body": {
+            "error": "not_found",
+            "message": "Object not found",
+            "statusCode": "404"
+          },
+          "status": 400
+        },
+        "write": {
+          "body": {
+            "error": "Unauthorized",
+            "message": "new row violates row-level security policy",
+            "statusCode": "403"
+          },
+          "status": 400
+        }
       },
-      "expected": "401/403",
+      "expected": "401/403 and no object written",
       "id": "storage_write_replay",
-      "note": "A closed connection is recorded as untested rather than treated as a denial.",
-      "observed": "None",
-      "status": "untested"
+      "note": "The bucket has no INSERT policy, so this measures Storage's default deny for the read token.",
+      "observed": "http=400 body.statusCode=403 object_written=false",
+      "status": "pass"
     },
     {
       "evidence": {
-        "error": "Remote end closed connection without response",
-        "status": null
+        "lookup": {
+          "body": {
+            "bucket_id": "evaluation-granted",
+            "cache_control": "no-cache",
+            "content_type": "text/plain",
+            "created_at": "2026-09-11T21:04:18.759Z",
+            "etag": "\"5f06b85e1619b2b8b56f7b758a0a310a\"",
+            "id": "e8c260c2-36f5-4538-96ab-0b751ae56510",
+            "last_modified": "2026-09-11T21:04:18.759Z",
+            "metadata": {},
+            "name": "replayed.txt",
+            "size": 9,
+            "version": "089ab707-5967-46a9-9c9f-7a59e947a301"
+          },
+          "status": 200
+        },
+        "write": {
+          "body": {
+            "Id": "e8c260c2-36f5-4538-96ab-0b751ae56510",
+            "Key": "evaluation-granted/replayed.txt"
+          },
+          "status": 200
+        }
       },
-      "expected": "deny or explicitly unsupported",
+      "expected": "401/403 and no object written",
+      "id": "storage_write_replay_granted_policy",
+      "note": "The fixture intentionally grants authenticated INSERT on this bucket, mirroring the privileged-RPC fixture: a written object shows Storage does not distinguish the read client's token from a first-party session.",
+      "observed": "http=200 body.statusCode=none object_written=true",
+      "status": "fail"
+    },
+    {
+      "evidence": {
+        "controls": {
+          "no_token": {
+            "body": {
+              "message": "Unauthorized"
+            },
+            "status": 401
+          },
+          "private_topic": {
+            "body": null,
+            "status": 202
+          }
+        },
+        "write": {
+          "body": null,
+          "status": 202
+        }
+      },
+      "expected": "401/403",
       "id": "realtime_write_replay",
-      "note": "REST broadcast is the pinned Realtime write surface; an unavailable endpoint is reported as untested.",
-      "observed": "None",
-      "status": "untested"
+      "note": "REST broadcast is the pinned Realtime write surface, addressed to the seeded realtime-dev tenant; 202 Accepted means the read token was accepted as a broadcast writer. The no-token control shows the endpoint gates only on JWT validity.",
+      "observed": "http=202",
+      "status": "fail"
     },
     {
       "evidence": {
@@ -239,34 +354,34 @@ Adoption gate: **failed**
             ]
           },
           "aud": "authenticated",
-          "confirmed_at": "2026-09-08T00:51:37.366169Z",
-          "created_at": "2026-09-08T00:51:37.363716Z",
+          "confirmed_at": "2026-09-11T21:04:18.542288Z",
+          "created_at": "2026-09-11T21:04:18.539918Z",
           "email": "oauth-evaluation@example.com",
-          "email_confirmed_at": "2026-09-08T00:51:37.366169Z",
-          "id": "db87c044-12a4-42e5-b400-6af285ba7483",
+          "email_confirmed_at": "2026-09-11T21:04:18.542288Z",
+          "id": "deda88fe-c6d1-4316-a856-1b0177482389",
           "identities": [
             {
-              "created_at": "2026-09-08T00:51:37.365018Z",
+              "created_at": "2026-09-11T21:04:18.541205Z",
               "email": "oauth-evaluation@example.com",
-              "id": "db87c044-12a4-42e5-b400-6af285ba7483",
+              "id": "deda88fe-c6d1-4316-a856-1b0177482389",
               "identity_data": {
                 "email": "oauth-evaluation@example.com",
                 "email_verified": false,
                 "phone_verified": false,
-                "sub": "db87c044-12a4-42e5-b400-6af285ba7483"
+                "sub": "deda88fe-c6d1-4316-a856-1b0177482389"
               },
-              "identity_id": "42b6f6e9-41e8-4dc4-9e0c-ac562b7c90d4",
-              "last_sign_in_at": "2026-09-08T00:51:37.365001Z",
+              "identity_id": "55faa742-335d-44a7-af4c-576d1b0661f9",
+              "last_sign_in_at": "2026-09-11T21:04:18.541191Z",
               "provider": "email",
-              "updated_at": "2026-09-08T00:51:37.365018Z",
-              "user_id": "db87c044-12a4-42e5-b400-6af285ba7483"
+              "updated_at": "2026-09-11T21:04:18.541205Z",
+              "user_id": "deda88fe-c6d1-4316-a856-1b0177482389"
             }
           ],
           "is_anonymous": false,
-          "last_sign_in_at": "2026-09-08T00:51:37.55886Z",
+          "last_sign_in_at": "2026-09-11T21:04:18.709341Z",
           "phone": "",
           "role": "authenticated",
-          "updated_at": "2026-09-08T00:51:37.654327Z",
+          "updated_at": "2026-09-11T21:04:18.864503Z",
           "user_metadata": {
             "email_verified": true,
             "oauth_probe": "write"
