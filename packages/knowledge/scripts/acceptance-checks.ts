@@ -650,7 +650,7 @@ export const checks: Record<string, Check> = {
   },
 
   async "re-extraction-preserves-corrections"() {
-    const reconciled = reconcileExtraction({ fields: { partNumber: "MTR-10O" }, evidence: {}, unresolved: [], warnings: ["ocr"] }, { fields: { partNumber: "MTR-100-B", revision: "B" }, evidence: { partNumber: [{ page: 1, text: "MTR-100-B" }] }, unresolved: [], warnings: [] }, { partNumber: { value: "MTR-100", decision: "corrected", evidence: ["p1"] } });
+    const reconciled = reconcileExtraction({ contractVersion: 1, fields: { partNumber: "MTR-10O" }, proposed: {}, evidence: {}, unresolved: [], warnings: ["ocr"] }, { contractVersion: 1, fields: { partNumber: "MTR-100-B", revision: "B" }, proposed: {}, evidence: { partNumber: [{ page: 1, text: "MTR-100-B" }] }, unresolved: [], warnings: [] }, { partNumber: { value: "MTR-100", decision: "corrected", evidence: ["p1"] } });
     assert(reconciled.fields.partNumber === "MTR-100" && reconciled.unresolved.includes("partNumber"), "re-extraction overwrote an accepted correction");
     assert(reconciled.fields.revision === "B" && reconciled.warnings.includes("ocr"), "re-extraction dropped new fields or prior warnings");
     const bytes = { kind: "object" as const, objectKey: "intake/manual.pdf", generation: "1", sha256: "a".repeat(64), mimeType: "application/pdf", bytes: 3 };
@@ -703,7 +703,7 @@ export const checks: Record<string, Check> = {
   },
 
   async "connector-contract"() {
-    const identity = { principal, companyGroupId: "group_alpha", allowedOperations: ["knowledge.query"], accessLevels: [] };
+    const identity = { principal, companyGroupId: "group_alpha", allowedOperations: ["knowledge.query"], accessLevels: [], assurance: { mode: "carbon-mfa" as const } };
     const page = { items: [{ id: "part-1", type: "pcb", title: "Controller", revision: "B", fields: { status: "released" } }], observedAt: "2026-09-01T00:00:00Z", sourceRevision: "rev-7", status: "partial", incompleteReason: "source deleted two entities since the cursor", nextCursor: "cursor-2" };
     const registry = createSourceRegistry({ version: 1, sources: [{ id: "carbon", kind: "carbon", origin: "https://carbon.example.test/", audience: "carbon" }, { id: "kanban", kind: "kanban", origin: "https://kanban.example.test/", audience: "kanban" }, { id: "engineering", kind: "engineering", origin: "https://engineering.example.test/", audience: "engineering" }, { id: "crm", kind: "crm", origin: "https://crm.example.test/", audience: "crm" }] }, { request: new Request("https://query.example.test/"), identity, headers: async () => new Headers(), fetch: async (input) => { const path = new URL(String(input)).pathname; if (path === "/api/knowledge/access/check") return Response.json({ allowedIds: ["expanded"], policyVersion: "1", validUntil: "2026-09-01T00:00:00Z" }); return Response.json(page); } });
     const kinds = registry.list().map((source) => source.kind);
