@@ -3,6 +3,7 @@
 import type { Browser, BrowserContext, Page } from "@playwright/test";
 import { expect } from "@playwright/test";
 import { ACTOR_COOKIE, type Actor, ASSERTION_COOKIE } from "./assertion";
+import { submitSearch, waitForClientNavigation } from "./browser";
 
 export const e2eGateway =
   process.env.KNOWLEDGE_E2E_GATEWAY_URL ?? "http://127.0.0.1:4301";
@@ -71,24 +72,27 @@ export function assertionPage(browser: Browser, assertion: string) {
   );
 }
 
-export async function waitForClientNavigation(page: Page) {
-  await page.waitForFunction(() =>
-    Boolean(
-      (window as { __reactRouterManifest?: unknown }).__reactRouterManifest
-    )
-  );
-  await page.waitForTimeout(250);
-}
+/** One hydration barrier for the whole suite. This file used to carry its own,
+ * waiting on `window.__reactRouterManifest` — which is set by an inline script
+ * in the server-rendered HTML and so is true even when the client entry never
+ * ran. `./browser` replaced it with `__reactRouterDataRouter` plus bounded
+ * reloads; re-exporting rather than keeping a second copy is what stops the
+ * two from drifting apart again. */
+export { waitForClientNavigation } from "./browser";
 
 export async function search(page: Page, term: string) {
   await page.goto("/");
-  await page.getByLabel("Search manuals").fill(term);
+  // The submit button is disabled until a hydrated client holds the typed text,
+  // so without these two the click waits out `actionTimeout` against a
+  // permanently disabled button and the failure is reported as the response
+  // that never arrived. Observed twice in seven cold iterations before this.
+  await waitForClientNavigation(page);
   const response = page.waitForResponse(
     (candidate) =>
       new URL(candidate.url()).pathname === "/api/query" &&
       candidate.request().method() === "POST"
   );
-  await page.getByRole("button", { name: "Search manuals" }).click();
+  await submitSearch(page, term);
   return (await response).status();
 }
 
