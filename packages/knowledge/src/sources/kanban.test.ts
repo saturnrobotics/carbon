@@ -21,7 +21,8 @@ const identity = {
   },
   companyGroupId: "group-a",
   allowedOperations: [],
-  accessLevels: []
+  accessLevels: [],
+  assurance: { mode: "carbon-mfa" as const }
 };
 const ticket = {
   id: "ticket-1",

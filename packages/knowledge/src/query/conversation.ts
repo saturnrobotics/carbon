@@ -1,8 +1,9 @@
 import { z } from "zod";
 import { KNOWLEDGE_LIMITS } from "../contracts";
+import { QUERY_BUDGETS } from "./budgets";
 
 /** Matches the authorized cache envelope: a follow-up never references more. */
-export const MAX_CONVERSATION_EVIDENCE = 8;
+export const MAX_CONVERSATION_EVIDENCE = QUERY_BUDGETS.conversationEvidence;
 const opaqueIdSchema = z
   .string()
   .min(1)

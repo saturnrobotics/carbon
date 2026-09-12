@@ -1,4 +1,3 @@
-import { z } from "zod";
 import {
   type Evidence,
   evidenceSchema,
@@ -7,45 +6,26 @@ import {
   queryRequestSchema
 } from "../contracts";
 import { ProviderPolicyRefusal } from "../provider-policy";
+import { QUERY_BUDGETS } from "./budgets";
 import { withDeadline } from "./deadline.server";
-import { routeQuery } from "./router";
+import { type QueryResult, queryResultSchema, synthesisSchema } from "./result";
+import { QUERY_CAPABILITIES, routeQuery } from "./router";
+import type { QueryStreamEvent } from "./stream";
 
-export const claimSchema = z
-  .object({
-    text: z.string().min(1).max(2000),
-    evidenceIds: z.array(z.string().min(1).max(256)).min(1).max(8)
-  })
-  .strict();
-export const synthesisSchema = z
-  .object({ claims: z.array(claimSchema).max(12) })
-  .strict();
-export const queryResultSchema = z
-  .object({
-    requestId: z.string(),
-    kind: z.enum([
-      "results",
-      "answer",
-      "abstention",
-      "command",
-      "clarification"
-    ]),
-    evidence: z.array(evidenceSchema).max(8),
-    claims: z.array(claimSchema).max(12),
-    message: z.string().max(500),
-    partial: z.boolean(),
-    choices: z
-      .array(
-        z
-          .object({ id: z.string().max(256), label: z.string().max(500) })
-          .strict()
-      )
-      .max(20)
-      .optional()
-  })
-  .strict();
-export type QueryResult = z.infer<typeof queryResultSchema>;
+export {
+  claimSchema,
+  type QueryClaim,
+  type QueryResult,
+  queryResultSchema,
+  synthesisSchema
+} from "./result";
+
 export const PROVIDER_POLICY_REFUSED_MESSAGE =
   "An answer was not generated because the evidence includes a source that is not admitted to the answer provider.";
+export const UNSUPPORTED_ANSWER_MESSAGE =
+  "The available evidence did not support a verified answer.";
+export const NO_EVIDENCE_MESSAGE = "No authorized evidence was found.";
+
 export type ReadDependencies = {
   signal?: AbortSignal;
   retrieve: (text: string, signal: AbortSignal) => Promise<Evidence[]>;
@@ -55,6 +35,13 @@ export type ReadDependencies = {
     evidence: Evidence[],
     signal: AbortSignal
   ) => Promise<unknown>;
+  /**
+   * Observes the read as it happens. Authorized evidence is reported once,
+   * before any synthesis; a synthesis stage is reported only when a model
+   * call really starts. The terminal result is the function's return value,
+   * so an observer never sees anything the caller would not.
+   */
+  emit?: (event: QueryStreamEvent) => void;
 };
 
 export async function executeReadQuery(
@@ -69,12 +56,14 @@ export async function executeReadQuery(
   )
     throw Error("Access denied");
   const route = routeQuery(request);
+  const capability = QUERY_CAPABILITIES[route.capability];
+  const emit = dependencies.emit ?? (() => undefined);
   const result: QueryResult = {
     requestId: request.requestId,
     kind: "abstention",
     evidence: [],
     claims: [],
-    message: "No authorized evidence was found.",
+    message: NO_EVIDENCE_MESSAGE,
     partial: false
   };
   if (route.kind === "command")
@@ -85,10 +74,12 @@ export async function executeReadQuery(
         "This request requires a permitted command. Review its resolved target and details."
     };
   return withDeadline(
-    10000,
+    QUERY_BUDGETS.requestDeadlineMs,
     async (signal) => {
+      emit({ type: "progress", stage: "retrieval", state: "started" });
       const candidates = await dependencies.retrieve(route.searchText, signal);
-      if (candidates.length > 8) throw Error("Evidence budget exceeded");
+      if (candidates.length > QUERY_BUDGETS.evidenceBlocks)
+        throw Error("Evidence budget exceeded");
       for (const candidate of candidates) {
         const evidence = evidenceSchema.parse(candidate);
         if (await dependencies.authorize(evidence))
@@ -98,7 +89,14 @@ export async function executeReadQuery(
       if (!result.evidence.length) return result;
       result.kind = "results";
       result.message = "";
-      if (route.kind === "read" && dependencies.synthesize) {
+      // Evidence is delivered the moment it is authorized: a locate answer is
+      // complete here, and a read answer's evidence precedes its claims.
+      emit({ type: "evidence", evidence: [...result.evidence] });
+      // The locate capability admits no inference at all; only a capability
+      // registered with `inference: "answer"` may reach a provider, and then
+      // exactly once.
+      if (capability.inference === "answer" && dependencies.synthesize) {
+        emit({ type: "progress", stage: "synthesis", state: "started" });
         let synthesized: unknown;
         let refused = false;
         try {
@@ -128,8 +126,7 @@ export async function executeReadQuery(
           result.claims = parsed.data.claims;
         } else {
           result.kind = "abstention";
-          result.message =
-            "The available evidence did not support a verified answer.";
+          result.message = UNSUPPORTED_ANSWER_MESSAGE;
         }
       }
       if (signal.aborted) throw Error("Query deadline exceeded");

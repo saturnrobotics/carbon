@@ -110,12 +110,19 @@ describe("source transport boundary", () => {
         403
       ).post("/api/v1/knowledge/getItemIdentity", {})
     ).rejects.toBeInstanceOf(StepUpRequiredError);
+    // Any other 403 is a status-aware denial: nothing about the body reaches
+    // the caller.
     await expect(
       transport(
         { code: "FORBIDDEN", status: 403, message: "not authorized" },
         403
       ).post("/api/v1/knowledge/getItemIdentity", {})
-    ).rejects.toThrow("Source unavailable or access denied");
+    ).rejects.toMatchObject({
+      name: "SourceTransportError",
+      reason: "denied",
+      status: 403,
+      message: "Source access denied"
+    });
     await expect(
       transport({ data: { code: "step_up_required" } }, 200).post(
         "/api/v1/knowledge/getItemIdentity",

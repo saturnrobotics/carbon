@@ -12,6 +12,9 @@ msgstr ""
 "Language-Team: \n"
 "Plural-Forms: \n"
 
+msgid "A follow-up question keeps the evidence shown here in context."
+msgstr "A follow-up question keeps the evidence shown here in context."
+
 msgid "Access to this document was revoked."
 msgstr "Access to this document was revoked."
 
@@ -26,6 +29,9 @@ msgstr "Additional proposed fields"
 
 msgid "Also proposed"
 msgstr "Also proposed"
+
+msgid "Answer"
+msgstr "Answer"
 
 msgid "Back to company knowledge"
 msgstr "Back to company knowledge"
@@ -42,6 +48,9 @@ msgstr "Captured document"
 msgid "Check freshness"
 msgstr "Check freshness"
 
+msgid "Choices"
+msgstr "Choices"
+
 msgid "Choose either a file or a URL, not both."
 msgstr "Choose either a file or a URL, not both."
 
@@ -50,6 +59,10 @@ msgstr "Choose one PDF, image, photo, or HTTPS address."
 
 msgid "Company knowledge"
 msgstr "Company knowledge"
+
+#. placeholder {0}: evidence.length
+msgid "Composing an answer from {0} evidence blocks…"
+msgstr "Composing an answer from {0} evidence blocks…"
 
 msgid "Confirm removal"
 msgstr "Confirm removal"
@@ -123,6 +136,9 @@ msgstr "Library and access"
 msgid "Link this document to one existing item, or keep it as a generic document. Linking never creates or changes items."
 msgstr "Link this document to one existing item, or keep it as a generic document. Linking never creates or changes items."
 
+msgid "Live record"
+msgstr "Live record"
+
 msgid "Machine"
 msgstr "Machine"
 
@@ -172,9 +188,16 @@ msgstr "Only public HTTPS addresses are fetched, through the server's fetch poli
 msgid "Only the first candidates are shown; narrow the search."
 msgstr "Only the first candidates are shown; narrow the search."
 
+msgid "Open record"
+msgstr "Open record"
+
 #. placeholder {0}: selected?.classification ?? ""
 msgid "Owner: {actorId}. Access: {0}. Readers of this library can find the document once it is reviewed and published."
 msgstr "Owner: {actorId}. Access: {0}. Readers of this library can find the document once it is reviewed and published."
+
+#. placeholder {0}: source.page
+msgid "page {0}"
+msgstr "page {0}"
 
 msgid "Page {page}"
 msgstr "Page {page}"
@@ -187,6 +210,9 @@ msgstr "Part number"
 
 msgid "Part number, MPN, or name"
 msgstr "Part number, MPN, or name"
+
+msgid "Partial source answer"
+msgstr "Partial source answer"
 
 msgid "PDF and image files are captured with their immutable object version before extraction."
 msgstr "PDF and image files are captured with their immutable object version before extraction."
@@ -243,8 +269,14 @@ msgstr "Search manuals"
 msgid "Search published company manuals by manufacturer, part number, revision, machine, or keyword. Open the exact original version from every result."
 msgstr "Search published company manuals by manufacturer, part number, revision, machine, or keyword. Open the exact original version from every result."
 
+msgid "Searching authorized sources…"
+msgstr "Searching authorized sources…"
+
 msgid "Searching…"
 msgstr "Searching…"
+
+msgid "see evidence"
+msgstr "see evidence"
 
 msgid "Selected: {fileName}"
 msgstr "Selected: {fileName}"
@@ -254,6 +286,9 @@ msgstr "Show evidence ({evidenceCount})"
 
 msgid "Some authorized manuals were unavailable."
 msgstr "Some authorized manuals were unavailable."
+
+msgid "Some sources did not answer; results may be partial."
+msgstr "Some sources did not answer; results may be partial."
 
 msgid "Source details"
 msgstr "Source details"
@@ -268,11 +303,17 @@ msgstr "Source pages"
 msgid "Source revision: {0}"
 msgstr "Source revision: {0}"
 
+msgid "Source unavailable"
+msgstr "Source unavailable"
+
 msgid "Source URL"
 msgstr "Source URL"
 
 msgid "Sources"
 msgstr "Sources"
+
+msgid "Start a new question"
+msgstr "Start a new question"
 
 msgid "State:"
 msgstr "State:"
@@ -306,6 +347,9 @@ msgstr "The knowledge company is not configured."
 
 msgid "The knowledge service could not complete this request."
 msgstr "The knowledge service could not complete this request."
+
+msgid "The request did not complete within its time budget."
+msgstr "The request did not complete within its time budget."
 
 msgid "The request was not valid."
 msgstr "The request was not valid."
@@ -378,3 +422,6 @@ msgstr "You cannot add documents to any library. Ask an administrator for a libr
 
 msgid "You do not have permission for this action in this library."
 msgstr "You do not have permission for this action in this library."
+
+msgid "Your access changed while this request ran. Search again."
+msgstr "Your access changed while this request ran. Search again."
