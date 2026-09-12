@@ -1,15 +1,31 @@
-# Knowledge portal browser specs: citation links and the manual-workflow regression
+# Knowledge portal browser specs: citation links, and making the suite a gate
 
 **Date:** 2026-09-12
-**Scope:** the two failing browser tests on the Task 18 branch
-(`feat/knowledge-18-routing-portal`, PR #31).
+**Scope:** the failing browser tests on the Task 18 branch
+(`feat/knowledge-18-routing-portal`, PR #31) and the run-to-run variance
+underneath them, which originates on `feat/knowledge-14-intake-review-ui`
+(PR #26).
 **Base:** `feat/knowledge-18-routing-portal` at `c4f21efc4f`.
 
-Both failures were reproduced locally on the containerised suite before any
-change, on a second synthetic stack (`knowledge-t18fix`, ports 4260/4361/4362/
-59960-59964, images tagged `t18fix-v1`), leaving the stack already running on
-the shared ports untouched. Baseline: `2 failed, 4 passed`, error text
-identical to the CI report.
+Reproduced locally on the containerised suite before any change, on a second
+synthetic stack (`knowledge-t18fix`, ports 4260/4361/4362/59960-59964, images
+tagged `t18fix-v1`), leaving the stack already holding the shared ports
+untouched. Baseline: `2 failed, 4 passed`, error text identical to CI's.
+
+## The variance was the defect
+
+Five iterations of the PR #26 suite, identical content, same stack, portal
+recreated cold before each: **2/5 passed**, and the failures moved.
+
+| Iteration | Outcome |
+| --- | --- |
+| 1 | `intake.spec.ts:161` — the URL-fetched document's text never appeared (1.5 min) |
+| 2 | `intake.spec.ts:75` — `Selected: e2e-intake.pdf` absent; `manual-workflow.spec.ts:271` — `Published` absent |
+| 3 | the same two |
+| 4, 5 | all green |
+
+Three distinct failing assertions across five runs of one tree is not a gate.
+After the fixes: 5/5 on PR #26 (17.3-18.5 s) and 5/5 on PR #31 (20.4-21.1 s).
 
 ## Decisions
 
@@ -24,23 +40,40 @@ identical to the CI report.
   internal hostname. The spec now resolves the href and asserts BOTH the
   portal's own origin and the exact `/documents/:id/versions/:id` path, which
   is strictly stronger than the path-only regex it replaces: a leaked internal
-  origin now fails the test.
+  origin now fails the test. (It caught a real one — the query fixture's
+  hard-coded `https://localhost:4200` while the portal was published on 4260.)
 
 - **`window.__reactRouterManifest` is not a hydration signal.** It is assigned
   by an inline module script in the server-rendered HTML, after the route
   modules import, so it is set even when `entry.client.tsx` never loads at all
-  (verified by blocking that one request: manifest present, React absent).
-  The barrier now waits for `window.__reactRouterDataRouter`, which
-  `HydratedRouter` assigns, and reloads — bounded, four loads — because a cold
-  Vite dev server can invalidate `node_modules/.vite/deps` while the entry is
-  being imported (`504 Outdated Optimize Dep`) and nothing retries it.
+  (verified by blocking that one request: manifest present, React absent, the
+  search button `disabled` after `fill`). The barrier now waits for
+  `window.__reactRouterDataRouter`, which `HydratedRouter` assigns, and
+  reloads — bounded, four loads — because a cold Vite dev server can
+  invalidate `node_modules/.vite/deps` while the entry is being imported
+  (`504 Outdated Optimize Dep`) and nothing retries it.
+
+- **Nothing waits without a bound.** Playwright leaves `actionTimeout` and
+  `navigationTimeout` unlimited, so one action that can never succeed spends
+  the whole test budget and is then reported as whatever the cleanup block
+  failed on — which is exactly why one defect surfaced as a 180 s timeout in
+  one run and as an assertion in another. Bounded, a failure names the locator
+  it waited for.
 
 - **The browser suite cannot run its specs in parallel.** Every spec drives one
   synthetic company and the same two fixture users, and the gateway's test
-  endpoints mutate them globally: the grant swap, the user deactivation and the
-  intake cleanup are all process-wide. `workers: 1` states that instead of
-  leaving one spec's authorization experiment to surface as another spec's
-  unexplained denial.
+  endpoints mutate them globally: `/__e2e/revoke/bob` deactivates the user,
+  `/__e2e/grant/bob/{review,admin}` swaps the publisher's library grant,
+  `/__e2e/fail-next-parser` arms a process-wide failure, and `/__e2e/cleanup`
+  deletes every intake captured since the fixture started. `workers: 1` states
+  that instead of leaving one spec's authorization experiment to surface as
+  another spec's unexplained denial.
+
+- **The dev server is warmed once, not by whichever spec ran first.** The first
+  client load of a route is when its packages are discovered and pre-bundled;
+  `globalSetup` now loads and hydrates `/` and `/intake` before any spec, so a
+  portal that cannot hydrate says so once rather than as six different-looking
+  failures.
 
 - **A repeated question inside one conversation is deliberately a different
   cache key.** Restored follow-up context is part of the answer cache's scope,
@@ -55,28 +88,39 @@ identical to the CI report.
   reproduce the historical project, `manual-v1` tags and the fixed ports
   exactly (`docker compose config` with no overrides differs from the previous
   file only by the two new defaulted port variables), so CI is unchanged. This
-  is why the spec shipped written-but-unrun: the harness pinned four origins
-  that another stack already held.
+  is why these specs shipped written-but-unrun: the harness pinned four
+  origins that another stack already held.
+
+## Where each fix landed
+
+Everything except the citation assertion and the conversation/cache repeat
+reproduces on PR #26, which merges first, so it was pushed there
+(`feat/knowledge-14-intake-review-ui`, one commit, no force-push, no rebase)
+rather than only downstream. PR #31 carries the same shared content plus its
+own two: `query.spec.ts` does not exist on PR #26, and the conversation scope
+that changes the cache key is PR #31's.
 
 ## Verification
 
 | Command | Result |
 | --- | --- |
-| `pnpm --filter knowledge test:e2e` (containerised, cold portal) | 6 passed, 20.7s |
-| `pnpm --filter knowledge test:e2e` (containerised, warm portal) | 6 passed, 19.6s |
-| `pnpm --filter knowledge test` | 12 files, 47 passed |
+| `pnpm --filter knowledge test:e2e` — PR #31, 5 cold iterations | 5/5, 6 passed each (20.4-21.1 s) |
+| `pnpm --filter knowledge test:e2e` — PR #26, 5 cold iterations | 5/5, 4 passed each (17.3-18.5 s) |
+| the same suite with every determinism fix reverted, 5 cold iterations | 2/5 — the table above |
+| `pnpm --filter knowledge test` | 12 files, 47 passed (PR #31); 10 files, 34 passed (PR #26) |
 | `pnpm --filter @carbon/knowledge test query grounding` | 9 files, 40 passed |
 | `pnpm --filter knowledge-query test` | 14 files, 45 passed |
-| `pnpm --filter knowledge-worker test` | 15 files, 41 passed |
-| `turbo run typecheck` (knowledge, knowledge-query, @carbon/knowledge, knowledge-worker) | clean |
-| `biome check --error-on-warnings` (7 changed TypeScript files) | no diagnostics |
+| `pnpm --filter knowledge-worker test` | 15 files, 41 passed (PR #31); 13 files, 33 passed (PR #26) |
+| `turbo run typecheck` (knowledge, knowledge-query, @carbon/knowledge, knowledge-worker) | clean on both branches |
+| `biome check --error-on-warnings` (changed TypeScript files) | no diagnostics |
 | `docker compose config` with no overrides, before vs after | identical but the two defaulted port variables |
 
 ## Not done
 
 - No product code changed. The cache-key and absolute-citation questions above
   are flagged for the branch author rather than decided here.
-- Other unbounded `click()` calls remain in `manual-workflow.spec.ts` (the
-  removal link, the upload buttons). They are not on either failure path, so
-  they were left alone; any of them can still spend a whole test timeout if the
-  element never appears.
+- The unfixed suite's failure rate was measured on PR #26's content only; PR
+  #31's extra spec was not included in that baseline.
+- Other unbounded waits are now bounded by the config rather than per call
+  site, so `manual-workflow.spec.ts` still clicks links it has not asserted
+  visible first. That is a diagnosability wart, not a race.
