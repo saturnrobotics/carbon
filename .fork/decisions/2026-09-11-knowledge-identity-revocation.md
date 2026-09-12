@@ -100,3 +100,24 @@ only way both apply orders end up working. The standalone `crbn migrate`
 postgres-only path cannot apply Carbon's early `storage.buckets` migration on a
 fresh volume (the storage service creates that schema); the services boot was
 used instead.
+
+Follow-up (same branch): the verification above ran the `@carbon/knowledge`
+suites but not the `knowledge-query` integration pair, and two consequences of
+the irreversible rule were found there afterwards. Both are test-side; the
+trigger is unchanged.
+
+- `apps/knowledge-query/src/local-security.integration.test.ts` restored
+  `user.active` and expected the read to succeed again as a control. The restore
+  no longer readmits, so the control received the handler's opaque 503. It now
+  asserts the binding is still revoked and the read still refused, then
+  re-enrolls explicitly (bumping `version`, which `knowledge.check_version`
+  requires) before the control, and re-enrolls in `finally` so the shared fixture
+  binding is not left revoked for every later suite. No refusal assertion was
+  changed; three were added.
+- `scripts/test_revocation.py` compared `revocationVersion` against literals.
+  The counter is monotonic and nothing can put it back, so those cases passed
+  only in CI's order on a fresh database. Every expectation now reads the value
+  the same transaction observed first and asserts the delta -- `+1` and inactive
+  where a revocation fires, unchanged and active where it must not. Proved by
+  running the two suites in both orders against one database, and by a trigger
+  mutated to advance the counter by two, which fails six of the delta assertions.

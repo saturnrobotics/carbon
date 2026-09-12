@@ -74,6 +74,14 @@ def snapshots(output):
     return [line for line in output.splitlines() if line.startswith("snapshot:")]
 
 
+def revocation_version(bindings, binding_id):
+    # revocationVersion only ever increases and nothing can put it back, so every
+    # expectation here is a delta against what this same transaction read first.
+    # A literal would make the case pass only on a database in which no earlier
+    # suite had revoked one of these shared fixture bindings.
+    return bindings[binding_id]["revocationVersion"]
+
+
 class RevocationTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -136,6 +144,8 @@ class RevocationTests(unittest.TestCase):
         output = transaction(
             "INSERT INTO public.\"userToCompany\"(\"userId\",\"companyId\") VALUES ('alice','company-b')",
             as_migrator(enroll(subject_a, "company-a", "alice"), enroll(subject_b, "company-b", "alice")),
+            bindings_of("alice"),
+            bindings_of("bob"),
             as_reader("alice", "company-a"),
             "UPDATE public.\"user\" SET active=false WHERE id='alice'",
             as_reader("alice", "company-a"),
@@ -147,38 +157,52 @@ class RevocationTests(unittest.TestCase):
             bindings_of("alice"),
         )
         rows = json_lines(output)
+        self.assertEqual(len(rows), 14)
         enrolled_a, enrolled_b = rows[0], rows[1]
+        alice_before = {row["id"]: row for row in rows[2:5]}
+        bob_before = rows[5]
+        alice_after = {row["id"]: row for row in rows[6:9]}
+        resolved = rows[9]
+        bob_after = rows[10]
+        alice_reactivated = {row["id"]: row for row in rows[11:14]}
+        self.assertEqual(sorted(alice_before), sorted(["id-alice", enrolled_a["id"], enrolled_b["id"]]))
         before, after = snapshots(output)
-        self.assertEqual(before, f"snapshot:id-alice:1|{enrolled_a['id']}:1")
+        self.assertEqual(
+            before,
+            f"snapshot:id-alice:{revocation_version(alice_before, 'id-alice')}"
+            f"|{enrolled_a['id']}:{revocation_version(alice_before, enrolled_a['id'])}",
+        )
         self.assertEqual(after, "snapshot:")
-        revoked = [row for row in rows[2:] if row.get("canonicalUserId") == "alice" and "revocationVersion" in row]
-        self.assertEqual(len(revoked), 6)
-        for row in revoked:
-            with self.subTest(binding=row["id"]):
+        for binding_id, row in alice_after.items():
+            with self.subTest(binding=binding_id):
                 self.assertFalse(row["active"])
-                self.assertEqual(row["revocationVersion"], 2)
-        first_pass = {row["id"]: row for row in revoked[:3]}
-        self.assertEqual(first_pass[enrolled_a["id"]]["version"], enrolled_a["version"] + 1)
-        self.assertEqual(first_pass[enrolled_b["id"]]["version"], enrolled_b["version"] + 1)
-        resolved = [row for row in rows if "bindingActive" in row][0]
+                self.assertEqual(
+                    row["revocationVersion"], revocation_version(alice_before, binding_id) + 1
+                )
+                self.assertEqual(row["version"], alice_before[binding_id]["version"] + 1)
         self.assertFalse(resolved["bindingActive"])
         self.assertFalse(resolved["userActive"])
-        self.assertEqual(resolved["revocationVersion"], 2)
-        bob = [row for row in rows if row.get("canonicalUserId") == "bob"]
-        self.assertEqual([(row["active"], row["revocationVersion"]) for row in bob], [(True, 1)])
-        self.assertEqual({row["id"]: row for row in revoked[3:]}, first_pass)
+        self.assertEqual(
+            resolved["revocationVersion"], revocation_version(alice_after, enrolled_a["id"])
+        )
+        # An unrelated user's binding is untouched: still active, counter unmoved.
+        self.assertEqual(bob_after["id"], bob_before["id"])
+        self.assertTrue(bob_after["active"])
+        self.assertEqual(bob_after["revocationVersion"], bob_before["revocationVersion"])
+        self.assertEqual(alice_reactivated, alice_after)
 
     def test_deactivation_by_authenticated_role_fires_without_an_execute_grant(self):
         output = transaction(
+            bindings_of("alice"),
             "SET LOCAL ROLE authenticated",
             "SELECT public.knowledge_fixture_mutator()",
             "RESET ROLE",
             bindings_of("alice"),
         )
-        (alice,) = json_lines(output)
-        self.assertEqual(alice["id"], "id-alice")
-        self.assertFalse(alice["active"])
-        self.assertEqual(alice["revocationVersion"], 2)
+        before, after = json_lines(output)
+        self.assertEqual([before["id"], after["id"]], ["id-alice", "id-alice"])
+        self.assertFalse(after["active"])
+        self.assertEqual(after["revocationVersion"], before["revocationVersion"] + 1)
 
     def test_membership_removal_revokes_only_that_company(self):
         subject_a = "accounts.google.com:100000000000000000923"
@@ -186,6 +210,7 @@ class RevocationTests(unittest.TestCase):
         output = transaction(
             "INSERT INTO public.\"userToCompany\"(\"userId\",\"companyId\") VALUES ('alice','company-b')",
             as_migrator(enroll(subject_a, "company-a", "alice"), enroll(subject_b, "company-b", "alice")),
+            bindings_of("alice"),
             "DELETE FROM public.\"userToCompany\" WHERE \"userId\"='alice' AND \"companyId\"='company-a'",
             as_reader("alice", "company-a"),
             as_reader("alice", "company-b"),
@@ -194,26 +219,41 @@ class RevocationTests(unittest.TestCase):
             resolve(subject_b, "company-b"),
         )
         rows = json_lines(output)
+        self.assertEqual(len(rows), 10)
         enrolled_b = rows[1]
-        self.assertEqual(snapshots(output), ["snapshot:", f"snapshot:{enrolled_b['id']}:1"])
-        by_company = {}
-        for row in rows[2:5]:
-            by_company.setdefault(row["companyId"], []).append((row["active"], row["revocationVersion"]))
-        self.assertEqual(by_company, {"company-a": [(False, 2), (False, 2)], "company-b": [(True, 1)]})
-        resolved_a, resolved_b = rows[5], rows[6]
+        before = {row["id"]: row for row in rows[2:5]}
+        after = {row["id"]: row for row in rows[5:8]}
+        self.assertEqual(
+            snapshots(output),
+            ["snapshot:", f"snapshot:{enrolled_b['id']}:{revocation_version(before, enrolled_b['id'])}"],
+        )
+        self.assertEqual(
+            sorted(row["companyId"] for row in after.values()),
+            ["company-a", "company-a", "company-b"],
+        )
+        for binding_id, row in after.items():
+            with self.subTest(binding=binding_id):
+                revoked_here = row["companyId"] == "company-a"
+                self.assertEqual(row["active"], not revoked_here)
+                self.assertEqual(
+                    row["revocationVersion"],
+                    revocation_version(before, binding_id) + (1 if revoked_here else 0),
+                )
+        resolved_a, resolved_b = rows[8], rows[9]
         self.assertFalse(resolved_a["bindingActive"])
         self.assertFalse(resolved_a["membershipActive"])
         self.assertTrue(resolved_b["bindingActive"] and resolved_b["membershipActive"])
 
     def test_unrelated_user_updates_leave_bindings_untouched(self):
         output = transaction(
+            bindings_of("alice"),
             "UPDATE public.\"user\" SET active=true WHERE id='alice'",
             "UPDATE public.\"user\" SET \"updatedAt\"=now() WHERE id='alice'",
             bindings_of("alice"),
         )
-        (alice,) = json_lines(output)
-        self.assertTrue(alice["active"])
-        self.assertEqual(alice["revocationVersion"], 1)
+        before, after = json_lines(output)
+        self.assertTrue(after["active"])
+        self.assertEqual(after["revocationVersion"], before["revocationVersion"])
 
     def test_permission_edit_changes_permissions_version_but_not_revocation(self):
         subject = "accounts.google.com:100000000000000000925"
@@ -226,7 +266,7 @@ class RevocationTests(unittest.TestCase):
         )
         _, before, after = json_lines(output)
         self.assertNotEqual(before["permissionsVersion"], after["permissionsVersion"])
-        self.assertEqual((before["revocationVersion"], after["revocationVersion"]), (1, 1))
+        self.assertEqual(after["revocationVersion"], before["revocationVersion"])
         self.assertTrue(after["bindingActive"])
 
     def test_unbind_denies_the_reader_snapshot_like_the_triggers_do(self):
@@ -238,8 +278,12 @@ class RevocationTests(unittest.TestCase):
             as_reader("revoked", "company-a"),
         )
         enrolled, unbound = json_lines(output)
-        self.assertEqual(snapshots(output), [f"snapshot:{enrolled['id']}:1", "snapshot:"])
-        self.assertEqual(unbound["revocationVersion"], 2)
+        self.assertEqual(
+            snapshots(output),
+            [f"snapshot:{enrolled['id']}:{enrolled['revocationVersion']}", "snapshot:"],
+        )
+        self.assertFalse(unbound["active"])
+        self.assertEqual(unbound["revocationVersion"], enrolled["revocationVersion"] + 1)
 
     def test_migration_reapplies_idempotently(self):
         migration = (
@@ -247,10 +291,17 @@ class RevocationTests(unittest.TestCase):
             / "packages/database/supabase/migrations/20260911211525_knowledge-identity-revocation.sql"
         ).read_text()
         count = f"SELECT 'triggers:' || count(*) FROM pg_trigger WHERE tgfoid='{TRIGGER_FUNCTION}'::regprocedure"
-        output = transaction(migration, count, "SELECT public.knowledge_fixture_mutator()", bindings_of("alice"))
+        output = transaction(
+            migration,
+            count,
+            bindings_of("alice"),
+            "SELECT public.knowledge_fixture_mutator()",
+            bindings_of("alice"),
+        )
         self.assertIn("triggers:2", output.splitlines())
-        (alice,) = json_lines(output)
-        self.assertEqual((alice["active"], alice["revocationVersion"]), (False, 2))
+        before, after = json_lines(output)
+        self.assertFalse(after["active"])
+        self.assertEqual(after["revocationVersion"], before["revocationVersion"] + 1)
 
 
 if __name__ == "__main__":
