@@ -1,0 +1,371 @@
+msgid ""
+msgstr ""
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: @lingui/cli\n"
+"Language: ru\n"
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"PO-Revision-Date: \n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Plural-Forms: \n"
+
+msgid "Access to this document was revoked."
+msgstr ""
+
+msgid "Acknowledge the changed evidence before publishing."
+msgstr ""
+
+msgid "Add a document"
+msgstr ""
+
+msgid "Back to company knowledge"
+msgstr ""
+
+msgid "Back to manual search"
+msgstr ""
+
+msgid "Captured"
+msgstr ""
+
+msgid "Captured document"
+msgstr ""
+
+msgid "Check freshness"
+msgstr ""
+
+msgid "Choose either a file or a URL, not both."
+msgstr ""
+
+msgid "Choose one PDF, image, photo, or HTTPS address."
+msgstr ""
+
+msgid "Company knowledge"
+msgstr ""
+
+msgid "Confirm removal"
+msgstr ""
+
+msgid "Corrections are saved. The document can be published."
+msgstr ""
+
+msgid "Current version"
+msgstr ""
+
+msgid "Document"
+msgstr ""
+
+msgid "Download original"
+msgstr ""
+
+msgid "Download original · page {page}"
+msgstr ""
+
+msgid "Drag and drop a PDF or image here, or choose a file."
+msgstr ""
+
+msgid "Drive sources are enrolled by an administrator. Portal sign-in does not authorize Drive access."
+msgstr ""
+
+msgid "Existing item"
+msgstr ""
+
+msgid "Extracted text anchored to page numbers. Page images are not available for this document; download the original to see the layout."
+msgstr ""
+
+msgid "Extracting"
+msgstr ""
+
+msgid "Extraction failed"
+msgstr ""
+
+msgid "Fetched from"
+msgstr ""
+
+msgid "Find the right manual."
+msgstr ""
+
+msgid "I reviewed this evidence"
+msgstr ""
+
+msgid "Intake review"
+msgstr ""
+
+msgid "Item association"
+msgstr ""
+
+msgid "Item lookup is not available for this library. The document can still be published as a generic document."
+msgstr ""
+
+msgid "Item lookup is unavailable right now."
+msgstr ""
+
+msgid "Library"
+msgstr ""
+
+msgid "Library and access"
+msgstr ""
+
+msgid "Link this document to one existing item, or keep it as a generic document. Linking never creates or changes items."
+msgstr ""
+
+msgid "Machine"
+msgstr ""
+
+msgid "Manual file"
+msgstr ""
+
+msgid "Manual search is unavailable."
+msgstr ""
+
+msgid "Manufacturer"
+msgstr ""
+
+msgid "Manufacturer, part number, revision, machine, or keyword"
+msgstr ""
+
+msgid "Needs review"
+msgstr ""
+
+msgid "New evidence changed this field after it was reviewed."
+msgstr ""
+
+msgid "No evidence on any page"
+msgstr ""
+
+msgid "No item association (generic document)"
+msgstr ""
+
+msgid "No matching items."
+msgstr ""
+
+msgid "No matching manuals found."
+msgstr ""
+
+msgid "No text has been extracted yet."
+msgstr ""
+
+msgid "Not set"
+msgstr ""
+
+msgid "Not yet decided. Saving the review records your choice."
+msgstr ""
+
+#. placeholder {0}: entity.observedAt
+msgid "Observed {0}"
+msgstr ""
+
+msgid "Only public HTTPS addresses are fetched, through the server's fetch policy, and the fetched copy is stored immutably."
+msgstr ""
+
+msgid "Only the first candidates are shown; narrow the search."
+msgstr ""
+
+#. placeholder {0}: selected?.classification ?? ""
+msgid "Owner: {actorId}. Access: {0}. Readers of this library can find the document once it is reviewed and published."
+msgstr ""
+
+msgid "Page {page}"
+msgstr ""
+
+msgid "Page not found."
+msgstr ""
+
+msgid "Part number"
+msgstr ""
+
+msgid "Part number, MPN, or name"
+msgstr ""
+
+msgid "PDF and image files are captured with their immutable object version before extraction."
+msgstr ""
+
+msgid "Proposed fields"
+msgstr ""
+
+msgid "Proposed fields are ready. Confirm or correct them, then save."
+msgstr ""
+
+#. placeholder {0}: model.proposed[field]
+msgid "Proposed: {0}"
+msgstr ""
+
+msgid "Publish manual"
+msgstr ""
+
+msgid "Published"
+msgstr ""
+
+msgid "Remove manual"
+msgstr ""
+
+msgid "Remove this manual?"
+msgstr ""
+
+msgid "Request unavailable"
+msgstr ""
+
+msgid "Review document"
+msgstr ""
+
+msgid "Reviewed"
+msgstr ""
+
+msgid "Revision"
+msgstr ""
+
+msgid "Save review"
+msgstr ""
+
+msgid "Save the review before publishing."
+msgstr ""
+
+msgid "Saved correction"
+msgstr ""
+
+msgid "Search items"
+msgstr ""
+
+msgid "Search manuals"
+msgstr ""
+
+msgid "Search published company manuals by manufacturer, part number, revision, machine, or keyword. Open the exact original version from every result."
+msgstr ""
+
+msgid "Searching…"
+msgstr ""
+
+msgid "Selected: {fileName}"
+msgstr ""
+
+msgid "Show evidence ({evidenceCount})"
+msgstr ""
+
+msgid "Some authorized manuals were unavailable."
+msgstr ""
+
+msgid "Source details"
+msgstr ""
+
+msgid "Source evidence"
+msgstr ""
+
+msgid "Source pages"
+msgstr ""
+
+#. placeholder {0}: entity.sourceRevision
+msgid "Source revision: {0}"
+msgstr ""
+
+msgid "Source URL"
+msgstr ""
+
+msgid "Sources"
+msgstr ""
+
+msgid "State:"
+msgstr ""
+
+msgid "Status {status}"
+msgstr ""
+
+msgid "Take a photo of a nameplate or label"
+msgstr ""
+
+msgid "Text is being extracted from the document."
+msgstr ""
+
+msgid "The document could not be fetched from that address."
+msgstr ""
+
+msgid "The document could not be fetched from that address. Check that it is a public HTTPS link to a PDF or image, or upload the file instead."
+msgstr ""
+
+msgid "The document is queued for extraction."
+msgstr ""
+
+msgid "The document is stored and waiting for extraction."
+msgstr ""
+
+msgid "The document was captured, but text could not be extracted. Review cannot start until extraction succeeds."
+msgstr ""
+
+msgid "The knowledge company is not configured."
+msgstr ""
+
+msgid "The knowledge service could not complete this request."
+msgstr ""
+
+msgid "The request was not valid."
+msgstr ""
+
+msgid "The review could not be saved. Check the fields and unresolved evidence."
+msgstr ""
+
+msgid "The review service is unavailable. Nothing was changed."
+msgstr ""
+
+msgid "The upload could not be captured."
+msgstr ""
+
+msgid "The upload service is unavailable. The document was not captured."
+msgstr ""
+
+msgid "This action is not configured for the library."
+msgstr ""
+
+msgid "This document changed since you opened it, or the same content was already reviewed. Reload and check before saving again."
+msgstr ""
+
+msgid "This document changed while you were working. Reload it and try again."
+msgstr ""
+
+msgid "This document is not available for review."
+msgstr ""
+
+msgid "This document version is not available."
+msgstr ""
+
+msgid "This removes the manual from {sourceDisplayName} search and blocks its original version from download."
+msgstr ""
+
+msgid "This review was published; it is now read-only."
+msgstr ""
+
+msgid "Title"
+msgstr ""
+
+msgid "Upload a manual"
+msgstr ""
+
+msgid "Upload a manual, photograph a nameplate, or point at a public address. Access follows the library you choose."
+msgstr ""
+
+msgid "Upload manual"
+msgstr ""
+
+msgid "Valid review fields are required."
+msgstr ""
+
+msgid "You are not allowed to add documents to the selected library."
+msgstr ""
+
+msgid "You are not allowed to add documents to this library."
+msgstr ""
+
+msgid "You are not allowed to publish in this library. The review was kept."
+msgstr ""
+
+msgid "You are not allowed to review documents in this library."
+msgstr ""
+
+msgid "You are not signed in to this library, or your access was revoked."
+msgstr ""
+
+msgid "You cannot add documents to any library. Ask an administrator for a library grant."
+msgstr ""
+
+msgid "You do not have permission for this action in this library."
+msgstr ""

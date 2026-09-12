@@ -1,4 +1,5 @@
 import { readManualSourceConfiguration } from "@carbon/knowledge/release-profile";
+import { Trans } from "@lingui/react/macro";
 import { useLoaderData } from "react-router";
 import { QueryInput } from "../modules/portal/ui/QueryInput";
 
@@ -12,12 +13,18 @@ export default function KnowledgeHome() {
   return (
     <main className="page-shell">
       <header>
-        <p className="eyebrow">Company knowledge</p>
-        <h1>Find the right manual.</h1>
+        <p className="eyebrow">
+          <Trans>Company knowledge</Trans>
+        </p>
+        <h1>
+          <Trans>Find the right manual.</Trans>
+        </h1>
         <p>
-          Search published company manuals by manufacturer, part number,
-          revision, machine, or keyword. Open the exact original version from
-          every result.
+          <Trans>
+            Search published company manuals by manufacturer, part number,
+            revision, machine, or keyword. Open the exact original version from
+            every result.
+          </Trans>
         </p>
       </header>
       <QueryInput sourceDisplayName={sourceDisplayName} />

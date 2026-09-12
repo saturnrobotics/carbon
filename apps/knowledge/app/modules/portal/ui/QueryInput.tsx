@@ -1,4 +1,5 @@
 import type { QueryResult } from "@carbon/knowledge/query";
+import { Trans, useLingui } from "@lingui/react/macro";
 import { useState } from "react";
 import { EvidenceCard } from "./EvidenceCard";
 
@@ -7,6 +8,7 @@ export function QueryInput({
 }: {
   sourceDisplayName: string;
 }) {
+  const { t } = useLingui();
   const [text, setText] = useState("");
   const [result, setResult] = useState<QueryResult>();
   const [error, setError] = useState<string>();
@@ -30,12 +32,10 @@ export function QueryInput({
           locale: navigator.language || "en-US"
         })
       });
-      if (!response.ok) throw new Error("Manual search is unavailable.");
+      if (!response.ok) throw new Error("unavailable");
       setResult((await response.json()) as QueryResult);
-    } catch (cause) {
-      setError(
-        cause instanceof Error ? cause.message : "Manual search is unavailable."
-      );
+    } catch {
+      setError(t`Manual search is unavailable.`);
     } finally {
       setPending(false);
     }
@@ -44,30 +44,36 @@ export function QueryInput({
   return (
     <section>
       <form className="query-form" onSubmit={submit}>
-        <label htmlFor="knowledge-query">Search manuals</label>
+        <label htmlFor="knowledge-query">
+          <Trans>Search manuals</Trans>
+        </label>
         <input
           id="knowledge-query"
           maxLength={500}
           onChange={(event) => setText(event.target.value)}
-          placeholder="Manufacturer, part number, revision, machine, or keyword"
+          placeholder={t`Manufacturer, part number, revision, machine, or keyword`}
           type="search"
           value={text}
         />
         <button disabled={pending || !text.trim()} type="submit">
-          {pending ? "Searching…" : "Search manuals"}
+          {pending ? t`Searching…` : t`Search manuals`}
         </button>
       </form>
       <a className="upload-link" href="/intake">
-        Upload a manual
+        <Trans>Upload a manual</Trans>
       </a>
       {error ? <p role="alert">{error}</p> : null}
       {result ? (
         <section aria-live="polite" className="query-result">
           {result.evidence.length === 0 ? (
-            <p>No matching manuals found.</p>
+            <p>
+              <Trans>No matching manuals found.</Trans>
+            </p>
           ) : null}
           {result.partial ? (
-            <p>Some authorized manuals were unavailable.</p>
+            <p>
+              <Trans>Some authorized manuals were unavailable.</Trans>
+            </p>
           ) : null}
           <div className="evidence-grid">
             {result.evidence.map((evidence) => (

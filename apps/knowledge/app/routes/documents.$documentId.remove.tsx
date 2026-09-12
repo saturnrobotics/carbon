@@ -1,4 +1,5 @@
 import { readManualSourceConfiguration } from "@carbon/knowledge/release-profile";
+import { Trans } from "@lingui/react/macro";
 import { Form, redirect, useLoaderData } from "react-router";
 import { forwardIntakeRequest } from "../modules/intake/intake.service";
 
@@ -18,7 +19,7 @@ export async function action({
   const documentId = params.documentId?.trim();
   const companyId = process.env.KNOWLEDGE_COMPANY_ID?.trim() ?? "";
   if (!documentId || !companyId)
-    throw new Response("Manual removal is not configured", { status: 503 });
+    throw new Response("not_configured", { status: 503 });
   const response = await forwardIntakeRequest({
     request,
     companyId,
@@ -36,15 +37,21 @@ export default function RemoveManualRoute() {
   return (
     <main className="page-shell">
       <a className="back-link" href="/">
-        Back to manual search
+        <Trans>Back to manual search</Trans>
       </a>
-      <h1>Remove this manual?</h1>
+      <h1>
+        <Trans>Remove this manual?</Trans>
+      </h1>
       <p>
-        This removes the manual from {sourceDisplayName} search and blocks its
-        original version from download.
+        <Trans>
+          This removes the manual from {sourceDisplayName} search and blocks its
+          original version from download.
+        </Trans>
       </p>
       <Form method="post">
-        <button type="submit">Confirm removal</button>
+        <button type="submit">
+          <Trans>Confirm removal</Trans>
+        </button>
       </Form>
     </main>
   );

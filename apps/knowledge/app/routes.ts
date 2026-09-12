@@ -5,6 +5,7 @@ export default [
   route("", "routes/_index.tsx"),
   route("health", "routes/health.ts"),
   route("api/query", "routes/api.query.ts"),
+  route("api/items", "routes/api.items.ts"),
   route("intake", "routes/intake.tsx"),
   route("intake/:id", "routes/intake.$id.tsx"),
   route(

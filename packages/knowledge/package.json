@@ -38,6 +38,7 @@
     "./retrieval/evidence": "./src/retrieval/evidence.ts",
     "./query/vertex.server": "./src/query/vertex.server.ts",
     "./sources/registry.server": "./src/sources/registry.server.ts",
+    "./sources/http.server": "./src/sources/http.server.ts",
     "./entities/resolve": "./src/entities/resolve.ts",
     "./query/embedding.server": "./src/query/embedding.server.ts",
     "./telemetry": "./src/telemetry.ts",

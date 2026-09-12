@@ -22,6 +22,19 @@ export function assertSameOrigin(
     throw new Error("Cross-origin knowledge mutation rejected");
 }
 
+/** The worker's short error code, so the page can name the failure without
+ * echoing any upstream detail. Unknown or unreadable bodies read as unavailable. */
+export async function workerErrorCode(response: Response): Promise<string> {
+  try {
+    const body = (await response.clone().json()) as { error?: unknown };
+    return typeof body.error === "string" && /^[a-z_]{1,64}$/.test(body.error)
+      ? body.error
+      : "service_unavailable";
+  } catch {
+    return "service_unavailable";
+  }
+}
+
 export async function forwardIntakeRequest(options: {
   request: Request;
   companyId: string;

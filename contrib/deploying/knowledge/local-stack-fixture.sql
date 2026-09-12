@@ -54,3 +54,42 @@ INSERT INTO knowledge_metering."requestPolicy" (
 ON CONFLICT ("companyId",endpoint) DO UPDATE SET
   "userPerMinute"=EXCLUDED."userPerMinute",
   "companyPerMinute"=EXCLUDED."companyPerMinute";
+
+-- Synthetic Carbon canonical item source for intake review candidates. The
+-- query fixture answers its resolveItems operation from fixed rows; no Carbon
+-- ERP runs in this stack.
+INSERT INTO knowledge.source (
+  id,"companyId","createdBy",kind,"externalId","displayName","ownerId",
+  classification,"providerPolicy",status
+) VALUES (
+  'source-carbon-e2e','company-b','bob','carbon','carbon-e2e','E2E items','bob',
+  'internal','{}'::jsonb,'active'
+)
+ON CONFLICT (id,"companyId") DO UPDATE SET status='active',
+  version=knowledge.source.version+1;
+
+-- A non-upload source is visible only through a local grant, an active source
+-- user binding, and a mirrored source-origin read grant (knowledge.can_access).
+INSERT INTO knowledge."sourceUserBinding" (
+  id,"companyId","createdBy","sourceId","canonicalUserId","sourceUserId",active
+) VALUES (
+  'e2e-bob-items-binding','company-b','bob','source-carbon-e2e','bob',
+  'carbon-user-bob',true
+)
+ON CONFLICT ("companyId","sourceId","canonicalUserId") DO UPDATE SET
+  active=true,
+  version=knowledge."sourceUserBinding".version+1;
+
+INSERT INTO knowledge."grant" (
+  id,"companyId","createdBy","sourceId","subjectKind","subjectId",
+  capability,origin,"policyVersion"
+) VALUES
+  ('e2e-bob-items-read','company-b','bob','source-carbon-e2e','user','bob',
+   'read','local',1),
+  ('e2e-bob-items-source','company-b','bob','source-carbon-e2e','user','bob',
+   'read','source',1)
+ON CONFLICT (id,"companyId") DO UPDATE SET
+  "revokedAt"=NULL,
+  "validUntil"=NULL,
+  capability='read',
+  version=knowledge."grant".version+1;
