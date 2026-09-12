@@ -16,13 +16,13 @@ msgid "A follow-up question keeps the evidence shown here in context."
 msgstr ""
 
 msgid "Access to this document was revoked."
-msgstr ""
+msgstr "इस दस्तावेज़ तक पहुंच रद्द कर दी गई।"
 
 msgid "Acknowledge the changed evidence before publishing."
-msgstr ""
+msgstr "प्रकाशित करने से पहले बदले गए सबूत को स्वीकार करें।"
 
 msgid "Add a document"
-msgstr ""
+msgstr "एक दस्तावेज़ जोड़ें"
 
 msgid "Additional proposed fields"
 msgstr ""
@@ -34,394 +34,394 @@ msgid "Answer"
 msgstr ""
 
 msgid "Back to company knowledge"
-msgstr ""
+msgstr "कंपनी ज्ञान पर वापस जाएं"
 
 msgid "Back to manual search"
-msgstr ""
+msgstr "मैनुअल खोज पर वापस जाएं"
 
 msgid "Captured"
-msgstr ""
+msgstr "कैप्चर किया गया"
 
 msgid "Captured document"
-msgstr ""
+msgstr "कैप्चर किया गया दस्तावेज़"
 
 msgid "Check freshness"
-msgstr ""
+msgstr "ताज़ापन जांचें"
 
 msgid "Choices"
 msgstr ""
 
 msgid "Choose either a file or a URL, not both."
-msgstr ""
+msgstr "एक फ़ाइल या URL चुनें, दोनों नहीं।"
 
 msgid "Choose one PDF, image, photo, or HTTPS address."
-msgstr ""
+msgstr "एक PDF, छवि, फ़ोटो, या HTTPS पता चुनें।"
 
 msgid "Company knowledge"
-msgstr ""
+msgstr "कंपनी ज्ञान"
 
 #. placeholder {0}: evidence.length
 msgid "Composing an answer from {0} evidence blocks…"
 msgstr ""
 
 msgid "Confirm removal"
-msgstr ""
+msgstr "हटाने की पुष्टि करें"
 
 msgid "Confirm this field against the source evidence."
 msgstr ""
 
 msgid "Corrections are saved. The document can be published."
-msgstr ""
+msgstr "सुधार सहेज दिए गए हैं। दस्तावेज़ प्रकाशित किया जा सकता है।"
 
 msgid "Current version"
-msgstr ""
+msgstr "वर्तमान संस्करण"
 
 msgid "Document"
-msgstr ""
+msgstr "दस्तावेज़"
 
 msgid "Download original"
-msgstr ""
+msgstr "मूल डाउनलोड करें"
 
 msgid "Download original · page {page}"
-msgstr ""
+msgstr "मूल डाउनलोड करें · पृष्ठ {page}"
 
 msgid "Drag and drop a PDF or image here, or choose a file."
-msgstr ""
+msgstr "यहाँ एक PDF या छवि खींचें और छोड़ें, या एक फ़ाइल चुनें।"
 
 msgid "Drive sources are enrolled by an administrator with a read-only connector credential held in Secret Manager. Signing into this portal does not authorize Drive access: a document is delivered only after a live check with your own Drive permissions."
 msgstr ""
 
 msgid "Existing item"
-msgstr ""
+msgstr "मौजूदा आइटम"
 
 msgid "Extracted text anchored to page numbers. Page images are not available for this document; download the original to see the layout."
-msgstr ""
+msgstr "पृष्ठ संख्या के लिए लंगर वाला निकाला गया पाठ। इस दस्तावेज़ के लिए पृष्ठ छवियां उपलब्ध नहीं हैं; लेआउट देखने के लिए मूल डाउनलोड करें।"
 
 msgid "Extracting"
-msgstr ""
+msgstr "निष्कर्षण जारी है"
 
 msgid "Extraction failed"
-msgstr ""
+msgstr "निष्कर्षण विफल रहा"
 
 msgid "Fetched from"
-msgstr ""
+msgstr "से लाया गया"
 
 msgid "Find the right manual."
-msgstr ""
+msgstr "सही मैनुअल खोजें।"
 
 msgid "Google Drive sources"
 msgstr ""
 
 msgid "I reviewed this evidence"
-msgstr ""
+msgstr "मैंने इस सबूत की समीक्षा की है"
 
 msgid "Intake review"
-msgstr ""
+msgstr "प्रवेश समीक्षा"
 
 msgid "Item association"
-msgstr ""
+msgstr "आइटम संबंध"
 
 msgid "Item lookup is not available for this library. The document can still be published as a generic document."
-msgstr ""
+msgstr "इस लाइब्रेरी के लिए आइटम लुकअप उपलब्ध नहीं है। दस्तावेज़ को अभी भी एक सामान्य दस्तावेज़ के रूप में प्रकाशित किया जा सकता है।"
 
 msgid "Item lookup is unavailable right now."
-msgstr ""
+msgstr "आइटम लुकअप अभी उपलब्ध नहीं है।"
 
 msgid "Library"
-msgstr ""
+msgstr "लाइब्रेरी"
 
 msgid "Library and access"
-msgstr ""
+msgstr "लाइब्रेरी और पहुंच"
 
 msgid "Link this document to one existing item, or keep it as a generic document. Linking never creates or changes items."
-msgstr ""
+msgstr "इस दस्तावेज़ को एक मौजूदा आइटम से जोड़ें, या इसे एक सामान्य दस्तावेज़ के रूप में रखें। जोड़ना कभी आइटम बनाता या बदलता नहीं है।"
 
 msgid "Live record"
 msgstr ""
 
 msgid "Machine"
-msgstr ""
+msgstr "मशीन"
 
 msgid "Manual file"
-msgstr ""
+msgstr "मैनुअल फ़ाइल"
 
 msgid "Manual search is unavailable."
-msgstr ""
+msgstr "मैनुअल खोज उपलब्ध नहीं है।"
 
 msgid "Manufacturer"
-msgstr ""
+msgstr "निर्माता"
 
 msgid "Manufacturer, part number, revision, machine, or keyword"
-msgstr ""
+msgstr "निर्माता, पार्ट नंबर, रिवीजन, मशीन, या कीवर्ड"
 
 msgid "Needs review"
-msgstr ""
+msgstr "समीक्षा की आवश्यकता है"
 
 msgid "No evidence on any page"
-msgstr ""
+msgstr "किसी भी पृष्ठ पर कोई साक्ष्य नहीं"
 
 msgid "No item association (generic document)"
-msgstr ""
+msgstr "कोई आइटम संबद्धता नहीं (सामान्य दस्तावेज़)"
 
 msgid "No matching items."
-msgstr ""
+msgstr "कोई मेल खाने वाले आइटम नहीं।"
 
 msgid "No matching manuals found."
-msgstr ""
+msgstr "कोई मेल खाने वाले मैनुअल नहीं मिले।"
 
 msgid "No text has been extracted yet."
-msgstr ""
+msgstr "अभी तक कोई पाठ निकाला नहीं गया है।"
 
 msgid "Not set"
-msgstr ""
+msgstr "सेट नहीं है"
 
 msgid "Not yet decided. Saving the review records your choice."
-msgstr ""
+msgstr "अभी तय नहीं हुआ है। समीक्षा को सहेजने से आपकी पसंद दर्ज होती है।"
 
 #. placeholder {0}: entity.observedAt
 msgid "Observed {0}"
-msgstr ""
+msgstr "देखा गया {0}"
 
 msgid "Only public HTTPS addresses are fetched, through the server's fetch policy, and the fetched copy is stored immutably."
-msgstr ""
+msgstr "केवल सार्वजनिक HTTPS पते प्राप्त किए जाते हैं, सर्वर की प्राप्ति नीति के माध्यम से, और प्राप्त प्रति को अपरिवर्तनीय रूप से संग्रहीत किया जाता है।"
 
 msgid "Only the first candidates are shown; narrow the search."
-msgstr ""
+msgstr "केवल पहले उम्मीदवार दिखाए जाते हैं; खोज को संकीर्ण करें।"
 
 msgid "Open record"
 msgstr ""
 
 #. placeholder {0}: selected?.classification ?? ""
 msgid "Owner: {actorId}. Access: {0}. Readers of this library can find the document once it is reviewed and published."
-msgstr ""
+msgstr "स्वामी: {actorId}। पहुंच: {0}। इस लाइब्रेरी के पाठक दस्तावेज़ को तब पा सकते हैं जब वह समीक्षित और प्रकाशित हो।"
 
 #. placeholder {0}: source.page
 msgid "page {0}"
 msgstr ""
 
 msgid "Page {page}"
-msgstr ""
+msgstr "पृष्ठ {page}"
 
 msgid "Page not found."
-msgstr ""
+msgstr "पृष्ठ नहीं मिला।"
 
 msgid "Part number"
-msgstr ""
+msgstr "पार्ट संख्या"
 
 msgid "Part number, MPN, or name"
-msgstr ""
+msgstr "पार्ट संख्या, MPN, या नाम"
 
 msgid "Partial source answer"
 msgstr ""
 
 msgid "PDF and image files are captured with their immutable object version before extraction."
-msgstr ""
+msgstr "PDF और चित्र फाइलों को निकालने से पहले उनके अपरिवर्तनीय वस्तु संस्करण के साथ कैप्चर किया जाता है।"
 
 msgid "Proposed fields"
-msgstr ""
+msgstr "प्रस्तावित क्षेत्र"
 
 msgid "Proposed fields are ready. Confirm or correct them, then save."
-msgstr ""
+msgstr "प्रस्तावित क्षेत्र तैयार हैं। उन्हें पुष्टि करें या सुधारें, फिर सहेजें।"
 
 #. placeholder {0}: model.proposed[field]
 msgid "Proposed: {0}"
-msgstr ""
+msgstr "प्रस्तावित: {0}"
 
 msgid "Publish manual"
-msgstr ""
+msgstr "मैनुअल प्रकाशित करें"
 
 msgid "Published"
-msgstr ""
+msgstr "प्रकाशित"
 
 msgid "Remove manual"
-msgstr ""
+msgstr "मैनुअल निकालें"
 
 msgid "Remove this manual?"
-msgstr ""
+msgstr "इस मैनुअल को निकालें?"
 
 msgid "Request unavailable"
-msgstr ""
+msgstr "अनुरोध अनुपलब्ध है"
 
 msgid "Review document"
-msgstr ""
+msgstr "दस्तावेज़ की समीक्षा करें"
 
 msgid "Reviewed"
-msgstr ""
+msgstr "समीक्षित"
 
 msgid "Revision"
-msgstr ""
+msgstr "रिवीजन"
 
 msgid "Save review"
-msgstr ""
+msgstr "समीक्षा सहेजें"
 
 msgid "Save the review before publishing."
-msgstr ""
+msgstr "प्रकाशन से पहले समीक्षा को सहेजें।"
 
 msgid "Saved correction"
-msgstr ""
+msgstr "सहेजा गया सुधार"
 
 msgid "Search items"
-msgstr ""
+msgstr "आइटम खोजें"
 
 msgid "Search manuals"
-msgstr ""
+msgstr "मैनुअल खोजें"
 
 msgid "Search published company manuals by manufacturer, part number, revision, machine, or keyword. Open the exact original version from every result."
-msgstr ""
+msgstr "निर्माता, पार्ट संख्या, रिवीजन, मशीन, या कीवर्ड द्वारा प्रकाशित कंपनी मैनुअल खोजें। प्रत्येक परिणाम से सटीक मूल संस्करण खोलें।"
 
 msgid "Searching authorized sources…"
 msgstr ""
 
 msgid "Searching…"
-msgstr ""
+msgstr "खोज रहे हैं…"
 
 msgid "see evidence"
 msgstr ""
 
 msgid "Selected: {fileName}"
-msgstr ""
+msgstr "चयनित: {fileName}"
 
 msgid "Show evidence ({evidenceCount})"
-msgstr ""
+msgstr "साक्ष्य दिखाएं ({evidenceCount})"
 
 msgid "Some authorized manuals were unavailable."
-msgstr ""
+msgstr "कुछ अधिकृत मैनुअल अनुपलब्ध थे।"
 
 msgid "Some sources did not answer; results may be partial."
 msgstr ""
 
 msgid "Source details"
-msgstr ""
+msgstr "स्रोत विवरण"
 
 msgid "Source evidence"
-msgstr ""
+msgstr "स्रोत साक्ष्य"
 
 msgid "Source pages"
-msgstr ""
+msgstr "स्रोत पृष्ठ"
 
 #. placeholder {0}: entity.sourceRevision
 msgid "Source revision: {0}"
-msgstr ""
+msgstr "स्रोत रिवीजन: {0}"
 
 msgid "Source unavailable"
 msgstr ""
 
 msgid "Source URL"
-msgstr ""
+msgstr "स्रोत URL"
 
 msgid "Sources"
-msgstr ""
+msgstr "स्रोत"
 
 msgid "Start a new question"
 msgstr ""
 
 msgid "State:"
-msgstr ""
+msgstr "स्थिति:"
 
 msgid "Status {status}"
-msgstr ""
+msgstr "स्थिति {status}"
 
 msgid "Take a photo of a nameplate or label"
-msgstr ""
+msgstr "नेमप्लेट या लेबल की तस्वीर लें"
 
 msgid "Text is being extracted from the document."
-msgstr ""
+msgstr "दस्तावेज़ से पाठ निकाला जा रहा है।"
 
 msgid "The document could not be fetched from that address."
-msgstr ""
+msgstr "वह दस्तावेज़ उस पते से प्राप्त नहीं किया जा सका।"
 
 msgid "The document could not be fetched from that address. Check that it is a public HTTPS link to a PDF or image, or upload the file instead."
-msgstr ""
+msgstr "वह दस्तावेज़ उस पते से प्राप्त नहीं किया जा सका। जांचें कि यह एक सार्वजनिक HTTPS लिंक है जो PDF या छवि के लिए है, या इसके बजाय फ़ाइल अपलोड करें।"
 
 msgid "The document is queued for extraction."
-msgstr ""
+msgstr "दस्तावेज़ निष्कर्षण के लिए कतार में है।"
 
 msgid "The document is stored and waiting for extraction."
-msgstr ""
+msgstr "दस्तावेज़ संग्रहीत है और निष्कर्षण की प्रतीक्षा कर रहा है।"
 
 msgid "The document was captured, but text could not be extracted. Review cannot start until extraction succeeds."
-msgstr ""
+msgstr "दस्तावेज़ कैप्चर किया गया था, लेकिन पाठ निकाला नहीं जा सका। समीक्षा शुरू नहीं की जा सकती जब तक निष्कर्षण सफल न हो।"
 
 msgid "The knowledge company is not configured."
-msgstr ""
+msgstr "ज्ञान कंपनी कॉन्फ़िगर नहीं की गई है।"
 
 msgid "The knowledge service could not complete this request."
-msgstr ""
+msgstr "ज्ञान सेवा इस अनुरोध को पूरा नहीं कर सकी।"
 
 msgid "The request did not complete within its time budget."
 msgstr ""
 
 msgid "The request was not valid."
-msgstr ""
+msgstr "अनुरोध मान्य नहीं था।"
 
 msgid "The review could not be saved. Check the fields and unresolved evidence."
-msgstr ""
+msgstr "समीक्षा को सहेजा नहीं जा सका। फ़ील्ड और अनसुलझे साक्ष्य की जांच करें।"
 
 msgid "The review service is unavailable. Nothing was changed."
-msgstr ""
+msgstr "समीक्षा सेवा अनुपलब्ध है। कुछ भी नहीं बदला गया।"
 
 msgid "The upload could not be captured."
-msgstr ""
+msgstr "अपलोड को कैप्चर नहीं किया जा सका।"
 
 msgid "The upload service is unavailable. The document was not captured."
-msgstr ""
+msgstr "अपलोड सेवा अनुपलब्ध है। दस्तावेज़ कैप्चर नहीं किया गया था।"
 
 msgid "This action is not configured for the library."
-msgstr ""
+msgstr "यह क्रिया लाइब्रेरी के लिए कॉन्फ़िगर नहीं की गई है।"
 
 msgid "This document changed since you opened it, or the same content was already reviewed. Reload and check before saving again."
-msgstr ""
+msgstr "यह दस्तावेज़ तब से बदल गया है जब आपने इसे खोला था, या समान सामग्री पहले से ही समीक्षा की जा चुकी है। फिर से सहेजने से पहले पुनः लोड करें और जांच करें।"
 
 msgid "This document changed while you were working. Reload it and try again."
-msgstr ""
+msgstr "यह दस्तावेज़ आपके काम करते समय बदल गया। इसे पुनः लोड करें और फिर से कोशिश करें।"
 
 msgid "This document is not available for review."
-msgstr ""
+msgstr "यह दस्तावेज़ समीक्षा के लिए उपलब्ध नहीं है।"
 
 msgid "This document version is not available."
-msgstr ""
+msgstr "यह दस्तावेज़ संस्करण उपलब्ध नहीं है।"
 
 msgid "This removes the manual from {sourceDisplayName} search and blocks its original version from download."
-msgstr ""
+msgstr "यह मैनुअल को {sourceDisplayName} खोज से हटाता है और इसके मूल संस्करण को डाउनलोड से अवरुद्ध करता है।"
 
 msgid "This review was published; it is now read-only."
-msgstr ""
+msgstr "यह समीक्षा प्रकाशित की गई थी; यह अब केवल पढ़ने के लिए है।"
 
 msgid "Title"
-msgstr ""
+msgstr "शीर्षक"
 
 msgid "Upload a manual"
-msgstr ""
+msgstr "एक मैनुअल अपलोड करें"
 
 msgid "Upload a manual, photograph a nameplate, or point at a public address. Access follows the library you choose."
-msgstr ""
+msgstr "एक मैनुअल अपलोड करें, नेमप्लेट की तस्वीर लें, या एक सार्वजनिक पते की ओर इशारा करें। पहुंच आपके द्वारा चुनी गई लाइब्रेरी का अनुसरण करती है।"
 
 msgid "Upload manual"
-msgstr ""
+msgstr "मैनुअल अपलोड करें"
 
 msgid "Valid review fields are required."
-msgstr ""
+msgstr "वैध समीक्षा फ़ील्ड आवश्यक हैं।"
 
 msgid "You are not allowed to add documents to the selected library."
-msgstr ""
+msgstr "आप चयनित लाइब्रेरी में दस्तावेज़ जोड़ने की अनुमति नहीं दी गई है।"
 
 msgid "You are not allowed to add documents to this library."
-msgstr ""
+msgstr "आप इस लाइब्रेरी में दस्तावेज़ जोड़ने की अनुमति नहीं दी गई है।"
 
 msgid "You are not allowed to publish in this library. The review was kept."
-msgstr ""
+msgstr "आप इस लाइब्रेरी में प्रकाशित करने की अनुमति नहीं दी गई है। समीक्षा रखी गई थी।"
 
 msgid "You are not allowed to review documents in this library."
-msgstr ""
+msgstr "आप इस लाइब्रेरी में दस्तावेज़ की समीक्षा करने की अनुमति नहीं दी गई है।"
 
 msgid "You are not signed in to this library, or your access was revoked."
-msgstr ""
+msgstr "आप इस लाइब्रेरी में साइन इन नहीं हैं, या आपकी पहुंच रद्द कर दी गई थी।"
 
 msgid "You cannot add documents to any library. Ask an administrator for a library grant."
-msgstr ""
+msgstr "आप किसी भी लाइब्रेरी में दस्तावेज़ नहीं जोड़ सकते। लाइब्रेरी अनुदान के लिए प्रशासक से पूछें।"
 
 msgid "You do not have permission for this action in this library."
 msgstr ""
 
 msgid "Your access changed while this request ran. Search again."
-msgstr ""
+msgstr "आपको इस लाइब्रेरी में इस क्रिया के लिए अनुमति नहीं है।"

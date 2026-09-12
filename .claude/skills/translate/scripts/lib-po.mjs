@@ -82,3 +82,13 @@ export function readLocaleConfig(configPath, readFileSync) {
   for (const m of labelBlock.matchAll(/(\w+)\s*:\s*"([^"]+)"/g)) labels[m[1]] = m[2];
   return { codes, labels };
 }
+
+// Catalog names read from lingui.config.js — the same source of truth `linguito
+// check` and .fork/check-locales.ts use, so a catalog added there (erp, mes,
+// knowledge, …) is picked up with no edit to this skill.
+export function readCatalogNames(configPath, readFileSync) {
+  const src = readFileSync(configPath, "utf8");
+  const names = [...src.matchAll(/path:\s*"[^"]*\{locale\}\/([A-Za-z0-9._-]+)"/g)].map((m) => m[1]);
+  if (!names.length) throw new Error(`No catalog paths found in ${configPath}`);
+  return [...new Set(names)];
+}

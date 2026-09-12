@@ -16,13 +16,13 @@ msgid "A follow-up question keeps the evidence shown here in context."
 msgstr ""
 
 msgid "Access to this document was revoked."
-msgstr ""
+msgstr "このドキュメントへのアクセスが取り消されました。"
 
 msgid "Acknowledge the changed evidence before publishing."
-msgstr ""
+msgstr "公開前に変更されたエビデンスを確認してください。"
 
 msgid "Add a document"
-msgstr ""
+msgstr "文書を追加"
 
 msgid "Additional proposed fields"
 msgstr ""
@@ -34,394 +34,394 @@ msgid "Answer"
 msgstr ""
 
 msgid "Back to company knowledge"
-msgstr ""
+msgstr "会社ナレッジに戻る"
 
 msgid "Back to manual search"
-msgstr ""
+msgstr "手動検索に戻る"
 
 msgid "Captured"
-msgstr ""
+msgstr "取得済み"
 
 msgid "Captured document"
-msgstr ""
+msgstr "取得した文書"
 
 msgid "Check freshness"
-msgstr ""
+msgstr "鮮度を確認"
 
 msgid "Choices"
 msgstr ""
 
 msgid "Choose either a file or a URL, not both."
-msgstr ""
+msgstr "ファイルまたはURLのいずれかを選択してください。両方は選択できません。"
 
 msgid "Choose one PDF, image, photo, or HTTPS address."
-msgstr ""
+msgstr "PDF、画像、写真、またはHTTPSアドレスのいずれか1つを選択してください。"
 
 msgid "Company knowledge"
-msgstr ""
+msgstr "会社ナレッジ"
 
 #. placeholder {0}: evidence.length
 msgid "Composing an answer from {0} evidence blocks…"
 msgstr ""
 
 msgid "Confirm removal"
-msgstr ""
+msgstr "削除を確認"
 
 msgid "Confirm this field against the source evidence."
 msgstr ""
 
 msgid "Corrections are saved. The document can be published."
-msgstr ""
+msgstr "修正が保存されました。文書を公開できます。"
 
 msgid "Current version"
-msgstr ""
+msgstr "現在のバージョン"
 
 msgid "Document"
-msgstr ""
+msgstr "文書"
 
 msgid "Download original"
-msgstr ""
+msgstr "オリジナルをダウンロード"
 
 msgid "Download original · page {page}"
-msgstr ""
+msgstr "オリジナルをダウンロード · ページ {page}"
 
 msgid "Drag and drop a PDF or image here, or choose a file."
-msgstr ""
+msgstr "PDFまたは画像をここにドラッグアンドドロップするか、ファイルを選択してください。"
 
 msgid "Drive sources are enrolled by an administrator with a read-only connector credential held in Secret Manager. Signing into this portal does not authorize Drive access: a document is delivered only after a live check with your own Drive permissions."
 msgstr ""
 
 msgid "Existing item"
-msgstr ""
+msgstr "既存の品目"
 
 msgid "Extracted text anchored to page numbers. Page images are not available for this document; download the original to see the layout."
-msgstr ""
+msgstr "ページ番号にアンカーされた抽出テキスト。このドキュメントではページ画像が利用できません。レイアウトを確認するにはオリジナルをダウンロードしてください。"
 
 msgid "Extracting"
-msgstr ""
+msgstr "抽出中"
 
 msgid "Extraction failed"
-msgstr ""
+msgstr "抽出に失敗しました"
 
 msgid "Fetched from"
-msgstr ""
+msgstr "から取得"
 
 msgid "Find the right manual."
-msgstr ""
+msgstr "適切なマニュアルを探してください。"
 
 msgid "Google Drive sources"
 msgstr ""
 
 msgid "I reviewed this evidence"
-msgstr ""
+msgstr "このエビデンスを確認しました"
 
 msgid "Intake review"
-msgstr ""
+msgstr "受け入れレビュー"
 
 msgid "Item association"
-msgstr ""
+msgstr "品目の関連付け"
 
 msgid "Item lookup is not available for this library. The document can still be published as a generic document."
-msgstr ""
+msgstr "このライブラリでは品目検索が利用できません。ドキュメントは汎用ドキュメントとして公開できます。"
 
 msgid "Item lookup is unavailable right now."
-msgstr ""
+msgstr "品目検索は現在利用できません。"
 
 msgid "Library"
-msgstr ""
+msgstr "ライブラリ"
 
 msgid "Library and access"
-msgstr ""
+msgstr "ライブラリとアクセス"
 
 msgid "Link this document to one existing item, or keep it as a generic document. Linking never creates or changes items."
-msgstr ""
+msgstr "このドキュメントを既存の品目にリンクするか、汎用ドキュメントとして保持してください。リンク作成によって品目が作成または変更されることはありません。"
 
 msgid "Live record"
 msgstr ""
 
 msgid "Machine"
-msgstr ""
+msgstr "機械"
 
 msgid "Manual file"
-msgstr ""
+msgstr "手動ファイル"
 
 msgid "Manual search is unavailable."
-msgstr ""
+msgstr "手動検索は利用できません。"
 
 msgid "Manufacturer"
-msgstr ""
+msgstr "製造業者"
 
 msgid "Manufacturer, part number, revision, machine, or keyword"
-msgstr ""
+msgstr "製造業者、部品番号、リビジョン、機械、またはキーワード"
 
 msgid "Needs review"
-msgstr ""
+msgstr "レビューが必要"
 
 msgid "No evidence on any page"
-msgstr ""
+msgstr "どのページにもエビデンスがありません"
 
 msgid "No item association (generic document)"
-msgstr ""
+msgstr "品目の関連付けなし（汎用文書）"
 
 msgid "No matching items."
-msgstr ""
+msgstr "一致する品目がありません。"
 
 msgid "No matching manuals found."
-msgstr ""
+msgstr "一致するマニュアルが見つかりません。"
 
 msgid "No text has been extracted yet."
-msgstr ""
+msgstr "テキストはまだ抽出されていません。"
 
 msgid "Not set"
-msgstr ""
+msgstr "未設定"
 
 msgid "Not yet decided. Saving the review records your choice."
-msgstr ""
+msgstr "まだ決定されていません。レビューを保存すると、選択が記録されます。"
 
 #. placeholder {0}: entity.observedAt
 msgid "Observed {0}"
-msgstr ""
+msgstr "観察: {0}"
 
 msgid "Only public HTTPS addresses are fetched, through the server's fetch policy, and the fetched copy is stored immutably."
-msgstr ""
+msgstr "公開 HTTPS アドレスのみがサーバーのフェッチポリシーを通じてフェッチされ、フェッチされたコピーは変更不可で保存されます。"
 
 msgid "Only the first candidates are shown; narrow the search."
-msgstr ""
+msgstr "最初の候補のみが表示されています。検索を絞り込んでください。"
 
 msgid "Open record"
 msgstr ""
 
 #. placeholder {0}: selected?.classification ?? ""
 msgid "Owner: {actorId}. Access: {0}. Readers of this library can find the document once it is reviewed and published."
-msgstr ""
+msgstr "責任者: {actorId}。アクセス: {0}。このライブラリの読者は、確認および公開後にドキュメントを見つけることができます。"
 
 #. placeholder {0}: source.page
 msgid "page {0}"
 msgstr ""
 
 msgid "Page {page}"
-msgstr ""
+msgstr "ページ {page}"
 
 msgid "Page not found."
-msgstr ""
+msgstr "ページが見つかりません。"
 
 msgid "Part number"
-msgstr ""
+msgstr "部品番号"
 
 msgid "Part number, MPN, or name"
-msgstr ""
+msgstr "部品番号、MPN、または名前"
 
 msgid "Partial source answer"
 msgstr ""
 
 msgid "PDF and image files are captured with their immutable object version before extraction."
-msgstr ""
+msgstr "PDF および画像ファイルは抽出前に変更不可オブジェクトバージョンでキャプチャされます。"
 
 msgid "Proposed fields"
-msgstr ""
+msgstr "提案されたフィールド"
 
 msgid "Proposed fields are ready. Confirm or correct them, then save."
-msgstr ""
+msgstr "提案されたフィールドの準備ができました。確認または修正してから、保存してください。"
 
 #. placeholder {0}: model.proposed[field]
 msgid "Proposed: {0}"
-msgstr ""
+msgstr "提案: {0}"
 
 msgid "Publish manual"
-msgstr ""
+msgstr "マニュアルを公開"
 
 msgid "Published"
-msgstr ""
+msgstr "公開済"
 
 msgid "Remove manual"
-msgstr ""
+msgstr "マニュアルを除去"
 
 msgid "Remove this manual?"
-msgstr ""
+msgstr "このマニュアルを除去しますか?"
 
 msgid "Request unavailable"
-msgstr ""
+msgstr "リクエストが利用できません"
 
 msgid "Review document"
-msgstr ""
+msgstr "ドキュメントのレビュー"
 
 msgid "Reviewed"
-msgstr ""
+msgstr "レビュー済"
 
 msgid "Revision"
-msgstr ""
+msgstr "リビジョン"
 
 msgid "Save review"
-msgstr ""
+msgstr "レビューを保存"
 
 msgid "Save the review before publishing."
-msgstr ""
+msgstr "公開する前にレビューを保存してください。"
 
 msgid "Saved correction"
-msgstr ""
+msgstr "保存済修正"
 
 msgid "Search items"
-msgstr ""
+msgstr "品目を検索"
 
 msgid "Search manuals"
-msgstr ""
+msgstr "マニュアルを検索"
 
 msgid "Search published company manuals by manufacturer, part number, revision, machine, or keyword. Open the exact original version from every result."
-msgstr ""
+msgstr "公開済会社マニュアルを、製造元、部品番号、リビジョン、機械、またはキーワードで検索します。各結果から正確なオリジナルバージョンを開きます。"
 
 msgid "Searching authorized sources…"
 msgstr ""
 
 msgid "Searching…"
-msgstr ""
+msgstr "検索中…"
 
 msgid "see evidence"
 msgstr ""
 
 msgid "Selected: {fileName}"
-msgstr ""
+msgstr "選択: {fileName}"
 
 msgid "Show evidence ({evidenceCount})"
-msgstr ""
+msgstr "エビデンスを表示 ({evidenceCount})"
 
 msgid "Some authorized manuals were unavailable."
-msgstr ""
+msgstr "一部の認可されたマニュアルが利用できませんでした。"
 
 msgid "Some sources did not answer; results may be partial."
 msgstr ""
 
 msgid "Source details"
-msgstr ""
+msgstr "ソースの詳細"
 
 msgid "Source evidence"
-msgstr ""
+msgstr "ソースエビデンス"
 
 msgid "Source pages"
-msgstr ""
+msgstr "ソースページ"
 
 #. placeholder {0}: entity.sourceRevision
 msgid "Source revision: {0}"
-msgstr ""
+msgstr "ソースリビジョン: {0}"
 
 msgid "Source unavailable"
 msgstr ""
 
 msgid "Source URL"
-msgstr ""
+msgstr "ソースURL"
 
 msgid "Sources"
-msgstr ""
+msgstr "ソース"
 
 msgid "Start a new question"
 msgstr ""
 
 msgid "State:"
-msgstr ""
+msgstr "状態:"
 
 msgid "Status {status}"
-msgstr ""
+msgstr "ステータス {status}"
 
 msgid "Take a photo of a nameplate or label"
-msgstr ""
+msgstr "銘板またはラベルの写真を撮る"
 
 msgid "Text is being extracted from the document."
-msgstr ""
+msgstr "テキストを文書から抽出中です。"
 
 msgid "The document could not be fetched from that address."
-msgstr ""
+msgstr "その住所から文書を取得できませんでした。"
 
 msgid "The document could not be fetched from that address. Check that it is a public HTTPS link to a PDF or image, or upload the file instead."
-msgstr ""
+msgstr "その住所から文書を取得できませんでした。公開されたHTTPSリンク(PDFまたは画像)であることを確認するか、代わりにファイルをアップロードしてください。"
 
 msgid "The document is queued for extraction."
-msgstr ""
+msgstr "文書は抽出待ちです。"
 
 msgid "The document is stored and waiting for extraction."
-msgstr ""
+msgstr "文書は保存され、抽出を待機中です。"
 
 msgid "The document was captured, but text could not be extracted. Review cannot start until extraction succeeds."
-msgstr ""
+msgstr "文書はキャプチャされましたが、テキストを抽出できませんでした。抽出が成功するまでレビューを開始できません。"
 
 msgid "The knowledge company is not configured."
-msgstr ""
+msgstr "ナレッジ会社が設定されていません。"
 
 msgid "The knowledge service could not complete this request."
-msgstr ""
+msgstr "ナレッジサービスがこのリクエストを完了できませんでした。"
 
 msgid "The request did not complete within its time budget."
 msgstr ""
 
 msgid "The request was not valid."
-msgstr ""
+msgstr "リクエストは有効ではありませんでした。"
 
 msgid "The review could not be saved. Check the fields and unresolved evidence."
-msgstr ""
+msgstr "レビューを保存できませんでした。フィールドと未解決の証拠を確認してください。"
 
 msgid "The review service is unavailable. Nothing was changed."
-msgstr ""
+msgstr "レビューサービスが利用できません。何も変更されませんでした。"
 
 msgid "The upload could not be captured."
-msgstr ""
+msgstr "アップロードをキャプチャできませんでした。"
 
 msgid "The upload service is unavailable. The document was not captured."
-msgstr ""
+msgstr "アップロードサービスが利用できません。文書はキャプチャされませんでした。"
 
 msgid "This action is not configured for the library."
-msgstr ""
+msgstr "このアクションはライブラリ用に設定されていません。"
 
 msgid "This document changed since you opened it, or the same content was already reviewed. Reload and check before saving again."
-msgstr ""
+msgstr "この文書は開いてから変更されたか、同じコンテンツが既にレビューされています。再度保存する前に再読み込みして確認してください。"
 
 msgid "This document changed while you were working. Reload it and try again."
-msgstr ""
+msgstr "作業中にこの文書が変更されました。再読み込みして再度お試しください。"
 
 msgid "This document is not available for review."
-msgstr ""
+msgstr "この文書はレビューに利用できません。"
 
 msgid "This document version is not available."
-msgstr ""
+msgstr "この文書のバージョンは利用できません。"
 
 msgid "This removes the manual from {sourceDisplayName} search and blocks its original version from download."
-msgstr ""
+msgstr "これにより、{sourceDisplayName}検索からマニュアルが削除され、元のバージョンをダウンロードできなくなります。"
 
 msgid "This review was published; it is now read-only."
-msgstr ""
+msgstr "このレビューは公開済みです。現在、読み取り専用です。"
 
 msgid "Title"
-msgstr ""
+msgstr "タイトル"
 
 msgid "Upload a manual"
-msgstr ""
+msgstr "マニュアルをアップロード"
 
 msgid "Upload a manual, photograph a nameplate, or point at a public address. Access follows the library you choose."
-msgstr ""
+msgstr "マニュアルをアップロード、銘板を撮影、または公開アドレスを指定してください。アクセスは選択したライブラリに従います。"
 
 msgid "Upload manual"
-msgstr ""
+msgstr "マニュアルをアップロード"
 
 msgid "Valid review fields are required."
-msgstr ""
+msgstr "有効なレビューフィールドが必要です。"
 
 msgid "You are not allowed to add documents to the selected library."
-msgstr ""
+msgstr "選択したライブラリにドキュメントを追加する権限がありません。"
 
 msgid "You are not allowed to add documents to this library."
-msgstr ""
+msgstr "このライブラリにドキュメントを追加する権限がありません。"
 
 msgid "You are not allowed to publish in this library. The review was kept."
-msgstr ""
+msgstr "このライブラリで公開する権限がありません。レビューは保持されました。"
 
 msgid "You are not allowed to review documents in this library."
-msgstr ""
+msgstr "このライブラリでドキュメントをレビューする権限がありません。"
 
 msgid "You are not signed in to this library, or your access was revoked."
-msgstr ""
+msgstr "このライブラリにサインインしていないか、アクセス権が取り消されました。"
 
 msgid "You cannot add documents to any library. Ask an administrator for a library grant."
-msgstr ""
+msgstr "どのライブラリにもドキュメントを追加できません。管理者にライブラリアクセス権をリクエストしてください。"
 
 msgid "You do not have permission for this action in this library."
 msgstr ""
 
 msgid "Your access changed while this request ran. Search again."
-msgstr ""
+msgstr "このライブラリでこのアクションの権限がありません。"

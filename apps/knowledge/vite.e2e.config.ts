@@ -10,6 +10,13 @@ import { defineConfig, type Plugin, type PluginOption } from "vite";
 import babelMacros from "vite-plugin-babel-macros";
 
 const appDirectory = dirname(fileURLToPath(import.meta.url));
+// The published port is also the port served inside the container, so the
+// browser's `Host`, Vite's asset origin and the app's own origin assertion all
+// agree. Unset (CI and the default stack) keeps the historical 4200.
+const portalPort = Number(process.env.KNOWLEDGE_E2E_PORTAL_PORT ?? 4200);
+if (!Number.isInteger(portalPort) || portalPort < 1 || portalPort > 65535)
+  throw new Error("KNOWLEDGE_E2E_PORTAL_PORT must be a TCP port");
+const portalOrigin = `https://localhost:${portalPort}`;
 const identityModule = resolve(appDirectory, "app/services/identity.server.ts");
 const syntheticIdentityModule = resolve(
   appDirectory,
@@ -34,7 +41,7 @@ function loopbackIdentityOnly(): Plugin {
     configureServer(server) {
       server.middlewares.use((request, _response, next) => {
         if (request.headers.origin === "null") {
-          request.headers.origin = "https://localhost:4200";
+          request.headers.origin = portalOrigin;
         }
         next();
       });
@@ -54,9 +61,9 @@ export default defineConfig({
     // progressive form submission `Origin: null`. This test-only transport
     // shim restores the known HTTPS loopback origin before the real action and
     // its production CSRF assertion execute.
-    origin: "https://localhost:4200",
+    origin: portalOrigin,
     host: process.env.KNOWLEDGE_E2E_DOCKER === "1" ? "0.0.0.0" : "127.0.0.1",
-    port: 4200,
+    port: portalPort,
     strictPort: true,
     https: {
       key: readFileSync(resolve(appDirectory, "tests/harness/.cert/key.pem")),

@@ -59,16 +59,63 @@ export async function actorPage(
   return { context, page: await context.newPage() };
 }
 
+/** React Router assigns this from `HydratedRouter`, so it exists only once
+ * the client entry has actually run. `window.__reactRouterManifest` is NOT
+ * that signal: an inline module script in the server-rendered HTML assigns it
+ * after importing the route modules, so it is set even when
+ * `entry.client.tsx` never loads. */
+type HydratedWindow = { __reactRouterDataRouter?: unknown };
+
+const HYDRATION_WINDOW_MS = 15_000;
+const HYDRATION_LOADS = 4;
+
+async function hydratedWithin(page: Page, timeout: number): Promise<boolean> {
+  try {
+    await page.waitForFunction(
+      () => Boolean((window as HydratedWindow).__reactRouterDataRouter),
+      undefined,
+      { timeout }
+    );
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Waits until the client bundle has taken over the server-rendered HTML.
+ * Every portal mutation is client-side (`onSubmit` plus `fetch`), and the
+ * search form's button is disabled until a hydrated client has the typed
+ * text, so an unhydrated page never becomes usable on its own.
+ *
+ * The reload is what a cold Vite dev server needs: while the client entry is
+ * being imported, the dependency optimizer can re-bundle a newly discovered
+ * package and invalidate `node_modules/.vite/deps`; the in-flight import then
+ * fails with `504 (Outdated Optimize Dep)` and nothing retries it, leaving the
+ * page server-rendered for good. Reloading picks up the re-bundled
+ * dependencies. Bounded, because a page that never hydrates must say so
+ * rather than consume the whole test timeout. */
 export async function waitForClientNavigation(page: Page) {
-  // React Router progressively enhances forms. In a cold Vite server the route
-  // module can arrive after the SSR HTML, so wait for the client bundle before
-  // exercising a mutation rather than falling back to an unhydrated form post.
-  await page.waitForFunction(() =>
-    Boolean(
-      (window as { __reactRouterManifest?: unknown }).__reactRouterManifest
-    )
+  for (let load = 0; load < HYDRATION_LOADS; load += 1) {
+    if (load > 0) await page.reload();
+    if (await hydratedWithin(page, HYDRATION_WINDOW_MS)) {
+      await page.waitForTimeout(250);
+      return;
+    }
+  }
+  throw new Error(
+    `The client never hydrated ${page.url()} across ${HYDRATION_LOADS} loads`
   );
-  await page.waitForTimeout(250);
+}
+
+/** Types one query into the portal and submits it. The search box is a
+ * controlled input and the button is disabled while it holds no text, so the
+ * enabled button is a precondition of the click: `click()` has no action
+ * timeout of its own and would otherwise wait out the entire test. */
+export async function submitSearch(page: Page, text: string) {
+  await page.getByLabel("Search manuals").fill(text);
+  const submit = page.getByRole("button", { name: "Search manuals" });
+  await expect(submit).toBeEnabled();
+  await submit.click();
 }
 
 /** Reloads the review page until its source evidence contains `text`, then

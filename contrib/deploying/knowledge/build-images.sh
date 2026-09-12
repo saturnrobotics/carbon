@@ -26,17 +26,22 @@ esac
 root=$(CDPATH= cd -- "$(dirname -- "$0")/../../.." && pwd)
 cd "$root"
 
+# Stack name and tag are overridable so a second local stack can be built
+# alongside a running one without retagging its images. CI leaves both unset.
+stack=${KNOWLEDGE_LOCAL_STACK:-knowledge-manual-local}
+tag=${KNOWLEDGE_LOCAL_TAG:-manual-v1}
+
 if [ "$mode" = "e2e" ]; then
   docker build \
     --file contrib/deploying/knowledge/Dockerfile.schema \
     --target runtime \
-    --tag knowledge-manual-local-schema:manual-v1 \
+    --tag "$stack-schema:$tag" \
     .
   for unit in ingest web parser; do
     docker build \
       --file "contrib/deploying/knowledge/Dockerfile.$unit" \
       --target e2e \
-      --tag "knowledge-manual-local-$unit-e2e:manual-v1" \
+      --tag "$stack-$unit-e2e:$tag" \
       .
   done
   exit 0
@@ -52,6 +57,6 @@ for unit in web query ingest parser schema retention; do
     "$@" \
     --file "contrib/deploying/knowledge/Dockerfile.$unit" \
     --target runtime \
-    --tag "knowledge-manual-local-$unit:manual-v1$suffix" \
+    --tag "$stack-$unit:$tag$suffix" \
     .
 done
