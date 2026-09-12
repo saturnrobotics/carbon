@@ -97,6 +97,12 @@ jobs:
       - name: Independent production builds and typechecks
         run: |
           corepack pnpm exec turbo run typecheck --concurrency=2 --filter=@carbon/knowledge --filter=knowledge --filter=knowledge-query --filter=knowledge-worker
+          # The deferred Drive surface first: its routes reach the client graph
+          # only under this variable, so a default build proves nothing about
+          # them and React Router's `dot-server` boundary goes unchecked. Run
+          # outside turbo, whose `build` task declares no `env` and would serve
+          # the flag-off artifact from cache.
+          KNOWLEDGE_DRIVE_ENABLED=true corepack pnpm --filter knowledge build
           corepack pnpm exec turbo run build --concurrency=2 --filter=knowledge --filter=knowledge-query --filter=knowledge-worker
       - name: Stop only this job's synthetic services
         if: always()
