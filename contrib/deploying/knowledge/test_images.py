@@ -36,6 +36,27 @@ class ManualImageContracts(unittest.TestCase):
             with self.subTest(route=deferred):
                 self.assertNotIn(deferred, routes)
 
+    def test_deferred_drive_surface_is_gated_and_no_release_path_enables_it(self):
+        """The manifest above stays clean because the Drive settings route is
+        spread in by a build-time gate that is off unless an environment names
+        `KNOWLEDGE_DRIVE_ENABLED=true`. That variable reaches no release image
+        and no deployed revision, so the gate is what keeps the fence real
+        rather than the absence of a literal from one file."""
+        manifest = (ROOT / "apps/knowledge/app/routes.ts").read_text()
+        gated = (ROOT / "apps/knowledge/app/routes.deferred.ts").read_text()
+        self.assertIn("deferredDriveRoutes", manifest)
+        self.assertIn("settings.sources", gated)
+        self.assertIn("isDriveSurfaceEnabled", gated)
+        variable = "KNOWLEDGE_DRIVE_ENABLED"
+        # release.py rejects any environment key outside REQUIRED_ENVIRONMENT as
+        # deferred runtime configuration, so its absence here is the refusal.
+        self.assertNotIn(variable, (HERE / "release.py").read_text())
+        for unit in UNITS:
+            with self.subTest(unit=unit):
+                self.assertNotIn(
+                    variable, (HERE / f"Dockerfile.{unit}").read_text()
+                )
+
     def test_parser_image_keeps_test_adapter_out_of_final_finite_job(self):
         dockerfile = (HERE / "Dockerfile.parser").read_text()
         adapter = (

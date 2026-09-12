@@ -24,6 +24,7 @@
     "./intake/confidence": "./src/intake/confidence.ts",
     "./intake/reconciliation": "./src/intake/reconciliation.ts",
     "./intake/publish.server": "./src/intake/publish.server.ts",
+    "./sources/drive-deployment": "./src/sources/drive-deployment.ts",
     "./sources/drive.server": "./src/sources/drive.server.ts",
     "./sources/drive-publication.server": "./src/sources/drive-publication.server.ts",
     "./indexing/indexer.server": "./src/indexing/indexer.server.ts",
