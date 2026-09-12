@@ -1,12 +1,15 @@
+import { readFileSync } from "node:fs";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
   type DriveSource,
   describeProviderEligibility,
-  driveSourceListSchema,
-  requestDriveSourceSync
-} from "./sources.service";
+  driveSourceListSchema
+} from "./sources.models";
 import { DriveSourceList } from "./ui/DriveSourceList";
+
+/** This file imports the contract and the page, never the service — the same
+ * graph the browser bundle gets. `sources.service.ts` is proven separately. */
 
 const source: DriveSource = {
   sourceId: "ksrc_drive",
@@ -30,7 +33,7 @@ const source: DriveSource = {
   documentCount: 12
 };
 
-describe("Drive source settings", () => {
+describe("Drive source contract", () => {
   it("describes provider eligibility from the recorded policy and admits nothing by default", () => {
     expect(describeProviderEligibility({})).toBe(
       "No external provider is admitted"
@@ -49,6 +52,21 @@ describe("Drive source settings", () => {
         sources: [{ ...source, credentialSecretRef: "projects/x/secrets/y" }]
       })
     ).toThrow();
+  });
+
+  // Read as TEXT, like the release fence reads `routes.ts`: cheap, and it names
+  // the rule a reader has to keep. The page value-imports this module, so any
+  // import added here is bundled for the browser — a service import would put
+  // `services/identity.server` back in the client graph and fail the build with
+  // `KNOWLEDGE_DRIVE_ENABLED=true`, which no default build exercises.
+  it("imports nothing but zod, so the page's graph reaches no server module", () => {
+    const specifiers = [
+      ...readFileSync(
+        new URL("./sources.models.ts", import.meta.url),
+        "utf8"
+      ).matchAll(/\bfrom\s+["']([^"']+)["']/g)
+    ].map(([, specifier]) => specifier);
+    expect(specifiers).toEqual(["zod"]);
   });
 
   it("renders scope, owner, admitted corpora, eligibility and sync state, never a credential", () => {
@@ -71,20 +89,5 @@ describe("Drive source settings", () => {
     expect(
       renderToStaticMarkup(<DriveSourceList sources={[]} requested={null} />)
     ).toContain("No Google Drive sources are enrolled");
-  });
-
-  it("never forwards a malformed source id to the worker", async () => {
-    const fetchImpl = vi.fn();
-    await expect(
-      requestDriveSourceSync(
-        new Request("https://portal.example.com/settings/sources", {
-          method: "POST"
-        }),
-        "../escape",
-        {},
-        fetchImpl
-      )
-    ).resolves.toBe(false);
-    expect(fetchImpl).not.toHaveBeenCalled();
   });
 });

@@ -1,50 +1,13 @@
-import { z } from "zod";
 import { forwardIntakeRequest } from "../intake/intake.service";
+import { type DriveSource, driveSourceListSchema } from "./sources.models";
 
-export const driveSourceSchema = z
-  .object({
-    sourceId: z.string().min(1).max(256),
-    displayName: z.string().max(200),
-    ownerId: z.string().max(256),
-    classification: z.string().max(100),
-    corpora: z.enum(["drive", "user"]),
-    driveId: z.string().max(256).nullable(),
-    rootFolderIds: z.array(z.string().max(256)).max(64),
-    oauthScope: z.string().max(200),
-    userAccessScope: z.string().max(200),
-    domainWideDelegation: z.boolean(),
-    providerPolicy: z.record(z.string(), z.unknown()),
-    reconcileAfterHours: z.number().int().positive(),
-    reconciledAt: z.string().max(40).nullable(),
-    lastSyncAt: z.string().max(40).nullable(),
-    lastSyncStatus: z.enum(["succeeded", "failed"]).nullable(),
-    documentCount: z.number().int().nonnegative()
-  })
-  .strict();
-export type DriveSource = z.infer<typeof driveSourceSchema>;
-export const driveSourceListSchema = z
-  .object({ sources: z.array(driveSourceSchema).max(50) })
-  .strict();
-
-/** Provider eligibility as recorded on the source: which providers may see which classifications. */
-export function describeProviderEligibility(
-  policy: Record<string, unknown>
-): string {
-  const providers = Array.isArray(policy.allowedProviders)
-    ? policy.allowedProviders.filter(
-        (value): value is string => typeof value === "string"
-      )
-    : [];
-  const classifications = Array.isArray(policy.allowedClassifications)
-    ? policy.allowedClassifications.filter(
-        (value): value is string => typeof value === "string"
-      )
-    : [];
-  if (!providers.length || !classifications.length)
-    return "No external provider is admitted";
-  return `${providers.join(", ")} for ${classifications.join(", ")}`;
-}
-
+/**
+ * Server-side Drive source access. This module reaches
+ * `services/identity.server` through `forwardIntakeRequest`, so only a loader
+ * or an action may import it — never a component. The contract and its pure
+ * descriptors live in `sources.models.ts`, which the page imports directly;
+ * re-exporting them from here would put this graph back in the client bundle.
+ */
 function companyId(environment: NodeJS.ProcessEnv): string {
   return environment.KNOWLEDGE_COMPANY_ID?.trim() ?? "";
 }

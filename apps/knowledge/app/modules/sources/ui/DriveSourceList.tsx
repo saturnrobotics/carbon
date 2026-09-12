@@ -1,7 +1,7 @@
 import {
   type DriveSource,
   describeProviderEligibility
-} from "../sources.service";
+} from "../sources.models";
 
 function scopeLabel(source: DriveSource): string {
   const drive =

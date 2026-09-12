@@ -117,3 +117,35 @@ Two findings worth carrying forward:
 - The fence test reads `routes.ts` as TEXT. That makes it cheap and readable, but
   it cannot see a route added through an import, which is why the gate needed its
   own assertions rather than relying on the literal's absence.
+
+## Follow-up: the client boundary (2026-09-12)
+
+The first finding above is closed. `apps/knowledge/app/modules/sources/sources.models.ts`
+now holds `driveSourceSchema`, `driveSourceListSchema`, `DriveSource` and
+`describeProviderEligibility`; the page and the service each import it directly and
+the service re-exports none of it, so no barrel hop re-creates the chain. The
+service keeps only `listDriveSources` / `requestDriveSourceSync`, the two functions
+that legitimately reach `services/identity.server`. A graph walk over
+`apps/knowledge/app/modules/**` found no other component reaching a `.server`
+module — the three routes that import a service do so from loaders and actions,
+which React Router strips from the client build.
+
+Two guards, both of which reproduce the failure and clear on the fix:
+`sources.models.test.tsx` reads its own module as text and asserts `zod` is the
+only import, and `knowledge-check.yml`'s build step now runs
+`KNOWLEDGE_DRIVE_ENABLED=true pnpm --filter knowledge build` ahead of the turbo
+build. That second command deliberately bypasses turbo — the `build` task declares
+no `env`, so a turbo invocation would hash identically to the flag-off run and
+serve its artifact from cache, proving nothing.
+
+`apps/knowledge` is not in `@carbon/checks`'s `TYPESCRIPT_ROOTS`, and adding it
+would not have caught this: `no-db-client-in-service` is a per-file text scan for
+connection-construction primitives, and nothing here constructs one. The boundary
+guard already existed in React Router's `dot-server` plugin; what was missing was a
+build that exercised it.
+
+Also worth recording: `compose.local.yaml` sets `KNOWLEDGE_DRIVE_ENABLED` as a
+container RUNTIME variable, but `Dockerfile.web` builds with it absent. Route
+config is a build-time artifact, so the docker harness's web image contains no
+Drive route regardless — `drive-source.spec.ts` is exercisable only through the
+Playwright `webServer` path, which sets the variable before `react-router dev`.
