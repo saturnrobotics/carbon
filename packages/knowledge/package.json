@@ -51,6 +51,7 @@
     "evaluate": "tsx scripts/evaluate.ts",
     "generate:types": "tsx scripts/generate-types.ts",
     "identity:enroll": "tsx scripts/enroll-identity.ts",
+    "identity:revoke": "tsx scripts/revoke-identity.ts",
     "migration:new": "tsx scripts/migration-new.ts",
     "migrate:test": "tsx scripts/migrate.ts --disposable",
     "test": "vitest run --passWithNoTests=false",

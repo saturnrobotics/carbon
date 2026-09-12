@@ -119,7 +119,7 @@ export function isLocalDatabaseUrl(value: string): boolean {
   );
 }
 
-async function resolveUserId(
+export async function resolveUserId(
   db: EnrollmentQueryable,
   email: string
 ): Promise<string> {
@@ -145,7 +145,7 @@ async function resolveUserId(
   return id;
 }
 
-function describeError(error: unknown): string {
+export function describeError(error: unknown): string {
   // Only the primary message: PostgreSQL DETAIL lines can echo key values.
   return error instanceof Error ? error.message : "unknown failure";
 }
@@ -217,34 +217,45 @@ export async function runEnrollment(
   }
 }
 
-async function promptConfirmation(question: string): Promise<boolean> {
+/** Interactive confirmation; a non-TTY answers no. Shared with identity:revoke. */
+export async function promptConfirmation(
+  question: string,
+  keyword = "enroll"
+): Promise<boolean> {
   if (!process.stdin.isTTY) return false;
   const prompt = createInterface({
     input: process.stdin,
     output: process.stderr
   });
   try {
-    const answer = await prompt.question(`${question} Type "enroll" to continue: `);
-    return answer.trim() === "enroll";
+    const answer = await prompt.question(
+      `${question} Type "${keyword}" to continue: `
+    );
+    return answer.trim() === keyword;
   } finally {
     prompt.close();
   }
 }
 
+/** One pooled connection to the schema login. Shared with identity:revoke. */
+export async function createConnection(
+  databaseUrl: string
+): Promise<EnrollmentConnection> {
+  const pool = new pg.Pool({
+    connectionString: databaseUrl,
+    max: 1,
+    connectionTimeoutMillis: 5_000
+  });
+  return {
+    query: (text, values) => pool.query(text, values ? [...values] : undefined),
+    end: () => pool.end()
+  };
+}
+
 async function main(): Promise<number> {
   return runEnrollment(process.argv.slice(2), {
     environment: process.env,
-    connect: async (databaseUrl) => {
-      const pool = new pg.Pool({
-        connectionString: databaseUrl,
-        max: 1,
-        connectionTimeoutMillis: 5_000
-      });
-      return {
-        query: (text, values) => pool.query(text, values ? [...values] : undefined),
-        end: () => pool.end()
-      };
-    },
+    connect: createConnection,
     confirm: promptConfirmation,
     stdout: (line) => process.stdout.write(`${line}\n`),
     stderr: (line) => process.stderr.write(`${line}\n`)
