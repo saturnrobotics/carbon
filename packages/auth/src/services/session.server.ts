@@ -1,4 +1,5 @@
 import { redis } from "@carbon/kv";
+import { getLogger } from "@carbon/logger";
 import { Edition } from "@carbon/utils";
 import type { AuthSession as SupabaseAuthSession } from "@supabase/supabase-js";
 import { createCookieSessionStorage, redirect } from "react-router";
@@ -51,6 +52,58 @@ async function assertAuthSession(
 
 export const isTestEdition = CarbonEdition === Edition.Test;
 
+const log = getLogger("auth");
+
+// Hosts already warned about in development, so the shared-cookie fallback is
+// logged once per host per process rather than on every request.
+const warnedFallbackHosts = new Set<string>();
+
+/**
+ * Resolve the session cookie name for a request host. A host that matches
+ * neither `ERP_URL` nor `MES_URL` is a misconfiguration: outside development
+ * the request fails closed (HTTP 500) instead of issuing the pre-split shared
+ * `carbon` cookie, which would let two deployments on one parent domain read
+ * each other's sessions. Development keeps the fallback so an ad-hoc host
+ * still works, and says so once.
+ */
+function resolveAuthCookieName(
+  url: URL,
+  {
+    erpUrl,
+    mesUrl,
+    isDevelopment
+  }: { erpUrl?: string; mesUrl?: string; isDevelopment: boolean }
+) {
+  const configuredHost = (value: string | undefined) => {
+    try {
+      return value ? new URL(value).host : undefined;
+    } catch {
+      return undefined;
+    }
+  };
+
+  if (url.host === configuredHost(mesUrl)) return "carbon-mes";
+  if (url.host === configuredHost(erpUrl)) return "carbon-erp";
+
+  if (!isDevelopment) {
+    log.error(
+      "Request host matches neither ERP_URL nor MES_URL; refusing to issue a session cookie",
+      { host: url.host }
+    );
+    throw new Response("Unrecognized request host", { status: 500 });
+  }
+
+  if (!warnedFallbackHosts.has(url.host)) {
+    warnedFallbackHosts.add(url.host);
+    log.warn(
+      "Request host matches neither ERP_URL nor MES_URL; using the shared carbon cookie (development only)",
+      { host: url.host }
+    );
+  }
+
+  return "carbon";
+}
+
 export function getAuthSessionCookieOptions(
   request: Request,
   options: {
@@ -60,24 +113,14 @@ export function getAuthSessionCookieOptions(
   } = {}
 ) {
   const url = new URL(request.url);
-  const erpUrl = options.erpUrl ?? ERP_URL;
-  const mesUrl = options.mesUrl ?? MES_URL;
-  const configuredHost = (value: string | undefined) => {
-    try {
-      return value ? new URL(value).host : undefined;
-    } catch {
-      return undefined;
-    }
-  };
-  const name =
-    url.host === configuredHost(mesUrl)
-      ? "carbon-mes"
-      : url.host === configuredHost(erpUrl)
-        ? "carbon-erp"
-        : "carbon";
   const isLocal = url.hostname === "localhost" || url.hostname === "127.0.0.1";
   const isDevelopment =
     options.isDevelopment ?? process.env.NODE_ENV === "development";
+  const name = resolveAuthCookieName(url, {
+    erpUrl: options.erpUrl ?? ERP_URL,
+    mesUrl: options.mesUrl ?? MES_URL,
+    isDevelopment
+  });
 
   return {
     name,
