@@ -27,6 +27,7 @@ import {
 import { readManualSourceConfiguration } from "@carbon/knowledge/release-profile";
 import type { Storage } from "@google-cloud/storage";
 import { Pool } from "pg";
+import { type DriveSyncRequest, handleDriveRoute } from "./drive-routes";
 import { createDriveTokenBroker } from "./drive-tokens";
 import { fetchBoundedUrl } from "./fetch-policy";
 import { captureImmutableUpload, readImmutableObject } from "./gcs";
@@ -59,6 +60,8 @@ export type WorkerDependencies = {
   sendOutboxEvent?: (companyId: string) => Promise<void>;
   /** Bounded HTTPS acquisition for URL intake; defaults to the fetch policy. */
   fetchUrl?: typeof fetchBoundedUrl;
+  /** Present only when a Drive sync function is registered (never under manual-v1). */
+  requestDriveSync?: (input: DriveSyncRequest) => Promise<void>;
 };
 
 function databasePool(connectionString: string): Pool {
@@ -516,6 +519,8 @@ export function createWorkerHandler(
           }
         });
       }
+      const drive = await handleDriveRoute(request, url, dependencies);
+      if (drive) return drive;
       return errorResponse(404, "not_found");
     } catch (error) {
       const message = error instanceof Error ? error.message : "request_failed";

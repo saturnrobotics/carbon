@@ -9,6 +9,8 @@ import {
   createCarbonReconciliationFunction,
   readCarbonSourceConfiguration
 } from "./carbon-changes";
+import { createDriveApiClient, downloadDriveDocument } from "./drive-client";
+import { createDriveSyncFunction } from "./drive-sync";
 import { createOutboxDeliveryFunction } from "./functions";
 import { knowledgeInngest } from "./inngest";
 import { createOutboxInvalidationFunction } from "./invalidation";
@@ -36,6 +38,25 @@ export function startServer(
     parserOutputBucket
       ? configuredDependencies
       : null;
+  // Drive synchronization exists only when a connector credential broker is
+  // configured; the manual-v1 release rejects that configuration outright.
+  const driveConfigured =
+    !!dependencies &&
+    !!environment.KNOWLEDGE_DRIVE_TOKEN_BROKER_URL &&
+    !!environment.KNOWLEDGE_DRIVE_TOKEN_BROKER_AUDIENCE;
+  const driveSources = driveConfigured
+    ? dependencies.machineConfiguration.callers
+        .filter((caller) => caller.capabilities.includes("source.changes.read"))
+        .flatMap((caller) =>
+          caller.companyIds.flatMap((companyId) =>
+            caller.sourceIds.map((sourceId) => ({
+              companyId,
+              sourceId,
+              callerId: caller.callerId
+            }))
+          )
+        )
+    : [];
   if (dependencies) {
     dependencies.sendOutboxEvent = async (companyId) => {
       await knowledgeInngest.send({
@@ -44,6 +65,14 @@ export function startServer(
         id: `knowledge-outbox-${companyId}-${crypto.randomUUID()}`
       });
     };
+    if (driveSources.length)
+      dependencies.requestDriveSync = async (input) => {
+        await knowledgeInngest.send({
+          name: "knowledge/drive.sync",
+          data: input,
+          id: `knowledge-drive-${input.sourceId}-${crypto.randomUUID()}`
+        });
+      };
   }
   const handler = createWorkerHandler(dependencies);
   const workerCompanies = dependencies
@@ -130,7 +159,20 @@ export function startServer(
                     location: parserLocation!,
                     job: parserJob!,
                     outputBucket: parserOutputBucket!
-                  })
+                  }),
+                ...(driveSources.length
+                  ? {
+                      loadDriveDocument: async (sourceId, fileId, mimeType) => {
+                        const token =
+                          await dependencies.connectorAccessToken(sourceId);
+                        if (!token)
+                          throw new Error(
+                            "Drive connector credential is unavailable"
+                          );
+                        return downloadDriveDocument(token, fileId, mimeType);
+                      }
+                    }
+                  : {})
               },
               principal,
               event
@@ -141,7 +183,20 @@ export function startServer(
           companies: workerCompanies,
           workerId: environment.K_REVISION ?? `knowledge-worker-${process.pid}`,
           sourceId: dependencies.manualSource.sourceId
-        })
+        }),
+        ...(driveSources.length
+          ? [
+              createDriveSyncFunction({
+                pool: dependencies.ingestPool,
+                sources: driveSources,
+                automationUserId: dependencies.automationUserId,
+                workerId:
+                  environment.K_REVISION ?? `knowledge-worker-${process.pid}`,
+                connectorAccessToken: dependencies.connectorAccessToken,
+                createClient: (accessToken) => createDriveApiClient(accessToken)
+              })
+            ]
+          : [])
       ]
     : [];
   const inngestHandler = serve({

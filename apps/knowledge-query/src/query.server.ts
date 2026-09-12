@@ -101,6 +101,10 @@ export function createReadHandler(
     workerOrigin?: string;
     workerAudience?: string;
     manualSourceId?: string;
+    /** Loopback harness seam only; production mints the forwarded token. */
+    driveForwardingHeaders?: Parameters<
+      typeof createDriveAccessChecker
+    >[0]["forwardingHeaders"];
   }
 ) {
   return async (request: Request): Promise<Response> => {
@@ -229,7 +233,8 @@ export function createReadHandler(
         request,
         identity,
         workerOrigin: options.workerOrigin,
-        workerAudience: options.workerAudience
+        workerAudience: options.workerAudience,
+        forwardingHeaders: options.driveForwardingHeaders
       });
       const { policy, authorizedCandidates, authorizeIds } =
         createReadAuthorization({

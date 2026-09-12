@@ -75,8 +75,8 @@ msgstr "Download original · page {page}"
 msgid "Drag and drop a PDF or image here, or choose a file."
 msgstr "Drag and drop a PDF or image here, or choose a file."
 
-msgid "Drive sources are enrolled by an administrator. Portal sign-in does not authorize Drive access."
-msgstr "Drive sources are enrolled by an administrator. Portal sign-in does not authorize Drive access."
+msgid "Drive sources are enrolled by an administrator with a read-only connector credential held in Secret Manager. Signing into this portal does not authorize Drive access: a document is delivered only after a live check with your own Drive permissions."
+msgstr "Drive sources are enrolled by an administrator with a read-only connector credential held in Secret Manager. Signing into this portal does not authorize Drive access: a document is delivered only after a live check with your own Drive permissions."
 
 msgid "Existing item"
 msgstr "Existing item"
@@ -95,6 +95,9 @@ msgstr "Fetched from"
 
 msgid "Find the right manual."
 msgstr "Find the right manual."
+
+msgid "Google Drive sources"
+msgstr "Google Drive sources"
 
 msgid "I reviewed this evidence"
 msgstr "I reviewed this evidence"

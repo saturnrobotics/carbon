@@ -9,6 +9,7 @@ export default [
   route("api/query", "routes/api.query.ts"),
   route("api/items", "routes/api.items.ts"),
   route("intake", "routes/intake.tsx"),
+  route("settings/sources", "routes/settings.sources.tsx"),
   route("intake/:id", "routes/intake.$id.tsx"),
   route(
     "documents/:documentId/versions/:versionId",
