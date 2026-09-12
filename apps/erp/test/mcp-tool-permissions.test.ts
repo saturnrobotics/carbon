@@ -29,6 +29,10 @@ const EXPECTED_OVERRIDES: Record<string, Tool["permission"]> = {
   knowledge_getRecentReceipts: { module: "inventory", actions: ["view"] },
   knowledge_getRecentReceiptItems: { module: "inventory", actions: ["view"] },
   knowledge_getPurchaseStatus: { module: "purchasing", actions: ["view"] },
+  knowledge_getItemSupplierPricing: {
+    module: "purchasing",
+    actions: ["view"]
+  },
   knowledge_createProcurementDraft: {
     module: "purchasing",
     actions: ["create"]

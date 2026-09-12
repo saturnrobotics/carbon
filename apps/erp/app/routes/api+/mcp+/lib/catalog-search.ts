@@ -4,6 +4,7 @@
 // vocabulary, so "RMA" reaching the returns tools is our job, not its.
 import type { Classification, ManifestEntry } from "@carbon/api";
 import { create, insertMultiple, search } from "zbsearch";
+import { isDisclosedOperation } from "../../v1+/lib/operations.server";
 
 /**
  * Domain synonyms expanded into the query before it hits the index. Keys are
@@ -126,6 +127,8 @@ export type CatalogSearchResult = {
 export type CatalogSearch = {
   search: (options: CatalogSearchOptions) => Promise<CatalogSearchResult>;
   moduleNames: string[];
+  /** How many operations the catalog can return at all — the disclosed count. */
+  totalTools: number;
 };
 
 function fieldWords(tool: ManifestEntry): string {
@@ -163,7 +166,13 @@ async function buildIndex(tools: ManifestEntry[]) {
   return db;
 }
 
-export function createCatalogSearch(tools: ManifestEntry[]): CatalogSearch {
+/**
+ * Build the search over the DISCLOSED catalog. The filter lives here rather
+ * than at the call site so no caller can index a workforce-only operation by
+ * passing the raw manifest — `search_tools` is the surface an agent reads first.
+ */
+export function createCatalogSearch(manifest: ManifestEntry[]): CatalogSearch {
+  const tools = manifest.filter(isDisclosedOperation);
   const byName = new Map(tools.map((tool) => [tool.name, tool]));
   const moduleNames = [...new Set(tools.map((tool) => tool.module))].sort();
 
@@ -236,5 +245,5 @@ export function createCatalogSearch(tools: ManifestEntry[]): CatalogSearch {
     };
   }
 
-  return { search: searchCatalog, moduleNames };
+  return { search: searchCatalog, moduleNames, totalTools: tools.length };
 }

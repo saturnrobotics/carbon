@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => ({
   getCarbonServiceRole: vi.fn(),
   getUserScopedClient: vi.fn(),
   getFreshUserClaims: vi.fn(),
+  userHasVerifiedTotpFactor: vi.fn(),
   verifyServiceToken: vi.fn(),
   verifyIapToken: vi.fn(),
   resolveItems: vi.fn()
@@ -52,11 +53,12 @@ vi.mock("@carbon/auth/client.server", () => ({
 vi.mock("@carbon/auth/users.server", () => ({
   getFreshUserClaims: mocks.getFreshUserClaims
 }));
-// The assurance check imports the MFA service, whose Supabase barrel reaches
-// @carbon/react and the Lingui macros vitest cannot compile. None of these
-// cases gets past verification, so the verdict itself is never consulted.
+// The assurance step (Task 03) reads the actor's factor state through Redis and
+// the service-role client; it runs only after a verified identity, which no case
+// here reaches. Replaced at the same boundary as the other infrastructure — and
+// its Supabase barrel reaches the Lingui macros vitest cannot compile anyway.
 vi.mock("@carbon/auth/mfa.server", () => ({
-  userHasVerifiedTotpFactor: vi.fn(async () => false)
+  userHasVerifiedTotpFactor: mocks.userHasVerifiedTotpFactor
 }));
 vi.mock("@carbon/knowledge/identity.server", async (importOriginal) => {
   const actual =

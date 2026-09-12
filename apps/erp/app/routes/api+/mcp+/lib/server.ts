@@ -8,6 +8,7 @@ import toolMetadata from "./tool-metadata.json";
 import { isMcpBlockedTool } from "./mcp-blocked-tools";
 import { callOperation } from "../../v1+/lib/call.server";
 import {
+  disclosedOperationsByName,
   isListOperation,
   operationsByName
 } from "../../v1+/lib/operations.server";
@@ -73,10 +74,12 @@ export function createMcpServer(ctx: McpContext, today: string): McpServer {
         };
       }
 
+      // Disclosed operations only: a workforce-only name reads as "not found",
+      // exactly as call_tool would answer it (the gate returns NOT_FOUND).
       const sections: string[] = [];
       const missing: string[] = [];
       for (const toolName of requested) {
-        const meta = operationsByName.get(toolName);
+        const meta = disclosedOperationsByName.get(toolName);
         if (!meta) {
           missing.push(toolName);
           continue;
@@ -86,7 +89,9 @@ export function createMcpServer(ctx: McpContext, today: string): McpServer {
             isList: isListOperation(meta),
             sibling: meta.paginates
               ? null
-              : paginatingSibling(meta.name, (n) => operationsByName.get(n))
+              : paginatingSibling(meta.name, (n) =>
+                  disclosedOperationsByName.get(n)
+                )
           })
         );
       }
@@ -307,7 +312,7 @@ export function createMcpServer(ctx: McpContext, today: string): McpServer {
       // No usage footer: the describe_tool/call_tool how-to ships once in the
       // server instructions at connect, and re-listing the names duplicated
       // the grouped list above on every search.
-      output += `STATUS: ${toolMetadata.totalTools} tools available via call_tool`;
+      output += `STATUS: ${catalogSearch.totalTools} tools available via call_tool`;
 
       return {
         content: [{ type: "text" as const, text: output }],

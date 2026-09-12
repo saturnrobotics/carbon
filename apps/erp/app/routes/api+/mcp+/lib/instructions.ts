@@ -1,10 +1,11 @@
 // The MCP server's connect-time instructions, in their own module so they are
 // testable without server.ts's import chain (callOperation → auth → env).
+// Counts come from the DISCLOSED operations — what search_tools can return.
+import { DISCLOSED_OPERATIONS } from "../../v1+/lib/operations.server";
 import { MCP_DEFAULT_LIMIT } from "./format-result";
-import toolMetadata from "./tool-metadata.json";
 
 const MODULE_NAMES = [
-  ...new Set(toolMetadata.tools.map((tool) => tool.module))
+  ...new Set(DISCLOSED_OPERATIONS.map((tool) => tool.module))
 ].sort();
 
 export function getServerInstructions(today: string): string {
@@ -13,7 +14,7 @@ export function getServerInstructions(today: string): string {
 Date: ${today}
 
 IMPORTANT: Tool Discovery System
-This server has ${toolMetadata.totalTools} tools available across ${toolMetadata.modules} modules:
+This server has ${DISCLOSED_OPERATIONS.length} tools available across ${MODULE_NAMES.length} modules:
 ${MODULE_NAMES.join(", ")}
 
 To prevent context exhaustion, tools are loaded on-demand using call_tool.

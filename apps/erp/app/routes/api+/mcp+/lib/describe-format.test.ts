@@ -136,11 +136,13 @@ describe("paginatingSibling", () => {
 describe("getServerInstructions", () => {
   const instructions = getServerInstructions("2026-09-11");
 
-  test("lists every module name", () => {
+  test("lists every disclosed module name and not the workforce-only one", () => {
     const modules = [...new Set(toolMetadata.tools.map((t) => t.module))];
-    for (const module of modules) {
+    expect(modules).toContain("knowledge");
+    for (const module of modules.filter((m) => m !== "knowledge")) {
       expect(instructions).toContain(module);
     }
+    expect(instructions).not.toContain("knowledge");
   });
 
   test("derives the default page size from the constant", () => {
