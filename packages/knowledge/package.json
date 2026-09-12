@@ -54,7 +54,7 @@
     "test": "vitest run --passWithNoTests=false",
     "test:integration": "vitest run --config vitest.integration.config.ts --passWithNoTests=false",
     "typecheck": "tsgo --noEmit",
-    "verify:deployment": "node -e \"throw new Error('Knowledge deployment verification is not implemented; complete Task 24 first')\"",
+    "verify:deployment": "tsx scripts/verify-deployment.ts",
     "verify:security": "tsx scripts/verify-security.ts"
   },
   "dependencies": {
