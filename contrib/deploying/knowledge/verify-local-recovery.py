@@ -429,7 +429,7 @@ def main():
     if not args.synthetic or not args.disposable:
         raise SystemExit("Both --synthetic and --disposable are required")
     running = set(filter(None, compose("ps", "--status", "running", "--services", capture=True).splitlines()))
-    writers = running.intersection({"portal", "ingest", "inngest", "parser", "query"})
+    writers = running.intersection({"portal", "ingest", "inngest", "parser", "query", "drive"})
     if writers:
         raise SystemExit(f"Stop manual stack task services before recovery: {sorted(writers)}")
     compose("up", "-d", "postgres", "storage")

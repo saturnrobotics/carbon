@@ -26,7 +26,7 @@ COPY --from=e2e-pruner /repo/out-e2e/json/ ./
 RUN pnpm install --frozen-lockfile --ignore-scripts
 COPY --from=e2e-pruner /repo/out-e2e/full/ ./
 RUN pnpm --filter knowledge-worker exec tsup \
-  src/test/local-ingest.ts src/test/local-query.ts \
+  src/test/local-ingest.ts src/test/local-query.ts src/test/local-drive.ts \
   --format esm --no-splitting --out-dir e2e-dist
 
 FROM node:22-alpine AS runtime-base

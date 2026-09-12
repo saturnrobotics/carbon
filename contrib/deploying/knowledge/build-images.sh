@@ -23,6 +23,12 @@ case "${1:-native}" in
     ;;
 esac
 
+# A concurrent harness must be able to build its own images without retagging
+# anyone else's. Both default to the historical values, so an unparameterised
+# invocation is unchanged.
+prefix=${KNOWLEDGE_IMAGE_PREFIX:-knowledge-manual-local}
+tag=${KNOWLEDGE_IMAGE_TAG:-manual-v1}
+
 root=$(CDPATH= cd -- "$(dirname -- "$0")/../../.." && pwd)
 cd "$root"
 
@@ -30,13 +36,22 @@ if [ "$mode" = "e2e" ]; then
   docker build \
     --file contrib/deploying/knowledge/Dockerfile.schema \
     --target runtime \
-    --tag knowledge-manual-local-schema:manual-v1 \
+    --tag "$prefix-schema:$tag" \
     .
   for unit in ingest web parser; do
+    # Only the disposable web harness admits the deferred Drive surface, and
+    # only through the `e2e` stage's build argument. No release build below
+    # passes it, and the release `runtime` stage cannot receive it at all.
+    if [ "$unit" = web ]; then
+      set -- --build-arg KNOWLEDGE_DRIVE_ENABLED=true
+    else
+      set --
+    fi
     docker build \
+      "$@" \
       --file "contrib/deploying/knowledge/Dockerfile.$unit" \
       --target e2e \
-      --tag "knowledge-manual-local-$unit-e2e:manual-v1" \
+      --tag "$prefix-$unit-e2e:$tag" \
       .
   done
   exit 0
@@ -52,6 +67,6 @@ for unit in web query ingest parser schema retention; do
     "$@" \
     --file "contrib/deploying/knowledge/Dockerfile.$unit" \
     --target runtime \
-    --tag "knowledge-manual-local-$unit:manual-v1$suffix" \
+    --tag "$prefix-$unit:$tag$suffix" \
     .
 done

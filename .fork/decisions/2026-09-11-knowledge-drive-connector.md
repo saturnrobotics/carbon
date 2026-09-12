@@ -149,3 +149,112 @@ container RUNTIME variable, but `Dockerfile.web` builds with it absent. Route
 config is a build-time artifact, so the docker harness's web image contains no
 Drive route regardless — `drive-source.spec.ts` is exercisable only through the
 Playwright `webServer` path, which sets the variable before `react-router dev`.
+
+## Follow-up: the spec has now been run (2026-09-12)
+
+`drive-source.spec.ts` is green in the containerised harness — 3 passed, twice in
+a row against the same stack. Four things stood between it and a first run, and
+only the first is the one the previous follow-up predicted.
+
+**The build-time gate.** The harness's web image now takes the surface as a build
+argument: `Dockerfile.web`'s `e2e` stage declares `ARG KNOWLEDGE_DRIVE_ENABLED`
+and rebuilds the app with it, and `build-images.sh e2e` passes `true` for the
+`web` unit only. The argument is declared in that stage and nowhere else, so the
+release `runtime` stage — which descends from `builder` — cannot receive it:
+building the release target WITH `--build-arg KNOWLEDGE_DRIVE_ENABLED=true` still
+produces a bundle with no Drive route, which is a stronger fence than "no release
+path passes it". `test_images.py` pins that structurally by parsing the
+Dockerfile into stages rather than searching its text, and the new case also
+asserts `cloudbuild.yaml` passes no build argument and selects no target (so it
+builds `runtime`), and that `build-images.sh`'s release loop passes none.
+
+The runtime variable in `compose.local.yaml` is kept, and is no longer the only
+thing holding the surface open: the `e2e` image serves through `react-router dev`,
+which re-reads the manifest at boot, so the two now agree instead of the image
+silently lacking what its environment claims.
+
+**The fixture was not in the image.** `Dockerfile.ingest`'s `e2e-builder` bundled
+`local-ingest.ts` and `local-query.ts` only, so `local-drive.js` did not exist in
+any container.
+
+**Two fixtures, one database, one portal.** The manual library's query fixture is
+constructed with `manualSourceId`, which filters sources to `kind='upload'` — it
+can never return Drive evidence — and its gateway's caller configuration admits
+no `knowledge.read` operation, so it answers no Drive route either. The Drive
+fixture therefore runs as its own `drive` Compose service on its own two ports,
+and the manual gateway forwards `/v1/drive/*` to it (`KNOWLEDGE_E2E_DRIVE_FIXTURE_URL`,
+absent by default) so the portal keeps ONE worker URL, as production has.
+The two coexist in one database because every row the Drive fixture writes is
+scoped to its own `sourceId` — with one exception: `knowledge."identityBinding"`
+is unique per `(companyId, issuer, subject)` and the stack fixture already binds
+the same reader with a superset of these capabilities, so the Drive seed is now
+`ON CONFLICT DO NOTHING`. Claiming that row instead would have downgraded the
+manual workflow's reader.
+
+**The seed was one-shot.** The spec's `afterAll` deletes the enrollment, which
+only process start recreated — so the suite passed once and then found no
+enrollment on every later run. There is now a `POST /__e2e/drive/reset` control
+(re-seed plus an in-memory Drive `restore()`, since the spec revokes a folder and
+a repeat run must start granted and uncursored) and the spec calls it in
+`beforeAll`.
+
+Two spec corrections, neither weakening what it proves:
+
+- `evidenceTitles("alice")` asserted a 200. The loopback stack deliberately binds
+  no company-b identity for alice — `manual-workflow.spec.ts` depends on that for
+  its cross-tenant assertions — so the read handler refuses her outright and the
+  status is 503, not 200. The assertion is now "not 200, and no evidence", with
+  the grant-layer twin left where it works: alice reaches `/settings/sources` and
+  sees the empty state, which is a real ACL result rather than an identity error.
+- The "Reconcile now" refusal asserted `getByRole("status")` count 0 immediately
+  after the click, which passes before the submission lands. It now waits for the
+  POST response first, so the absent confirmation is a refusal.
+
+## Follow-up: harness ports are parameterised (2026-09-12)
+
+The harness pinned whole origins by string equality, which made "loopback only"
+and "port 4200" the same decision and left a second stack no way to move a port
+without dropping the guarantee. `apps/knowledge/tests/loopback.ts` now owns that
+check — loopback host, expected scheme, no credentials, no path/query/fragment —
+and the port is free. `compose.local.yaml`, `local-stack.sh` and
+`build-images.sh` take the project name, image prefix, image tag and every
+published port from environment variables that default to the historical values,
+so an unparameterised invocation resolves byte-for-byte as before (verified with
+`docker compose config`). `vite.e2e.config.ts` reads its port and origin from
+`KNOWLEDGE_E2E_PORT` / `KNOWLEDGE_WEB_ORIGIN`; a published port that differed
+from the container's would otherwise have made Vite advertise assets on the
+wrong origin.
+
+`playwright.config.ts` also sets `workers: 1`. Spec FILES ran in parallel by
+default, and `manual-workflow.spec.ts` deactivates the shared reader mid-run
+(`/__e2e/revoke/bob`) — a database-wide mutation that no other spec can survive
+concurrently.
+
+## Follow-up: `manual-workflow.spec.ts` is red for its own reasons (2026-09-12)
+
+Running the suite surfaced two defects in the OTHER spec, both predating this
+work and both invisible while the suite was never run. The first is fixed here
+because nothing else could run past it; the second is diagnosed and left.
+
+1. **Fixed.** `getByLabel("Source evidence")` matched two elements. `getByLabel`
+   is a case-insensitive SUBSTRING match, and `7da6001bf2` (typed intake
+   proposals) added "Confirm this field against the source evidence." inside
+   every unresolved field's own `<label>` — after `7482e0ce19` wrote the spec.
+   Unresolved fields are the review page's normal first state (the spec fills
+   them), so this was ambiguous on every run. The three call sites now address
+   the panel by role: `getByRole("complementary", { name: "Source evidence" })`.
+2. **Not fixed — hand-off.** The browser download of a just-published manual
+   answers `{"error":"document_not_found"}`, from
+   `apps/knowledge-worker/src/server.ts:394`, i.e. `getAuthorizedDocumentVersion`
+   returns null. The row data satisfies that query's WHERE clause — verified in
+   the live fixture: `status='published'`, `currentVersionId` set,
+   `extractionStatus='ready'`, `kind='upload'`, not deleted — so the row is being
+   removed by the read role's ACL. The published document has NO document-scoped
+   grant; the only grant covering it is the fixture's source-scoped `admin`
+   (`documentId IS NULL`), which the retrieval path accepts (the spec's search
+   and cache assertions pass) and this one apparently does not. So either publish
+   should write a document grant or the two paths disagree about a source-scoped
+   grant. The spec then hangs on `waitForEvent("download")` for a download that
+   can never arrive, so a wrong answer costs the full 180 s test timeout rather
+   than failing on the response status. Reproduced identically with
+   `drive-source.spec.ts` excluded from the run, on a freshly wiped database.
