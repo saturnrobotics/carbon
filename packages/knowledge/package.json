@@ -37,6 +37,8 @@
     "./retrieval/vector.server": "./src/retrieval/vector.server.ts",
     "./retrieval/fusion": "./src/retrieval/fusion.ts",
     "./retrieval/evidence": "./src/retrieval/evidence.ts",
+    "./retrieval/sections.server": "./src/retrieval/sections.server.ts",
+    "./retrieval/recall": "./src/retrieval/recall.ts",
     "./query/vertex.server": "./src/query/vertex.server.ts",
     "./sources/registry.server": "./src/sources/registry.server.ts",
     "./entities/resolve": "./src/entities/resolve.ts",
