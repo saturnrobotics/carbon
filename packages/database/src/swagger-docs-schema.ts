@@ -625,6 +625,9 @@ export default {
             $ref: "#/parameters/rowFilter.knowledgeCommandReceipt.createdAt"
           },
           {
+            $ref: "#/parameters/rowFilter.knowledgeCommandReceipt.version"
+          },
+          {
             $ref: "#/parameters/select"
           },
           {
@@ -708,6 +711,9 @@ export default {
             $ref: "#/parameters/rowFilter.knowledgeCommandReceipt.createdAt"
           },
           {
+            $ref: "#/parameters/rowFilter.knowledgeCommandReceipt.version"
+          },
+          {
             $ref: "#/parameters/preferReturn"
           }
         ],
@@ -743,6 +749,9 @@ export default {
           },
           {
             $ref: "#/parameters/rowFilter.knowledgeCommandReceipt.createdAt"
+          },
+          {
+            $ref: "#/parameters/rowFilter.knowledgeCommandReceipt.version"
           },
           {
             $ref: "#/parameters/body.knowledgeCommandReceipt"
@@ -107081,7 +107090,8 @@ export default {
         "idempotencyKey",
         "payloadHash",
         "purchaseOrderId",
-        "createdAt"
+        "createdAt",
+        "version"
       ],
       properties: {
         id: {
@@ -107092,7 +107102,7 @@ export default {
         },
         companyId: {
           description:
-            "Note:\nThis is a Foreign Key to `company.id`.<fk table='company' column='id'/>",
+            "Note:\nThis is a Primary Key.<pk/>\nThis is a Foreign Key to `company.id`.<fk table='company' column='id'/>",
           format: "text",
           type: "string"
         },
@@ -107124,6 +107134,11 @@ export default {
           default: "now()",
           format: "timestamp with time zone",
           type: "string"
+        },
+        version: {
+          default: 1,
+          format: "bigint",
+          type: "integer"
         }
       },
       type: "object"
@@ -152008,6 +152023,12 @@ export default {
     },
     "rowFilter.knowledgeCommandReceipt.createdAt": {
       name: "createdAt",
+      required: false,
+      in: "query",
+      type: "string"
+    },
+    "rowFilter.knowledgeCommandReceipt.version": {
+      name: "version",
       required: false,
       in: "query",
       type: "string"

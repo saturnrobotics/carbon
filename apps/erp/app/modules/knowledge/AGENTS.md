@@ -7,7 +7,8 @@ The canonical read surface (plus one command) that the company knowledge platfor
 - **Workforce caller** — a knowledge service (`knowledge-query`, `knowledge-actions`) presenting its own service token plus the user's IAP assertion. `authenticate.server.ts` resolves it to `authKind: "workforce"` with the caller registry's `allowedOperations`, the principal's `capabilities`, the user's fresh Carbon permissions and an `assurance` verdict.
 - **Capability** — what the principal's identity binding grants: `knowledge.read` (the six identity reads), `knowledge.read.pricing` (the one read that discloses money), `carbon.procurement.draft` (the write). Assigned per operation by `KNOWLEDGE_OPERATIONS`.
 - **Identity read** — a bounded projection of items, receipts, documents or purchase status that never carries a price or cost field. Pinned on the manifest's response schemas by `knowledge.read.integration.test.ts`.
-- **Procurement draft command** — `createProcurementDraft` (`knowledge.mcp.server.ts` → `knowledge.commands.server.ts`): creates or schedules a Draft purchase order through the purchasing transaction. Actor, company and source are server-stamped; `executeAt` defers it to `knowledgeProcurementSchedule`.
+- **Procurement draft command** — `createProcurementDraft` (`knowledge.mcp.server.ts` → `knowledge.commands.server.ts`): creates or schedules a Draft purchase order through the purchasing transaction. Actor and company are server-stamped; the validator recomputes the caller's `payloadHash` over the business content (`procurementCommandPayloadHash` in `@carbon/knowledge/commands/procurement`) and refuses a payload that drifted from it; `executeAt` in the future defers it to `knowledgeProcurementSchedule` after a read-only preflight (`resolveProcurementDraft`).
+- **Execution-time recheck** — the command boundary is the only path, immediate or scheduled: `actorCanCreatePurchasing` re-evaluates the actor's live employee membership and `purchasing_create` grant, `assertScheduleStillExecutable` refuses a changed payload, a payload `version` this build cannot execute, a cancelled row or a schedule that is not due, and the purchasing transaction re-verifies supplier, location, item revision and supplier purchase settings.
 - **Disclosure** — knowledge operations stay in the manifest and its committed digest but are filtered out of MCP `search_tools`/`describe_tool`, `/.well-known/mcp.json`, the server instructions and `/api/v1/openapi.json` (`isDisclosedOperation` in `routes/api+/v1+/lib/operations.server.ts`).
 
 ## Safety
@@ -45,8 +46,9 @@ pnpm exec turbo run typecheck --filter=erp
 | `purchaseOrder` | `getPurchaseStatus`: status and dates, no amounts |
 | `supplierPart` / `supplier` | `getItemSupplierPricing`: active unit price, supplier unit of measure, the supplier's currency |
 | `storage.objects` (`private` bucket, `<companyId>/parts/<itemId>`) | `getDocumentReferences`: object keys only, no signed URLs |
-| `knowledgeProcurementSchedule` | Deferred procurement draft commands (`executeAt`), idempotent on `(companyId, actorId, action, idempotencyKey)` |
-| `knowledge.source` | The single active Carbon purchasing source a draft is attributed to |
+| `knowledgeProcurementSchedule` | Deferred procurement draft commands (`executeAt`) with their `version` and `payloadHash`, idempotent on `(companyId, actorId, action, idempotencyKey)` |
+| `knowledgeCommandReceipt` | One row per executed command — actor, company, action, idempotency key, payload hash, payload `version` and the resulting `purchaseOrderId`; the SQL uniqueness on `(companyId, actorId, action, idempotencyKey)` is what makes a retry a replay |
+| `knowledgeSourceOutbox` | The draft's knowledge event, written by the `purchaseOrder` trigger in the command's own transaction (see `knowledge.events.server.ts`) — the command inserts nothing here itself |
 
 ## Key Service Functions
 
@@ -60,7 +62,7 @@ pnpm exec turbo run typecheck --filter=erp
 
 ## Related Modules
 
-- **purchasing** — `createProcurementDraft` in `purchasing.service.ts` is the transaction the command path calls
+- **purchasing** — `createProcurementDraft` / `resolveProcurementDraft` in `purchasing.service.ts` are the transaction and the preflight this command path calls; both are in `MCP_BLOCKED_TOOL_NAMES`, because their `authorizedContext` argument would otherwise let an API caller supply its own tenancy and permission
 - **items** / **inventory** — own the tables the identity reads project; this module adds no writes to them
 
 ## Rules References

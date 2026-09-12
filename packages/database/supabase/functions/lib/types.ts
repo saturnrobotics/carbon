@@ -27504,6 +27504,7 @@ export type Database = {
           idempotencyKey: string
           payloadHash: string
           purchaseOrderId: string
+          version: number
         }
         Insert: {
           action: string
@@ -27514,6 +27515,7 @@ export type Database = {
           idempotencyKey: string
           payloadHash: string
           purchaseOrderId: string
+          version?: number
         }
         Update: {
           action?: string
@@ -27524,6 +27526,7 @@ export type Database = {
           idempotencyKey?: string
           payloadHash?: string
           purchaseOrderId?: string
+          version?: number
         }
         Relationships: [
           {
