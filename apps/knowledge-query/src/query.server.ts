@@ -1,5 +1,9 @@
 import { createHash } from "node:crypto";
-import { queryRequestSchema } from "@carbon/knowledge";
+import {
+  type Evidence,
+  type QueryRequest,
+  queryRequestSchema
+} from "@carbon/knowledge";
 import {
   admitReadRequest,
   durableBudget
@@ -8,7 +12,12 @@ import { AuthorizedCache, type CacheStore } from "@carbon/knowledge/cache";
 import { currentPolicySnapshot } from "@carbon/knowledge/cache/epochs.server";
 import { withKnowledgeTransaction } from "@carbon/knowledge/database.server";
 import { verifyWorkforceRequest } from "@carbon/knowledge/identity.server";
-import { executeReadQuery, queryResultSchema } from "@carbon/knowledge/query";
+import { assertProviderCandidates } from "@carbon/knowledge/provider-policy";
+import {
+  executeReadQuery,
+  queryResultSchema,
+  type ReadDependencies
+} from "@carbon/knowledge/query";
 import {
   createVertexEmbedder,
   type EmbeddingConfiguration
@@ -19,10 +28,7 @@ import {
   createVertexAnswerProvider,
   type VertexConfiguration
 } from "@carbon/knowledge/query/vertex.server";
-import {
-  assembleEvidence,
-  providerEligible
-} from "@carbon/knowledge/retrieval/evidence";
+import { assembleEvidence } from "@carbon/knowledge/retrieval/evidence";
 import { reciprocalRankFusion } from "@carbon/knowledge/retrieval/fusion";
 import {
   chunkJoins,
@@ -32,6 +38,7 @@ import {
 } from "@carbon/knowledge/retrieval/lexical.server";
 import { vectorSearch } from "@carbon/knowledge/retrieval/vector.server";
 import type { SourceRegistryConfiguration } from "@carbon/knowledge/sources/registry.server";
+import type { Telemetry } from "@carbon/knowledge/telemetry";
 import type { Pool } from "pg";
 import { createDriveAccessChecker } from "./drive-access.server";
 import { structuredSourceQuery } from "./sources.server";
@@ -40,6 +47,41 @@ type IdentityOptions = Omit<
   Parameters<typeof verifyWorkforceRequest>[0],
   "request" | "operation"
 >;
+
+/**
+ * The only path from evidence to an answer provider. The candidates are re-read
+ * under the reader's current authorization first, then their source policy is
+ * checked as a whole: one ineligible member refuses the call (recorded as a
+ * `model` deny) instead of trimming the set the provider sees.
+ */
+export function createProviderDisclosure(options: {
+  providerId: string;
+  trace: Pick<Telemetry, "record" | "measure">;
+  authorizedCandidates: (
+    ids: readonly string[]
+  ) => Promise<readonly RetrievedChunk[] | null>;
+  answer: (
+    request: QueryRequest,
+    evidence: Evidence[],
+    signal: AbortSignal
+  ) => Promise<unknown>;
+}): NonNullable<ReadDependencies["synthesize"]> {
+  return async (request, evidence, signal) => {
+    const candidates = await options.authorizedCandidates(
+      evidence.map((item) => item.id)
+    );
+    if (!candidates) throw Error("Authorization changed");
+    try {
+      assertProviderCandidates(options.providerId, candidates);
+    } catch (error) {
+      options.trace.record("model", "deny");
+      throw error;
+    }
+    return options.trace.measure("model", () =>
+      options.answer(request, evidence, signal)
+    );
+  };
+}
 export function createReadHandler(
   options: IdentityOptions & {
     pool: Pool;
@@ -218,14 +260,16 @@ export function createReadHandler(
         workerOrigin: options.workerOrigin,
         workerAudience: options.workerAudience
       });
-      const authorizeIds = async (ids: string[]) => {
-        if (!(await currentIdentity())) return false;
+      const authorizedCandidates = async (ids: readonly string[]) => {
+        if (!(await currentIdentity())) return null;
         const rows = await authorizedChunks(ids);
-        return (
-          rows.length === new Set(ids).size &&
+        return rows.length === new Set(ids).size &&
           (await Promise.all(rows.map(liveAccess))).every(Boolean)
-        );
+          ? rows
+          : null;
       };
+      const authorizeIds = async (ids: string[]) =>
+        !!(await authorizedCandidates(ids));
       const cache = new AuthorizedCache(options.cacheStore, policy);
       let computed = false;
       const result = await cache.get(
@@ -249,7 +293,6 @@ export function createReadHandler(
           computed = true;
           trace.record("cache", "miss");
           const retrievedIds = new Set<string>();
-          const providerIds = new Set<string>();
           let retrievalPartial = false;
           const embed =
             !options.manualSourceId && options.embedding
@@ -319,8 +362,6 @@ export function createReadHandler(
               for (const [index, chunk] of chunks.entries()) {
                 if (live[index]) retrievedIds.add(chunk.id);
                 else retrievalPartial = true;
-                if (live[index] && providerEligible(chunk, "vertex"))
-                  providerIds.add(chunk.id);
               }
               return assembleEvidence(chunks, {
                 origin: options.origin,
@@ -333,17 +374,12 @@ export function createReadHandler(
             authorize: async (evidence) => retrievedIds.has(evidence.id),
             ...(answer
               ? {
-                  synthesize: async (input, evidence, signal) => {
-                    const permitted = evidence.filter((item) =>
-                      providerIds.has(item.id)
-                    );
-                    if (!permitted.length) return { claims: [] };
-                    if (!(await authorizeIds(permitted.map((item) => item.id))))
-                      throw Error("Authorization changed");
-                    return trace.measure("model", () =>
-                      answer(input, permitted, signal)
-                    );
-                  }
+                  synthesize: createProviderDisclosure({
+                    providerId: "vertex",
+                    trace,
+                    authorizedCandidates,
+                    answer
+                  })
                 }
               : {})
           });

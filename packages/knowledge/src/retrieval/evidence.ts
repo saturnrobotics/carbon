@@ -1,26 +1,16 @@
 import { type Evidence, evidenceSchema } from "../contracts";
 import type { RetrievedChunk } from "./lexical.server";
 
-export function providerEligible(
-  chunk: RetrievedChunk,
-  providerId: string
-): boolean {
-  const providers = chunk.providerPolicy.allowedProviders;
-  const classifications = chunk.providerPolicy.allowedClassifications;
-  return (
-    Array.isArray(providers) &&
-    providers.includes(providerId) &&
-    Array.isArray(classifications) &&
-    classifications.includes(chunk.classification)
-  );
-}
-
+/**
+ * Evidence is what the READER may see. Provider eligibility is decided
+ * separately at the provider boundary (`../provider-policy.ts`), never here: an
+ * ineligible document is still the reader's evidence.
+ */
 export async function assembleEvidence(
   chunks: readonly RetrievedChunk[],
   options: {
     origin: string;
     policyVersion: string;
-    providerId?: string;
     maxTokens: number;
     countTokens: (text: string) => number;
     authorize: (chunk: RetrievedChunk) => Promise<boolean>;
@@ -41,12 +31,8 @@ export async function assembleEvidence(
   let tokens = 0;
   for (const chunk of chunks) {
     if (evidence.length === 8) break;
-    // Source policy (including live Drive access) precedes any external disclosure.
-    if (
-      !(await options.authorize(chunk)) ||
-      (options.providerId && !providerEligible(chunk, options.providerId))
-    )
-      continue;
+    // Authorization (including live Drive access) precedes delivery.
+    if (!(await options.authorize(chunk))) continue;
     const count = options.countTokens(chunk.text);
     if (!Number.isInteger(count) || count < 0)
       throw new Error("Invalid token accounting");

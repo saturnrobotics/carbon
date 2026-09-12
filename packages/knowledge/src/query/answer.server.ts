@@ -6,6 +6,7 @@ import {
   type QueryRequest,
   queryRequestSchema
 } from "../contracts";
+import { ProviderPolicyRefusal } from "../provider-policy";
 import { withDeadline } from "./deadline.server";
 import { routeQuery } from "./router";
 
@@ -43,6 +44,8 @@ export const queryResultSchema = z
   })
   .strict();
 export type QueryResult = z.infer<typeof queryResultSchema>;
+export const PROVIDER_POLICY_REFUSED_MESSAGE =
+  "An answer was not generated because the evidence includes a source that is not admitted to the answer provider.";
 export type ReadDependencies = {
   signal?: AbortSignal;
   retrieve: (text: string, signal: AbortSignal) => Promise<Evidence[]>;
@@ -96,11 +99,25 @@ export async function executeReadQuery(
       result.kind = "results";
       result.message = "";
       if (route.kind === "read" && dependencies.synthesize) {
-        const parsed = synthesisSchema.safeParse(
-          await dependencies.synthesize(request, result.evidence, signal)
-        );
+        let synthesized: unknown;
+        let refused = false;
+        try {
+          synthesized = await dependencies.synthesize(
+            request,
+            result.evidence,
+            signal
+          );
+        } catch (error) {
+          if (!(error instanceof ProviderPolicyRefusal)) throw error;
+          // Refused whole, never trimmed: the reader keeps the evidence and no
+          // provider saw any of it.
+          refused = true;
+        }
+        const parsed = synthesisSchema.safeParse(synthesized);
         const ids = new Set(result.evidence.map((item) => item.id));
-        if (
+        if (refused) {
+          result.message = PROVIDER_POLICY_REFUSED_MESSAGE;
+        } else if (
           parsed.success &&
           parsed.data.claims.length &&
           parsed.data.claims.every((claim) =>
