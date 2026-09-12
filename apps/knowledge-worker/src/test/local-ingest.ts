@@ -5,6 +5,7 @@
  * storage, outbox leasing, processor, and parser result contract.
  */
 
+import { lookup } from "node:dns/promises";
 import { createServer } from "node:http";
 import { verifyWorkforceRequest } from "@carbon/knowledge/identity.server";
 import { postgresIdentityStore } from "@carbon/knowledge/identity-store.server";
@@ -12,6 +13,7 @@ import { createExtraction, type ParserOutput } from "@carbon/knowledge/intake";
 import { Storage } from "@google-cloud/storage";
 import { serve } from "inngest/node";
 import { Pool } from "pg";
+import { fetchBoundedUrl } from "../fetch-policy";
 import { createOutboxDeliveryFunction } from "../functions";
 import {
   captureExistingObject,
@@ -28,7 +30,9 @@ import {
   localCallerConfiguration,
   localCompanyId,
   localSourceId,
-  localTokenVerifier
+  localTokenVerifier,
+  syntheticUrlIntakeFetch,
+  syntheticUrlIntakeResolve
 } from "./local-fixture";
 import { handleLocalHttpRequest } from "./local-http";
 
@@ -144,6 +148,17 @@ async function main() {
     },
     connectorAccessToken: async () => null,
     userDriveAccessToken: async () => null,
+    // URL intake runs the production fetch policy; only the synthetic host's
+    // DNS answer and socket are substituted, so private-address and
+    // content-type refusals are the real ones.
+    fetchUrl: (value) =>
+      fetchBoundedUrl(value, {
+        resolve: (hostname) =>
+          syntheticUrlIntakeResolve(hostname, async (host) =>
+            (await lookup(host, { all: true })).map((entry) => entry.address)
+          ),
+        fetchImpl: syntheticUrlIntakeFetch
+      }),
     sendOutboxEvent: async (companyId) => {
       await knowledgeInngest.send({
         name: "knowledge/outbox.deliver",
@@ -248,6 +263,19 @@ async function main() {
         `UPDATE public."user" SET active=true WHERE id='bob'`
       );
       return Response.json({ state: "active" });
+    }
+    // Swap the fixture publisher's library grant so a browser run can prove
+    // that publish is refused by the database policy, not only by the UI.
+    const grantMatch = url.pathname.match(
+      /^\/__e2e\/grant\/bob\/(review|admin)$/
+    );
+    if (request.method === "POST" && grantMatch) {
+      await fixturePool.query(
+        `UPDATE knowledge."grant" SET capability=$1,version=version+1
+         WHERE id='e2e-bob-admin' AND "companyId"=$2`,
+        [grantMatch[1], localCompanyId]
+      );
+      return Response.json({ capability: grantMatch[1] });
     }
     if (request.method === "POST" && url.pathname === "/__e2e/cleanup") {
       await cleanCapturedIntakes(fixturePool, [...capturedIntakes]);

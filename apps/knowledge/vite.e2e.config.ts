@@ -4,8 +4,10 @@
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { lingui } from "@lingui/vite-plugin";
 import { reactRouter } from "@react-router/dev/vite";
-import { defineConfig, type Plugin } from "vite";
+import { defineConfig, type Plugin, type PluginOption } from "vite";
+import babelMacros from "vite-plugin-babel-macros";
 
 const appDirectory = dirname(fileURLToPath(import.meta.url));
 const identityModule = resolve(appDirectory, "app/services/identity.server.ts");
@@ -41,7 +43,12 @@ function loopbackIdentityOnly(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [loopbackIdentityOnly(), reactRouter()],
+  plugins: [
+    loopbackIdentityOnly(),
+    babelMacros(),
+    lingui(),
+    reactRouter()
+  ] as PluginOption[],
   server: {
     // React Router's Vite forwarded-action adapter labels a same-origin
     // progressive form submission `Origin: null`. This test-only transport

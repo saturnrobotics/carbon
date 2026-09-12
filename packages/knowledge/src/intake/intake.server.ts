@@ -6,13 +6,17 @@ import {
 } from "../database.server";
 import {
   type IntakeInput,
+  type ItemAssociation,
   intakeInputSchema,
+  itemAssociationSchema,
   type ReviewedManualMetadata,
   reviewedManualMetadataSchema
 } from "./contracts";
 
 export type { IntakeInput } from "./contracts";
 export {
+  type ItemAssociation,
+  itemAssociationSchema,
   type ReviewedManualMetadata,
   reviewedManualMetadataSchema
 } from "./contracts";
@@ -24,6 +28,8 @@ export type CapturedIntake = {
   ownerId: string;
   acl: string;
   input: IntakeInput;
+  /** Final HTTPS URL an object was acquired from; provenance only, never identity. */
+  acquiredFrom?: string;
   state: "captured";
 };
 
@@ -58,7 +64,15 @@ export async function persistCapturedIntake(
         principal.actorId,
         captured.sourceId,
         captured.ownerId,
-        JSON.stringify([{ ...captured.input, acl: captured.acl }]),
+        JSON.stringify([
+          {
+            ...captured.input,
+            acl: captured.acl,
+            ...(captured.acquiredFrom
+              ? { acquiredFrom: captured.acquiredFrom }
+              : {})
+          }
+        ]),
         captured.idempotencyKey
       ]
     );
@@ -107,23 +121,66 @@ export async function getManualUploadSource(
   });
 }
 
-export function manualReviewDecisions(metadata: unknown): {
+export type WritableUploadSource = {
+  sourceId: string;
+  displayName: string;
+  classification: string;
+};
+
+/** Upload libraries the current actor may capture into, by the same read grant
+ * the intake INSERT policy checks for an owner capture. Bounded to 20 rows. */
+export async function getWritableUploadSources(
+  pool: Pool,
+  principal: DatabasePrincipal & { actorId: string },
+  options: { onlySourceId?: string } = {}
+): Promise<WritableUploadSource[]> {
+  return withKnowledgeTransaction(pool, principal, "read", async (client) => {
+    const result = await client.query<WritableUploadSource>(
+      `SELECT id AS "sourceId","displayName",classification FROM knowledge.source
+       WHERE "companyId"=$1 AND kind='upload' AND status='active'
+         AND ($2::text IS NULL OR id=$2) AND knowledge.can_access("companyId",id)
+       ORDER BY "displayName",id LIMIT 20`,
+      [principal.companyId, options.onlySourceId ?? null]
+    );
+    return result.rows;
+  });
+}
+
+export function manualReviewDecisions(
+  metadata: unknown,
+  item?: unknown
+): {
   metadata: ReviewedManualMetadata;
+  item: ItemAssociation | null;
   decisions: Record<
     string,
-    { value: string; decision: "corrected"; evidence: never[] }
+    {
+      value: string | ItemAssociation | null;
+      decision: "corrected";
+      evidence: never[];
+    }
   >;
   unresolved: never[];
 } {
   const reviewed = reviewedManualMetadataSchema.parse(metadata);
+  const association =
+    item === undefined || item === null
+      ? null
+      : itemAssociationSchema.parse(item);
   return {
     metadata: reviewed,
-    decisions: Object.fromEntries(
-      Object.entries(reviewed).map(([field, value]) => [
-        field,
-        { value, decision: "corrected" as const, evidence: [] }
-      ])
-    ),
+    item: association,
+    decisions: {
+      ...Object.fromEntries(
+        Object.entries(reviewed).map(([field, value]) => [
+          field,
+          { value, decision: "corrected" as const, evidence: [] }
+        ])
+      ),
+      // A generic document keeps an explicit "no item" decision so a later
+      // re-extraction cannot read silence as an unanswered question.
+      item: { value: association, decision: "corrected" as const, evidence: [] }
+    },
     unresolved: []
   };
 }

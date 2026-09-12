@@ -2,11 +2,14 @@
 import { createRedisCache } from "@carbon/knowledge/cache/redis.server";
 import { postgresIdentityStore } from "@carbon/knowledge/identity-store.server";
 import { Pool } from "pg";
+import { createItemSearchHandler } from "../../../knowledge-query/src/items.server";
 import { createReadHandler } from "../../../knowledge-query/src/query.server";
 import {
   localCallerConfiguration,
+  localItemSourceId,
   localSourceId,
-  localTokenVerifier
+  localTokenVerifier,
+  syntheticItemSourceFetch
 } from "./local-fixture";
 import { startLocalHttpServer } from "./local-http";
 
@@ -57,6 +60,31 @@ async function main() {
     manualSourceId: localSourceId
   });
 
+  // Existing-item candidates come from a synthetic Carbon canonical source: the
+  // production registry transport, deadline and contract run, while the only
+  // stubbed pieces are the outbound HTTPS call and its forwarding headers.
+  const items = createItemSearchHandler({
+    pool,
+    configuration: localCallerConfiguration("e2e-query"),
+    identityStore: postgresIdentityStore(pool),
+    tokenVerifier: localTokenVerifier,
+    sources: {
+      version: 1,
+      sources: [
+        {
+          id: localItemSourceId,
+          kind: "carbon",
+          origin: "https://carbon.e2e.invalid/",
+          audience: "e2e-carbon"
+        }
+      ]
+    },
+    registryContext: () => ({
+      fetch: syntheticItemSourceFetch,
+      headers: async () => new Headers({ authorization: "Bearer e2e-carbon" })
+    })
+  });
+
   const server = startLocalHttpServer({
     port: Number(process.env.PORT ?? "4302"),
     maximumBytes: 32_768,
@@ -74,6 +102,8 @@ async function main() {
         return Response.json(cacheStats);
       if (request.method === "POST" && url.pathname === "/v1/query")
         return query(request);
+      if (request.method === "POST" && url.pathname === "/v1/items")
+        return items(request);
       return Response.json({ error: "not_found" }, { status: 404 });
     }
   });

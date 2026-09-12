@@ -1,4 +1,5 @@
 import type { Evidence } from "@carbon/knowledge";
+import { Trans, useLingui } from "@lingui/react/macro";
 
 export function EvidenceCard({
   evidence,
@@ -7,6 +8,7 @@ export function EvidenceCard({
   evidence: Evidence;
   sourceDisplayName: string;
 }) {
+  const { t } = useLingui();
   let removalPath: string | undefined;
   try {
     const path = new URL(evidence.sourceUri).pathname;
@@ -15,22 +17,27 @@ export function EvidenceCard({
   } catch {
     removalPath = undefined;
   }
+  const page = evidence.page;
   return (
     <article className="evidence-card">
       <div className="evidence-meta">
         <span>
           {evidence.freshness === "current"
-            ? "Current version"
-            : "Check freshness"}
+            ? t`Current version`
+            : t`Check freshness`}
         </span>
         <span>{sourceDisplayName}</span>
       </div>
       <h3>{evidence.title}</h3>
       {evidence.excerpt ? <p>{evidence.excerpt}</p> : null}
       <a href={evidence.sourceUri} rel="noreferrer">
-        Download original{evidence.page ? ` · page ${evidence.page}` : ""}
+        {page ? t`Download original · page ${page}` : t`Download original`}
       </a>
-      {removalPath ? <a href={removalPath}>Remove manual</a> : null}
+      {removalPath ? (
+        <a href={removalPath}>
+          <Trans>Remove manual</Trans>
+        </a>
+      ) : null}
     </article>
   );
 }

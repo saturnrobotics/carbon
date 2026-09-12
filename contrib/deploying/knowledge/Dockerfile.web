@@ -13,6 +13,9 @@ RUN corepack enable
 COPY --from=pruner /repo/out/json/ ./
 RUN pnpm install --frozen-lockfile --ignore-scripts
 COPY --from=pruner /repo/out/full/ ./
+# `turbo prune` copies workspace manifests only; the Lingui Vite plugin resolves
+# the root catalog configuration at build time and fails without it.
+COPY lingui.config.js ./
 RUN pnpm --filter knowledge build
 RUN pnpm --filter knowledge deploy --prod --legacy --ignore-scripts /runtime
 
