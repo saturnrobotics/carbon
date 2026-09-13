@@ -35,6 +35,18 @@ class NamingTests(unittest.TestCase):
     def test_cross_tree_glue_is_scanned(self):
         self.assertTrue(self.scan({"scripts/new-release.sh": "pnpm --filter @carbon/knowledge build"}))
 
+    def test_shared_jobs_auth_and_erp_reject_legacy_contract_names(self):
+        cases = {
+            "packages/jobs/src/new-job.ts": 'db.selectFrom("knowledgeCommandReceipt")',
+            "packages/jobs/src/new-schedule.ts": 'db.selectFrom("knowledgeProcurementSchedule")',
+            "packages/auth/src/new-permission.ts": 'const role = "knowledge_actions";',
+            "apps/erp/app/modules/portal/new-service.ts": "class KnowledgeContext {}",
+            "apps/erp/app/modules/knowledge/new-service.ts": "export {};",
+        }
+        for path, content in cases.items():
+            with self.subTest(path=path):
+                self.assertTrue(self.scan({path: content}))
+
     def test_generic_upstream_agent_knowledge_remains_valid(self):
         self.assertFalse(self.scan({"apps/erp/app/agent/knowledge.ts": "// Search the knowledge base for guidance."}))
 

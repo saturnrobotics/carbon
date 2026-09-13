@@ -34,7 +34,7 @@ Verification on an owned synthetic environment:
 - Both browser fixture modes passed all 24 scenarios. The product label rendered
   as Portal; document extraction, publication, search, downloads, revocation and
   deletion were exercised through actual services.
-- Portal deployment tests passed 118 cases and shared GCP deployment tests passed
+- Portal deployment tests passed 119 cases and shared GCP deployment tests passed
   216 cases. Terraform validation, scoped typechecks, lint, locale compilation,
   four dataset checks and backup compatibility passed.
 

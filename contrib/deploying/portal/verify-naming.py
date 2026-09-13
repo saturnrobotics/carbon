@@ -18,15 +18,15 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[2]
 LEGACY = re.compile(
     r"KNOWLEDGE_[A-Z0-9_]+|@carbon/knowledge\b|"
-    r"(?:apps|packages|contrib/deploying)/knowledge(?:[-/]|\b)|"
-    r"\bknowledge(?:_migrations|_metering|_read|_review|_ingest|_maintenance|_owner|_migration|_source)[A-Za-z0-9_]*|"
+    r"(?:apps|packages|contrib/deploying|apps/erp/app/modules)/knowledge(?:[-/]|\b)|"
+    r"\bknowledge(?:_migrations|_metering|_read|_review|_ingest|_maintenance|_owner|_migration|_source|_actions)[A-Za-z0-9_]*|"
     r"\bknowledge\.(?:read|query|identity|intake|document|actor_id|company_id)\b|"
-    r"\bknowledge(?:Source|Request|Identity|Receiver|Document)[A-Za-z0-9_]*|"
+    r"\bknowledge(?:Source|Request|Identity|Receiver|Document|Command|Procurement)[A-Za-z0-9_]*|"
     r"\bknowledge-(?:web|query|ingest|worker|actions|parser|schema|retention|source|private|runtime)\b|"
     r"knowledge://"
 )
 HISTORICAL_NAME = re.compile(r"\b[0-9]{14}_knowledge[a-z0-9_-]*\b")
-OWNED = ("apps/portal/", "apps/portal-", "packages/portal/", "contrib/deploying/portal/")
+OWNED = ("apps/portal/", "apps/portal-", "apps/erp/app/modules/portal/", "packages/portal/", "contrib/deploying/portal/")
 ARCHIVES = (".fork/", ".ai/")
 
 
