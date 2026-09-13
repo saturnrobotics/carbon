@@ -1,5 +1,8 @@
 import { queryRequestSchema } from "@carbon/knowledge";
-import type { VerifiedIapBrowserRequest } from "@carbon/knowledge/identity.server";
+import {
+  UnauthorizedRequestError,
+  type VerifiedIapBrowserRequest
+} from "@carbon/knowledge/identity.server";
 import { queryResultSchema } from "@carbon/knowledge/query";
 import {
   acceptsQueryStream,
@@ -16,6 +19,21 @@ import {
   forwardVerifiedWorkforceRequest,
   verifyKnowledgeBrowserRequest
 } from "./identity.server";
+
+/**
+ * The class an upstream status belongs to, for a response the browser will read.
+ * Anything that is not a refusal stays unavailability, which is what a reader
+ * can act on by trying again.
+ *
+ * Exported because the item gateway forwards to the same service and must not
+ * disagree with this one about which statuses are refusals; only the code a
+ * non-refusal carries differs between them, which is why it is an argument.
+ */
+export function refusalCode(status: number, unavailable: string): string {
+  if (status === 401) return "unauthorized";
+  if (status === 403) return "forbidden";
+  return unavailable;
+}
 
 /** Only a 403 from the query service is read for the step-up code; any other body is ignored. */
 async function isStepUpDenial(response: Response): Promise<boolean> {
@@ -136,8 +154,13 @@ export async function forwardKnowledgeQuery(
     );
     if (!response.ok) {
       if (await isStepUpDenial(response)) return stepUpRequiredResponse();
+      // The status was always preserved; the body was not. Relabelling an
+      // upstream refusal `query_unavailable` is what put "Manual search is
+      // unavailable" in front of a denied reader. Only the class crosses —
+      // the upstream's own code never does, so a refusal still says nothing
+      // about which document, source or grant it was about.
       return Response.json(
-        { error: "query_unavailable" },
+        { error: refusalCode(response.status, "query_unavailable") },
         { status: response.status, headers: { "cache-control": "no-store" } }
       );
     }
@@ -151,7 +174,16 @@ export async function forwardKnowledgeQuery(
     return Response.json(result, {
       headers: { "cache-control": "no-store" }
     });
-  } catch {
+  } catch (error) {
+    // Verifying the browser and minting the forwarding credential both throw
+    // this one error, and this catch turned each of them into a 503 — the same
+    // answer a dead upstream gives. A denial is not an outage, and 503 invites
+    // a retry that cannot succeed.
+    if (error instanceof UnauthorizedRequestError)
+      return Response.json(
+        { error: "forbidden" },
+        { status: 403, headers: { "cache-control": "no-store" } }
+      );
     return Response.json(
       { error: "query_unavailable" },
       { status: 503, headers: { "cache-control": "no-store" } }

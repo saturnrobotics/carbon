@@ -9,7 +9,8 @@ from pathlib import Path
 import re
 import subprocess
 import tempfile
-from typing import Any
+from typing import Any, NoReturn
+from urllib.parse import urlsplit
 
 UNITS = {"knowledge-web": "service", "knowledge-query": "service", "knowledge-ingest": "service", "knowledge-parser": "job", "knowledge-schema": "job", "knowledge-retention": "job"}
 IMAGE = re.compile(r"^[a-z0-9][a-z0-9./_-]*@sha256:[a-f0-9]{64}$")
@@ -23,6 +24,18 @@ REQUIRED_ENVIRONMENT = {
     "knowledge-schema": set(),
     "knowledge-retention": {"KNOWLEDGE_OBJECT_BUCKET"},
 }
+# Configuration a unit MAY carry. Unlike REQUIRED_ENVIRONMENT this is an allowance
+# only: absence is never an error. `KNOWLEDGE_SOURCES_JSON` is the query service's
+# live-source registry, and only the query service reads it, so admitting it
+# anywhere else would stage a revision carrying configuration nothing consumes.
+OPTIONAL_ENVIRONMENT = {"knowledge-query": {"KNOWLEDGE_SOURCES_JSON"}}
+# The manual release registers live CARBON sources only. Kanban belongs to the
+# deferred command surface and `engineering`/`crm` are the generic source adapters
+# this release excludes, so admitting the registry key without this would reverse
+# that decision by the back door. Which Carbon source a deployment registers — its
+# id, origin and audience — remains entirely the operator's.
+SOURCE_REGISTRY_KINDS = {"carbon"}
+SOURCE_REGISTRY_FIELDS = {"id", "kind", "origin", "audience"}
 REQUIRED_SECRETS = {
     "knowledge-web": set(),
     "knowledge-query": {"KNOWLEDGE_READ_DATABASE_URL", "KNOWLEDGE_REDIS_URL"},
@@ -96,6 +109,45 @@ def apply_foundation_audiences(plan: dict[str, Any], outputs: dict[str, Any], *,
     return plan
 
 
+def check_source_registry(name: str, value: Any) -> None:
+    """Refuse a live-source registry the query service would refuse to boot on.
+
+    `readSourceRegistryConfiguration` throws on a malformed registry rather than
+    starting with no sources, so without this the only symptom of a typo is a
+    revision that never becomes Ready. Same shape as
+    `sourceRegistryConfigurationSchema`, narrowed to the kinds this release ships.
+    """
+    def refuse() -> NoReturn:
+        raise ValueError(f"{name} requires a strict live-source registry")
+    try:
+        registry = json.loads(value)
+    except (TypeError, json.JSONDecodeError) as error:
+        raise ValueError(f"{name} requires a strict live-source registry") from error
+    if not isinstance(registry, dict) or set(registry) != {"version", "sources"} or registry["version"] != 1:
+        refuse()
+    sources = registry["sources"]
+    if not isinstance(sources, list) or len(sources) > 100:
+        refuse()
+    for source in sources:
+        if not isinstance(source, dict) or set(source) != SOURCE_REGISTRY_FIELDS:
+            refuse()
+        if source["kind"] not in SOURCE_REGISTRY_KINDS:
+            raise ValueError(f"{name} registers a source kind this release does not ship: {source['kind']}")
+        for field in ("id", "audience"):
+            if not isinstance(source[field], str) or not 1 <= len(source[field]) <= (256 if field == "id" else 2048):
+                refuse()
+        origin = source["origin"]
+        if not isinstance(origin, str):
+            refuse()
+        parts = urlsplit(origin)
+        # A bare https origin: the transport refuses a plaintext or credentialed
+        # URL it acquires, and configuration is not a way around that.
+        if parts.scheme != "https" or not parts.hostname or parts.username or parts.password or parts.path not in ("", "/") or parts.query or parts.fragment:
+            raise ValueError(f"{name} requires each source origin to be a bare https URL without credentials")
+    if len({source["id"] for source in sources}) != len(sources):
+        raise ValueError(f"{name} registers two sources under one ID")
+
+
 def validate_plan(plan: dict[str, Any]) -> None:
     if plan.get("schema_version") != 1 or not isinstance(plan.get("generation"), int):
         raise ValueError("Release plan must use schema_version 1 and an integer generation")
@@ -126,7 +178,7 @@ def validate_plan(plan: dict[str, Any]) -> None:
                 raise ValueError(f"{name} requires a pinned secret version, never latest")
         if name in NO_SECRET_UNITS and spec["secrets"]:
             raise ValueError(f"{name} must not receive runtime secrets")
-        extra_environment = spec["environment"].keys() - REQUIRED_ENVIRONMENT[name]
+        extra_environment = spec["environment"].keys() - REQUIRED_ENVIRONMENT[name] - OPTIONAL_ENVIRONMENT.get(name, set())
         extra_secrets = spec["secrets"].keys() - REQUIRED_SECRETS[name]
         if extra_environment or extra_secrets:
             deferred = sorted(extra_environment | extra_secrets)
@@ -145,6 +197,8 @@ def validate_plan(plan: dict[str, Any]) -> None:
                 raise ValueError(f"{name} requires strict manual source configuration") from error
             if not isinstance(source, dict) or set(source) != {"sourceId", "displayName"} or not isinstance(source["sourceId"], str) or not re.fullmatch(r"[A-Za-z0-9_-]{1,256}", source["sourceId"]) or not isinstance(source["displayName"], str) or not 1 <= len(source["displayName"].strip()) <= 200:
                 raise ValueError(f"{name} requires strict manual source configuration")
+        if "KNOWLEDGE_SOURCES_JSON" in spec["environment"]:
+            check_source_registry(name, spec["environment"]["KNOWLEDGE_SOURCES_JSON"])
         if not isinstance(spec.get("network"), str) or not spec["network"] or not isinstance(spec.get("subnetwork"), str) or not spec["subnetwork"] or spec.get("egress") != "all-traffic":
             raise ValueError(f"{name} requires Direct VPC egress through the private network")
         if not isinstance(spec.get("max_instances"), int) or spec["max_instances"] < 1:

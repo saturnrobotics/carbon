@@ -136,6 +136,52 @@ class ReleaseControllerTests(unittest.TestCase):
             {"KNOWLEDGE_MAINTENANCE_DATABASE_URL"},
         )
 
+    def test_live_source_registry_is_admitted_on_the_query_unit_alone(self):
+        registry = json.dumps({"version": 1, "sources": [{"id": "carbon-source", "kind": "carbon", "origin": "https://erp.example", "audience": "erp-receiver-audience"}]})
+        self.assertEqual(release.OPTIONAL_ENVIRONMENT, {"knowledge-query": {"KNOWLEDGE_SOURCES_JSON"}})
+        # Optional, so the query unit is valid with it and valid without it.
+        release.validate_plan(database_plan())
+        admitted = database_plan()
+        admitted["services"]["knowledge-query"]["environment"]["KNOWLEDGE_SOURCES_JSON"] = registry
+        release.validate_plan(admitted)
+        for unit in ("knowledge-web", "knowledge-ingest"):
+            candidate = database_plan(unit) if unit in release.DATABASE_UNITS else plan()
+            candidate["services"][unit]["environment"]["KNOWLEDGE_SOURCES_JSON"] = registry
+            with self.assertRaisesRegex(ValueError, "deferred runtime configuration: KNOWLEDGE_SOURCES_JSON"):
+                release.validate_plan(candidate)
+
+    def test_rejects_a_registry_the_query_service_would_refuse_to_boot_on(self):
+        source = {"id": "carbon-source", "kind": "carbon", "origin": "https://erp.example", "audience": "erp-receiver-audience"}
+        for reason, registry in (
+            ("not JSON", "{"),
+            ("no version", json.dumps({"sources": [source]})),
+            ("an unknown top-level field", json.dumps({"version": 1, "sources": [source], "default": "carbon-source"})),
+            ("an unknown source field", json.dumps({"version": 1, "sources": [dict(source, token="secret")]})),
+            ("a missing source field", json.dumps({"version": 1, "sources": [{"id": "carbon-source", "kind": "carbon", "origin": "https://erp.example"}]})),
+            ("an empty id", json.dumps({"version": 1, "sources": [dict(source, id="")]})),
+        ):
+            candidate = database_plan()
+            candidate["services"]["knowledge-query"]["environment"]["KNOWLEDGE_SOURCES_JSON"] = registry
+            with self.subTest(reason=reason), self.assertRaisesRegex(ValueError, "strict live-source registry"):
+                release.validate_plan(candidate)
+        for origin in ("http://erp.example", "https://user:secret@erp.example", "https://erp.example/knowledge", "https://erp.example/?source=carbon", "not a url"):
+            candidate = database_plan()
+            candidate["services"]["knowledge-query"]["environment"]["KNOWLEDGE_SOURCES_JSON"] = json.dumps({"version": 1, "sources": [dict(source, origin=origin)]})
+            with self.subTest(origin=origin), self.assertRaisesRegex(ValueError, "bare https URL without credentials"):
+                release.validate_plan(candidate)
+        duplicated = database_plan()
+        duplicated["services"]["knowledge-query"]["environment"]["KNOWLEDGE_SOURCES_JSON"] = json.dumps({"version": 1, "sources": [source, dict(source, origin="https://other.example")]})
+        with self.assertRaisesRegex(ValueError, "two sources under one ID"):
+            release.validate_plan(duplicated)
+
+    def test_rejects_a_source_kind_this_release_does_not_ship(self):
+        self.assertEqual(release.SOURCE_REGISTRY_KINDS, {"carbon"})
+        for kind in ("kanban", "engineering", "crm", "sharepoint"):
+            candidate = database_plan()
+            candidate["services"]["knowledge-query"]["environment"]["KNOWLEDGE_SOURCES_JSON"] = json.dumps({"version": 1, "sources": [{"id": "source", "kind": kind, "origin": "https://source.example", "audience": "audience"}]})
+            with self.subTest(kind=kind), self.assertRaisesRegex(ValueError, f"does not ship: {kind}"):
+                release.validate_plan(candidate)
+
     def test_noop_issues_no_mutations(self):
         self.assertEqual(release.select_mutations({**plan(), "deploy": {}}, {"generation": 3, "services": {}}, {}), [])
 

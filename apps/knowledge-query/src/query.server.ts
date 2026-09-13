@@ -10,7 +10,10 @@ import {
 } from "@carbon/knowledge/budgets.server";
 import type { CacheStore } from "@carbon/knowledge/cache";
 import { withKnowledgeTransaction } from "@carbon/knowledge/database.server";
-import { verifyWorkforceRequest } from "@carbon/knowledge/identity.server";
+import {
+  UnauthorizedRequestError,
+  verifyWorkforceRequest
+} from "@carbon/knowledge/identity.server";
 import { assertProviderCandidates } from "@carbon/knowledge/provider-policy";
 import {
   executeReadQuery,
@@ -244,12 +247,28 @@ export function createReadHandler(
         );
       // A registered live source answers before any index or model. It runs
       // outside the stream so a source's step-up denial keeps its own status.
-      if (options.sources && !options.manualSourceId && route.structured) {
+      //
+      // The condition is the registry and the router's decision, and nothing
+      // else. It used to also require the ABSENCE of a manual source, which
+      // made the released profile's behaviour an accident of a second setting:
+      // the manual source is required configuration there, so a registered
+      // Carbon source could never be reached however it was configured. The
+      // two coexist, with the manual library primary — a registered source
+      // answers only the structured intents the router names, and every other
+      // question, and every structured one no registered source answers, still
+      // falls through to the manual index below.
+      if (options.sources && route.structured) {
         const sourceConfiguration = options.sources;
         const structured = await trace.measure("source", () =>
           structuredSourceQuery({
             request,
-            query,
+            // The reader's own request, not the manual-pinned rewrite above:
+            // that pin confines the DOCUMENT index read to the upload library,
+            // and a live source is not in it. Pinning it here would leave every
+            // registered source unpermitted, which is the same unreachability
+            // under a different name. `route` still applies unchanged — the
+            // router reads the request TEXT, which the rewrite never touches.
+            query: parsed.data,
             route,
             identity,
             pool: options.pool,
@@ -517,6 +536,17 @@ export function createReadHandler(
       // A source that requires Carbon MFA is the one failure the portal must
       // be able to name; everything else stays an opaque unavailability.
       if (error instanceof StepUpRequiredError) return stepUpRequiredResponse();
+      // An identity this service will not act for is a refusal. It was
+      // indistinguishable from an outage, which is what made a cross-company
+      // question read as "Manual search is unavailable". The CLASS is all that
+      // surfaces: `forbidden` is the same answer for an unknown caller, a
+      // revoked binding and another company's question, so the refusal still
+      // says nothing about what exists.
+      if (error instanceof UnauthorizedRequestError)
+        return Response.json(
+          { error: "forbidden" },
+          { status: 403, headers: { "cache-control": "no-store" } }
+        );
       return Response.json(
         { error: "query_unavailable" },
         { status: 503, headers: { "cache-control": "no-store" } }

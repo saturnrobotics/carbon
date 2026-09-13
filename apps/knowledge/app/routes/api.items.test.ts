@@ -1,3 +1,4 @@
+import { UnauthorizedRequestError } from "@carbon/knowledge/identity.server";
 import { describe, expect, it, vi } from "vitest";
 import { forwardItemSearch } from "../services/item-gateway.server";
 
@@ -77,6 +78,53 @@ describe("knowledge item search BFF", () => {
     });
     expect(response.status).toBe(status);
     expect(verifyBrowser).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["the browser check", "verifyBrowser"],
+    ["minting the forwarding credential", "forwardingHeaders"]
+  ])("answers a denial from %s as a refusal, not an outage", async (_name, failing) => {
+    const denial = vi.fn().mockRejectedValue(new UnauthorizedRequestError());
+    const response = await forwardItemSearch(request(), {
+      queryUrl: "https://query.example.test",
+      queryAudience: "https://query.example.test",
+      companyId: "company_synthetic",
+      verifyBrowser:
+        failing === "verifyBrowser"
+          ? denial
+          : vi.fn().mockResolvedValue(verified),
+      forwardingHeaders:
+        failing === "forwardingHeaders"
+          ? denial
+          : vi.fn().mockResolvedValue(new Headers()),
+      fetchImpl: vi.fn()
+    });
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({ error: "forbidden" });
+  });
+
+  it.each([
+    [401, "unauthorized"],
+    [403, "forbidden"],
+    [429, "items_unavailable"],
+    [503, "items_unavailable"]
+  ])("crosses an upstream %i as its own class, never the service's code", async (status, code) => {
+    const response = await forwardItemSearch(request(), {
+      queryUrl: "https://query.example.test",
+      queryAudience: "https://query.example.test",
+      companyId: "company_synthetic",
+      verifyBrowser: vi.fn().mockResolvedValue(verified),
+      forwardingHeaders: vi.fn().mockResolvedValue(new Headers()),
+      // Whatever the service said, only the class crosses: a refusal stays
+      // opaque about which library, source or item it concerned.
+      fetchImpl: vi
+        .fn()
+        .mockResolvedValue(
+          Response.json({ error: "request_limit_exceeded" }, { status })
+        )
+    });
+    expect(response.status).toBe(status);
+    expect(await response.json()).toEqual({ error: code });
   });
 
   it("does not pass an unvalidated gateway response to the browser", async () => {

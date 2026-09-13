@@ -30,6 +30,14 @@ export type CapturedIntake = {
   input: IntakeInput;
   /** Final HTTPS URL an object was acquired from; provenance only, never identity. */
   acquiredFrom?: string;
+  /**
+   * The name the uploader's own file carried; provenance only, never identity.
+   *
+   * It is deliberately outside `input`, which is hashed into `idempotencyKey`:
+   * the same bytes uploaded twice under two names are still the same capture,
+   * and a name in the identity would silently stop deduplicating them.
+   */
+  fileName?: string;
   state: "captured";
 };
 
@@ -70,7 +78,8 @@ export async function persistCapturedIntake(
             acl: captured.acl,
             ...(captured.acquiredFrom
               ? { acquiredFrom: captured.acquiredFrom }
-              : {})
+              : {}),
+            ...(captured.fileName ? { fileName: captured.fileName } : {})
           }
         ]),
         captured.idempotencyKey

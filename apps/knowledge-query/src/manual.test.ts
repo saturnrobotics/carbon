@@ -99,14 +99,24 @@ it("resolves a missing manufacturer only through the exact human-verified item/r
   expect(result.evidence).toHaveLength(1);
 });
 it.each([
-  "missing-ledger",
-  "bounded-result-truncated",
-  "missing-identity,missing-ledger",
-  ""
-])("cannot repair incomplete source data (%s) with a manual link", async (reason) => {
+  ["bounded-result-truncated", "more receipt lines than one read returns"],
+  ["ambiguous-lot", "a receipt line recording more than one lot"],
+  [
+    "missing-identity,invalid-posting-date",
+    "a receipt line whose posting date could not be read"
+  ],
+  // A reason this build does not recognise, and none at all, both leave the
+  // candidate set unaccounted for — neither may be waved through.
+  ["missing-ledger", "missing-ledger"],
+  ["", "the source did not say what was missing"]
+])("cannot repair incomplete source data (%s) with a manual link", async (reason, named) => {
   mocks.reason = reason;
   const result = await resolveRecentManual(options);
   expect(result.kind).toBe("abstention");
   expect(result.partial).toBe(true);
+  // The answer names what could not be determined rather than reading as an
+  // outage or an empty corpus.
+  expect(result.message).toContain(named);
+  expect(result.message).toContain("Review the receipt in Carbon");
   expect(mocks.read).not.toHaveBeenCalled();
 });

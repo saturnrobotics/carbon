@@ -130,17 +130,19 @@ it("real Redis hits cannot survive canonical user or document grant revocation",
     expect(stores).toBeGreaterThan(0);
     expect((await query()).status).toBe(200);
     expect(hits).toBeGreaterThan(0);
-    // The query handler maps verifier failures to its generic
-    // fail-closed response; assert that contract, not merely non-200.
+    // The query handler answers a verifier failure with its refusal — the
+    // class, never the reason; assert that contract, not merely non-200. It
+    // was `503 query_unavailable`, which told a denied reader the service was
+    // down and told an operator nothing about which of the two had happened.
     const wrongCompany = await query("company-a");
-    expect(wrongCompany.status).toBe(503);
-    expect(await wrongCompany.json()).toEqual({ error: "query_unavailable" });
+    expect(wrongCompany.status).toBe(403);
+    expect(await wrongCompany.json()).toEqual({ error: "forbidden" });
 
     await admin.query('UPDATE public."user" SET active=false WHERE id=$1', [
       "bob"
     ]);
     const inactive = await query();
-    expect(inactive.status).toBe(503);
+    expect(inactive.status).toBe(403);
     expect(await inactive.text()).not.toContain("chunk-doc-b");
     // Reactivating the user is not readmission: the deactivation revoked the
     // binding and that revocation is deliberately not undone by it. Prove both
@@ -156,7 +158,7 @@ it("real Redis hits cannot survive canonical user or document grant revocation",
     );
     expect(revokedBinding.rows[0].active).toBe(false);
     const reactivated = await query();
-    expect(reactivated.status).toBe(503);
+    expect(reactivated.status).toBe(403);
     expect(await reactivated.text()).not.toContain("chunk-doc-b");
     await reenroll();
     expect((await query()).status).toBe(200);

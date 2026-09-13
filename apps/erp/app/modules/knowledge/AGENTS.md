@@ -19,6 +19,7 @@ The canonical read surface (plus one command) that the company knowledge platfor
 - MUST give a new READ a `PERMISSION_OVERRIDES` entry in `scripts/lib/service-metadata.ts` naming the real Carbon permission it depends on (`parts`, `inventory`, `purchasing`); the module-name default (`knowledge:view`) does not exist and would deny every caller.
 - MUST validate identifiers and search terms with `knowledgeIdentifier` / `knowledgeItemSearch` before they reach a PostgREST filter string (`.or(...)`), and keep every validator `.strict()`.
 - MUST run `pnpm generate:mcp` after touching `knowledge.service.ts`, `knowledge.models.ts` or `knowledge.mcp.server.ts` and commit `tool-manifest.digest.json`.
+- MUST give a new operation a route on the knowledge platform's side too: an entry in the transport allowlist (`operations` in `packages/knowledge/src/sources/http.server.ts`) or a named reason in `EXCLUDED_CARBON_OPERATIONS` beside it. Publishing here is not reaching; the transport refuses an unregistered path before any credential is minted, which is how `getItemSupplierPricing` shipped gated, permitted and unreachable. `packages/knowledge/src/sources/carbon-operations.test.ts` reads this module's digest and fails on the gap.
 
 ### Ask First
 - Adding a field that names money, cost, margin or a supplier price to any identity read — that is a new capability, not a projection change.
@@ -28,6 +29,7 @@ The canonical read surface (plus one command) that the company knowledge platfor
 - Serve a knowledge operation to an API key, OAuth connector or in-process session — the gate answers NOT_FOUND on purpose (`base.server.ts`), and `knowledge.gate.test.ts` pins every operation and caller kind.
 - Import a `*.server` module from `knowledge.service.ts` — the barrel is client-bundled; put such code in `knowledge.mcp.server.ts` or `knowledge.commands.server.ts`.
 - Read `supplierPart.unitPrice`, `itemCost` or any purchase amount anywhere but `getItemSupplierPricing`.
+- Key a receipt read on `itemLedger.documentLineId` — `post-receipt` never writes it (only material issuing does), so the lookup is empty for every genuinely posted receipt. The posted status is the posting evidence, and `receiptLine.receivedQuantity` plus the line's tracked entities are the quantity and the lot/serial.
 
 ## Validation Commands
 
@@ -42,7 +44,7 @@ pnpm exec turbo run typecheck --filter=erp
 | Table / View | Purpose |
 |---|---|
 | `item` | `resolveItems` / `getItemIdentity` projection: readable id, revision, MPN, unit of measure, active flag |
-| `receipt` / `receiptLine` / `itemLedger` / `trackedEntity` | `getRecentReceipts` / `getRecentReceiptItems`: posted receipts, net ledger quantities, serial and lot identities |
+| `receipt` / `receiptLine` / `trackedEntity` | `getRecentReceipts` / `getRecentReceiptItems`: posted receipts, their received quantities, and the serial or lot identities those lines created. NOT `itemLedger` — a purchase receipt's ledger rows carry no `documentLineId`, and the line already holds everything this read needs |
 | `purchaseOrder` | `getPurchaseStatus`: status and dates, no amounts |
 | `supplierPart` / `supplier` | `getItemSupplierPricing`: active unit price, supplier unit of measure, the supplier's currency |
 | `storage.objects` (`private` bucket, `<companyId>/parts/<itemId>`) | `getDocumentReferences`: object keys only, no signed URLs |
@@ -53,7 +55,7 @@ pnpm exec turbo run typecheck --filter=erp
 ## Key Service Functions
 
 - `resolveItems` / `getItemIdentity` — bounded item identity search and lookup (`parts:view`)
-- `getRecentReceipts` / `getRecentReceiptItems` — posted receipts and their line identities with reversals (`inventory:view`); the projection is `summarizeReceiptIdentities` in `knowledge.receipts.ts`
+- `getRecentReceipts` / `getRecentReceiptItems` — posted receipts and their line identities (`inventory:view`); the projection is `summarizeReceiptIdentities` in `knowledge.receipts.ts`, which reads the line's `receivedQuantity` and the tracked entities whose `attributes->>'Receipt Line'` names it
 - `getDocumentReferences` — item document object keys without minting URLs (`parts:view`)
 - `getPurchaseStatus` — one purchase order's status projection (`purchasing:view`)
 - `getItemSupplierPricing` — active supplier unit prices for one item, optionally one supplier (`purchasing:view`, capability `knowledge.read.pricing`)

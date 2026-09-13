@@ -6,7 +6,10 @@ query, ingestion, parser, schema and retention units. Drive synchronization,
 vector search, generated answers, voice, commands and generic source adapters are
 not part of this release. `release.py` rejects those units and rejects their
 environment variables or secrets even if deferred implementation remains in the
-repository.
+repository. A Carbon ERP may optionally be registered as a live source of
+records alongside the uploaded manuals — see [Live source registry](#live-source-registry-optional);
+that is a `carbon` source, not one of the generic adapters, and the planner
+refuses every other kind.
 
 Terraform creates the workload identities, private buckets, managed Redis,
 Direct VPC egress, Secret Manager containers, immutable Artifact Registry, the
@@ -349,6 +352,59 @@ There is no third mode and nothing is inferred from an email or a domain. The
 delegated path never marks a Carbon session as verified. A company that does
 not require MFA is unaffected by either mode.
 
+### Live source registry (optional)
+
+The query service reads registered live sources — today, a Carbon ERP — through
+one environment value on `knowledge-query` alone:
+
+```text
+KNOWLEDGE_SOURCES_JSON={"version":1,"sources":[{"id":"<carbon-source-id>","kind":"carbon","origin":"https://<erp-host>","audience":"<erp-receiver-audience>"}]}
+```
+
+Without the value the service registers no live source: item search answers
+`unavailable` so intake review can still publish a generic document, and every
+question is answered from the manual library. That is the shape the release
+shipped with, and it stays supported.
+
+**Present and malformed refuses to start.** `readSourceRegistryConfiguration`
+parses the value with the runtime schema at start-up, so `/health` answers
+`not-configured`, the staged revision never becomes Ready, and the promotion
+fails with the reason rather than the service starting with no sources — which
+would present as an empty corpus rather than as a typo. `release.py` checks the
+same shape first, so a malformed registry is refused before any cloud write.
+
+Origins are bare `https://` URLs with no embedded credentials, no path, query or
+fragment — the policy the transport already applies to a URL it acquires, so
+configuration is not a way around it. Source IDs are unique. `kind` must be
+`carbon`: kanban belongs to the deferred command surface and the generic source
+adapters are not part of this release, so the planner refuses those kinds even
+though the runtime schema knows them.
+
+Each registered source also needs a `knowledge.source` row for the reading
+company with `kind = 'carbon'` and `status = 'active'` — the reader's own row
+policy decides which registered sources a request may reach, and a registry entry
+on its own reaches nothing. The audience is Carbon's receiver audience, the same
+value the change feed below uses.
+
+Both read paths use the registry:
+
+- `POST /v1/items` (intake review's existing-item candidates) reads Carbon's
+  `resolveItems` operation.
+- `POST /v1/query` reaches a registered source for the structured intents the
+  router names — a part lookup, a purchase-order status, the applicable manual
+  for a recently received item. **The manual library stays primary**: a question
+  the router did not send to a structured capability, and a structured one no
+  registered source answers, is still answered from the uploaded manuals. The
+  manual source pin (`KNOWLEDGE_MANUAL_SOURCE_JSON`) confines the *document*
+  index read and does not constrain the live-source path.
+
+One limit worth knowing before registering a source for a multi-company
+deployment: "the manual for the item we received" is answered by the Carbon
+resolver as soon as any registry is configured, and a reading company with no
+active `carbon` source row of its own gets a clarification it cannot satisfy
+rather than a fallthrough to keyword search. Register the source for every
+company that asks that question, or leave the registry unset.
+
 ### Carbon change feed (optional)
 
 The ingestion worker can carry Carbon's `knowledgeSourceOutbox` into the
@@ -619,7 +675,8 @@ execution order. No cloud environment has been provisioned for this release.
 Use Docker Compose v2, Corepack/pnpm, Python 3 and a Chromium installation for
 Playwright. Run commands from the repository root. All fixture identities and
 passwords are synthetic; these test images must never be deployed publicly.
-The runner uses ports 4200, 4301, 4302, 4303, 4304 and 59910–59914 on loopback.
+The runner publishes ports 4200, 4301, 4302, 4303, 4304, 59910, 59911, 59912
+and 59914 on loopback.
 Resolve a port conflict without stopping an unrelated development database: every
 published port, the Compose project name and the image tag are environment
 variables that default to those values, so a second stack can run beside a
@@ -648,21 +705,36 @@ this stack. Stopping preserves its volumes.
 
 ### Running a second stack
 
-Set a distinct project name, image tag and ports; unset variables keep the
-defaults above, so an unparameterised invocation is unchanged.
+Set a distinct stack name, image tag and published ports; unset variables keep
+the defaults above, so an unparameterised invocation is unchanged.
+`KNOWLEDGE_LOCAL_STACK` is one name doing two jobs — the Compose project name and
+the prefix of every image `build-images.sh` tags — so the build and the stack
+cannot disagree about which images belong to which stack. Export the variables
+before `build-images.sh`, not only before `local-stack.sh`: the compose file
+resolves the image names from the same two variables the build tagged them with,
+and a stack started without them looks for the default images.
 
 ```bash
-export KNOWLEDGE_STACK_NAME=knowledge-mine KNOWLEDGE_IMAGE_PREFIX=knowledge-mine
-export KNOWLEDGE_IMAGE_TAG=mine-v1
-export KNOWLEDGE_PORT_PORTAL=4270 KNOWLEDGE_PORT_GATEWAY=4371
-export KNOWLEDGE_PORT_QUERY=4372 KNOWLEDGE_PORT_DRIVE_GATEWAY=4373
-export KNOWLEDGE_PORT_DRIVE_QUERY=4374 KNOWLEDGE_PORT_POSTGRES=59970
-export KNOWLEDGE_PORT_REDIS=59971 KNOWLEDGE_PORT_STORAGE=59972
-export KNOWLEDGE_PORT_INNGEST=59974
+export KNOWLEDGE_LOCAL_STACK=knowledge-mine KNOWLEDGE_LOCAL_TAG=mine-v1
+export KNOWLEDGE_LOCAL_PORTAL_PORT=4270 KNOWLEDGE_LOCAL_GATEWAY_PORT=4371
+export KNOWLEDGE_LOCAL_QUERY_PORT=4372 KNOWLEDGE_LOCAL_DRIVE_GATEWAY_PORT=4373
+export KNOWLEDGE_LOCAL_DRIVE_QUERY_PORT=4374 KNOWLEDGE_LOCAL_DATABASE_PORT=59970
+export KNOWLEDGE_LOCAL_REDIS_PORT=59971 KNOWLEDGE_LOCAL_STORAGE_PORT=59972
+export KNOWLEDGE_LOCAL_INNGEST_PORT=59974
 contrib/deploying/knowledge/build-images.sh e2e
 contrib/deploying/knowledge/local-stack.sh test
 contrib/deploying/knowledge/local-stack.sh down
 ```
+
+`test_local_stack_docs.py` pins the names in this section against the ones
+`local-stack.sh`, `build-images.sh` and `compose.local.yaml` actually read, so a
+renamed variable fails a check rather than silently starting the default stack on
+the default ports beside the one it was meant to avoid.
+
+Only the stack itself is parameterised. `verify-local-lifecycle.sh` and
+`verify-local-recovery.py` name the default project and the `manual-v1` image tag
+directly, and `local-performance.py` is pointed at a URL you supply, so run the
+proofs below against the default stack and leave a second stack out of them.
 
 ### The deferred Drive surface in the harness
 

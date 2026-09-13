@@ -91,14 +91,15 @@ async function parseWithLocalContainer(
   reference: ImmutableObjectReference,
   mimeType: string,
   storage: Storage,
-  parserUrl: string
+  parserUrl: string,
+  name?: string
 ) {
   const outputObjectKey = `parser/${reference.sha256}/extraction-v1.json`;
   const response = await fetch(new URL("/parse", parserUrl), {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
-      input: { ...reference, mimeType },
+      input: { ...reference, mimeType, ...(name ? { name } : {}) },
       output: { bucket: localBucket, objectKey: outputObjectKey }
     }),
     signal: AbortSignal.timeout(300_000)
@@ -221,13 +222,14 @@ async function main() {
           bucket: localBucket,
           automationUserId: "automation",
           manualSourceId: localSourceId,
-          parseDocument: async (reference, mimeType) => {
+          parseDocument: async (reference, mimeType, name) => {
             stats.parserCalls += 1;
             return parseWithLocalContainer(
               reference,
               mimeType,
               storage,
-              parserUrl
+              parserUrl,
+              name
             );
           }
         },

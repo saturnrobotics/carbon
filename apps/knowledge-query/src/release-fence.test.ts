@@ -78,13 +78,25 @@ describe("provider release fence", () => {
         model: "synthetic-embedding-001",
         microUsdPerMillionTokens: 1
       }),
-      KNOWLEDGE_SOURCES_JSON: "{}"
+      // A live-source registry is configuration the profile reads, not a
+      // deferred provider; it is here to prove it does not drag one in.
+      KNOWLEDGE_SOURCES_JSON: JSON.stringify({
+        version: 1,
+        sources: [
+          {
+            id: "carbon-source",
+            kind: "carbon",
+            origin: "https://erp.example",
+            audience: "erp-receiver-audience"
+          }
+        ]
+      })
     });
     expect(createReadHandler).toHaveBeenCalledTimes(1);
     const options = createReadHandler.mock.calls[0]?.[0];
     if (!options) throw Error("read handler was not created");
     expect(options.manualSourceId).toBe("manuals");
-    for (const deferred of ["embedding", "model", "sources"])
+    for (const deferred of ["embedding", "model"])
       expect(options).not.toHaveProperty(deferred);
   });
 
