@@ -3,6 +3,7 @@ name: Knowledge platform checks
 on:
   pull_request:
     paths:
+      - "Makefile"
       - "apps/knowledge*/**"
       - "packages/knowledge/**"
       - "packages/database/supabase/migrations/**"
@@ -15,7 +16,8 @@ on:
       - ".github/workflows/knowledge-check.yml"
   push:
     branches: [saturn/main]
-    paths: ["apps/knowledge*/**", "packages/knowledge/**", "contrib/deploying/knowledge/**", "pnpm-lock.yaml", "turbo.json", ".dockerignore"]
+    # deploy-knowledge requires verification of the exact integration commit,
+    # including merges whose authored changes are outside the knowledge tree.
   workflow_dispatch:
 
 permissions:

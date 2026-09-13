@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
 HERE = Path(__file__).resolve().parent
 spec = importlib.util.spec_from_file_location("knowledge_release", HERE / "release.py")
@@ -113,9 +114,9 @@ class ReleaseControllerTests(unittest.TestCase):
         self.assertEqual(release.DATABASE_UNITS, {"knowledge-query", "knowledge-ingest", "knowledge-schema", "knowledge-retention"})
         query = dict(plan()["services"]["knowledge-web"], kind="service")
         interfaces = json.loads(release.revision_document("knowledge-query", query, "revision")["spec"]["template"]["metadata"]["annotations"]["run.googleapis.com/network-interfaces"])
-        self.assertEqual(interfaces, [{"network": "knowledge-private", "subnetwork": "knowledge-runtime", "tags": ["knowledge-source-database-client"]}])
+        self.assertEqual(interfaces, [{"network": "knowledge-private", "subnetwork": "knowledge-runtime", "tags": "knowledge-source-database-client"}])
         job = dict(plan()["services"]["knowledge-web"], kind="job")
-        interfaces = json.loads(release.revision_document("knowledge-parser", job, "revision")["spec"]["template"]["template"]["metadata"]["annotations"]["run.googleapis.com/network-interfaces"])
+        interfaces = json.loads(release.revision_document("knowledge-parser", job, "revision")["spec"]["template"]["metadata"]["annotations"]["run.googleapis.com/network-interfaces"])
         self.assertEqual(interfaces, [{"network": "knowledge-private", "subnetwork": "knowledge-runtime"}])
 
     def test_retention_job_requires_its_narrow_runtime_configuration(self):
@@ -124,6 +125,33 @@ class ReleaseControllerTests(unittest.TestCase):
             release.REQUIRED_ENVIRONMENT["knowledge-retention"],
             {"KNOWLEDGE_OBJECT_BUCKET"},
         )
+
+    def test_database_ca_is_pinned_mounted_and_part_of_revision_identity(self):
+        for name in sorted(release.DATABASE_UNITS):
+            with self.subTest(name=name):
+                candidate = database_plan(name)
+                unit = candidate["services"][name]
+                before = release.revision_digest(unit)
+                unit["database_ca_secret"] = "projects/example/secrets/knowledge-source-database-ca/versions/3"
+                release.validate_plan(candidate)
+                self.assertNotEqual(release.revision_digest(unit), before)
+                document = release.revision_document(name, unit, release.revision_digest(unit))
+                template = document["spec"]["template"]
+                runtime = template["spec"]["template"]["spec"] if unit["kind"] == "job" else template["spec"]
+                self.assertEqual(runtime["volumes"], [{"name": "database-ca", "secret": {"secretName": "knowledge-source-database-ca", "items": [{"key": "3", "path": "ca.crt"}]}}])
+                self.assertEqual(runtime["containers"][0]["volumeMounts"], [{"name": "database-ca", "mountPath": "/var/run/secrets/knowledge-source-database"}])
+                previous = release.revision_digest(unit)
+                unit["database_ca_secret"] = "projects/example/secrets/knowledge-source-database-ca/versions/4"
+                self.assertNotEqual(release.revision_digest(unit), previous)
+                unit["database_ca_secret"] = "projects/example/secrets/knowledge-source-database-ca/versions/latest"
+                with self.assertRaisesRegex(ValueError, "pinned database CA"):
+                    release.validate_plan(candidate)
+        for name in ("knowledge-web", "knowledge-parser"):
+            candidate = plan() if name == "knowledge-web" else database_plan(name)
+            candidate["services"][name].pop("migrations", None)
+            candidate["services"][name]["database_ca_secret"] = "projects/example/secrets/knowledge-source-database-ca/versions/3"
+            with self.subTest(name=name), self.assertRaisesRegex(ValueError, "cannot receive a database CA"):
+                release.validate_plan(candidate)
 
     def test_manual_release_rejects_deferred_units_and_configuration(self):
         self.assertNotIn("knowledge-actions", release.UNITS)
@@ -237,52 +265,153 @@ class ReleaseControllerTests(unittest.TestCase):
             [{"network": "knowledge-private", "subnetwork": "knowledge-runtime"}],
         )
 
-    def test_promotes_selected_service_after_no_traffic_stage_and_persists_manifest(self):
-        class FakeGcloud:
-            def __init__(self): self.calls = []; self.describes = 0
-            def call(self, args, *, capture=False):
-                self.calls.append(args)
-                if "describe" in args:
-                    self.describes += 1
-                    if self.describes == 1:
-                        return json.dumps(observed_web_shell())
-                    return json.dumps({"status": {"url": "https://knowledge-web.example", "latestReadyRevisionName": "knowledge-web-new", "conditions": [{"type": "Ready", "status": "True"}]}})
-                if args[:4] == ["gcloud", "auth", "print-identity-token", "--audiences=https://knowledge-web.example"]:
-                    return "synthetic-token\n"
-                return ""
+    def test_promotes_exact_startup_checked_revision_without_runtime_impersonation(self):
+        adapter = CloudProtocol()
         current = {"generation": 3, "services": {"knowledge-web": {"revision_digest": "old"}}}
         with tempfile.TemporaryDirectory() as directory:
-            adapter = FakeGcloud()
-            promoted = release.promote(plan(), current, project="example", region="us-east1", manifest=Path(directory) / "manifest.json", adapter=adapter)
-            self.assertEqual([entry["name"] for entry in promoted], ["knowledge-web"])
-            staged = next(call for call in adapter.calls if "replace" in call)
-            self.assertIn("--no-traffic", staged)
-            self.assertTrue(any(call[0] == "curl" and call[-1].endswith("/health") for call in adapter.calls))
-            self.assertTrue(any("update-traffic" in call for call in adapter.calls))
-            saved = json.loads((Path(directory) / "manifest.json").read_text())
+            manifest = Path(directory) / "manifest.json"
+            release.promote(plan(), current, project="example", region="us-east1", manifest=manifest, adapter=adapter)
+            staged = adapter.documents["knowledge-web"]
+            self.assertIn("name", staged["spec"]["template"]["metadata"], "Stage an explicitly named revision")
+            revision = staged["spec"]["template"]["metadata"]["name"]
+            probe = staged["spec"]["template"]["spec"]["containers"][0]["startupProbe"]
+            self.assertEqual(probe["httpGet"], {"path": "/health", "port": 8080})
+            self.assertLessEqual(probe["failureThreshold"] * probe["periodSeconds"], 240)
+            self.assertEqual(staged["spec"]["traffic"], [{"revisionName": "knowledge-web-old", "percent": 100}])
+            self.assertFalse(any("--no-traffic" in call or "--file" in call for call in adapter.calls))
+            self.assertTrue(any(f"--to-revisions={revision}=100" in call for call in adapter.calls))
+            self.assertFalse(any("--to-latest" in call or call[0] == "curl" or "print-identity-token" in call for call in adapter.calls))
+            saved = json.loads(manifest.read_text())
             self.assertEqual(saved["generation"], 4)
-            self.assertEqual(saved["services"]["knowledge-web"]["deployed_revision"], "knowledge-web-new")
+            self.assertEqual(saved["services"]["knowledge-web"]["deployed_revision"], revision)
 
-    def test_failed_health_restores_only_the_selected_service_prior_revision(self):
-        class FailingHealthGcloud:
-            def __init__(self): self.calls = []; self.describes = 0
-            def call(self, args, *, capture=False):
-                self.calls.append(args)
-                if "describe" in args:
-                    self.describes += 1
-                    if self.describes == 1:
-                        return json.dumps(observed_web_shell())
-                    return json.dumps({"status": {"url": "https://knowledge-web.example", "conditions": [{"type": "Ready", "status": "True"}]}})
-                if args[0] == "curl":
-                    raise release.subprocess.CalledProcessError(22, args)
-                if args[:4] == ["gcloud", "auth", "print-identity-token", "--audiences=https://knowledge-web.example"]:
-                    return "synthetic-token\n"
-                return ""
-        adapter = FailingHealthGcloud()
+    def test_old_ready_revision_cannot_pass_the_staged_health_gate(self):
+        for failure in ("not-ready", "old-ready", "newer-created"):
+            with self.subTest(failure=failure), tempfile.TemporaryDirectory() as directory:
+                adapter = CloudProtocol(failure=failure)
+                manifest = Path(directory) / "manifest.json"
+                with self.assertRaisesRegex(ValueError, "staged revision"):
+                    release.promote(plan(), {"generation": 3, "services": {"knowledge-web": {"revision_digest": "old"}}}, project="example", region="us-east1", manifest=manifest, adapter=adapter)
+                self.assertFalse(manifest.exists())
+                if failure == "newer-created":
+                    self.assertEqual(len([call for call in adapter.calls if "replace" in call]), 1, "Never restore over a concurrent writer")
+                traffic_calls = [call for call in adapter.calls if "update-traffic" in call]
+                self.assertTrue(all("--to-revisions=knowledge-web-old=100" in call for call in traffic_calls))
+
+    def test_failed_stage_restores_prior_template_so_the_same_plan_can_retry(self):
+        adapter = CloudProtocol(failure="not-ready")
+        current = {"generation": 3, "services": {"knowledge-web": {"revision_digest": "old"}}}
         with tempfile.TemporaryDirectory() as directory:
-            with self.assertRaises(release.subprocess.CalledProcessError):
-                release.promote(plan(), {"generation": 3, "services": {"knowledge-web": {"revision_digest": "old"}}}, project="example", region="us-east1", manifest=Path(directory) / "manifest.json", adapter=adapter)
-        self.assertTrue(any("--to-revisions=knowledge-web-old=100" in call for call in adapter.calls))
+            manifest = Path(directory) / "manifest.json"
+            with self.assertRaisesRegex(ValueError, "staged revision"):
+                release.promote(plan(), current, project="example", region="us-east1", manifest=manifest, adapter=adapter)
+            restored = adapter.documents["knowledge-web"]
+            self.assertEqual(restored["spec"]["template"], observed_web_shell()["spec"]["template"])
+            adapter.failure = None
+            release.promote(plan(), current, project="example", region="us-east1", manifest=manifest, adapter=adapter)
+            self.assertTrue(manifest.exists())
+
+    def test_existing_unrecorded_runtime_cannot_be_silently_adopted(self):
+        for labeled in (True, False):
+            adapter = CloudProtocol()
+            candidate = database_plan()
+            existing = release.revision_document("knowledge-query", candidate["services"]["knowledge-query"], release.revision_digest(candidate["services"]["knowledge-query"]))
+            if not labeled:
+                existing["spec"]["template"]["metadata"].pop("labels")
+            adapter.documents["knowledge-query"] = existing
+            with self.subTest(labeled=labeled), tempfile.TemporaryDirectory() as directory:
+                with self.assertRaisesRegex(ValueError, "unrecorded"):
+                    release.promote(candidate, {"generation": 3, "services": {}}, project="example", region="us-east1", manifest=Path(directory) / "manifest.json", adapter=adapter, ledger=ledger(LAST))
+                self.assertFalse(any("replace" in call for call in adapter.calls))
+
+    def test_job_documents_follow_cloud_run_v1_schema_and_have_valid_digest_labels(self):
+        candidate = database_plan("knowledge-schema")
+        unit = candidate["services"]["knowledge-schema"]
+        digest = release.revision_digest(unit)
+        document = release.revision_document("knowledge-schema", unit, digest)
+        self.assertIn("spec", document["spec"]["template"], "Cloud Run jobs require ExecutionTemplateSpec.spec")
+        execution = document["spec"]["template"]["spec"]
+        self.assertEqual(execution["taskCount"], 1)
+        self.assertEqual(execution["parallelism"], 1)
+        template = execution["template"]
+        self.assertNotIn("containerConcurrency", template["spec"])
+        self.assertEqual(template["spec"]["maxRetries"], 0)
+        self.assertIn("timeoutSeconds", template["spec"])
+        self.assertNotIn("metadata", template, "Network and digest belong to the execution template")
+        metadata = document["spec"]["template"]["metadata"]
+        self.assertIn("run.googleapis.com/network-interfaces", metadata["annotations"])
+        for value in metadata["labels"].values():
+            self.assertLessEqual(len(value), 63)
+            self.assertRegex(value, r"^[a-z0-9_-]+$")
+        self.assertEqual(release.observed_digest("knowledge-schema", document), digest)
+
+    def test_repeated_job_promotion_uses_jobs_api_and_correct_nested_digest(self):
+        candidate = database_plan("knowledge-schema")
+        adapter = CloudProtocol()
+        with tempfile.TemporaryDirectory() as directory:
+            manifest = Path(directory) / "manifest.json"
+            release.promote(candidate, {"generation": 3, "services": {}}, project="example", region="us-east1", manifest=manifest, adapter=adapter, ledger=ledger())
+            current = json.loads(manifest.read_text())
+            candidate.update(expected_generation=4, generation=5)
+            release.promote(candidate, current, project="example", region="us-east1", manifest=manifest, adapter=adapter, ledger=ledger())
+            with patch.object(release, "run", adapter.call):
+                observed = release.observed_revision_digests("example", "us-east1", ["knowledge-schema"])
+            self.assertEqual(observed["knowledge-schema"], current["services"]["knowledge-schema"]["revision_digest"])
+            self.assertFalse(any(call[2] == "services" for call in adapter.calls))
+
+    def test_completed_units_are_recorded_if_later_unit_fails(self):
+        candidate = database_plan("knowledge-retention")
+        web = plan()
+        for field in ("services", "deploy", "build_receipt"):
+            candidate[field].update(web[field])
+        adapter = CloudProtocol(failure="not-ready")
+        with tempfile.TemporaryDirectory() as directory:
+            manifest = Path(directory) / "manifest.json"
+            with self.assertRaisesRegex(ValueError, "staged revision"):
+                release.promote(candidate, {"generation": 3, "services": {"knowledge-web": {"revision_digest": "old"}}}, project="example", region="us-east1", manifest=manifest, adapter=adapter, ledger=ledger(LAST))
+            self.assertTrue(manifest.exists(), "Completed units must be persisted before a later unit fails")
+            saved = json.loads(manifest.read_text())
+            self.assertIn("knowledge-retention", saved["services"])
+            self.assertEqual(saved["services"]["knowledge-web"]["revision_digest"], "old")
+            self.assertEqual(saved["generation"], 4)
+
+
+class CloudProtocol:
+    """Emulates cloud resource state, including separate staged/serving revisions."""
+    def __init__(self, *, failure=None):
+        self.calls = []
+        self.documents = {}
+        self.failure = failure
+
+    def call(self, args, *, capture=False):
+        self.calls.append(args)
+        if "print-identity-token" in args:
+            return "synthetic-token"
+        if "replace" in args:
+            document = json.loads(Path(args[4]).read_text())
+            name = document["metadata"]["name"]
+            self.documents[name] = document
+            return ""
+        if "describe" in args:
+            name = args[4]
+            if name not in self.documents:
+                if name == "knowledge-web":
+                    return json.dumps(observed_web_shell())
+                raise release.subprocess.CalledProcessError(1, args)
+            document = json.loads(json.dumps(self.documents[name]))
+            if args[2] == "jobs":
+                document["metadata"]["generation"] = 9
+                return json.dumps(document)
+            revision = document["spec"]["template"]["metadata"].get("name", "missing-name")
+            document["status"] = {
+                "url": "https://knowledge-web.example",
+                "latestReadyRevisionName": "knowledge-web-old" if self.failure == "old-ready" else revision,
+                "latestCreatedRevisionName": "knowledge-web-concurrent" if self.failure == "newer-created" else revision,
+                "conditions": [{"type": "Ready", "status": "False" if self.failure == "not-ready" else "True"}],
+                "traffic": [{"revisionName": "knowledge-web-old", "percent": 100}],
+            }
+            return json.dumps(document)
+        return ""
 
 
 FIRST, MIDDLE, LAST = "20260908000245_knowledge-foundation", "20260908014537_retention-recovery", "20260908050421_ingest-source-visibility-execute"
@@ -363,10 +492,14 @@ class MigrationCompatibilityTests(unittest.TestCase):
 
     def test_promote_checks_the_ledger_before_any_write_and_records_the_window(self):
         class RecordingGcloud:
-            def __init__(self): self.calls = []
+            def __init__(self): self.calls = []; self.exists = False
             def call(self, args, *, capture=False):
                 self.calls.append(args)
+                if "replace" in args:
+                    self.exists = True
                 if "describe" in args:
+                    if not self.exists:
+                        raise release.subprocess.CalledProcessError(1, args)
                     return json.dumps({"metadata": {"generation": 9}})
                 return ""
         candidate = database_plan("knowledge-retention", minimum=MIDDLE, maximum=LAST)
