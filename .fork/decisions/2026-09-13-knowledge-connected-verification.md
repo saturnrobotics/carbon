@@ -21,6 +21,10 @@ authentication, schema, credentials or cloud infrastructure was changed.
    snapshotted so old fixtures cannot mask a lost new fixture or cause a false
    cleanup failure after a service restart.
 
+The existing knowledge CI browser job runs both preservation and normal cleanup
+modes, so the preservation regression is exercised on subsequent changes rather
+than depending on an agent remembering the optional flag.
+
 ## Executed evidence
 
 | Check | Result and scope |

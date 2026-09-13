@@ -93,6 +93,9 @@ jobs:
       - name: Manual browser workflow
         run: |
           corepack pnpm --filter knowledge exec playwright install --with-deps chromium
+          # Both modes must pass their final-state assertion. A normal-only run
+          # cannot catch a later spec erasing the retained recovery fixture.
+          KNOWLEDGE_E2E_PRESERVE_FIXTURE=1 contrib/deploying/knowledge/local-stack.sh test
           contrib/deploying/knowledge/local-stack.sh test
       - name: Stop local manual workflow stack
         run: contrib/deploying/knowledge/local-stack.sh stop
