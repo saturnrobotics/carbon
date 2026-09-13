@@ -2,13 +2,55 @@
 
 Index of the pull requests that implement
 `.fork/plans/2026-09-07-company-knowledge-platform.md` (24 roadmap tasks) and
-`.fork/plans/2026-09-11-knowledge-authorization.md` (11 authorization tasks, on
-branch `docs/knowledge-authorization-plan`). Written so a reviewer can find the
+`.fork/plans/2026-09-11-knowledge-authorization.md` (11 authorization tasks).
+Reconciled on 2026-09-13 against `saturn/main` at `7e03ef5e2d` and GitHub PR
+states. Written so a reviewer can find the
 change for any task without reconstructing it from branch names.
 
 No roadmap checkbox is ticked. The plan requires a task's whole acceptance
 boundary, not implemented code, and the cloud-dependent gates below have not
-been executed. This record states what each remaining boundary needs.
+been executed. This record states what each remaining boundary needs. An open
+acceptance checkbox does not mean the implementation is missing.
+
+The subsequent [connected verification record](2026-09-13-knowledge-connected-verification.md)
+adds fresh browser, real Carbon receiver/receipt, revocation and isolated recovery
+proof, and records two verification-tool defects found and fixed. Consult its
+limits before treating a deployment gate as closed.
+
+## Current integration state
+
+- [PR #30](https://github.com/saturnrobotics/carbon/pull/30) merged the platform
+  program at `bcdc214a4b`; its stacked task PRs were merged or closed after
+  integration. The table below is a provenance index, not an open-PR queue.
+- [PR #56](https://github.com/saturnrobotics/carbon/pull/56) merged the nine Carbon
+  connection repair PRs at `7e03ef5e2d`. All 15 reported checks passed. Its prior
+  verification records 24 browser tests on each of three cold runs; broader
+  ERP/actions suites include skips, which are not acceptance proof.
+- PR #46 deliberately detached Carbon source-outbox triggers. The outbox table
+  and consumer code exist, but ordinary source writes do not enqueue changes.
+  No local fixture that reattaches triggers proves the shipped state is active.
+- Configured Carbon structured reads and receipt-to-manual resolution may now
+  coexist with manual search (PR #53/#56). Drive, vector retrieval, generated
+  answers, commands, procurement and generic/MCP features remain deferred.
+
+## Task map: implemented code versus remaining acceptance
+
+These groups cover all 24 roadmap tasks. Historical task records and the PRs
+below contain individual verification; this table does not claim a new run.
+
+| Roadmap tasks | Implementation state | Remaining boundary |
+| --- | --- | --- |
+| 01–03 | Package contracts, release planner and selective Carbon deployment are implemented; #21 closes foundation gaps. | Verify the actual selected deployment's image/configuration closure and rollout behavior. |
+| 04, 09 | Kanban work belongs to its separate repository and PRs below. | Reconcile its current trunk and prove its deployed authorization/cutover independently. |
+| 05, 07–08 | Carbon identity and authorization implementations merged; see the authorization plan's per-task completion table. | Authz 11: real Google sign-in, assurance, private ingress, service IAM and receiver checks. |
+| 06 | OAuth isolation evaluation and additional write-replay observations merged in #17; the selected IAP/trusted-forwarder design stands. | Do not reopen the design merely because its historical roadmap box is unchecked. |
+| 10–11 | Knowledge schema, roles, generators and migration compatibility checks exist. #56 records fresh union regeneration and a clean second pass. | Apply and verify the selected deployment's schema/roles without resetting an existing database. |
+| 12 | Source adapters, pricing transport and posted-receipt resolution merged through #56. | Exercise real Carbon receiver → receipt/items → applicable manual, including ambiguity, revocation and the known empty-source limitation. |
+| 13–14 | Intake, extraction review and publication UI merged; #48/#56 repair title proposals. | Representative documents and cold upload → extraction → review → publish → search → exact download exercise. |
+| 15, 17 | Index/outbox consumer and versioned cache/revocation implementations merged. | Carbon source triggers remain deliberately detached by #46; enabling propagation requires a separate decision and resynchronization plan. |
+| 16, 18 | Retrieval, evidence assembly and portal implementations merged; local browser proof exists. | Real-corpus quality, ambiguity and performance remain unmeasured; vector retrieval and generated answers remain unreleased. |
+| 19–22 | Drive, commands, procurement and generic/MCP implementations are retained behind release fences. | Separate enablement decisions and applicable end-to-end/provider/client acceptance. |
+| 23–24 | Monitoring, budgets, retention, recovery tooling and acceptance harnesses exist. | Deployed alerts/budgets, restore with denied/deleted-document controls, rollout/rollback and restricted pilot acceptance. |
 
 ## Carbon pull requests
 
@@ -34,7 +76,7 @@ been executed. This record states what each remaining boundary needs.
 | 27 | `feat/knowledge-authz-07-read-gate` | Authz 07, canonical read gate |
 | 28 | `feat/knowledge-12-source-adapters` | Roadmap 12, bounded adapters; Roadmap 15 consumer |
 | 29 | `feat/knowledge-19-drive-connector` | Roadmap 19, Google Drive connector |
-| 30 | `integration/knowledge-platform` | Draft, every branch above merged and regenerated |
+| 30 | `integration/knowledge-platform` | Merged integration of the program and its repair branches |
 | 31 | `feat/knowledge-18-routing-portal` | Roadmap 18, routing, synthesis, portal |
 | 32 | `feat/knowledge-20-ticket-commands` | Roadmap 20, ticket commands, Carbon half |
 | 33 | `feat/knowledge-22-adapters-mcp` | Roadmap 22, generic adapters and MCP |
@@ -55,19 +97,18 @@ from authz 07, roadmap 09 from authz 08.
 
 ## What no local run can close
 
-Authorization task 11, restricted production verification, is the only task with
-no pull request. It requires an operator-confirmed deployment target, a named
-tester and credentials, so it cannot be started from a development machine. The
+Authorization task 11, restricted production verification, has no completed
+deployment evidence. It requires an operator-confirmed deployment target, a named
+tester and credentials. Local preparation can proceed, but cannot close it. The
 same boundary blocks four acceptance cases carried in PR 25: Google credential
 sign-in, document answer latency, IAP boundary overhead, and ticket creation
 against a deployed Kanban.
 
-Three further gates are implemented but unexecuted, each for a stated reason
-recorded in the owning pull request: the containerised browser suites for
-roadmap 18 and 19 (the fixtures pin one set of ports, and concurrent agents held
-them), and the MCP client gate in roadmap 22 (no intended client exists yet, so
-the transport ships disabled behind an explicit flag, a release profile check and
-a deployment variable refusal).
+The formerly blocked roadmap 18/19 browser gates have since run: the harness now
+accepts independent project names, image tags and ports, and #56 records the
+combined cold suite. These local results do not prove a real Drive deployment.
+The MCP client gate in roadmap 22 remains unexecuted: no intended client is
+recorded, and the transport remains disabled behind the release fences.
 
 ## Findings that outlived their task
 
@@ -85,12 +126,30 @@ own tenancy and permissions. It is blocked in Carbon PR 34.
 A latency alert in the monitoring configuration read a nested payload field that
 telemetry never emits, so it could not have fired. Fixed in PR 21.
 
-## Review order
+## Next work and PR bookkeeping
 
-Merge in pull request number order, or review the integrated tree at PR 30. The
-authorization changes warrant review first: PR 24 installs triggers on Carbon's
-`user` and `userToCompany` tables, and PR 27 changes which operations the public
-API document and the tool catalogue disclose.
+Exercise the merged Carbon-connected workflow first, then resolve reproduced
+failures and prepare the restricted deployment checks. Do not merge the original
+task branches again or enable deferred features to clear roadmap checkboxes.
+
+[PR #38](https://github.com/saturnrobotics/carbon/pull/38) was closed as superseded
+on 2026-09-13 after review: its explicit re-enrollment, sticky-denial
+assertions and cleanup are already in trunk. Its lesson is byte-identical; the
+test has subsequently adopted #49's intentional 403 responses. The separately
+reported monotonic-counter fixture issue is also repaired in
+`packages/knowledge/scripts/test_revocation.py`. Merging the old branch is
+unnecessary. Its old failed checks do not describe current trunk.
+
+[PR #57](https://github.com/saturnrobotics/carbon/pull/57) remains an open handoff.
+Update its pre-#56 integration instructions before retaining them as current
+operator guidance.
+
+The handoff additionally flags step-up errors classified as identity denials,
+non-API-key bearer tokens entering the workforce path, the receiver's live-only
+Google key fetching, and receipt reversal quantity semantics. Reproduce these
+against the merged tree before proposing fixes. Runtime authentication changes
+need their own review; a local verification seam must not become a release
+authentication bypass.
 
 ## Follow-ups this program recorded but did not take
 
@@ -101,8 +160,9 @@ The knowledge scripts invoke `corepack pnpm`, which fails wherever Corepack
 resolves a pnpm other than the pinned one, and refuses to switch. Every agent
 that hit it used a path shim rather than editing the scripts, since the call
 appears in `packages/knowledge/scripts/setup-disposable.py` and several commands
-in `verify-security.ts`, on branches that are still open. Prefer the pnpm already
-on the path, and fall back to Corepack.
+in `verify-security.ts`. Those implementations have now merged. Diagnose the
+current launcher before changing it and preserve the repository's pinned pnpm
+version; merely preferring an arbitrary executable on PATH is not sufficient.
 
 The backup schema manifest is generated from `information_schema.columns` with no
 `ORDER BY`, so two machines regenerate byte-different files that are semantically
@@ -111,10 +171,9 @@ when the comparison is semantically clean. Ordering the query would make
 regeneration byte-stable, but column order also reaches real backup exports, so
 the change needs its own review.
 
-Two verification surfaces are unusually hostile to parallel work, which is how
-several gates in this program went unexecuted. The browser harness pins fixed
-loopback origins, host ports and one image tag, so two agents cannot run it at
-once and a long-lived stack blocks it entirely. Separately,
+The fixed browser origins/ports/image-tag blocker was repaired in the merged
+portal browser work; use the documented per-stack overrides and leave others'
+stacks untouched. A remaining disposable-database setup constraint is that
 `knowledge_resolve_workforce_identity` segfaults a Postgres backend when called
 under `SET ROLE anon` unless the container sets `supautils.hint_roles` empty, as
 the continuous integration configuration does.

@@ -1,7 +1,10 @@
 # Knowledge platform authorization program
 
 **Date:** 2026-09-11
-**Status:** Planned; no task started.
+**Status (2026-09-13):** Carbon Tasks 01–07, 09 and 10 have merged implementations
+and recorded local verification. Task 08 belongs to the separate Kanban
+repository; its deployed cutover is unproven here. Task 11 remains unexecuted.
+See §4 for evidence and remaining acceptance boundaries.
 **Base revision:** `saturn/main` at `7464d10347` (after PR #7 and PR #8).
 **Refines:** Tasks 05, 07, 08, 09 and the provider-eligibility invariant (§1.9.1)
 of `2026-09-07-company-knowledge-platform.md`. That plan's §1.2 (managed Google
@@ -22,10 +25,11 @@ and credentials belong in `contrib/deploying/knowledge/.local/`,
 `contrib/deploying/gcp-tailscale/.local/`, `../kanban/.env` and the deployment
 secret stores, never in tracked files. Evidence goes to `.fork/decisions/`.
 
-## 1. What exists on `saturn/main` today
+## 1. Historical audit at the original base revision
 
 The audit is the reason this plan is shorter than the original four tasks. Cited
-lines are as of the base revision.
+lines and missing-code findings are as of the base revision, not current trunk.
+They are preserved as the rationale for the tasks; §4 supersedes their status.
 
 | Area | Present and tested | Missing or unverified |
 |---|---|---|
@@ -55,6 +59,10 @@ lines are as of the base revision.
 9. Local integration proof and managed-cloud proof are separate (`…-separate-local-integration-proof-from-managed-cloud-configuration-proof.md`). Each task states which one it delivers.
 
 ## 3. Progress and order
+
+These checkboxes represent full task acceptance. Implementation progress and
+recorded local checks are tracked separately in §4; an unchecked task must not
+be interpreted as absent code or an instruction to reimplement it.
 
 - [ ] Task 01: Workforce identity enrollment and account linking (Carbon).
 - [ ] Task 02: Emergency revocation and deactivation propagation.
@@ -554,6 +562,22 @@ feature.
 
 ## 4. Completion record
 
-To be filled per task with the exact commit and the checks that ran. Local
-fixture results do not stand in for Task 11's live checks, and Task 11's live
-checks do not replace the local suites.
+Reconciled against `saturn/main` at `7e03ef5e2d` on 2026-09-13. PR #30 integrated
+the implementation program; PR #56 integrated the Carbon connection repairs.
+The entries below point to historical verification, not new executions by this
+documentation pass. Local fixture results do not stand in for Task 11's live
+checks, and Task 11's live checks do not replace the local suites.
+
+| Task | Merged implementation and recorded proof | Remaining acceptance boundary |
+| --- | --- | --- |
+| 01 | PR #15; enrollment command and owner-role tests in [enrollment record](../decisions/2026-09-11-knowledge-identity-enrollment.md). PR #50/#56 repaired the real Carbon identifier-helper grants and fixture. | Exercise the integrated enrollment path on the selected Carbon-connected environment; production enrollment belongs to 11. |
+| 02 | PR #24 through #30; [revocation record](../decisions/2026-09-11-knowledge-identity-revocation.md). Trunk tests require explicit re-enrollment after reactivation and compare monotonic version deltas. | Measure deployed propagation under 11; do not mistake restored user activity for restored admission. |
+| 03 | PR #22 through #30; [assurance record](../decisions/2026-09-11-knowledge-authz-03-assurance.md). | Prove the selected Workspace assurance policy and access level under 11. Carbon-session evidence is not forwarded; `carbon-mfa` continues to deny when required. |
+| 04 | PR #14; [real-signature and registry checks](../decisions/2026-09-11-knowledge-authz-04-signature-tests.md). | Real cloud caller/issuer/audience configuration remains 11; fixture signatures are not Google sign-in proof. |
+| 05 | PR #20; [receiver wiring record](../decisions/2026-09-11-knowledge-receiver-wiring.md), with denial handling repaired in #49/#55/#56. | Live receiver configuration under 11; reproduce the outstanding non-API-key bearer and step-up classification findings before claiming complete error semantics. |
+| 06 | PR #12; [session and entry-path checks](../decisions/2026-09-11-knowledge-authz-06-session-tests.md). | Real Google session/cookie and entry-path exercise under 11. |
+| 07 | PR #27 through #30; [read-gate record](../decisions/2026-09-11-knowledge-authz-07-read-gate.md). PR #52/#56 added pricing transport and published-operation drift coverage. | Exercise current canonical permissions and receipt/manual resolution through the real receiver; production proof remains 11. |
+| 08 | Kanban PR #2 is indexed in the [program record](../decisions/2026-09-12-knowledge-program-status.md). | Verify that repository's current merged revision and perform its workforce deployment/cutover; Carbon CI does not prove this. |
+| 09 | PR #13; [foundation record](../decisions/2026-09-11-knowledge-authz-09-cloud-foundation.md) records Terraform validation and mutation tests. | No cloud apply is recorded. Database CA mounting and runtime IAM/networking must be verified before or during 11. |
+| 10 | PR #11; [provider-policy checks](../decisions/2026-09-11-knowledge-provider-policy-verification.md). | Keep vector search and synthesis disabled pending their separate release decision and applicable acceptance. |
+| 11 | No completed deployment evidence. | Confirm target and initial tester; verify real Google sign-in, assurance, IAP/private ingress, IAM, storage, revocation, recovery and rollback before expanding access. |

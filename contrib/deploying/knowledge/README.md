@@ -695,6 +695,12 @@ KNOWLEDGE_E2E_PRESERVE_FIXTURE=1 contrib/deploying/knowledge/local-stack.sh test
 
 The preserve flag retains the synthetic published manual and tombstone for
 subsequent performance and recovery checks. Omit it for normal test cleanup.
+After the full browser suite, the runner checks the database for the requested
+final state: uploaded originals and tombstones must remain with preservation
+enabled, and this run's captured intake/document rows must be absent otherwise.
+The runner snapshots pre-existing fixture IDs first, so earlier explicitly
+retained runs are allowed and cannot satisfy the new run's preservation check.
+Seeded manuals alone cannot satisfy it either.
 The stack persists its own named PostgreSQL, Redis, storage and Inngest volumes.
 `local-stack.sh up` applies pending private migrations and idempotent synthetic
 fixtures without resetting a developer database. Use `local-stack.sh status`,
@@ -731,10 +737,12 @@ contrib/deploying/knowledge/local-stack.sh down
 renamed variable fails a check rather than silently starting the default stack on
 the default ports beside the one it was meant to avoid.
 
-Only the stack itself is parameterised. `verify-local-lifecycle.sh` and
-`verify-local-recovery.py` name the default project and the `manual-v1` image tag
-directly, and `local-performance.py` is pointed at a URL you supply, so run the
-proofs below against the default stack and leave a second stack out of them.
+`verify-local-recovery.py` uses the same `KNOWLEDGE_LOCAL_STACK` selection and
+checks the containers' project/service ownership and their actual storage volume
+before starting or copying anything. Keep the exported stack variables set for
+the stop, recovery and restart commands below. `local-performance.py` takes the
+selected query URL explicitly. `verify-local-lifecycle.sh` still names the default
+project and `manual-v1` tag directly; do not run it against a second stack.
 
 ### The deferred Drive surface in the harness
 
@@ -801,12 +809,15 @@ rejects a nonexistent input generation. The test-only storage proxy adapts the
 SDK metadata URL path to the emulator; it does not synthesize object bytes,
 generations or extraction results.
 
-After a successful browser journey, run the lifecycle proof against the retained
-synthetic manual, then stop task services before the isolated restore proof. The proof refuses a running writer, restores into newly named
+Set `KNOWLEDGE_E2E_PRESERVE_FIXTURE=1` when running the browser journey to retain
+its synthetic manual for the proofs below. On the default stack only, the lifecycle proof
+can run first. For either stack selection, stop task services before the isolated
+restore proof. The proof refuses a running writer, restores into newly named
 disposable resources, then removes only its restore targets and temporary rows.
 It preserves original stack volumes; restart the stack afterward.
 
 ```bash
+# Default stack only; omit this line for a separately named stack:
 contrib/deploying/knowledge/verify-local-lifecycle.sh
 contrib/deploying/knowledge/local-stack.sh stop
 python3 contrib/deploying/knowledge/verify-local-recovery.py --synthetic --disposable

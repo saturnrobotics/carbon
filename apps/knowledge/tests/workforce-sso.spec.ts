@@ -175,7 +175,8 @@ test("a well-formed assertion for a revoked user is denied until restored", asyn
       .toBe(200);
   } finally {
     await request.post(`${e2eGateway}/__e2e/restore/bob`);
-    await request.post(`${e2eGateway}/__e2e/cleanup`);
+    if (process.env.KNOWLEDGE_E2E_PRESERVE_FIXTURE !== "1")
+      await request.post(`${e2eGateway}/__e2e/cleanup`);
     await bob.context.close();
   }
 });
