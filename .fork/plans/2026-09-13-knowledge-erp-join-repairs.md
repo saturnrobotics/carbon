@@ -1,5 +1,24 @@
 # Connecting the knowledge platform to Carbon: six repairs
 
+**Status (2026-09-13):** All six repair implementations and the denial-status
+addendum are merged in [PR #56](https://github.com/saturnrobotics/carbon/pull/56),
+`7e03ef5e2d`. The original diagnosis and task instructions below are historical;
+do not implement them again. Deployment and representative Carbon-connected
+acceptance remain separate gates.
+
+| Task | Integrated change | Recorded evidence and limit |
+| --- | --- | --- |
+| 01–02 | PR #50 grants the enrollment role's identifier-helper closure and installs Carbon's real helper in the disposable fixture. | #56 records enrollment/integration suites and three cold browser runs using that helper. Live deployment enrollment is not proven. |
+| 03–04 | PR #53 reads and validates the source registry and explicitly permits configured Carbon structured reads alongside manual search. | Configuration/profile tests and browser checks in #56; the [source-registry decision](../decisions/2026-09-13-knowledge-query-source-registry.md) records the release choice and empty-company-source limitation. |
+| 05 | PR #52 adds supplier-pricing transport and published-operation drift tests. | See [pricing transport decision](../decisions/2026-09-13-knowledge-pricing-transport.md) and #56's combined suites. |
+| 06 | PR #54 resolves items directly from posted receipt lines, without changing receipt posting or ledger history. | #56 records module tests, dataset/backup checks and regeneration; exercise the full receipt-to-manual path against representative Carbon receipts separately. |
+| Denial addendum | PR #49 and #55 classify query, gateway and item-search refusals. | #56's merged suite caught and repaired a source-registry test mock hiding the newly imported error class. |
+
+PR #56 reports 15 successful checks and 24 browser tests passing on each of three
+cold runs. These are prior integration results, not a fresh execution by this
+status reconciliation. Some broader ERP/actions suites in that PR had skipped
+tests; they must not be described as complete behavioral acceptance.
+
 The knowledge platform and Carbon were connected for the first time on
 2026-09-13, against a disposable Carbon database seeded with demo data. The
 authorization model held: thirteen adversarial cases were refused correctly,
@@ -7,8 +26,10 @@ real ERP rows crossed the boundary, and revocation propagated. Six defects stop
 the connection being made by configuration on a shipped build. Four are the
 connection itself; two are the reasons nobody saw them earlier.
 
-Evidence and the full finding list are in
-`.fork/decisions/2026-09-13-knowledge-erp-join.md`.
+The originally cited `2026-09-13-knowledge-erp-join.md` decision file is absent
+from this revision. The available integrated repair evidence is in PR #56 and
+the owning decision records linked above; do not treat a missing record as
+independent proof of the original exercise.
 
 No task here changes an authorization rule. Where a task touches a posting path
 or a release profile, it says so and stops for a decision.

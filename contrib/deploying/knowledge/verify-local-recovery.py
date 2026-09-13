@@ -4,6 +4,7 @@
 import argparse
 from hashlib import sha256
 import json
+import os
 from pathlib import Path
 import secrets
 import subprocess
@@ -18,8 +19,6 @@ COMPOSE = HERE / "compose.local.yaml"
 PASSWORD = "synthetic-test-only"
 DATABASE = "knowledge_test"
 BOOTSTRAP_DATABASE = "knowledge_bootstrap"
-PROJECT = "knowledge-manual-local"
-STORAGE_VOLUME = f"{PROJECT}_knowledge_storage"
 HELPER_IMAGE = "ubuntu:24.04@sha256:4fbb8e6a8395de5a7550b33509421a2bafbc0aab6c06ba2cef9ebffbc7092d90"
 HELPER_PLATFORM = "linux/amd64"
 STORAGE_IMAGE = "fsouza/fake-gcs-server@sha256:797ce226d62f947c009dc40246b30cfb456b8473d8241407f9d6f2c04e4d69ef"
@@ -45,9 +44,14 @@ def run(arguments, *, input_text=None, capture=False, stdout_file=None):
     return result.stdout.strip() if capture else ""
 
 
+def selected_project():
+    return os.environ.get("KNOWLEDGE_LOCAL_STACK") or "knowledge-manual-local"
+
+
 def compose(*arguments, capture=False):
     return run(
-        ["docker", "compose", "-f", str(COMPOSE), *arguments], capture=capture
+        ["docker", "compose", "--project-name", selected_project(),
+         "-f", str(COMPOSE), *arguments], capture=capture
     )
 
 
@@ -63,13 +67,34 @@ def assert_disposable(info, expected_stack=None):
         raise ValueError("recovery source is not the manual local stack")
 
 
-def assert_source_storage_volume(info):
+def assert_source_container(info, project, service):
+    assert_disposable(info, "manual-local")
+    labels = info.get("Config", {}).get("Labels") or {}
+    if (
+        labels.get("com.docker.compose.project") != project
+        or labels.get("com.docker.compose.service") != service
+    ):
+        raise ValueError("recovery source container is not owned by the selected project/service")
+
+
+def assert_source_storage_mount(info, volume):
+    mounts = [mount for mount in info.get("Mounts", [])
+              if mount.get("Destination") == "/data"]
+    if (
+        len(mounts) != 1
+        or mounts[0].get("Type") != "volume"
+        or mounts[0].get("Name") != volume
+    ):
+        raise ValueError("storage mount is not the selected project's named volume")
+
+
+def assert_source_storage_volume(info, project):
     labels = info.get("Labels") or {}
     if (
-        labels.get("com.docker.compose.project") != PROJECT
+        labels.get("com.docker.compose.project") != project
         or labels.get("com.docker.compose.volume") != "knowledge_storage"
     ):
-        raise ValueError("storage volume is not owned by the manual local stack")
+        raise ValueError("storage volume is not owned by the selected project")
 
 
 def assert_storage_configuration(info):
@@ -432,16 +457,22 @@ def main():
     writers = running.intersection({"portal", "ingest", "inngest", "parser", "query", "drive"})
     if writers:
         raise SystemExit(f"Stop manual stack task services before recovery: {sorted(writers)}")
-    compose("up", "-d", "postgres", "storage")
-    source_database = compose("ps", "-q", "postgres", capture=True)
-    source_storage = compose("ps", "-q", "storage", capture=True)
-    assert_disposable(inspect(source_database), "manual-local")
+    project = selected_project()
+    storage_volume = f"{project}_knowledge_storage"
+    source_database = compose("ps", "--all", "-q", "postgres", capture=True)
+    source_storage = compose("ps", "--all", "-q", "storage", capture=True)
+    if not source_database or not source_storage:
+        raise SystemExit("Create and seed the selected disposable stack before recovery")
+    assert_source_container(inspect(source_database), project, "postgres")
     source_storage_info = inspect(source_storage)
-    assert_disposable(source_storage_info, "manual-local")
+    assert_source_container(source_storage_info, project, "storage")
+    assert_source_storage_mount(source_storage_info, storage_volume)
     assert_storage_configuration(source_storage_info)
     assert_source_storage_volume(
-        json.loads(run(["docker", "volume", "inspect", STORAGE_VOLUME], capture=True))[0]
+        json.loads(run(["docker", "volume", "inspect", storage_volume], capture=True))[0],
+        project,
     )
+    compose("start", "postgres", "storage")
     wait_postgres(source_database)
     source_origin = storage_origin(source_storage)
     wait_http(f"{source_origin}/storage/v1/b")
@@ -488,7 +519,7 @@ def main():
                 )
             compose("stop", "storage", "postgres")
             run(["docker", "run", "--rm", "--platform", HELPER_PLATFORM,
-                 "--volume", f"{STORAGE_VOLUME}:/source:ro",
+                 "--volume", f"{storage_volume}:/source:ro",
                  "--volume", f"{backup_directory}:/backup", HELPER_IMAGE,
                  "tar", "--xattrs", "--xattrs-include=user.*", "--numeric-owner",
                  "-C", "/source", "-cpf", "/backup/storage.tar", "."])
@@ -553,7 +584,7 @@ def main():
                 subprocess.run(["docker", "volume", "rm", volume], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             subprocess.run(["docker", "network", "rm", target_network], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             if source_fixture_added:
-                compose("up", "-d", "postgres")
+                compose("start", "postgres")
                 wait_postgres(source_database)
                 remove_linked_recovery_rows(source_database, linked_documents)
                 compose("stop", "postgres")

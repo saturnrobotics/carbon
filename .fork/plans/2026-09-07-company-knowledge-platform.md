@@ -2,7 +2,11 @@
 
 **Date:** 2026-09-07
 
-**Status:** Planned; implementation and deployment have not started.
+**Status (2026-09-13):** The implementation program and Carbon connection repairs
+are merged through `7e03ef5e2d` (PRs #30 and #56). Local evidence exists; restricted
+production acceptance and deferred feature release remain open. See the
+[current program status](../decisions/2026-09-12-knowledge-program-status.md)
+for task coverage, evidence limits, and the next verification gates.
 
 **Design baseline:** The requirements, decisions, contracts, and acceptance criteria in this document.
 
@@ -526,8 +530,14 @@ Release acceptance (local implementation):
 - [ ] Restricted production verification: real Google SSO, private ingress,
       service IAM, storage permissions, rollout/rollback and pilot acceptance.
 
+The subsequent approved Carbon connection repair (PR #53, integrated in #56)
+allows configured Carbon structured reads and receipt-to-manual resolution
+alongside manual search. The manual index remains primary for other questions;
+this does not enable the deferred features below. See the
+[source registry decision](../decisions/2026-09-13-knowledge-query-source-registry.md).
+
 Deferred from this release: Drive synchronization, semantic/vector retrieval,
-generated answers, receipt-aware "recently received" disambiguation, voice,
+generated answers, voice,
 Kanban commands, purchasing actions, and generic CRM/engineering adapters. Any
 existing implementation of those paths is unreleased work. The manual-v1 runtime
 and release configuration must not activate them even if old environment values
@@ -601,21 +611,27 @@ application environment. No production resource changes have been made.
 
 The seven-step local goal is complete. See
 `.fork/decisions/archive/2026-09-08-local-manual-verification.md` for verified evidence and limits.
-The broader roadmap below remains deferred; its checkboxes require each entire
-task acceptance boundary, not merely implemented code.
+The broader roadmap's implementation has since merged through PRs #30 and #56.
+Its checkboxes still require each entire task acceptance boundary, not merely
+implemented code. The earlier local-only evidence is historical; it does not
+certify later changes or a live Carbon-connected deployment.
 
 ### Authorization program (2026-09-11)
 
 Tasks 05, 07, 08 and 09 and the provider-eligibility invariant (§1.9.1) were
 re-planned against a code audit of `saturn/main` in
 [`2026-09-11-knowledge-authorization.md`](2026-09-11-knowledge-authorization.md).
-Much of their step lists is already implemented (two-assertion verification,
-canonical resolution, the Carbon workforce read gate, Kanban's authorization
-code); what remains is binding enrollment, revocation, required assurance,
-deployment wiring, the Kanban cutover, the cloud foundation and the live
-production check. Execute that plan's eleven tasks in place of the four tasks'
+The Carbon enrollment, revocation, assurance, receiver wiring, read gate and
+foundation configuration implementations are now merged. The authorization
+plan's current completion table separates their recorded local proof from the
+unexecuted production check and the independently tracked Kanban cutover.
+Use that plan's eleven tasks in place of the four tasks'
 step lists; keep the four checkboxes below and tick each only when the
 corresponding tasks there are done (05 ← 09 + 11; 07 ← 01–06; 08 ← 07; 09 ← 08).
+
+The checklist below tracks whole-task acceptance. It is not an implementation
+backlog: use the [program task map](../decisions/2026-09-12-knowledge-program-status.md)
+before starting work so merged features are exercised rather than rebuilt.
 
 - [ ] Task 01: Add contracts, isolated test tooling, and package boundaries.
 - [ ] Task 02: Build a dependency-aware release planner.

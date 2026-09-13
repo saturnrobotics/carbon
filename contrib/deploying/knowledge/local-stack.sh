@@ -85,6 +85,17 @@ case "${1:-up}" in
   test)
     start
     database_container=$(compose ps -q postgres)
+    fixture_before=$(docker exec -i -e PGPASSWORD=synthetic-test-only "$database_container" \
+      psql -X -At -v ON_ERROR_STOP=1 -U supabase_admin -d knowledge_test <<'SQL'
+SELECT jsonb_build_object(
+  'intakes', (SELECT coalesce(jsonb_agg(id), '[]'::jsonb)
+    FROM knowledge.intake WHERE "companyId" = 'company-b'),
+  'documents', (SELECT coalesce(jsonb_agg(id), '[]'::jsonb)
+    FROM knowledge.document WHERE "companyId" = 'company-b'
+      AND "sourceId" = 'source-b' AND "sourceItemId" LIKE 'intake:%')
+)
+SQL
+    )
     KNOWLEDGE_E2E_BASE_URL="https://localhost:$KNOWLEDGE_LOCAL_PORTAL_PORT" \
     KNOWLEDGE_E2E_DATABASE_CONTAINER=$database_container \
     KNOWLEDGE_E2E_DATABASE_PORT="$KNOWLEDGE_LOCAL_DATABASE_PORT" \
@@ -95,6 +106,14 @@ case "${1:-up}" in
     KNOWLEDGE_E2E_DRIVE_QUERY_URL="http://127.0.0.1:$KNOWLEDGE_LOCAL_DRIVE_QUERY_PORT" \
     KNOWLEDGE_E2E_SYNTHETIC_FIXTURES=1 \
       corepack pnpm --dir "$repository" --filter knowledge test:e2e
+    preserve=0
+    if [ "${KNOWLEDGE_E2E_PRESERVE_FIXTURE:-}" = "1" ]; then
+      preserve=1
+    fi
+    docker exec -i -e PGPASSWORD=synthetic-test-only "$database_container" \
+      psql -X -U supabase_admin -d knowledge_test --set="preserve=$preserve" \
+      --set="before=$fixture_before" \
+      < "$directory/verify-local-fixtures.sql"
     ;;
   status)
     compose ps
