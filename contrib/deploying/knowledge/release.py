@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import base64
 import hashlib
 import json
 from pathlib import Path
@@ -11,6 +12,7 @@ import subprocess
 import tempfile
 from typing import Any, NoReturn
 from urllib.parse import urlsplit
+from uuid import uuid4
 
 UNITS = {"knowledge-web": "service", "knowledge-query": "service", "knowledge-ingest": "service", "knowledge-parser": "job", "knowledge-schema": "job", "knowledge-retention": "job"}
 IMAGE = re.compile(r"^[a-z0-9][a-z0-9./_-]*@sha256:[a-f0-9]{64}$")
@@ -176,6 +178,11 @@ def validate_plan(plan: dict[str, Any]) -> None:
         for version in spec["secrets"].values():
             if not PINNED_SECRET.fullmatch(version):
                 raise ValueError(f"{name} requires a pinned secret version, never latest")
+        if "database_ca_secret" in spec:
+            if name not in DATABASE_UNITS:
+                raise ValueError(f"{name} cannot receive a database CA")
+            if not isinstance(spec["database_ca_secret"], str) or not PINNED_SECRET.fullmatch(spec["database_ca_secret"]):
+                raise ValueError(f"{name} requires a pinned database CA secret version, never latest")
         if name in NO_SECRET_UNITS and spec["secrets"]:
             raise ValueError(f"{name} must not receive runtime secrets")
         extra_environment = spec["environment"].keys() - REQUIRED_ENVIRONMENT[name] - OPTIONAL_ENVIRONMENT.get(name, set())
@@ -256,7 +263,10 @@ def check_migration_compatibility(plan: dict[str, Any], ledger: dict[str, Any] |
 
 
 def revision_digest(spec: dict[str, Any]) -> str:
-    return canonical_digest({key: spec[key] for key in ("image", "service_account", "environment", "secrets", "resources", "max_instances", "concurrency", "network", "subnetwork", "egress")})
+    values = {key: spec[key] for key in ("image", "service_account", "environment", "secrets", "resources", "max_instances", "concurrency", "network", "subnetwork", "egress")}
+    if "database_ca_secret" in spec:
+        values["database_ca_secret"] = spec["database_ca_secret"]
+    return canonical_digest(values)
 
 
 def select_mutations(plan: dict[str, Any], current: dict[str, Any], observed: dict[str, str], ledger: dict[str, Any] | None = None) -> list[dict[str, Any]]:
@@ -268,6 +278,8 @@ def select_mutations(plan: dict[str, Any], current: dict[str, Any], observed: di
     for name in sorted(plan.get("deploy", {})):
         previous = current.get("services", {}).get(name, {})
         expected = previous.get("revision_digest")
+        if not expected and name in observed and (name != "knowledge-web" or observed[name]):
+            raise ValueError(f"Existing unrecorded runtime for {name}; reconcile the private manifest before promotion")
         if expected and observed.get(name) != expected:
             raise ValueError(f"Manual configuration drift for {name}; review it before promotion")
         mutations.append({"name": name, "kind": UNITS[name], "strategy": "stage-then-promote" if UNITS[name] == "service" else "replace-without-execute", "revision_digest": revision_digest(plan["services"][name])})
@@ -279,15 +291,37 @@ def run(args: list[str], *, capture: bool = False) -> str:
     return result.stdout if capture else ""
 
 
+DIGEST_LABEL = "knowledge-revision-digest"
+
+
+def digest_label(digest: str) -> str:
+    """Store all 256 bits in a Cloud Run label (hex plus prefix exceeds 63 chars)."""
+    if re.fullmatch(r"sha256:[a-f0-9]{64}", digest):
+        return "sha256-" + base64.b32encode(bytes.fromhex(digest[7:])).decode().lower().rstrip("=")
+    return digest
+
+
+def observed_digest(name: str, document: dict[str, Any]) -> str:
+    template = document.get("spec", {}).get("template", {})
+    labels = template.get("metadata", {}).get("labels", {})
+    value = labels.get(DIGEST_LABEL, labels.get("knowledge.carbon/revision-digest", ""))
+    if re.fullmatch(r"sha256-[a-z2-7]{52}", value):
+        return "sha256:" + base64.b32decode(value[7:].upper() + "====").hex()
+    return value
+
+
+def describe_command(project: str, region: str, name: str) -> list[str]:
+    return ["gcloud", "run", "jobs" if UNITS[name] == "job" else "services", "describe", name, "--project", project, "--region", region, "--format=json"]
+
+
 def observed_revision_digests(project: str, region: str, names: list[str]) -> dict[str, str]:
     result = {}
     for name in names:
         try:
-            document = json.loads(run(["gcloud", "run", "services", "describe", name, "--project", project, "--region", region, "--format=json"], capture=True))
+            document = json.loads(run(describe_command(project, region, name), capture=True))
         except subprocess.CalledProcessError:
             continue
-        labels = document.get("spec", {}).get("template", {}).get("metadata", {}).get("labels", {})
-        result[name] = labels.get("knowledge.carbon/revision-digest", "")
+        result[name] = observed_digest(name, document)
     return result
 
 
@@ -319,28 +353,47 @@ def revision_document(name: str, spec: dict[str, Any], digest: str, observed: di
     environment += [{"name": key, "valueFrom": {"secretKeyRef": {"name": secret_reference(value)[0], "key": secret_reference(value)[1]}}} for key, value in sorted(spec["secrets"].items())]
     interface: dict[str, Any] = {"network": spec["network"], "subnetwork": spec["subnetwork"]}
     if name in DATABASE_UNITS:
-        interface["tags"] = [SOURCE_DATABASE_CLIENT_TAG]
+        interface["tags"] = SOURCE_DATABASE_CLIENT_TAG
     template = {
         "metadata": {
-            "labels": {"knowledge.carbon/revision-digest": digest},
+            "labels": {DIGEST_LABEL: digest_label(digest)},
             "annotations": {
                 "run.googleapis.com/network-interfaces": json.dumps([interface], separators=(",", ":")),
                 "run.googleapis.com/vpc-access-egress": spec["egress"],
             },
         },
         "spec": {
-            "serviceAccountName": spec["service_account"], "containerConcurrency": spec["concurrency"],
+            "serviceAccountName": spec["service_account"],
             "containers": [{"image": spec["image"], "env": environment, "resources": {"limits": spec["resources"]}}],
         },
     }
+    if "database_ca_secret" in spec:
+        secret, version = secret_reference(spec["database_ca_secret"])
+        template["spec"]["volumes"] = [{"name": "database-ca", "secret": {"secretName": secret, "items": [{"key": version, "path": "ca.crt"}]}}]
+        template["spec"]["containers"][0]["volumeMounts"] = [{"name": "database-ca", "mountPath": "/var/run/secrets/knowledge-source-database"}]
     if spec["kind"] == "job":
-        return {"apiVersion": "run.googleapis.com/v1", "kind": "Job", "metadata": {"name": name}, "spec": {"template": {"template": template}}}
+        template["spec"].update(maxRetries=0, timeoutSeconds="3600")
+        return {"apiVersion": "run.googleapis.com/v1", "kind": "Job", "metadata": {"name": name}, "spec": {"template": {"metadata": template["metadata"], "spec": {"taskCount": 1, "parallelism": 1, "template": {"spec": template["spec"]}}}}}
+    template["metadata"]["name"] = f"{name}-{uuid4().hex[:16]}"
+    template["spec"]["containerConcurrency"] = spec["concurrency"]
+    # Cloud Run runs this against the staged container before declaring its
+    # revision ready, without routing to the old revision or bypassing IAP.
+    template["spec"]["containers"][0]["startupProbe"] = {
+        "httpGet": {"path": "/health", "port": 8080},
+        "timeoutSeconds": 5, "periodSeconds": 5, "failureThreshold": 48,
+    }
     template["metadata"]["annotations"]["autoscaling.knative.dev/maxScale"] = str(spec["max_instances"])
     metadata: dict[str, Any] = {"name": name}
     kept = foundation_service_annotations(name, observed)
     if kept:
         metadata["annotations"] = kept
-    return {"apiVersion": "serving.knative.dev/v1", "kind": "Service", "metadata": metadata, "spec": {"template": template}}
+    service_spec = {"template": template}
+    prior = (observed or {}).get("status", {}).get("traffic", [])
+    if prior:
+        # `services replace` has no --no-traffic flag. Explicitly pin all
+        # existing allocations while the new revision passes its startup probe.
+        service_spec["traffic"] = [{key: entry[key] for key in ("revisionName", "percent", "tag") if key in entry} for entry in prior]
+    return {"apiVersion": "serving.knative.dev/v1", "kind": "Service", "metadata": metadata, "spec": service_spec}
 
 
 def save_manifest(path: Path, plan: dict[str, Any], current: dict[str, Any], mutations: list[dict[str, Any]]) -> None:
@@ -367,53 +420,66 @@ def promote(plan: dict[str, Any], current: dict[str, Any], *, project: str, regi
     observed = {}
     for name in selected:
         try:
-            document = json.loads(adapter.call(["gcloud", "run", "services", "describe", name, "--project", project, "--region", region, "--format=json"], capture=True))
+            document = json.loads(adapter.call(describe_command(project, region, name), capture=True))
         except subprocess.CalledProcessError:
             continue
         observed_documents[name] = document
-        observed[name] = document.get("spec", {}).get("template", {}).get("metadata", {}).get("labels", {}).get("knowledge.carbon/revision-digest", "")
+        observed[name] = observed_digest(name, document)
     mutations = select_mutations(plan, current, observed, ledger)
     # Render every document before the first write so a missing IAP shell
     # refuses the whole promotion instead of a partial one.
     documents = {mutation["name"]: revision_document(mutation["name"], plan["services"][mutation["name"]], mutation["revision_digest"], observed_documents.get(mutation["name"])) for mutation in mutations}
     promoted: list[dict[str, Any]] = []
     for mutation in mutations:
-        name, spec = mutation["name"], plan["services"][mutation["name"]]
+        name = mutation["name"]
         document = documents[name]
+        restore_previous = True
         with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as stream:
             json.dump(document, stream)
             rendered = Path(stream.name)
         try:
-            command = ["gcloud", "run", "jobs" if mutation["kind"] == "job" else "services", "replace", "--file", str(rendered), "--project", project, "--region", region]
-            if mutation["kind"] == "service": command.append("--no-traffic")
+            command = ["gcloud", "run", "jobs" if mutation["kind"] == "job" else "services", "replace", str(rendered), "--project", project, "--region", region]
             adapter.call(command)
             if mutation["kind"] == "service":
-                ready = json.loads(adapter.call(["gcloud", "run", "services", "describe", name, "--project", project, "--region", region, "--format=json"], capture=True))
-                conditions = ready.get("status", {}).get("conditions", [])
-                if not any(condition.get("type") == "Ready" and condition.get("status") == "True" for condition in conditions):
-                    raise ValueError(f"{name} staged revision did not become Ready")
-                url = ready.get("status", {}).get("url")
-                if not isinstance(url, str) or not url.startswith("https://"):
-                    raise ValueError(f"{name} staged revision has no HTTPS service URL")
-                token = adapter.call(["gcloud", "auth", "print-identity-token", f"--audiences={url}", f"--impersonate-service-account={spec['service_account']}"], capture=True).strip()
-                if not token:
-                    raise ValueError(f"Could not obtain an identity token for {name} health probe")
-                adapter.call(["curl", "--fail", "--silent", "--show-error", "--max-time", "20", "--header", f"Authorization: Bearer {token}", url + "/health"])
-                adapter.call(["gcloud", "run", "services", "update-traffic", name, "--to-latest", "--project", project, "--region", region])
-                mutation["deployed_revision"] = ready.get("status", {}).get("latestReadyRevisionName")
-                if not mutation["deployed_revision"]:
-                    raise ValueError(f"{name} staged revision did not expose its immutable revision name")
+                ready = json.loads(adapter.call(describe_command(project, region, name), capture=True))
+                status = ready.get("status", {})
+                revision = document["spec"]["template"]["metadata"]["name"]
+                restore_previous = status.get("latestCreatedRevisionName") == revision
+                if status.get("latestCreatedRevisionName") != revision or status.get("latestReadyRevisionName") != revision or not any(condition.get("type") == "Ready" and condition.get("status") == "True" for condition in status.get("conditions", [])):
+                    raise ValueError(f"{name} staged revision did not become Ready with its HTTP startup probe")
+                adapter.call(["gcloud", "run", "services", "update-traffic", name, f"--to-revisions={revision}=100", "--project", project, "--region", region])
+                mutation["deployed_revision"] = revision
             else:
                 replaced = json.loads(adapter.call(["gcloud", "run", "jobs", "describe", name, "--project", project, "--region", region, "--format=json"], capture=True))
                 mutation["deployed_revision"] = str(replaced.get("metadata", {}).get("generation", ""))
                 if not mutation["deployed_revision"]:
                     raise ValueError(f"{name} replacement did not expose its observed generation")
             promoted.append(mutation)
+            # Preserve proven progress if a later independent unit fails.
+            save_manifest(manifest, plan, current, promoted)
         except Exception:
-            prior = observed_documents.get(name, {}).get("status", {}).get("traffic", [])
-            prior_revision = next((entry.get("revisionName") for entry in prior if entry.get("percent") == 100), None)
-            if mutation["kind"] == "service" and prior_revision:
-                adapter.call(["gcloud", "run", "services", "update-traffic", name, f"--to-revisions={prior_revision}=100", "--project", project, "--region", region])
+            previous = observed_documents.get(name)
+            if mutation["kind"] == "service" and previous and restore_previous:
+                # Restoring traffic alone leaves the failed template as the
+                # latest desired configuration and makes retry trip drift checks.
+                # Restore the complete observed template before pinning traffic.
+                prior = previous.get("status", {}).get("traffic", [])
+                traffic = [{key: entry[key] for key in ("revisionName", "percent", "tag") if key in entry} for entry in prior]
+                restore = {
+                    "apiVersion": "serving.knative.dev/v1", "kind": "Service",
+                    "metadata": {key: value for key, value in previous.get("metadata", {}).items() if key in {"name", "annotations", "labels"}},
+                    "spec": dict(previous["spec"]),
+                }
+                if traffic:
+                    restore["spec"]["traffic"] = traffic
+                rendered.write_text(json.dumps(restore))
+                try:
+                    adapter.call(["gcloud", "run", "services", "replace", str(rendered), "--project", project, "--region", region])
+                    allocation = ",".join(f"{entry['revisionName']}={entry['percent']}" for entry in traffic if entry.get("revisionName") and entry.get("percent", 0) > 0)
+                    if allocation:
+                        adapter.call(["gcloud", "run", "services", "update-traffic", name, f"--to-revisions={allocation}", "--project", project, "--region", region])
+                except Exception as restore_error:
+                    raise ValueError(f"{name} failed and its prior service configuration could not be restored; reconcile it before retrying") from restore_error
             raise
         finally:
             rendered.unlink(missing_ok=True)
@@ -439,7 +505,7 @@ def main() -> None:
         plan = apply_foundation_audiences(plan, json.loads(args.foundation_outputs.read_text()), override=args.override_audiences)
     ledger = json.loads(args.schema_ledger.read_text()) if args.schema_ledger is not None else None
     selected = sorted(plan.get("deploy", {}))
-    mutations = select_mutations(plan, current, observed_revision_digests(args.project, args.region, selected) if args.apply else {name: current.get("services", {}).get(name, {}).get("revision_digest", "") for name in selected}, ledger)
+    mutations = select_mutations(plan, current, observed_revision_digests(args.project, args.region, selected) if args.apply else {name: current["services"][name]["revision_digest"] for name in selected if current.get("services", {}).get(name, {}).get("revision_digest")}, ledger)
     if not args.apply:
         print(json.dumps({"mutations": mutations}, indent=2))
         return
