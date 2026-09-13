@@ -110,14 +110,24 @@ class ReleaseControllerTests(unittest.TestCase):
             self.assertFalse((Path(directory) / "manifest.json").exists())
         self.assertFalse(any("replace" in call for call in adapter.calls))
 
-    def test_only_database_units_carry_the_source_database_client_tag(self):
+    def test_only_database_units_carry_source_database_tags_as_an_array(self):
         self.assertEqual(release.DATABASE_UNITS, {"portal-query", "portal-ingest", "portal-schema", "portal-retention"})
-        query = dict(plan()["services"]["portal-web"], kind="service")
-        interfaces = json.loads(release.revision_document("portal-query", query, "revision")["spec"]["template"]["metadata"]["annotations"]["run.googleapis.com/network-interfaces"])
-        self.assertEqual(interfaces, [{"network": "portal-private", "subnetwork": "portal-runtime", "tags": "portal-source-database-client"}])
-        job = dict(plan()["services"]["portal-web"], kind="job")
-        interfaces = json.loads(release.revision_document("portal-parser", job, "revision")["spec"]["template"]["metadata"]["annotations"]["run.googleapis.com/network-interfaces"])
-        self.assertEqual(interfaces, [{"network": "portal-private", "subnetwork": "portal-runtime"}])
+        for name, kind in release.UNITS.items():
+            with self.subTest(name=name, kind=kind):
+                unit = dict(plan()["services"]["portal-web"], kind=kind)
+                rendered = release.revision_document(name, unit, "revision", observed_web_shell() if name == "portal-web" else None)
+                document = json.loads(json.dumps(rendered))
+                self.assertEqual(document["kind"], "Job" if kind == "job" else "Service")
+                template = document["spec"]["template"]
+                interfaces = json.loads(template["metadata"]["annotations"]["run.googleapis.com/network-interfaces"])
+                expected = {"network": "portal-private", "subnetwork": "portal-runtime"}
+                if name in release.DATABASE_UNITS:
+                    expected["tags"] = ["portal-source-database-client"]
+                self.assertEqual(interfaces, [expected])
+                self.assertEqual(template["metadata"]["annotations"]["run.googleapis.com/vpc-access-egress"], "all-traffic")
+                runtime = template["spec"]["template"]["spec"] if kind == "job" else template["spec"]
+                self.assertEqual(runtime["serviceAccountName"], unit["service_account"])
+                self.assertEqual(runtime["containers"][0]["image"], unit["image"])
 
     def test_retention_job_requires_its_narrow_runtime_configuration(self):
         self.assertEqual(release.UNITS["portal-retention"], "job")

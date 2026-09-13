@@ -401,7 +401,7 @@ def revision_document(name: str, spec: dict[str, Any], digest: str, observed: di
     environment += [{"name": key, "valueFrom": {"secretKeyRef": {"name": secret_reference(value)[0], "key": secret_reference(value)[1]}}} for key, value in sorted(spec["secrets"].items())]
     interface: dict[str, Any] = {"network": spec["network"], "subnetwork": spec["subnetwork"]}
     if name in DATABASE_UNITS:
-        interface["tags"] = SOURCE_DATABASE_CLIENT_TAG
+        interface["tags"] = [SOURCE_DATABASE_CLIENT_TAG]
     template = {
         "metadata": {
             "labels": {DIGEST_LABEL: digest_label(digest)},
