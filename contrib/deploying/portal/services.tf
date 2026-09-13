@@ -22,6 +22,9 @@ resource "google_cloud_run_v2_service" "probe" {
   iap_enabled         = true
   deletion_protection = var.environment == "production"
 
+  # The API returns this default block; declaring it prevents perpetual drift.
+  scaling { min_instance_count = 0 }
+
   template {
     service_account                  = google_service_account.runtime["web"].email
     max_instance_request_concurrency = 10
@@ -85,6 +88,9 @@ resource "google_cloud_run_v2_service" "web" {
   ingress             = "INGRESS_TRAFFIC_ALL"
   iap_enabled         = true
   deletion_protection = var.environment == "production"
+
+  # The API returns this default block; declaring it prevents perpetual drift.
+  scaling { min_instance_count = 0 }
 
   template {
     service_account                  = google_service_account.runtime["web"].email

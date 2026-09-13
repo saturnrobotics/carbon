@@ -7,6 +7,15 @@ from test_infrastructure import Configuration, parse_body, unquote
 
 
 class DatabaseMonitoringTests(unittest.TestCase):
+    def test_bootstrap_shells_match_provider_service_scaling_defaults(self):
+        config = Configuration(Path(__file__).resolve().parent)
+        for name in ("web", "probe"):
+            with self.subTest(name=name):
+                service = config.resources("google_cloud_run_v2_service")[name]
+                scaling = service.child("scaling")
+                self.assertIsNotNone(scaling, "Cloud Run returns a service scaling block even with default zero minimum")
+                self.assertEqual(scaling.attrs["min_instance_count"], "0")
+
     def test_descriptor_matches_the_worker_sample_and_alert_scope(self):
         config = Configuration(Path(__file__).resolve().parent)
         descriptors = config.resources("google_monitoring_metric_descriptor")

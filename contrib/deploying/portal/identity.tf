@@ -217,8 +217,15 @@ resource "google_cloud_scheduler_job" "outbox" {
       audience              = local.service_urls["portal-ingest"]
     }
   }
-  # API defaults set both retry count and duration to zero, disabling retries.
-  # Omit the empty block: the API omits it on read, causing perpetual plan drift.
+  # Both zero limits disable retries. Include the API's backoff defaults so the
+  # provider sends a nonempty block that matches reads after create or update.
+  retry_config {
+    retry_count          = 0
+    max_retry_duration   = "0s"
+    min_backoff_duration = "5s"
+    max_backoff_duration = "3600s"
+    max_doublings        = 5
+  }
   lifecycle {
     ignore_changes = [paused]
   }

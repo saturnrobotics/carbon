@@ -483,7 +483,15 @@ class FoundationTests(unittest.TestCase):
         self.assertEqual(unquote(job.attrs["attempt_deadline"]), "450s")
         self.assertEqual(job.attrs["paused"], "true")
         self.assertEqual(list_items(job.child("lifecycle").attrs["ignore_changes"]), ["paused"])
-        self.assertIsNone(job.child("retry_config"), "API-default disabled retries must not produce perpetual empty-block drift")
+        retries = job.child("retry_config")
+        self.assertIsNotNone(retries, "Explicit API defaults must preserve the retry block returned after updates")
+        self.assertEqual(retries.attrs, {
+            "retry_count": "0",
+            "max_retry_duration": '"0s"',
+            "min_backoff_duration": '"5s"',
+            "max_backoff_duration": '"3600s"',
+            "max_doublings": "5",
+        }, "Both zero retry limits disable retries; nonempty backoff defaults keep provider serialization stable")
         target = job.child("http_target")
         self.assertEqual(unquote(target.attrs["http_method"]), "POST")
         self.assertNotIn("body", target.attrs, "scheduler endpoints accept no request body")
