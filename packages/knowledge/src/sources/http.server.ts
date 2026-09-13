@@ -33,13 +33,33 @@ async function readBounded(
   return new TextDecoder().decode(buffer);
 }
 
-const operations = new Set([
+/**
+ * Carbon publishes each knowledge operation at `/api/v1/knowledge/<operation>`,
+ * where `<operation>` is the generated manifest name minus its module prefix
+ * (`knowledge_getItemIdentity` → `/api/v1/knowledge/getItemIdentity`).
+ */
+export const CARBON_OPERATION_PATH_PREFIX = "/api/v1/knowledge/";
+export const CARBON_OPERATION_NAME_PREFIX = "knowledge_";
+
+/**
+ * Every endpoint this transport may call. The allowlist exists so that
+ * retrieved content can never induce a call Carbon or Kanban did not expect:
+ * a path that is not here is refused before any credential is minted.
+ *
+ * Keeping it in step with what Carbon publishes is not automatic —
+ * `getItemSupplierPricing` shipped with a capability, a permission and no
+ * entry here, so it was unreachable through its own refusal. `sources/
+ * carbon-operations.test.ts` now pins that every published knowledge operation
+ * is either in this set or named in `EXCLUDED_CARBON_OPERATIONS` below.
+ */
+const operations: ReadonlySet<string> = new Set([
   "/api/v1/knowledge/resolveItems",
   "/api/v1/knowledge/getRecentReceipts",
   "/api/v1/knowledge/getRecentReceiptItems",
   "/api/v1/knowledge/getItemIdentity",
   "/api/v1/knowledge/getDocumentReferences",
   "/api/v1/knowledge/getPurchaseStatus",
+  "/api/v1/knowledge/getItemSupplierPricing",
   "/api/v1/knowledge/source-changes",
   "/api/knowledge/catalog",
   "/api/knowledge/tickets/search",
@@ -49,6 +69,31 @@ const operations = new Set([
   "/api/knowledge/documents/references",
   "/api/knowledge/access/check"
 ]);
+
+/** The live allowlist, so the drift test reads it rather than a second copy. */
+export const REGISTERED_SOURCE_OPERATIONS = operations;
+
+/**
+ * Carbon knowledge operations this transport deliberately does NOT carry, each
+ * with the reason. An entry here is a decision on the record; the absence of
+ * one is the defect the drift test refuses.
+ */
+export const EXCLUDED_CARBON_OPERATIONS: Readonly<Record<string, string>> =
+  Object.freeze({
+    knowledge_createProcurementDraft:
+      "A write, not a read. Draft purchase orders are raised by the actions service (apps/knowledge-actions/src/procurement.ts) over its own request path, whose review boundary is the portal. This transport carries only reads a verified employee's own Carbon permission already returns."
+  });
+
+/**
+ * Registered Carbon paths that are not manifest operations, and what each one
+ * is. The drift test reads both directions, so without this a mistyped
+ * allowlist entry would look exactly like a registered operation.
+ */
+export const CARBON_NON_OPERATION_PATHS: Readonly<Record<string, string>> =
+  Object.freeze({
+    "/api/v1/knowledge/source-changes":
+      "The machine-only change feed (routes/api+/v1+/knowledge.source-changes.ts). It sits outside the operation dispatch on purpose — a source indexer is neither an API key nor a workforce identity — so it is a route, never a published operation."
+  });
 const entityPath =
   /^\/api\/knowledge\/(?:tickets|entities)\/[A-Za-z0-9_-]{1,256}$/;
 const changesPath =

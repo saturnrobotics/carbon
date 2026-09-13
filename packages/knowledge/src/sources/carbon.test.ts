@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  CARBON_PRICING_CAPABILITY,
   carbonSearchTerm,
   createCarbonChangeFeed,
   createCarbonSourceAdapter,
@@ -205,6 +206,144 @@ describe("Carbon read adapter", () => {
     await expect(
       source.queryFacts({ entityId: "x", fact: "SELECT * FROM itemCost" })
     ).rejects.toThrow();
+  });
+});
+
+describe("Carbon supplier pricing", () => {
+  const price = {
+    supplierId: "sup-acme",
+    supplierUnitPrice: 12.34,
+    currencyCode: "USD",
+    unitOfMeasureCode: "EA",
+    updatedAt: "2026-09-01T10:00:00Z"
+  };
+  /** The same adapter, for a caller whose binding carries the stated capabilities. */
+  function pricingAdapter(
+    capabilities: string[],
+    handler: (url: URL, init: RequestInit) => Response | Promise<Response>
+  ) {
+    return createCarbonSourceAdapter(connection, {
+      request: new Request("https://query.example"),
+      identity: {
+        ...identity,
+        principal: { ...identity.principal, capabilities }
+      },
+      headers: async () => new Headers(),
+      fetch: async (url, init) => handler(url as URL, init ?? {})
+    });
+  }
+
+  it("reaches the pricing operation for a caller holding the pricing capability", async () => {
+    let seen: unknown;
+    const source = pricingAdapter(
+      ["knowledge.read", CARBON_PRICING_CAPABILITY],
+      (url, init) => {
+        expect(url.pathname).toBe("/api/v1/knowledge/getItemSupplierPricing");
+        seen = JSON.parse(String(init.body));
+        return Response.json({
+          results: [price, { ...price, supplierId: "sup-bolt" }],
+          count: null
+        });
+      }
+    );
+    const result = await source.getSupplierPricing("item-motor-a");
+    expect(seen).toEqual({ itemId: "item-motor-a" });
+    expect(result.outcome).toEqual({ kind: "ok" });
+    expect(result.status).toBe("complete");
+    expect(result.prices).toEqual([
+      price,
+      { ...price, supplierId: "sup-bolt" }
+    ]);
+    expect(result.validUntil).toBe(factValidUntil(result.observedAt));
+  });
+
+  it("passes the supplier filter through and projects only the agreed fields", async () => {
+    let seen: unknown;
+    const source = pricingAdapter(
+      ["knowledge.read", CARBON_PRICING_CAPABILITY],
+      (_url, init) => {
+        seen = JSON.parse(String(init.body));
+        // A leaked internal cost must not survive the projection.
+        return Response.json([{ ...price, itemCost: 9.99 }]);
+      }
+    );
+    const result = await source.getSupplierPricing("item-motor-a", "sup-acme");
+    expect(seen).toEqual({ itemId: "item-motor-a", supplierId: "sup-acme" });
+    expect(result.prices).toEqual([price]);
+    expect(JSON.stringify(result)).not.toContain("itemCost");
+  });
+
+  it("refuses a caller without the pricing capability before any request is made", async () => {
+    let called = false;
+    const source = pricingAdapter(["knowledge.read"], () => {
+      called = true;
+      return Response.json([price]);
+    });
+    const result = await source.getSupplierPricing("item-motor-a");
+    expect(result.outcome).toEqual({ kind: "insufficient-permission" });
+    expect(result.prices).toBeNull();
+    expect(called).toBe(false);
+  });
+
+  it("refuses a caller holding neither the capability nor the transport read", async () => {
+    let called = false;
+    const source = pricingAdapter([], () => {
+      called = true;
+      return Response.json([price]);
+    });
+    expect((await source.getSupplierPricing("item-motor-a")).outcome).toEqual({
+      kind: "insufficient-permission"
+    });
+    expect(called).toBe(false);
+  });
+
+  it("maps Carbon's own denial to insufficient-permission, not an empty price list", async () => {
+    // The capability alone is not the grant: Carbon still gates on purchasing
+    // view, and that refusal must never read as "this item has no prices".
+    const denied = pricingAdapter(
+      ["knowledge.read", CARBON_PRICING_CAPABILITY],
+      () => new Response("no", { status: 403 })
+    );
+    const result = await denied.getSupplierPricing("item-motor-a");
+    expect(result.outcome).toEqual({ kind: "insufficient-permission" });
+    expect(result.prices).toBeNull();
+    const outage = pricingAdapter(
+      ["knowledge.read", CARBON_PRICING_CAPABILITY],
+      () => new Response("boom", { status: 503 })
+    );
+    expect((await outage.getSupplierPricing("item-motor-a")).outcome).toEqual({
+      kind: "unavailable",
+      reason: "source-error"
+    });
+  });
+
+  it("marks a full page partial rather than passing the bound off as the population", async () => {
+    const source = pricingAdapter(
+      ["knowledge.read", CARBON_PRICING_CAPABILITY],
+      () =>
+        Response.json(
+          Array.from({ length: 50 }, (_unused, index) => ({
+            ...price,
+            supplierId: `sup-${index}`
+          }))
+        )
+    );
+    const result = await source.getSupplierPricing("item-motor-a");
+    expect(result.status).toBe("partial");
+    expect(result.prices).toHaveLength(50);
+  });
+
+  it("refuses an identifier Carbon's validator would not admit", async () => {
+    const source = pricingAdapter(
+      ["knowledge.read", CARBON_PRICING_CAPABILITY],
+      () => Response.json([])
+    );
+    await expect(
+      source.getSupplierPricing("item-motor-a; DROP TABLE item")
+    ).rejects.toThrow("entity identifier");
+    await expect(
+      source.getSupplierPricing("item-motor-a", "sup acme")
+    ).rejects.toThrow("entity identifier");
   });
 });
 

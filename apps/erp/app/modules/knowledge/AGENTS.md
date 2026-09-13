@@ -19,6 +19,7 @@ The canonical read surface (plus one command) that the company knowledge platfor
 - MUST give a new READ a `PERMISSION_OVERRIDES` entry in `scripts/lib/service-metadata.ts` naming the real Carbon permission it depends on (`parts`, `inventory`, `purchasing`); the module-name default (`knowledge:view`) does not exist and would deny every caller.
 - MUST validate identifiers and search terms with `knowledgeIdentifier` / `knowledgeItemSearch` before they reach a PostgREST filter string (`.or(...)`), and keep every validator `.strict()`.
 - MUST run `pnpm generate:mcp` after touching `knowledge.service.ts`, `knowledge.models.ts` or `knowledge.mcp.server.ts` and commit `tool-manifest.digest.json`.
+- MUST give a new operation a route on the knowledge platform's side too: an entry in the transport allowlist (`operations` in `packages/knowledge/src/sources/http.server.ts`) or a named reason in `EXCLUDED_CARBON_OPERATIONS` beside it. Publishing here is not reaching; the transport refuses an unregistered path before any credential is minted, which is how `getItemSupplierPricing` shipped gated, permitted and unreachable. `packages/knowledge/src/sources/carbon-operations.test.ts` reads this module's digest and fails on the gap.
 
 ### Ask First
 - Adding a field that names money, cost, margin or a supplier price to any identity read — that is a new capability, not a projection change.

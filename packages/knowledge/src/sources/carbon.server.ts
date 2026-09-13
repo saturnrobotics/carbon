@@ -210,6 +210,35 @@ const documentReferenceRowSchema = z.object({
   updatedAt: z.string().max(64).nullable().optional()
 });
 
+/** What Carbon's `knowledgeIdentifier` validator admits; refused before the call. */
+const CARBON_IDENTIFIER = /^[A-Za-z0-9._/-]{1,256}$/;
+
+/**
+ * The workforce capability Carbon requires for the supplier pricing operation
+ * (`KNOWLEDGE_OPERATIONS`, apps/erp/app/modules/knowledge/knowledge.server.ts).
+ * Carbon's gate remains the authority; reading it here can only refuse.
+ */
+export const CARBON_PRICING_CAPABILITY = "knowledge.read.pricing";
+
+/** Carbon returns at most this many supplier prices for one item. */
+const SUPPLIER_PRICING_LIMIT = 50;
+
+/**
+ * One supplier's agreed price for an item — the ONLY money Carbon discloses to
+ * this platform, and the reason it is a separate operation with a separate
+ * capability. It is deliberately not a `sourceEntity`: the finite source
+ * contract is money-free, and `sourceEntitySchema` is what keeps the item,
+ * receipt and purchase-order projections that way.
+ */
+export const supplierPriceSchema = z.object({
+  supplierId: z.string().min(1).max(256),
+  supplierUnitPrice: z.number().finite().nullable(),
+  currencyCode: z.string().max(10).nullable(),
+  unitOfMeasureCode: z.string().max(100).nullable(),
+  updatedAt: z.string().max(64).nullable()
+});
+export type SupplierPrice = z.infer<typeof supplierPriceSchema>;
+
 function bounded<T>(
   items: readonly T[],
   concurrency: number,
@@ -242,7 +271,7 @@ export function createCarbonSourceAdapter(
   const principal = context.identity.principal;
 
   async function readItem(itemId: string) {
-    if (!/^[A-Za-z0-9._/-]{1,256}$/.test(itemId))
+    if (!CARBON_IDENTIFIER.test(itemId))
       throw Error("Invalid entity identifier");
     return itemSchema
       .extend({
@@ -464,7 +493,7 @@ export function createCarbonSourceAdapter(
       }
     },
     async getDocumentReferences(entityId: string) {
-      if (!/^[A-Za-z0-9._/-]{1,256}$/.test(entityId))
+      if (!CARBON_IDENTIFIER.test(entityId))
         throw Error("Invalid entity identifier");
       const observedAt = now("UTC").toAbsoluteString();
       try {
@@ -507,6 +536,79 @@ export function createCarbonSourceAdapter(
       }
     },
     /**
+     * The active supplier unit prices for one item, optionally for one
+     * supplier. This is the one Carbon read that discloses money, which is why
+     * it is a separate operation rather than fields on the item projection:
+     * Carbon gates it on its own capability (`knowledge.read.pricing`) AND on
+     * purchasing view, so the identity, receipt and purchase-order reads above
+     * stay free of every price and cost field.
+     *
+     * The capability is re-read here before the call. The transport's blanket
+     * `knowledge.read` check does not imply it, and a caller who never held it
+     * should not spend a source read learning that. It can only refuse:
+     * Carbon's gate is what grants, and a caller who passes this check still
+     * receives `insufficient-permission` from Carbon without the purchasing
+     * permission the supplierPart and supplier row-level policies require.
+     */
+    async getSupplierPricing(
+      itemId: string,
+      supplierId?: string
+    ): Promise<{
+      outcome: SourceOutcome;
+      prices: SupplierPrice[] | null;
+      observedAt: string;
+      validUntil: string;
+      sourceRevision: string | null;
+      status: "complete" | "partial";
+    }> {
+      if (
+        !CARBON_IDENTIFIER.test(itemId) ||
+        (supplierId !== undefined && !CARBON_IDENTIFIER.test(supplierId))
+      )
+        throw Error("Invalid entity identifier");
+      const observedAt = now("UTC").toAbsoluteString();
+      const validUntil = factValidUntil(observedAt);
+      const withoutPrices = {
+        prices: null,
+        observedAt,
+        validUntil,
+        sourceRevision: null,
+        status: "complete" as const
+      };
+      if (!principal.capabilities.includes(CARBON_PRICING_CAPABILITY))
+        return {
+          outcome: { kind: "insufficient-permission" },
+          ...withoutPrices
+        };
+      try {
+        const result = await transport.post(
+          "/api/v1/knowledge/getItemSupplierPricing",
+          { itemId, ...(supplierId ? { supplierId } : {}) }
+        );
+        const rows = z
+          .array(supplierPriceSchema)
+          .max(100)
+          .parse(
+            typeof result === "object" && result !== null && "results" in result
+              ? (result as { results: unknown }).results
+              : (result ?? [])
+          );
+        // Carbon bounds the read; a full page means the bound cut it, which the
+        // caller must read as "name the supplier", not "these are all of them".
+        const truncated = rows.length >= SUPPLIER_PRICING_LIMIT;
+        return {
+          outcome: { kind: "ok" },
+          prices: rows.slice(0, SUPPLIER_PRICING_LIMIT),
+          observedAt,
+          validUntil,
+          sourceRevision: `carbon:${projectionRevision(rows)}`,
+          status: truncated ? "partial" : "complete"
+        };
+      } catch (error) {
+        return { outcome: outcomeFromError(error), ...withoutPrices };
+      }
+    },
+    /**
      * Membership of the caller's Carbon view, one bounded parallel read per id.
      * Carbon exposes no batched identity read on this surface; the fan-out is
      * capped at the contract's 40 ids and 8 in flight.
@@ -515,7 +617,7 @@ export function createCarbonSourceAdapter(
       if (
         ids.length < 1 ||
         ids.length > 40 ||
-        ids.some((id) => !/^[A-Za-z0-9._/-]{1,256}$/.test(id))
+        ids.some((id) => !CARBON_IDENTIFIER.test(id))
       )
         throw Error("Invalid access projection");
       const observedAt = now("UTC").toAbsoluteString();
