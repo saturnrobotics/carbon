@@ -1,4 +1,6 @@
 import { type CacheScope, cacheKey } from "./keys";
+
+export { type CacheScope, cacheKey } from "./keys";
 export type PolicySnapshot = {
   allowed: boolean;
   policyVersion: string;

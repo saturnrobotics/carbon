@@ -16,6 +16,8 @@
   },
   "dependencies": {
     "@carbon/knowledge": "workspace:*",
+    "@lingui/core": "catalog:",
+    "@lingui/react": "catalog:",
     "@react-router/dev": "catalog:",
     "@react-router/serve": "catalog:",
     "@vercel/react-router": "catalog:",
@@ -27,12 +29,15 @@
   },
   "devDependencies": {
     "@carbon/config": "workspace:*",
+    "@lingui/macro": "catalog:",
+    "@lingui/vite-plugin": "catalog:",
     "@playwright/test": "1.62.0",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "rimraf": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:",
+    "vite-plugin-babel-macros": "catalog:",
     "vitest": "catalog:"
   }
 }

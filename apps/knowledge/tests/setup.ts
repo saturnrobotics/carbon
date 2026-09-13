@@ -1,25 +1,11 @@
 import { execFileSync } from "node:child_process";
+import { chromium } from "@playwright/test";
+import { waitForClientNavigation } from "./harness/browser";
+import { assertLoopbackOrigin } from "./loopback";
 
 const container =
   process.env.KNOWLEDGE_E2E_DATABASE_CONTAINER ?? "knowledge-schema-test";
 const expectedPort = process.env.KNOWLEDGE_E2E_DATABASE_PORT ?? "59910";
-
-function fixedLocalUrl(
-  name: string,
-  fallback: string,
-  expected: string
-): string {
-  const value = process.env[name] ?? fallback;
-  let parsed: URL;
-  try {
-    parsed = new URL(value);
-  } catch {
-    throw new Error(`${name} must be the fixed local test origin`);
-  }
-  if (parsed.href !== expected)
-    throw new Error(`${name} must be the fixed local test origin`);
-  return parsed.href;
-}
 
 /** Refuse to run browser tests unless the supplied database is the known labelled
  * disposable fixture. The local services then clean only captured intake IDs. */
@@ -72,25 +58,73 @@ async function requireHealthy(url: string) {
   if (!response.ok) throw new Error(`Local fixture is unhealthy: ${url}`);
 }
 
+/** Loads and hydrates both portal routes once, before any spec runs.
+ *
+ * The browser fixture is a Vite dev server, so the FIRST client load of a
+ * route is also when its packages are discovered and pre-bundled — and the
+ * optimizer's re-bundle invalidates `node_modules/.vite/deps` underneath the
+ * imports already in flight, which can leave that first page permanently
+ * server-rendered. Paying it here means no spec is the one that pays it, and
+ * a portal that cannot hydrate at all says so once, before six specs fail
+ * for six different-looking reasons. */
+async function warmPortalRoutes(baseUrl: string) {
+  const browser = await chromium.launch();
+  try {
+    const context = await browser.newContext({ ignoreHTTPSErrors: true });
+    await context.addCookies([
+      {
+        name: "knowledge_e2e_actor",
+        value: "bob",
+        domain: new URL(baseUrl).hostname,
+        path: "/",
+        secure: true,
+        sameSite: "Lax"
+      }
+    ]);
+    const page = await context.newPage();
+    for (const route of ["/", "/intake"]) {
+      await page.goto(new URL(route, baseUrl).href);
+      await waitForClientNavigation(page);
+    }
+  } finally {
+    await browser.close();
+  }
+}
+
 export default async function requireLocalSyntheticFixtures() {
-  fixedLocalUrl(
+  const baseUrl = assertLoopbackOrigin(
     "KNOWLEDGE_E2E_BASE_URL",
-    "https://localhost:4200",
-    "https://localhost:4200/"
+    process.env.KNOWLEDGE_E2E_BASE_URL ?? "https://localhost:4200",
+    "https:"
   );
-  const gatewayUrl = fixedLocalUrl(
+  const gatewayUrl = assertLoopbackOrigin(
     "KNOWLEDGE_E2E_GATEWAY_URL",
-    "http://127.0.0.1:4301",
-    "http://127.0.0.1:4301/"
+    process.env.KNOWLEDGE_E2E_GATEWAY_URL ?? "http://127.0.0.1:4301",
+    "http:"
   );
-  const queryUrl = fixedLocalUrl(
+  const queryUrl = assertLoopbackOrigin(
     "KNOWLEDGE_E2E_QUERY_FIXTURE_URL",
-    "http://127.0.0.1:4302",
-    "http://127.0.0.1:4302/"
+    process.env.KNOWLEDGE_E2E_QUERY_FIXTURE_URL ?? "http://127.0.0.1:4302",
+    "http:"
+  );
+  // The Drive connector fixture is a second pair of endpoints: the manual
+  // library's query service is pinned to the upload source and can never
+  // answer for a Drive one, and its gateway admits no Drive caller.
+  const driveGatewayUrl = assertLoopbackOrigin(
+    "KNOWLEDGE_E2E_DRIVE_GATEWAY_URL",
+    process.env.KNOWLEDGE_E2E_DRIVE_GATEWAY_URL ?? "http://127.0.0.1:4301",
+    "http:"
+  );
+  const driveQueryUrl = assertLoopbackOrigin(
+    "KNOWLEDGE_E2E_DRIVE_QUERY_URL",
+    process.env.KNOWLEDGE_E2E_DRIVE_QUERY_URL ?? "http://127.0.0.1:4302",
+    "http:"
   );
   assertDisposableFixture();
-  await Promise.all([
-    requireHealthy(new URL("/health", gatewayUrl).href),
-    requireHealthy(new URL("/health", queryUrl).href)
-  ]);
+  await Promise.all(
+    [...new Set([gatewayUrl, queryUrl, driveGatewayUrl, driveQueryUrl])].map(
+      (url) => requireHealthy(new URL("/health", url).href)
+    )
+  );
+  await warmPortalRoutes(baseUrl);
 }

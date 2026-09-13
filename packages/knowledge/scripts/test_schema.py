@@ -65,7 +65,7 @@ def sql(statement, *, succeeds=True, sqlstate=None):
 TABLES = ["source", "identityBinding", "sourceUserBinding", "document",
           "documentVersion", "chunk", "entity", "entityLink", "grant",
           "groupMembership", "intake", "extraction", "outbox", "command",
-          "conversation", "audit"]
+          "conversation", "audit", "driveEnrollment", "driveItem"]
 
 
 class SchemaTests(unittest.TestCase):

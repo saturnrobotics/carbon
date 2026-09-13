@@ -6,10 +6,20 @@ import {
   parseTrustedCallerConfiguration
 } from "@carbon/knowledge/identity.server";
 import { postgresIdentityStore } from "@carbon/knowledge/identity-store.server";
-import { requestBoundary } from "@carbon/knowledge/query/request-boundary.server";
+import {
+  requestBoundary,
+  writeWebResponse
+} from "@carbon/knowledge/query/request-boundary.server";
 import { readManualSourceConfiguration } from "@carbon/knowledge/release-profile";
 import { Pool } from "pg";
+import { startCacheIsolationProbe } from "./cache-probe";
+import {
+  CONVERSATION_TTL_SECONDS,
+  createConversationStore
+} from "./conversation.server";
 import { handleIdentityRequest } from "./identity.server";
+import { createItemSearchHandler } from "./items.server";
+import { createQueryMcpHandler } from "./mcp";
 import { createReadHandler } from "./query.server";
 
 export const serviceName = "knowledge-query";
@@ -60,6 +70,13 @@ export function createHandler(
   const identityStore = postgresIdentityStore(pool);
   const tokenVerifier = new GoogleWorkforceTokenVerifier();
   const cacheStore = createRedisCache(environment.KNOWLEDGE_REDIS_URL!).store;
+  // Follow-up context outlives the answer cache's freshness budget, so it
+  // takes its own bounded store on the same Redis.
+  const conversationStore = createConversationStore(
+    createRedisCache(environment.KNOWLEDGE_REDIS_URL!, {
+      maxTtlSeconds: CONVERSATION_TTL_SECONDS
+    }).store
+  );
   const readHandler = createReadHandler({
     manualSourceId: manual.sourceId,
     configuration,
@@ -68,7 +85,21 @@ export function createHandler(
     pool,
     cacheStore,
     origin: environment.KNOWLEDGE_PORTAL_ORIGIN!,
-    businessTimezone: environment.KNOWLEDGE_BUSINESS_TIMEZONE!
+    businessTimezone: environment.KNOWLEDGE_BUSINESS_TIMEZONE!,
+    conversationStore
+  });
+  // The manual release registers no Carbon item source; the handler answers
+  // `unavailable` so intake review can still publish a generic document.
+  const itemHandler = createItemSearchHandler({
+    configuration,
+    identityStore,
+    tokenVerifier,
+    pool
+  });
+  // Optional transport over the read handler mounted below; off by default.
+  const mcpHandler = createQueryMcpHandler({
+    environment,
+    routes: { "/v1/query": readHandler }
   });
   return requestBoundary("query", async (request) => {
     const pathname = new URL(request.url).pathname;
@@ -80,6 +111,9 @@ export function createHandler(
       });
     if (request.method === "POST" && pathname === "/v1/query")
       return readHandler(request);
+    if (request.method === "POST" && pathname === "/v1/items")
+      return itemHandler(request);
+    if (pathname === "/v1/mcp") return mcpHandler(request);
     return Response.json({ error: "not_found" }, { status: 404 });
   });
 }
@@ -129,13 +163,7 @@ export function startServer(
           ...(size ? { body: Buffer.concat(chunks) } : {})
         }
       );
-      const response = await handler(request);
-      response.headers.forEach((value, key) => {
-        outgoing.setHeader(key, value);
-      });
-      outgoing
-        .writeHead(response.status)
-        .end(Buffer.from(await response.arrayBuffer()));
+      await writeWebResponse(outgoing, await handler(request));
     } catch {
       outgoing
         .writeHead(503)
@@ -147,5 +175,11 @@ export function startServer(
   return server.listen(port, "0.0.0.0");
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href)
+if (
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(process.argv[1]).href
+) {
   startServer();
+  // Periodic cache-leakage self-test; its verdict feeds the security alert policy.
+  startCacheIsolationProbe();
+}

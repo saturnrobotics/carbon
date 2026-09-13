@@ -46,6 +46,15 @@ import {
 } from "./backup-baseline";
 
 const SCHEMA_FILE = join(import.meta.dirname, "../../manifests/schema.json");
+/**
+ * Git exports GIT_DIR to its hooks, and `pnpm --filter` runs this script with
+ * packages/jobs as the cwd. Without GIT_WORK_TREE, git takes the cwd as the
+ * work-tree root, so `git add <absolute path>` issued from here indexed the
+ * manifest as `manifests/schema.json` at the repository root. Every git call
+ * runs from the repository root instead, where a relative or an absolute
+ * GIT_DIR both resolve to this checkout.
+ */
+const REPO_ROOT = join(import.meta.dirname, "../../../..");
 
 /**
  * The baseline lives on the repository's default branch. A fork's trunk need
@@ -191,6 +200,7 @@ function reportBlocking(
 
 function git(args: string[]): string {
   return execFileSync("git", args, {
+    cwd: REPO_ROOT,
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"]
   }).trim();
@@ -223,25 +233,77 @@ const baselineSources = {
   branch: baselineBranch()
 };
 
-/** Generated output, like a lockfile — announced, never silent. */
+/**
+ * Formats the manifest in place with the repository's own Biome.
+ *
+ * `JSON.stringify` puts every array element on its own line; Biome's JSON
+ * formatter collapses the short ones. Nothing downstream closes that gap:
+ * `.husky/pre-commit` stages this file AFTER `lint-staged` has already run, so
+ * raw generator output reaches the commit with nothing left to format it, and
+ * CI's repo-wide `biome check` then fails on a file no author edited.
+ * `generate:swagger` and `generate:workflow-catalog` pipe their output through
+ * Biome for the same reason (package.json).
+ */
+function formatSchemaFile(): void {
+  execFileSync(
+    "pnpm",
+    [
+      "exec",
+      "biome",
+      "check",
+      "--write",
+      "--no-errors-on-unmatched",
+      SCHEMA_FILE
+    ],
+    { cwd: REPO_ROOT, encoding: "utf8", stdio: ["ignore", "ignore", "pipe"] }
+  );
+}
+
+/**
+ * Generated output, like a lockfile — announced, never silent.
+ *
+ * Formatting runs BEFORE staging: the index snapshots the blob at `git add`
+ * time, so formatting afterwards would leave the staged copy unformatted. Both
+ * steps report through the SAME pair of messages, so an unformatted-but-staged
+ * baseline is a warning rather than the success line it would otherwise print.
+ */
 function writeSchemaFile(catalog: Catalog): void {
   // @internationalized/date, never JS Date (.claude/rules/date-handling.md), and UTC
   // rather than the machine's zone — this stamp labels a schema, not a business day.
   const manifest = catalogAsManifest(catalog, now("UTC").toAbsoluteString());
   mkdirSync(dirname(SCHEMA_FILE), { recursive: true });
   writeFileSync(SCHEMA_FILE, `${JSON.stringify(manifest, null, 2)}\n`);
+
+  // A Biome that will not run is environmental — and unreachable from the hook,
+  // which runs `lint-staged` (Biome) before this. The baseline is still worth
+  // staging, so say so loudly rather than fail a backup-compatibility check.
+  const notes: string[] = [];
+  try {
+    formatSchemaFile();
+  } catch (err) {
+    notes.push(
+      `could not format it — ${
+        err instanceof Error ? err.message : String(err)
+      }\n  Run: pnpm exec biome check --write ${SCHEMA_REPO_PATH}`
+    );
+  }
   try {
     git(["add", SCHEMA_FILE]);
-    console.log(
-      `Updated and staged ${SCHEMA_REPO_PATH} (${manifest.tables.length} tables) — the baseline the next migration is checked against.`
-    );
   } catch (err) {
-    console.warn(
-      `⚠ Wrote ${SCHEMA_REPO_PATH} but could not stage it — ${
+    notes.push(
+      `could not stage it — ${
         err instanceof Error ? err.message : String(err)
       }\n  Run: git add ${SCHEMA_REPO_PATH}`
     );
   }
+
+  if (notes.length === 0) {
+    console.log(
+      `Updated and staged ${SCHEMA_REPO_PATH} (${manifest.tables.length} tables) — the baseline the next migration is checked against.`
+    );
+    return;
+  }
+  console.warn(`⚠ Wrote ${SCHEMA_REPO_PATH} but ${notes.join("\n⚠ ")}`);
 }
 
 function printUsage() {

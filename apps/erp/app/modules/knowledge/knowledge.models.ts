@@ -42,6 +42,12 @@ export const getDocumentReferencesValidator = z
     itemId: knowledgeIdentifier
   })
   .strict();
+export const getItemSupplierPricingValidator = z
+  .object({
+    itemId: knowledgeIdentifier,
+    supplierId: knowledgeIdentifier.optional()
+  })
+  .strict();
 export const getPurchaseStatusValidator = z
   .object({
     purchaseOrderId: knowledgeIdentifier

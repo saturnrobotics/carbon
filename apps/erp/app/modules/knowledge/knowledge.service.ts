@@ -189,6 +189,64 @@ export async function getDocumentReferences(
   };
 }
 
+/**
+ * Return the active supplier unit prices for one item. This is the only
+ * knowledge read that discloses money: it is a separate operation with its own
+ * capability (`knowledge.read.pricing`) and gates on purchasing view, so the
+ * identity reads can keep excluding every price and cost field. Two batched
+ * reads, both under the caller's own RLS; the supplier read is what supplies the
+ * currency, and a supplier the caller may not see reports no currency.
+ */
+export async function getItemSupplierPricing(
+  client: SupabaseClient<Database>,
+  itemId: string,
+  companyId: string,
+  supplierId?: string
+) {
+  let partsQuery = client
+    .from("supplierPart")
+    .select("supplierId,unitPrice,supplierUnitOfMeasureCode,updatedAt")
+    .eq("companyId", companyId)
+    .eq("itemId", knowledgeIdentifier.parse(itemId))
+    .eq("active", true)
+    .order("updatedAt", { ascending: false, nullsFirst: false })
+    .limit(50);
+  if (supplierId) {
+    partsQuery = partsQuery.eq(
+      "supplierId",
+      knowledgeIdentifier.parse(supplierId)
+    );
+  }
+  const parts = await partsQuery;
+  if (parts.error) return { data: null, error: parts.error };
+  const rows = parts.data ?? [];
+  const supplierIds = [...new Set(rows.map((row) => row.supplierId))];
+  const suppliers = supplierIds.length
+    ? await client
+        .from("supplier")
+        .select("id,currencyCode")
+        .eq("companyId", companyId)
+        .in("id", supplierIds)
+    : { data: [], error: null };
+  if (suppliers.error) return { data: null, error: suppliers.error };
+  const currencyBySupplier = new Map(
+    (suppliers.data ?? []).map((supplier) => [
+      supplier.id,
+      supplier.currencyCode
+    ])
+  );
+  return {
+    data: rows.map((row) => ({
+      supplierId: row.supplierId,
+      supplierUnitPrice: row.unitPrice,
+      currencyCode: currencyBySupplier.get(row.supplierId) ?? null,
+      unitOfMeasureCode: row.supplierUnitOfMeasureCode,
+      updatedAt: row.updatedAt
+    })),
+    error: null
+  };
+}
+
 /** Return one bounded purchase-order status projection; financial fields stay out. */
 export async function getPurchaseStatus(
   client: SupabaseClient<Database>,

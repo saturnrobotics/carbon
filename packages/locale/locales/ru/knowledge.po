@@ -1,0 +1,427 @@
+msgid ""
+msgstr ""
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: @lingui/cli\n"
+"Language: ru\n"
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"PO-Revision-Date: \n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Plural-Forms: \n"
+
+msgid "A follow-up question keeps the evidence shown here in context."
+msgstr "Дополнительный вопрос сохраняет контекст показанных здесь доказательств."
+
+msgid "Access to this document was revoked."
+msgstr "Доступ к этому документу был отозван."
+
+msgid "Acknowledge the changed evidence before publishing."
+msgstr "Подтвердите изменённые доказательства перед публикацией."
+
+msgid "Add a document"
+msgstr "Добавить документ"
+
+msgid "Additional proposed fields"
+msgstr "Дополнительно предложенные поля"
+
+msgid "Also proposed"
+msgstr "Также предложено"
+
+msgid "Answer"
+msgstr "Ответ"
+
+msgid "Back to company knowledge"
+msgstr "Вернуться к базе знаний организации"
+
+msgid "Back to manual search"
+msgstr "Вернуться к ручному поиску"
+
+msgid "Captured"
+msgstr "Захвачено"
+
+msgid "Captured document"
+msgstr "Захваченный документ"
+
+msgid "Check freshness"
+msgstr "Проверить актуальность"
+
+msgid "Choices"
+msgstr "Варианты"
+
+msgid "Choose either a file or a URL, not both."
+msgstr "Выберите либо файл, либо URL, но не оба."
+
+msgid "Choose one PDF, image, photo, or HTTPS address."
+msgstr "Выберите один PDF, изображение, фотографию или адрес HTTPS."
+
+msgid "Company knowledge"
+msgstr "База знаний организации"
+
+#. placeholder {0}: evidence.length
+msgid "Composing an answer from {0} evidence blocks…"
+msgstr "Составление ответа из {0} блоков доказательств…"
+
+msgid "Confirm removal"
+msgstr "Подтвердить удаление"
+
+msgid "Confirm this field against the source evidence."
+msgstr "Подтвердите это поле по исходному свидетельству."
+
+msgid "Corrections are saved. The document can be published."
+msgstr "Исправления сохранены. Документ можно опубликовать."
+
+msgid "Current version"
+msgstr "Текущая версия"
+
+msgid "Document"
+msgstr "Документ"
+
+msgid "Download original"
+msgstr "Скачать оригинал"
+
+msgid "Download original · page {page}"
+msgstr "Скачать оригинал · страница {page}"
+
+msgid "Drag and drop a PDF or image here, or choose a file."
+msgstr "Перетащите сюда PDF или изображение, или выберите файл."
+
+msgid "Drive sources are enrolled by an administrator with a read-only connector credential held in Secret Manager. Signing into this portal does not authorize Drive access: a document is delivered only after a live check with your own Drive permissions."
+msgstr "Источники Drive регистрируются администратором с учетными данными соединителя только для чтения, которые хранятся в Secret Manager. Вход в этот портал не дает разрешение на доступ к Drive: документ доставляется только после проверки в реальном времени ваших прав доступа к Drive."
+
+msgid "Existing item"
+msgstr "Существующая номенклатура"
+
+msgid "Extracted text anchored to page numbers. Page images are not available for this document; download the original to see the layout."
+msgstr "Извлечённый текст привязан к номерам страниц. Изображения страниц недоступны для этого документа; скачайте оригинал, чтобы увидеть макет."
+
+msgid "Extracting"
+msgstr "Извлечение"
+
+msgid "Extraction failed"
+msgstr "Ошибка извлечения"
+
+msgid "Fetched from"
+msgstr "Получено из"
+
+msgid "Find the right manual."
+msgstr "Найдите нужное руководство."
+
+msgid "Google Drive sources"
+msgstr "Источники Google Drive"
+
+msgid "I reviewed this evidence"
+msgstr "Я проверил эти доказательства"
+
+msgid "Intake review"
+msgstr "Входящее рассмотрение"
+
+msgid "Item association"
+msgstr "Связь номенклатуры"
+
+msgid "Item lookup is not available for this library. The document can still be published as a generic document."
+msgstr "Поиск номенклатуры недоступен для этой библиотеки. Документ можно всё ещё опубликовать как универсальный документ."
+
+msgid "Item lookup is unavailable right now."
+msgstr "Поиск номенклатуры сейчас недоступен."
+
+msgid "Library"
+msgstr "Библиотека"
+
+msgid "Library and access"
+msgstr "Библиотека и доступ"
+
+msgid "Link this document to one existing item, or keep it as a generic document. Linking never creates or changes items."
+msgstr "Свяжите этот документ с одной существующей номенклатурой или оставьте его как универсальный документ. Связывание никогда не создаёт и не изменяет номенклатуру."
+
+msgid "Live record"
+msgstr "Текущая запись"
+
+msgid "Machine"
+msgstr "Станок"
+
+msgid "Manual file"
+msgstr "Файл руководства"
+
+msgid "Manual search is unavailable."
+msgstr "Ручной поиск недоступен."
+
+msgid "Manufacturer"
+msgstr "Производитель"
+
+msgid "Manufacturer, part number, revision, machine, or keyword"
+msgstr "Производитель, номер детали, ревизия, станок или ключевое слово"
+
+msgid "Needs review"
+msgstr "Требует рассмотрения"
+
+msgid "No evidence on any page"
+msgstr "Нет доказательств ни на одной странице"
+
+msgid "No item association (generic document)"
+msgstr "Нет связанной номенклатуры (обобщенный документ)"
+
+msgid "No matching items."
+msgstr "Нет совпадающих номенклатур."
+
+msgid "No matching manuals found."
+msgstr "Руководства не найдены."
+
+msgid "No text has been extracted yet."
+msgstr "Текст еще не был извлечен."
+
+msgid "Not set"
+msgstr "Не установлено"
+
+msgid "Not yet decided. Saving the review records your choice."
+msgstr "Еще не решено. Сохранение рассмотрения записывает ваш выбор."
+
+#. placeholder {0}: entity.observedAt
+msgid "Observed {0}"
+msgstr "Наблюдалось {0}"
+
+msgid "Only public HTTPS addresses are fetched, through the server's fetch policy, and the fetched copy is stored immutably."
+msgstr "Только общедоступные адреса HTTPS извлекаются через политику выборки сервера, и полученная копия хранится неизменяемо."
+
+msgid "Only the first candidates are shown; narrow the search."
+msgstr "Показаны только первые кандидаты; сузьте поиск."
+
+msgid "Open record"
+msgstr "Открыть запись"
+
+#. placeholder {0}: selected?.classification ?? ""
+msgid "Owner: {actorId}. Access: {0}. Readers of this library can find the document once it is reviewed and published."
+msgstr "Ответственный: {actorId}. Доступ: {0}. Читатели этой библиотеки смогут найти документ после рассмотрения и опубликования."
+
+#. placeholder {0}: source.page
+msgid "page {0}"
+msgstr "страница {0}"
+
+msgid "Page {page}"
+msgstr "Страница {page}"
+
+msgid "Page not found."
+msgstr "Страница не найдена."
+
+msgid "Part number"
+msgstr "Номер детали"
+
+msgid "Part number, MPN, or name"
+msgstr "Номер детали, MPN или название"
+
+msgid "Partial source answer"
+msgstr "Частичный ответ источника"
+
+msgid "PDF and image files are captured with their immutable object version before extraction."
+msgstr "PDF и файлы изображений захватываются с их неизменяемой версией объекта перед извлечением."
+
+msgid "Proposed fields"
+msgstr "Предложенные поля"
+
+msgid "Proposed fields are ready. Confirm or correct them, then save."
+msgstr "Предложенные поля готовы. Подтвердите или исправьте их, затем сохраните."
+
+#. placeholder {0}: model.proposed[field]
+msgid "Proposed: {0}"
+msgstr "Предложено: {0}"
+
+msgid "Publish manual"
+msgstr "Опубликовать руководство"
+
+msgid "Published"
+msgstr "Опубликовано"
+
+msgid "Remove manual"
+msgstr "Убрать руководство"
+
+msgid "Remove this manual?"
+msgstr "Убрать это руководство?"
+
+msgid "Request unavailable"
+msgstr "Запрос недоступен"
+
+msgid "Review document"
+msgstr "Рассмотреть документ"
+
+msgid "Reviewed"
+msgstr "Рассмотрено"
+
+msgid "Revision"
+msgstr "Ревизия"
+
+msgid "Save review"
+msgstr "Сохранить рассмотрение"
+
+msgid "Save the review before publishing."
+msgstr "Сохраните рассмотрение перед опубликованием."
+
+msgid "Saved correction"
+msgstr "Сохраненное исправление"
+
+msgid "Search items"
+msgstr "Поиск номенклатуры"
+
+msgid "Search manuals"
+msgstr "Поиск руководств"
+
+msgid "Search published company manuals by manufacturer, part number, revision, machine, or keyword. Open the exact original version from every result."
+msgstr "Поиск опубликованных руководств организации по производителю, номеру детали, ревизии, станку или ключевому слову. Откройте точную исходную версию из каждого результата."
+
+msgid "Searching authorized sources…"
+msgstr "Поиск в авторизованных источниках…"
+
+msgid "Searching…"
+msgstr "Поиск…"
+
+msgid "see evidence"
+msgstr "посмотреть доказательства"
+
+msgid "Selected: {fileName}"
+msgstr "Выбран: {fileName}"
+
+msgid "Show evidence ({evidenceCount})"
+msgstr "Показать доказательства ({evidenceCount})"
+
+msgid "Some authorized manuals were unavailable."
+msgstr "Некоторые авторизованные руководства были недоступны."
+
+msgid "Some sources did not answer; results may be partial."
+msgstr "Некоторые источники не ответили; результаты могут быть частичными."
+
+msgid "Source details"
+msgstr "Детали источника"
+
+msgid "Source evidence"
+msgstr "Доказательства источника"
+
+msgid "Source pages"
+msgstr "Страницы источника"
+
+#. placeholder {0}: entity.sourceRevision
+msgid "Source revision: {0}"
+msgstr "Исходная ревизия: {0}"
+
+msgid "Source unavailable"
+msgstr "Источник недоступен"
+
+msgid "Source URL"
+msgstr "Исходный URL"
+
+msgid "Sources"
+msgstr "Источники"
+
+msgid "Start a new question"
+msgstr "Задать новый вопрос"
+
+msgid "State:"
+msgstr "Состояние:"
+
+msgid "Status {status}"
+msgstr "Статус {status}"
+
+msgid "Take a photo of a nameplate or label"
+msgstr "Сфотографируйте табличку или ярлык"
+
+msgid "Text is being extracted from the document."
+msgstr "Текст извлекается из документа."
+
+msgid "The document could not be fetched from that address."
+msgstr "Документ не удалось получить по этому адресу."
+
+msgid "The document could not be fetched from that address. Check that it is a public HTTPS link to a PDF or image, or upload the file instead."
+msgstr "Документ не удалось получить по этому адресу. Проверьте, что это открытая HTTPS-ссылка на PDF или изображение, либо загрузите файл вместо этого."
+
+msgid "The document is queued for extraction."
+msgstr "Документ добавлен в очередь на извлечение."
+
+msgid "The document is stored and waiting for extraction."
+msgstr "Документ сохранён и ожидает извлечения."
+
+msgid "The document was captured, but text could not be extracted. Review cannot start until extraction succeeds."
+msgstr "Документ был захвачен, но текст не удалось извлечь. Рассмотрение не может начаться до тех пор, пока извлечение не будет успешным."
+
+msgid "The knowledge company is not configured."
+msgstr "Организация знаний не настроена."
+
+msgid "The knowledge service could not complete this request."
+msgstr "Служба знаний не смогла выполнить этот запрос."
+
+msgid "The request did not complete within its time budget."
+msgstr "Запрос не завершился в отведенное время."
+
+msgid "The request was not valid."
+msgstr "Запрос был недействительным."
+
+msgid "The review could not be saved. Check the fields and unresolved evidence."
+msgstr "Рассмотрение не удалось сохранить. Проверьте поля и неразрешённые доказательства."
+
+msgid "The review service is unavailable. Nothing was changed."
+msgstr "Служба рассмотрения недоступна. Ничего не было изменено."
+
+msgid "The upload could not be captured."
+msgstr "Загрузка не могла быть захвачена."
+
+msgid "The upload service is unavailable. The document was not captured."
+msgstr "Служба загрузки недоступна. Документ не был захвачен."
+
+msgid "This action is not configured for the library."
+msgstr "Это действие не настроено для библиотеки."
+
+msgid "This document changed since you opened it, or the same content was already reviewed. Reload and check before saving again."
+msgstr "Этот документ изменился с момента его открытия, или аналогичное содержимое уже было рассмотрено. Перезагрузите и проверьте перед повторным сохранением."
+
+msgid "This document changed while you were working. Reload it and try again."
+msgstr "Этот документ изменился, пока вы работали. Перезагрузите его и попробуйте снова."
+
+msgid "This document is not available for review."
+msgstr "Этот документ недоступен для рассмотрения."
+
+msgid "This document version is not available."
+msgstr "Эта версия документа недоступна."
+
+msgid "This removes the manual from {sourceDisplayName} search and blocks its original version from download."
+msgstr "Это удаляет руководство из поиска {sourceDisplayName} и блокирует скачивание его исходной версии."
+
+msgid "This review was published; it is now read-only."
+msgstr "Это рассмотрение было опубликовано; оно теперь доступно только для чтения."
+
+msgid "Title"
+msgstr "Название"
+
+msgid "Upload a manual"
+msgstr "Загрузить руководство"
+
+msgid "Upload a manual, photograph a nameplate, or point at a public address. Access follows the library you choose."
+msgstr "Загрузите руководство, сфотографируйте табличку или укажите на открытый адрес. Доступ соответствует выбранной вами библиотеке."
+
+msgid "Upload manual"
+msgstr "Загрузить руководство"
+
+msgid "Valid review fields are required."
+msgstr "Требуются действительные поля рассмотрения."
+
+msgid "You are not allowed to add documents to the selected library."
+msgstr "Вам не разрешено добавлять документы в выбранную библиотеку."
+
+msgid "You are not allowed to add documents to this library."
+msgstr "Вам не разрешено добавлять документы в эту библиотеку."
+
+msgid "You are not allowed to publish in this library. The review was kept."
+msgstr "Вам не разрешено публиковать в этой библиотеке. Рассмотрение было сохранено."
+
+msgid "You are not allowed to review documents in this library."
+msgstr "Вам не разрешено рассматривать документы в этой библиотеке."
+
+msgid "You are not signed in to this library, or your access was revoked."
+msgstr "Вы не вошли в эту библиотеку, или ваш доступ был отозван."
+
+msgid "You cannot add documents to any library. Ask an administrator for a library grant."
+msgstr "Вы не можете добавлять документы в какую-либо библиотеку. Попросите администратора предоставить доступ к библиотеке."
+
+msgid "You do not have permission for this action in this library."
+msgstr "Вы не имеете прав доступа для этого действия в этой библиотеке."
+
+msgid "Your access changed while this request ran. Search again."
+msgstr "Ваш доступ изменился во время выполнения этого запроса. Повторите поиск."

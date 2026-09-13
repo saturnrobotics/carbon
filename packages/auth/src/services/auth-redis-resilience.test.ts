@@ -147,11 +147,12 @@ describe("auth Redis-down resilience", () => {
     };
 
     // Mint a real signed cookie via the module's own storage, then feed it back.
-    const setCookie = await setAuthSession(new Request("http://localhost/"), {
-      authSession
-    });
+    const setCookie = await setAuthSession(
+      new Request("http://localhost:3000/"),
+      { authSession }
+    );
     const cookiePair = setCookie.split(";")[0] ?? "";
-    const request = new Request("http://localhost/", {
+    const request = new Request("http://localhost:3000/", {
       headers: { Cookie: cookiePair }
     });
 

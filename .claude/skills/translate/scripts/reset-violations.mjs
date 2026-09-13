@@ -18,12 +18,12 @@ import {
   termsInString,
   usesApprovedTerm,
 } from "./lib-glossary.mjs";
-import { escapePo, parsePo } from "./lib-po.mjs";
+import { escapePo, parsePo, readCatalogNames } from "./lib-po.mjs";
 
 const REPO = process.cwd();
 const LOCALES_DIR = `${REPO}/packages/locale/locales`;
 const RECORD_DIR = `${REPO}/.ai/runs/translation-consistency`;
-const CATALOGS = ["erp", "mes"];
+const CATALOGS = readCatalogNames(`${REPO}/lingui.config.js`, readFileSync);
 
 const argv = process.argv.slice(2);
 const flag = (n) => {

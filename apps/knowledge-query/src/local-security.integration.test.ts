@@ -31,6 +31,21 @@ it("real Redis hits cannot survive canonical user or document grant revocation",
     'SELECT "revokedAt" FROM knowledge."grant" WHERE id=$1 AND "companyId"=$2',
     ["grant-b-local", "company-b"]
   );
+  // Deactivating a Carbon user revokes every binding of that user
+  // (public.knowledge_propagate_identity_revocation), and re-activating the
+  // user deliberately does not restore one: re-enrollment is explicit. So the
+  // bindings admissible now are the ones this test has to re-enroll after it
+  // drives the deactivation, and the ones it owes the fixture back at the end.
+  const enrolled = await admin.query<{ id: string }>(
+    'SELECT id FROM knowledge."identityBinding" WHERE "canonicalUserId"=$1 AND active',
+    ["bob"]
+  );
+  const enrolledIds = [id, ...enrolled.rows.map((row) => row.id)];
+  const reenroll = () =>
+    admin.query(
+      'UPDATE knowledge."identityBinding" SET active=true,version=version+1,"updatedBy"=$2,"updatedAt"=now() WHERE id=ANY($1::text[]) AND NOT active',
+      [enrolledIds, "bob"]
+    );
   expect(originalUser.rows).toHaveLength(1);
   expect(originalGrant.rows).toHaveLength(1);
   try {
@@ -127,10 +142,23 @@ it("real Redis hits cannot survive canonical user or document grant revocation",
     const inactive = await query();
     expect(inactive.status).toBe(503);
     expect(await inactive.text()).not.toContain("chunk-doc-b");
+    // Reactivating the user is not readmission: the deactivation revoked the
+    // binding and that revocation is deliberately not undone by it. Prove both
+    // halves, then re-enroll so the control below says what it claims — that
+    // the denial above came from the revocation and not from a broken service.
     await admin.query('UPDATE public."user" SET active=$1 WHERE id=$2', [
       originalUser.rows[0].active,
       "bob"
     ]);
+    const revokedBinding = await admin.query(
+      'SELECT active FROM knowledge."identityBinding" WHERE id=$1 AND "companyId"=$2',
+      [id, "company-b"]
+    );
+    expect(revokedBinding.rows[0].active).toBe(false);
+    const reactivated = await query();
+    expect(reactivated.status).toBe(503);
+    expect(await reactivated.text()).not.toContain("chunk-doc-b");
+    await reenroll();
     expect((await query()).status).toBe(200);
 
     await admin.query(
@@ -145,6 +173,10 @@ it("real Redis hits cannot survive canonical user or document grant revocation",
       originalUser.rows[0].active,
       "bob"
     ]);
+    // The deactivation revoked the shared fixture's own binding too, and the
+    // trigger does not undo that, so leaving it revoked would deny every later
+    // read for this user in the same disposable database.
+    await reenroll();
     await admin.query(
       'UPDATE knowledge."grant" SET "revokedAt"=$1,version=version+1 WHERE id=$2 AND "companyId"=$3',
       [originalGrant.rows[0].revokedAt, "grant-b-local", "company-b"]

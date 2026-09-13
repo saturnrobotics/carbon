@@ -1,13 +1,13 @@
 import type { Kysely, KyselyDatabase } from "@carbon/database/client";
-import {
-  procurementDraftCommandValidator,
-  scheduleProcurementDraftCommand
-} from "./knowledge.commands.server";
+import { scheduleProcurementDraftCommand } from "./knowledge.commands.server";
 
 /**
  * Generated as `knowledge_createProcurementDraft`.  Workforce authorization is
- * enforced by the API operation gate; scheduled execution independently
- * rechecks the same current user state before it reaches this function.
+ * enforced by the API operation gate; the command boundary rechecks the actor's
+ * current purchasing permission, and a scheduled execution rechecks the same
+ * state again before it reaches the purchasing transaction. The raw arguments
+ * are handed through unchanged so the payload hash is verified over exactly
+ * what the caller sent.
  */
 export async function createProcurementDraft(
   db: Kysely<KyselyDatabase>,
@@ -19,6 +19,6 @@ export async function createProcurementDraft(
   return await scheduleProcurementDraftCommand(
     db,
     { actorId: userId, companyId, companyGroupId },
-    procurementDraftCommandValidator.parse(args)
+    args
   );
 }

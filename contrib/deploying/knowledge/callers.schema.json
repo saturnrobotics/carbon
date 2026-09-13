@@ -2,6 +2,36 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://example.com/schemas/knowledge-trusted-callers-v1.json",
   "title": "Knowledge trusted caller configuration",
+  "description": "Mirrors trustedCallerConfigurationSchema in packages/knowledge/src/identity.server.ts. Subject uniqueness across callers is enforced by the runtime schema and validate-callers.ts, not expressible here.",
+  "$defs": {
+    "boundedString": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2048,
+      "pattern": "\\S"
+    },
+    "assurance": {
+      "description": "How the caller's requests satisfy Carbon's MFA requirement. Omitted means carbon-mfa. workspace-equivalent names the IAP access level the operator has documented as equivalent to Carbon MFA; the verifier requires it in google.access_levels. There is no third mode.",
+      "type": "object",
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mode"],
+          "properties": { "mode": { "const": "carbon-mfa" } }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mode", "accessLevel"],
+          "properties": {
+            "mode": { "const": "workspace-equivalent" },
+            "accessLevel": { "$ref": "#/$defs/boundedString" }
+          }
+        }
+      ]
+    }
+  },
   "type": "object",
   "additionalProperties": false,
   "required": ["version", "receiver", "callers"],
@@ -12,8 +42,8 @@
       "additionalProperties": false,
       "required": ["id", "audience"],
       "properties": {
-        "id": { "type": "string", "minLength": 1, "maxLength": 2048 },
-        "audience": { "type": "string", "minLength": 1, "maxLength": 2048 }
+        "id": { "$ref": "#/$defs/boundedString" },
+        "audience": { "$ref": "#/$defs/boundedString" }
       }
     },
     "callers": {
@@ -32,33 +62,26 @@
           "requiredAccessLevels"
         ],
         "properties": {
-          "callerId": { "type": "string", "minLength": 1, "maxLength": 2048 },
-          "serviceAccountSubject": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 2048
-          },
-          "sourceIapAudience": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 2048
-          },
+          "callerId": { "$ref": "#/$defs/boundedString" },
+          "serviceAccountSubject": { "$ref": "#/$defs/boundedString" },
+          "sourceIapAudience": { "$ref": "#/$defs/boundedString" },
           "operations": {
             "type": "array",
             "minItems": 1,
             "maxItems": 100,
-            "items": { "type": "string", "minLength": 1, "maxLength": 2048 }
+            "items": { "$ref": "#/$defs/boundedString" }
           },
           "capabilities": {
             "type": "array",
             "maxItems": 100,
-            "items": { "type": "string", "minLength": 1, "maxLength": 2048 }
+            "items": { "$ref": "#/$defs/boundedString" }
           },
           "requiredAccessLevels": {
             "type": "array",
             "maxItems": 20,
-            "items": { "type": "string", "minLength": 1, "maxLength": 2048 }
-          }
+            "items": { "$ref": "#/$defs/boundedString" }
+          },
+          "assurance": { "$ref": "#/$defs/assurance" }
         }
       }
     }

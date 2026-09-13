@@ -1,4 +1,5 @@
-import { getLocalTimeZone, today } from "@internationalized/date";
+import { EPSILON, round } from "@carbon/utils";
+import { getLocalTimeZone, parseDate, today } from "@internationalized/date";
 import { z } from "zod";
 import { zfd } from "zod-form-data";
 import { address, contact } from "~/types/validators";
@@ -729,3 +730,89 @@ export const purchaseReturnOrderCreditValidator = z.object({
         .min(1, { message: "At least one line is required" })
     )
 });
+
+// ─── Procurement draft (knowledge command) ───
+
+/**
+ * The version of the procurement-draft payload contract below. It is written on
+ * every command receipt and on every scheduled command, so a deferred command
+ * authored under an older contract is refused at execution rather than being
+ * rebuilt under rules its author never saw. Bump it whenever the meaning of a
+ * field in `procurementDraftInputValidator` changes.
+ */
+export const PROCUREMENT_DRAFT_PAYLOAD_VERSION = 1;
+
+/** A value the NUMERIC columns can hold exactly at internal scale. */
+function isStoredPrecision(value: number): boolean {
+  return Number.isFinite(value) && Math.abs(round(value) - value) <= EPSILON;
+}
+
+function isCalendarDate(value: string): boolean {
+  try {
+    parseDate(value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+const procurementIdentifier = z.string().trim().min(1).max(256);
+const procurementCalendarDate = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/)
+  .refine(isCalendarDate, "Expected a valid ISO calendar date");
+const storedDecimal = z
+  .number()
+  .finite()
+  .refine(isStoredPrecision, "Expected at most five decimal places");
+
+export const procurementDraftLineValidator = z
+  .object({
+    /** Stable Carbon item number (`item.readableId`). */
+    itemId: procurementIdentifier,
+    /** Exact immutable item revision (`item.id`). */
+    itemRevisionId: procurementIdentifier,
+    quantity: storedDecimal.refine(
+      (value) => value > 0,
+      "Expected a positive quantity"
+    ),
+    /** Proposal assertions, compared to Carbon authority and never persisted as such. */
+    purchaseUnitOfMeasureCode: z.string().trim().min(1).max(32),
+    inventoryUnitOfMeasureCode: z.string().trim().min(1).max(32),
+    conversionFactor: storedDecimal.refine(
+      (value) => value > 0,
+      "Expected a positive conversion factor"
+    ),
+    supplierUnitPrice: storedDecimal
+      .refine((value) => value >= 0, "Expected a non-negative price")
+      .optional()
+  })
+  .strict();
+
+export const procurementDraftInputValidator = z
+  .object({
+    idempotencyKey: procurementIdentifier,
+    payloadHash: z.string().regex(/^[0-9a-f]{64}$/),
+    supplierId: procurementIdentifier,
+    receivingLocationId: procurementIdentifier,
+    /** The draft's order date; defaults to today on the company calendar. */
+    orderDate: procurementCalendarDate.optional(),
+    /** Requested receiving date, distinct from the order date. */
+    requestedArrivalDate: procurementCalendarDate.optional(),
+    lines: z.array(procurementDraftLineValidator).min(1).max(100)
+  })
+  .strict()
+  .refine(
+    (input) =>
+      !input.orderDate ||
+      !input.requestedArrivalDate ||
+      input.requestedArrivalDate >= input.orderDate,
+    {
+      path: ["requestedArrivalDate"],
+      message: "Requested arrival cannot precede the order date"
+    }
+  );
+
+export type ProcurementDraftInput = z.infer<
+  typeof procurementDraftInputValidator
+>;

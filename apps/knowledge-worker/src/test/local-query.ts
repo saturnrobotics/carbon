@@ -2,11 +2,18 @@
 import { createRedisCache } from "@carbon/knowledge/cache/redis.server";
 import { postgresIdentityStore } from "@carbon/knowledge/identity-store.server";
 import { Pool } from "pg";
+import {
+  CONVERSATION_TTL_SECONDS,
+  createConversationStore
+} from "../../../knowledge-query/src/conversation.server";
+import { createItemSearchHandler } from "../../../knowledge-query/src/items.server";
 import { createReadHandler } from "../../../knowledge-query/src/query.server";
 import {
   localCallerConfiguration,
+  localItemSourceId,
   localSourceId,
-  localTokenVerifier
+  localTokenVerifier,
+  syntheticItemSourceFetch
 } from "./local-fixture";
 import { startLocalHttpServer } from "./local-http";
 
@@ -16,9 +23,27 @@ function required(name: string): string {
   return value;
 }
 
+/** The portal origin evidence links open. Either spelling the harness supplies
+ * is accepted — a whole origin, or just the port the local stack published (see
+ * compose.local.yaml) — and unset keeps the historical 4200. */
+function loopbackPortalOrigin(): string {
+  const port = process.env.KNOWLEDGE_E2E_PORTAL_PORT?.trim();
+  const parsed = new URL(
+    process.env.KNOWLEDGE_WEB_ORIGIN?.trim() ||
+      `https://localhost:${port || "4200"}`
+  );
+  if (
+    parsed.protocol !== "https:" ||
+    !["localhost", "127.0.0.1", "[::1]"].includes(parsed.hostname)
+  )
+    throw new Error("KNOWLEDGE_WEB_ORIGIN must be an HTTPS loopback origin");
+  return parsed.origin;
+}
+
 async function main() {
   if (process.env.KNOWLEDGE_E2E_SYNTHETIC_FIXTURES !== "1")
     throw new Error("Local synthetic identity is disabled");
+  const portalOrigin = loopbackPortalOrigin();
   const pool = new Pool({
     connectionString: required("KNOWLEDGE_E2E_DATABASE_URL"),
     options: "-c role=knowledge_read",
@@ -27,6 +52,10 @@ async function main() {
     statement_timeout: 2_000
   });
   const redis = createRedisCache(required("KNOWLEDGE_REDIS_URL"));
+  // Follow-up context, as in production: its own bounded store on the same Redis.
+  const conversations = createRedisCache(required("KNOWLEDGE_REDIS_URL"), {
+    maxTtlSeconds: CONVERSATION_TTL_SECONDS
+  });
   await redis.store.set("knowledge:e2e:health", { ready: true }, 1);
   if (
     !((await redis.store.get("knowledge:e2e:health")) as { ready?: boolean })
@@ -52,9 +81,39 @@ async function main() {
         await redis.store.set(key, value, ttlSeconds);
       }
     },
-    origin: "https://localhost:4200",
+    // The portal origin this fixture stamps onto evidence `sourceUri` links.
+    // It follows the harness's portal port: a fixture that kept a fixed 4200
+    // while the portal moved would hand the browser download links pointing at
+    // whatever else holds that port.
+    origin: portalOrigin,
     businessTimezone: "UTC",
-    manualSourceId: localSourceId
+    manualSourceId: localSourceId,
+    conversationStore: createConversationStore(conversations.store)
+  });
+
+  // Existing-item candidates come from a synthetic Carbon canonical source: the
+  // production registry transport, deadline and contract run, while the only
+  // stubbed pieces are the outbound HTTPS call and its forwarding headers.
+  const items = createItemSearchHandler({
+    pool,
+    configuration: localCallerConfiguration("e2e-query"),
+    identityStore: postgresIdentityStore(pool),
+    tokenVerifier: localTokenVerifier,
+    sources: {
+      version: 1,
+      sources: [
+        {
+          id: localItemSourceId,
+          kind: "carbon",
+          origin: "https://carbon.e2e.invalid/",
+          audience: "e2e-carbon"
+        }
+      ]
+    },
+    registryContext: () => ({
+      fetch: syntheticItemSourceFetch,
+      headers: async () => new Headers({ authorization: "Bearer e2e-carbon" })
+    })
   });
 
   const server = startLocalHttpServer({
@@ -74,13 +133,15 @@ async function main() {
         return Response.json(cacheStats);
       if (request.method === "POST" && url.pathname === "/v1/query")
         return query(request);
+      if (request.method === "POST" && url.pathname === "/v1/items")
+        return items(request);
       return Response.json({ error: "not_found" }, { status: 404 });
     }
   });
 
   const close = async () => {
     await new Promise<void>((resolve) => server.close(() => resolve()));
-    await Promise.all([pool.end(), redis.close()]);
+    await Promise.all([pool.end(), redis.close(), conversations.close()]);
   };
   process.once("SIGINT", () => void close());
   process.once("SIGTERM", () => void close());

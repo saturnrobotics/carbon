@@ -133,6 +133,13 @@ const PERMISSION_OVERRIDES: Record<string, ToolPermission> = {
   knowledge_getRecentReceipts: { module: "inventory", actions: ["view"] },
   knowledge_getRecentReceiptItems: { module: "inventory", actions: ["view"] },
   knowledge_getPurchaseStatus: { module: "purchasing", actions: ["view"] },
+  // The one knowledge read that discloses money: it gates on purchasing view
+  // (the supplierPart/supplier RLS permission) and carries its own workforce
+  // capability, `knowledge.read.pricing`, in KNOWLEDGE_OPERATIONS.
+  knowledge_getItemSupplierPricing: {
+    module: "purchasing",
+    actions: ["view"]
+  },
   // This server-only command is deliberately excluded from the browser-facing
   // knowledge.service barrel. It is still a canonical API operation, parsed
   // from knowledge.mcp.server.ts below.

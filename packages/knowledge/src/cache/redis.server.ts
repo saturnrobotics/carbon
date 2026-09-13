@@ -1,10 +1,25 @@
 import Redis from "ioredis";
 import type { CacheStore } from "./cache.server";
 
-export function createRedisCache(url: string): {
+/** The answer cache never outlives its freshness budget. */
+export const CACHE_MAX_TTL_SECONDS = 60;
+
+export function createRedisCache(
+  url: string,
+  options: {
+    /**
+     * The longest TTL a caller may set. Defaults to the answer cache's
+     * freshness budget; a store for follow-up context passes its own bound.
+     */
+    maxTtlSeconds?: number;
+  } = {}
+): {
   store: CacheStore;
   close: () => Promise<void>;
 } {
+  const maxTtlSeconds = options.maxTtlSeconds ?? CACHE_MAX_TTL_SECONDS;
+  if (!Number.isInteger(maxTtlSeconds) || maxTtlSeconds < 1)
+    throw new Error("Invalid cache TTL bound");
   const parsed = new URL(url);
   if (
     parsed.protocol !== "rediss:" &&
@@ -43,7 +58,11 @@ export function createRedisCache(url: string): {
         return value === null ? undefined : JSON.parse(value);
       },
       async set(key, value, ttlSeconds) {
-        if (ttlSeconds < 1 || ttlSeconds > 60)
+        if (
+          !Number.isInteger(ttlSeconds) ||
+          ttlSeconds < 1 ||
+          ttlSeconds > maxTtlSeconds
+        )
           throw new Error("Invalid cache TTL");
         await ready();
         await redis.set(key, JSON.stringify(value), "EX", ttlSeconds);

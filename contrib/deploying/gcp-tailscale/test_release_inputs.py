@@ -108,6 +108,17 @@ class RepositoryInputsTests(unittest.TestCase):
     def selected(self):
         return set(release_plan.plan(self.materialize(), self.previous)["build"])
 
+    def test_pinned_secret_version_change_reconfigures_only_its_service(self):
+        desired = self.materialize()
+        desired["services"]["erp"]["secret_versions"] = {
+            "knowledge_trusted_callers_json": "sha256:" + "e" * 64
+        }
+        planned = release_plan.plan(desired, self.previous)
+        self.assertEqual(planned["build"], {})
+        self.assertEqual(set(planned["configure"]), {"erp"})
+        self.assertEqual(set(planned["deploy"]), {"erp"})
+        self.assertIn("mes", planned["unchanged"])
+
     def test_unused_catalog_and_unrelated_root_command_do_not_build_apps(self):
         self.write(
             "pnpm-workspace.yaml",

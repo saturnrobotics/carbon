@@ -1,4 +1,11 @@
-name: knowledge-manual-local
+# Disposable local browser-harness stack.
+#
+# Every project name, image reference and published port is parameterised with
+# its historical value as the default, so an unparameterised `local-stack.sh up`
+# is unchanged while a second harness can run beside it on its own ports without
+# stopping, reusing or retagging anything the first one owns. Container-internal
+# ports are fixed; only the loopback host side moves.
+name: ${KNOWLEDGE_LOCAL_STACK:-knowledge-manual-local}
 
 services:
   postgres:
@@ -14,7 +21,7 @@ services:
       knowledge.disposable: "true"
       knowledge.stack: manual-local
     ports:
-      - "127.0.0.1:59910:5432"
+      - "127.0.0.1:${KNOWLEDGE_LOCAL_DATABASE_PORT:-59910}:5432"
     volumes:
       - knowledge_postgres:/var/lib/postgresql/data
     networks: [knowledge_internal]
@@ -35,7 +42,7 @@ services:
     networks: [knowledge_internal]
 
   schema:
-    image: knowledge-manual-local-schema:manual-v1
+    image: ${KNOWLEDGE_LOCAL_STACK:-knowledge-manual-local}-schema:${KNOWLEDGE_LOCAL_TAG:-manual-v1}
     profiles: [setup]
     environment:
       KNOWLEDGE_MIGRATION_DATABASE_URL: postgresql://supabase_admin:synthetic-test-only@postgres:5432/knowledge_test
@@ -68,7 +75,7 @@ services:
       knowledge.disposable: "true"
       knowledge.stack: manual-local
     ports:
-      - "127.0.0.1:59912:4443"
+      - "127.0.0.1:${KNOWLEDGE_LOCAL_STORAGE_PORT:-59912}:4443"
     volumes:
       - knowledge_storage:/data
     networks: [knowledge_internal]
@@ -80,8 +87,10 @@ services:
       knowledge.disposable: "true"
       knowledge.stack: manual-local
     ports:
-      - "127.0.0.1:59911:6379"
-      - "127.0.0.1:4302:4302"
+      - "127.0.0.1:${KNOWLEDGE_LOCAL_REDIS_PORT:-59911}:6379"
+      # The query fixture shares this network namespace, so its published port
+      # is declared here.
+      - "127.0.0.1:${KNOWLEDGE_LOCAL_QUERY_PORT:-4302}:4302"
     volumes:
       - knowledge_redis:/data
     networks: [knowledge_internal]
@@ -92,7 +101,7 @@ services:
       retries: 30
 
   parser:
-    image: knowledge-manual-local-parser-e2e:manual-v1
+    image: ${KNOWLEDGE_LOCAL_STACK:-knowledge-manual-local}-parser-e2e:${KNOWLEDGE_LOCAL_TAG:-manual-v1}
     environment:
       STORAGE_EMULATOR_HOST: http://storage-api:8081
     depends_on:
@@ -101,7 +110,7 @@ services:
     networks: [parser_internal]
 
   storage-api:
-    image: knowledge-manual-local-parser-e2e:manual-v1
+    image: ${KNOWLEDGE_LOCAL_STACK:-knowledge-manual-local}-parser-e2e:${KNOWLEDGE_LOCAL_TAG:-manual-v1}
     command: ["node", "/usr/local/bin/images-storage-emulator-proxy.mjs"]
     environment:
       KNOWLEDGE_STORAGE_EMULATOR_TARGET: http://storage:4443
@@ -112,13 +121,18 @@ services:
     networks: [knowledge_internal, parser_internal]
 
   ingest:
-    image: knowledge-manual-local-ingest-e2e:manual-v1
+    image: ${KNOWLEDGE_LOCAL_STACK:-knowledge-manual-local}-ingest-e2e:${KNOWLEDGE_LOCAL_TAG:-manual-v1}
     command: ["node", "e2e-dist/local-ingest.js"]
     restart: unless-stopped
     environment:
       INNGEST_BASE_URL: http://inngest:8288/
       INNGEST_DEV: "1"
       KNOWLEDGE_E2E_DATABASE_URL: postgresql://supabase_admin:synthetic-test-only@postgres:5432/knowledge_test
+      # The manual-workflow fixture serves no Drive route: its caller
+      # configuration admits the portal's manual operations only. The Drive
+      # fixture beside it owns that surface, so this gateway forwards
+      # `/v1/drive/*` there and the portal keeps one worker URL.
+      KNOWLEDGE_E2E_DRIVE_FIXTURE_URL: http://drive:4301
       KNOWLEDGE_E2E_PARSER_URL: http://parser:8080
       KNOWLEDGE_E2E_SYNTHETIC_FIXTURES: "1"
       PORT: "4301"
@@ -132,7 +146,7 @@ services:
       knowledge.disposable: "true"
       knowledge.stack: manual-local
     ports:
-      - "127.0.0.1:4301:4301"
+      - "127.0.0.1:${KNOWLEDGE_LOCAL_GATEWAY_PORT:-4301}:4301"
     networks: [knowledge_internal, parser_internal]
 
   inngest:
@@ -156,20 +170,24 @@ services:
       knowledge.disposable: "true"
       knowledge.stack: manual-local
     ports:
-      - "127.0.0.1:59914:8288"
+      - "127.0.0.1:${KNOWLEDGE_LOCAL_INNGEST_PORT:-59914}:8288"
     volumes:
       - knowledge_inngest:/data
     working_dir: /data
     networks: [knowledge_internal]
 
   query:
-    image: knowledge-manual-local-ingest-e2e:manual-v1
+    image: ${KNOWLEDGE_LOCAL_STACK:-knowledge-manual-local}-ingest-e2e:${KNOWLEDGE_LOCAL_TAG:-manual-v1}
     command: ["node", "e2e-dist/local-query.js"]
     restart: unless-stopped
     environment:
       KNOWLEDGE_E2E_DATABASE_URL: postgresql://supabase_admin:synthetic-test-only@postgres:5432/knowledge_test
+      # The evidence `sourceUri` this fixture builds must carry the portal's own
+      # origin, which moves with the published portal port.
+      KNOWLEDGE_E2E_PORTAL_PORT: ${KNOWLEDGE_LOCAL_PORTAL_PORT:-4200}
       KNOWLEDGE_E2E_SYNTHETIC_FIXTURES: "1"
       KNOWLEDGE_REDIS_URL: redis://localhost:6379
+      KNOWLEDGE_WEB_ORIGIN: https://localhost:${KNOWLEDGE_LOCAL_PORTAL_PORT:-4200}
       PORT: "4302"
     depends_on:
       postgres:
@@ -181,26 +199,61 @@ services:
       knowledge.stack: manual-local
     network_mode: service:redis
 
+  # The Drive connector fixture: the production worker, the production Drive
+  # sync engine and a query handler with the reader-delegated live check, all
+  # against an in-memory Drive. It is a separate service because the manual
+  # library's query fixture is pinned to the upload source and can never return
+  # Drive evidence, and because its worker deliberately admits no Drive caller.
+  drive:
+    image: ${KNOWLEDGE_LOCAL_STACK:-knowledge-manual-local}-ingest-e2e:${KNOWLEDGE_LOCAL_TAG:-manual-v1}
+    command: ["node", "e2e-dist/local-drive.js"]
+    restart: unless-stopped
+    environment:
+      KNOWLEDGE_E2E_DATABASE_URL: postgresql://supabase_admin:synthetic-test-only@postgres:5432/knowledge_test
+      KNOWLEDGE_E2E_SYNTHETIC_FIXTURES: "1"
+      KNOWLEDGE_WEB_ORIGIN: https://localhost:${KNOWLEDGE_LOCAL_PORTAL_PORT:-4200}
+      PORT: "4301"
+      KNOWLEDGE_E2E_QUERY_PORT: "4302"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    labels:
+      knowledge.disposable: "true"
+      knowledge.stack: manual-local
+    ports:
+      - "127.0.0.1:${KNOWLEDGE_LOCAL_DRIVE_GATEWAY_PORT:-4303}:4301"
+      - "127.0.0.1:${KNOWLEDGE_LOCAL_DRIVE_QUERY_PORT:-4304}:4302"
+    networks: [knowledge_internal]
+
   portal:
-    image: knowledge-manual-local-web-e2e:manual-v1
+    image: ${KNOWLEDGE_LOCAL_STACK:-knowledge-manual-local}-web-e2e:${KNOWLEDGE_LOCAL_TAG:-manual-v1}
     environment:
       KNOWLEDGE_COMPANY_ID: company-b
+      # `drive-source.spec.ts` exercises a surface manual-v1 defers. The route
+      # is in this image because `Dockerfile.web`'s `e2e` stage was BUILT with
+      # `--build-arg KNOWLEDGE_DRIVE_ENABLED=true`; this runtime value is what
+      # the harness dev server re-reads. The released web image is built from
+      # `builder`, which never receives the argument, and `release.py` refuses
+      # the variable on a revision.
+      KNOWLEDGE_DRIVE_ENABLED: "true"
       KNOWLEDGE_E2E_DOCKER: "1"
+      KNOWLEDGE_E2E_PORTAL_PORT: "${KNOWLEDGE_LOCAL_PORTAL_PORT:-4200}"
       KNOWLEDGE_E2E_SYNTHETIC_FIXTURES: "1"
       KNOWLEDGE_MANUAL_SOURCE_JSON: '{"sourceId":"source-b","displayName":"Operations manuals"}'
       KNOWLEDGE_QUERY_AUDIENCE: e2e-query
       KNOWLEDGE_QUERY_URL: http://redis:4302
-      KNOWLEDGE_WEB_ORIGIN: https://localhost:4200
+      KNOWLEDGE_WEB_ORIGIN: https://localhost:${KNOWLEDGE_LOCAL_PORTAL_PORT:-4200}
       KNOWLEDGE_WORKER_AUDIENCE: e2e-worker
       KNOWLEDGE_WORKER_URL: http://ingest:4301
     depends_on:
       - ingest
       - query
+      - drive
     labels:
       knowledge.disposable: "true"
       knowledge.stack: manual-local
     ports:
-      - "127.0.0.1:4200:4200"
+      - "127.0.0.1:${KNOWLEDGE_LOCAL_PORTAL_PORT:-4200}:${KNOWLEDGE_LOCAL_PORTAL_PORT:-4200}"
     networks: [knowledge_internal]
 
 networks:

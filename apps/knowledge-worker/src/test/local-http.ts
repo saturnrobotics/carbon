@@ -4,6 +4,7 @@ import {
   type Server,
   type ServerResponse
 } from "node:http";
+import { writeWebResponse } from "@carbon/knowledge/query/request-boundary.server";
 
 export async function handleLocalHttpRequest(
   incoming: IncomingMessage,
@@ -49,12 +50,7 @@ export async function handleLocalHttpRequest(
         }
       )
     );
-    response.headers.forEach((value, key) => {
-      outgoing.setHeader(key, value);
-    });
-    outgoing
-      .writeHead(response.status)
-      .end(Buffer.from(await response.arrayBuffer()));
+    await writeWebResponse(outgoing, response);
   } catch {
     outgoing
       .writeHead(503, {

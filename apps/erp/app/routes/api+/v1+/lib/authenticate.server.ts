@@ -1,9 +1,11 @@
 // Resolve an incoming Carbon API v1 request to an AuthedContext.
 //
-// v1 accepts API keys only, sent as `Authorization: Bearer crbn_…` (the convention the
+// v1 accepts API keys, sent as `Authorization: Bearer crbn_…` (the convention the
 // rest.carbon.ms proxy uses) or the raw `carbon-key` header. Client + rate limit + plan
 // gate + expiry are handled by reusing the carbon-key branch of requirePermissions; the
 // per-operation scope gate lives in oRPC middleware and reads the scopes we attach here.
+// Any other bearer, or portal user evidence, selects the delegated workforce branch
+// (resolveApiContext), whose registry comes from KNOWLEDGE_TRUSTED_CALLERS_JSON.
 
 import {
   getCompanyIdFromAPIKey,
@@ -11,7 +13,8 @@ import {
 } from "@carbon/auth/auth.server";
 import {
   authorizeCarbonWorkforceRequest,
-  PORTAL_USER_EVIDENCE_HEADER
+  PORTAL_USER_EVIDENCE_HEADER,
+  WorkforceNotConfiguredError
 } from "@carbon/auth/workforce.server";
 import type { AuthedContext } from "./base.server";
 
@@ -85,10 +88,21 @@ export async function resolveApiContext(
     (Boolean(bearer) && !bearer.startsWith("crbn_"));
   if (!isWorkforce) return resolveApiKeyContext(request);
 
-  const authorized = await authorizeCarbonWorkforceRequest({
-    request,
-    operation
-  });
+  // Same contract as the API-key branch: auth failures are thrown Responses, and
+  // the body never says why. The verifier already collapses every reason into one
+  // error; the only distinction worth surfacing is "no registry at all", which is
+  // an operator problem (503), not a caller problem (401).
+  let authorized: Awaited<ReturnType<typeof authorizeCarbonWorkforceRequest>>;
+  try {
+    authorized = await authorizeCarbonWorkforceRequest({ request, operation });
+  } catch (error) {
+    if (error instanceof WorkforceNotConfiguredError) {
+      throw new Response("Workforce authentication is not configured", {
+        status: 503
+      });
+    }
+    throw new Response("Unauthorized", { status: 401 });
+  }
   return {
     client: authorized.client,
     userId: authorized.principal.actorId,
@@ -100,7 +114,8 @@ export async function resolveApiContext(
       allowedOperations: authorized.allowedOperations,
       capabilities: authorized.principal.capabilities,
       permissions: authorized.permissions,
-      policyVersion: authorized.principal.policyVersion
+      policyVersion: authorized.principal.policyVersion,
+      assurance: authorized.principal.assurance
     }
   };
 }

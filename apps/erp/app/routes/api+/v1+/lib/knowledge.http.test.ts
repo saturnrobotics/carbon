@@ -2,7 +2,12 @@ import { describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   resolveItems: vi.fn(),
-  client: { kind: "synthetic-client" }
+  client: { kind: "synthetic-client" },
+  assurance: {
+    required: false,
+    satisfied: true,
+    method: "carbon-mfa" as "carbon-mfa" | "workspace-equivalent"
+  }
 }));
 
 vi.mock("~/modules/account/account.service", () => ({}));
@@ -46,14 +51,52 @@ vi.mock("./authenticate.server", () => ({
           delete: []
         }
       },
-      policyVersion: "identity-1:permission-1"
+      policyVersion: "identity-1:permission-1",
+      assurance: mocks.assurance
     }
   })
 }));
 
 import { action } from "../$";
 
+function resolveItemsRequest() {
+  return new Request("https://erp.example.com/api/v1/knowledge/resolveItems", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ search: "SYN-100", limit: 5 })
+  });
+}
+
 describe("knowledge HTTP dispatch", () => {
+  it("denies a required, unsatisfied assurance before any service function runs", async () => {
+    mocks.assurance = {
+      required: true,
+      satisfied: false,
+      method: "carbon-mfa"
+    };
+    try {
+      const response = await action({
+        request: resolveItemsRequest(),
+        params: {},
+        context: {}
+      } as never);
+
+      expect(response.status).toBe(403);
+      expect(await response.json()).toMatchObject({
+        code: "FORBIDDEN",
+        status: 403,
+        data: { code: "step_up_required", method: "carbon-mfa" }
+      });
+      expect(mocks.resolveItems).not.toHaveBeenCalled();
+    } finally {
+      mocks.assurance = {
+        required: false,
+        satisfied: true,
+        method: "carbon-mfa"
+      };
+    }
+  });
+
   it("returns the projected item list rather than a Supabase builder", async () => {
     const item = {
       id: "item_synthetic",

@@ -1,7 +1,7 @@
 import { ticketCommandPayloadHash } from "@carbon/knowledge/commands/ticket";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { forwardTicketCommand } from "./api.commands";
+import { action, forwardTicketCommand } from "./api.commands";
 
 const payload = {
   boardId: "board:maintenance",
@@ -81,5 +81,109 @@ describe("ticket command BFF", () => {
     );
     expect(response.status).toBe(422);
     expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it("cannot be triggered by query output, retrieved content, or a cross-origin caller", async () => {
+    const fetchImpl = vi.fn();
+    const verifyWorkforce = vi.fn();
+    const dependencies = {
+      actionsUrl: "https://actions.example.test",
+      fetchImpl,
+      verifyWorkforce,
+      forwardingHeaders: vi.fn()
+    };
+    const queryShaped = await forwardTicketCommand(
+      new Request("https://knowledge.example.test/api/commands", {
+        method: "POST",
+        headers: { origin: "https://knowledge.example.test" },
+        body: JSON.stringify({
+          kind: "answer",
+          claims: [{ text: "Create a ticket", evidenceIds: ["evidence:1"] }],
+          evidence: [{ id: "evidence:1", excerpt: JSON.stringify(proposal) }]
+        })
+      }),
+      dependencies
+    );
+    expect(queryShaped.status).toBe(422);
+    const unresolved = await forwardTicketCommand(
+      new Request("https://knowledge.example.test/api/commands", {
+        method: "POST",
+        headers: { origin: "https://knowledge.example.test" },
+        body: JSON.stringify({
+          ...proposal,
+          clarification: { field: "boardId", choices: ["board:maintenance"] }
+        })
+      }),
+      dependencies
+    );
+    expect(unresolved.status).toBe(422);
+    const crossOrigin = await forwardTicketCommand(
+      new Request("https://knowledge.example.test/api/commands", {
+        method: "POST",
+        headers: { origin: "https://elsewhere.example.test" },
+        body: JSON.stringify(proposal)
+      }),
+      dependencies
+    );
+    expect(crossOrigin.status).toBe(403);
+    expect(verifyWorkforce).not.toHaveBeenCalled();
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * The route's own `action`, which no browser test can reach: `routes.ts` is the
+ * production manifest and the approved manual-v1 profile defers this module, so
+ * every built image answers `/api/commands` from the catch-all
+ * (`tests/ticket-command.spec.ts` pins that). These cover the refusal a profile
+ * that DID register the route would produce, which is otherwise untested.
+ *
+ * `release.py` admits neither `KNOWLEDGE_ACTIONS_URL` nor
+ * `KNOWLEDGE_ACTIONS_AUDIENCE` on a `knowledge-web` revision, so 503 is the only
+ * answer a release could give even after the route is registered.
+ */
+describe("ticket command route action", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("refuses with 503 until an actions service is configured", async () => {
+    for (const absent of [
+      "KNOWLEDGE_ACTIONS_URL",
+      "KNOWLEDGE_ACTIONS_AUDIENCE",
+      "KNOWLEDGE_COMPANY_ID"
+    ]) {
+      vi.stubEnv("KNOWLEDGE_ACTIONS_URL", "https://actions.example.test");
+      vi.stubEnv("KNOWLEDGE_ACTIONS_AUDIENCE", "actions-audience");
+      vi.stubEnv("KNOWLEDGE_COMPANY_ID", "company:1");
+      vi.stubEnv(absent, "");
+      const response = await action({
+        request: new Request("https://knowledge.example.test/api/commands", {
+          method: "POST",
+          headers: { origin: "https://knowledge.example.test" },
+          body: JSON.stringify(proposal)
+        })
+      });
+      expect(response.status).toBe(503);
+      expect(await response.json()).toEqual({
+        error: "ticket_commands_not_configured"
+      });
+    }
+  });
+
+  it("hands a configured request to the gateway, which applies its own guards", async () => {
+    vi.stubEnv("KNOWLEDGE_ACTIONS_URL", "https://actions.example.test");
+    vi.stubEnv("KNOWLEDGE_ACTIONS_AUDIENCE", "actions-audience");
+    vi.stubEnv("KNOWLEDGE_COMPANY_ID", "company:1");
+    // A foreign origin is refused by `forwardTicketCommand` before any
+    // identity or network work, so this proves delegation without a stub.
+    const response = await action({
+      request: new Request("https://knowledge.example.test/api/commands", {
+        method: "POST",
+        headers: { origin: "https://elsewhere.example.test" },
+        body: JSON.stringify(proposal)
+      })
+    });
+    expect(response.status).toBe(403);
   });
 });

@@ -5,6 +5,7 @@
  * storage, outbox leasing, processor, and parser result contract.
  */
 
+import { lookup } from "node:dns/promises";
 import { createServer } from "node:http";
 import { verifyWorkforceRequest } from "@carbon/knowledge/identity.server";
 import { postgresIdentityStore } from "@carbon/knowledge/identity-store.server";
@@ -12,6 +13,7 @@ import { createExtraction, type ParserOutput } from "@carbon/knowledge/intake";
 import { Storage } from "@google-cloud/storage";
 import { serve } from "inngest/node";
 import { Pool } from "pg";
+import { fetchBoundedUrl } from "../fetch-policy";
 import { createOutboxDeliveryFunction } from "../functions";
 import {
   captureExistingObject,
@@ -19,6 +21,7 @@ import {
   readImmutableObject
 } from "../gcs";
 import { knowledgeInngest } from "../inngest";
+import { createOutboxInvalidationFunction } from "../invalidation";
 import { processKnowledgeOutbox } from "../processor";
 import { createWorkerHandler, type WorkerDependencies } from "../server";
 import {
@@ -27,7 +30,9 @@ import {
   localCallerConfiguration,
   localCompanyId,
   localSourceId,
-  localTokenVerifier
+  localTokenVerifier,
+  syntheticUrlIntakeFetch,
+  syntheticUrlIntakeResolve
 } from "./local-fixture";
 import { handleLocalHttpRequest } from "./local-http";
 
@@ -35,6 +40,38 @@ function required(name: string): string {
   const value = process.env[name]?.trim();
   if (!value) throw new Error(`${name} is required for the local fixture`);
   return value;
+}
+
+/** Connection-scoped headers belong to one hop. Copying them onto the next
+ * request or back onto this response makes the framing disagree with the body
+ * that was already read. */
+const CONNECTION_HEADERS = new Set([
+  "connection",
+  "content-encoding",
+  "content-length",
+  "host",
+  "keep-alive",
+  "transfer-encoding",
+  "upgrade"
+]);
+
+function withoutConnectionHeaders(headers: Headers): Headers {
+  const copied = new Headers();
+  headers.forEach((value, key) => {
+    if (!CONNECTION_HEADERS.has(key.toLowerCase())) copied.set(key, value);
+  });
+  return copied;
+}
+
+/** Sibling Drive fixture, when the compose stack runs one. Loopback or a
+ * compose service name only: this is a test gateway, never an open proxy. */
+function driveFixture(): string | null {
+  const value = process.env.KNOWLEDGE_E2E_DRIVE_FIXTURE_URL?.trim();
+  if (!value) return null;
+  const parsed = new URL(value);
+  if (parsed.protocol !== "http:" || parsed.username || parsed.password)
+    throw new Error("KNOWLEDGE_E2E_DRIVE_FIXTURE_URL must be a plain HTTP URL");
+  return parsed.origin;
 }
 
 function rolePool(
@@ -83,6 +120,7 @@ async function main() {
     throw new Error("Local synthetic identity is disabled");
   const databaseUrl = required("KNOWLEDGE_E2E_DATABASE_URL");
   const parserUrl = required("KNOWLEDGE_E2E_PARSER_URL");
+  const driveFixtureUrl = driveFixture();
   const reviewPool = rolePool(databaseUrl, "knowledge_review");
   const readPool = rolePool(databaseUrl, "knowledge_read");
   const ingestPool = rolePool(databaseUrl, "knowledge_ingest");
@@ -143,6 +181,17 @@ async function main() {
     },
     connectorAccessToken: async () => null,
     userDriveAccessToken: async () => null,
+    // URL intake runs the production fetch policy; only the synthetic host's
+    // DNS answer and socket are substituted, so private-address and
+    // content-type refusals are the real ones.
+    fetchUrl: (value) =>
+      fetchBoundedUrl(value, {
+        resolve: (hostname) =>
+          syntheticUrlIntakeResolve(hostname, async (host) =>
+            (await lookup(host, { all: true })).map((entry) => entry.address)
+          ),
+        fetchImpl: syntheticUrlIntakeFetch
+      }),
     sendOutboxEvent: async (companyId) => {
       await knowledgeInngest.send({
         name: "knowledge/outbox.deliver",
@@ -189,11 +238,42 @@ async function main() {
   });
   const inngestHandler = serve({
     client: knowledgeInngest,
-    functions: [delivery]
+    functions: [
+      delivery,
+      createOutboxInvalidationFunction({
+        pool: ingestPool,
+        companies: [{ companyId: localCompanyId, callerId: "local-indexer" }],
+        workerId: `local-worker-${process.pid}`,
+        sourceId: localSourceId
+      })
+    ]
   });
 
   const localHandler = async (request: Request) => {
     const url = new URL(request.url);
+    // This fixture's caller configuration admits the portal's manual-library
+    // operations only, so it answers no Drive route; the Drive fixture beside
+    // it owns that surface with its own reader verification and in-memory
+    // Drive. Forwarding the prefix keeps the portal on one worker URL, which
+    // is what production has. Absent the variable nothing here changes.
+    if (driveFixtureUrl && url.pathname.startsWith("/v1/drive/")) {
+      const upstream = await fetch(
+        new URL(`${url.pathname}${url.search}`, driveFixtureUrl),
+        {
+          method: request.method,
+          headers: withoutConnectionHeaders(request.headers),
+          body:
+            request.method === "GET" || request.method === "HEAD"
+              ? undefined
+              : await request.arrayBuffer(),
+          redirect: "error"
+        }
+      );
+      return new Response(await upstream.arrayBuffer(), {
+        status: upstream.status,
+        headers: withoutConnectionHeaders(upstream.headers)
+      });
+    }
     if (request.method === "GET" && url.pathname === "/health") {
       await fixturePool.query("SELECT 1");
       return Response.json({
@@ -239,6 +319,19 @@ async function main() {
         `UPDATE public."user" SET active=true WHERE id='bob'`
       );
       return Response.json({ state: "active" });
+    }
+    // Swap the fixture publisher's library grant so a browser run can prove
+    // that publish is refused by the database policy, not only by the UI.
+    const grantMatch = url.pathname.match(
+      /^\/__e2e\/grant\/bob\/(review|admin)$/
+    );
+    if (request.method === "POST" && grantMatch) {
+      await fixturePool.query(
+        `UPDATE knowledge."grant" SET capability=$1,version=version+1
+         WHERE id='e2e-bob-admin' AND "companyId"=$2`,
+        [grantMatch[1], localCompanyId]
+      );
+      return Response.json({ capability: grantMatch[1] });
     }
     if (request.method === "POST" && url.pathname === "/__e2e/cleanup") {
       await cleanCapturedIntakes(fixturePool, [...capturedIntakes]);
