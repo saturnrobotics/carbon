@@ -67,6 +67,26 @@ TABLES = ["source", "identityBinding", "sourceUserBinding", "document",
           "groupMembership", "intake", "extraction", "outbox", "command",
           "conversation", "audit", "driveEnrollment", "driveItem"]
 
+# Every (role, default expression) pair a knowledge INSERT can fire: each role
+# holding INSERT on a knowledge table, against each of that table's defaults
+# that calls a function. pg_depend records the call, so the pairing survives a
+# generator gaining a new hop or a table gaining a new default.
+IDENTIFIER_DEFAULT_WRITERS = """
+SELECT DISTINCT a.grantee::regrole::text || ' | ' || pg_get_expr(d.adbin, d.adrelid)
+FROM pg_attrdef d
+JOIN pg_class c ON c.oid=d.adrelid
+JOIN pg_namespace n ON n.oid=c.relnamespace
+JOIN pg_depend dep ON dep.classid='pg_attrdef'::regclass AND dep.objid=d.oid
+ AND dep.refclassid='pg_proc'::regclass
+CROSS JOIN LATERAL aclexplode(COALESCE(c.relacl,acldefault('r',c.relowner))) a
+WHERE n.nspname='knowledge' AND a.privilege_type='INSERT' AND a.grantee<>0
+ORDER BY 1
+"""
+
+# A role holding nothing but EXECUTE on the generator itself.
+ID_PROBE = ("CREATE ROLE knowledge_id_probe NOLOGIN; "
+            "GRANT EXECUTE ON FUNCTION public.id(text) TO knowledge_id_probe; ")
+
 
 class SchemaTests(unittest.TestCase):
     def test_all_tables_have_forced_row_security_and_audit_columns(self):
@@ -87,6 +107,40 @@ class SchemaTests(unittest.TestCase):
 
     def test_unbound_actor_is_default_deny(self):
         self.assertEqual(sql("BEGIN; SET LOCAL ROLE knowledge_read; SELECT count(*) FROM knowledge.document; ROLLBACK").splitlines()[-2], "0")
+
+    def test_every_knowledge_writer_can_evaluate_its_column_defaults(self):
+        # Table privileges alone do not make a row insertable: the id defaults
+        # call Carbon's invoker generator, which reaches further helpers in
+        # public and extensions. knowledge_enrollment_owner shipped able to
+        # INSERT into "identityBinding" and unable to evaluate its default, so
+        # every enrollment was refused. Evaluating each default as each writer
+        # is the check no new role can pass by accident.
+        self.assertEqual(
+            sql("SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace "
+                "CROSS JOIN LATERAL aclexplode(COALESCE(c.relacl,acldefault('r',c.relowner))) a "
+                "WHERE n.nspname='knowledge' AND a.privilege_type='INSERT' AND a.grantee=0"),
+            "0",
+        )
+        pairs = [line.split(" | ", 1) for line in sql(IDENTIFIER_DEFAULT_WRITERS).splitlines()]
+        self.assertIn("knowledge_enrollment_owner", {role for role, _ in pairs})
+        for role, expression in pairs:
+            with self.subTest(role=role, default=expression):
+                sql(f"BEGIN; SET LOCAL ROLE {role}; SELECT {expression}; ROLLBACK")
+
+    def test_identifier_generator_requires_the_helper_grants(self):
+        # The check above only proves something while public.id costs a grant to
+        # reach. The fixture's earlier gen_random_uuid() stand-in needed none,
+        # which is exactly why the missing enrollment grants passed every suite.
+        sql("BEGIN; " + ID_PROBE + "SET LOCAL ROLE knowledge_id_probe; SELECT public.id('probe'); ROLLBACK",
+            succeeds=False, sqlstate="42501")
+        granted = sql("BEGIN; " + ID_PROBE +
+                      "GRANT USAGE ON SCHEMA extensions TO knowledge_id_probe; "
+                      "GRANT EXECUTE ON FUNCTION public.uuid_to_base58(uuid), "
+                      "extensions.uuid_generate_v4() TO knowledge_id_probe; "
+                      "SET LOCAL ROLE knowledge_id_probe; SELECT public.id('probe'); ROLLBACK")
+        # Base58 of a v4 UUID, so the grants bought the whole closure, not a
+        # hyphenated UUID from some other definition that happened to answer.
+        self.assertRegex(granted, r"(?m)^probe_[1-9A-HJ-NP-Za-km-z]{20,}$")
 
 
 def as_reader(actor, company, query):

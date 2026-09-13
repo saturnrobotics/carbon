@@ -58,12 +58,15 @@ for table, migration in (
     if "t" not in exists.split():
         body = (root / "packages/database/supabase/migrations" / migration).read_text()
         sql("BEGIN;\n" + body + "\nCOMMIT;")
+# The worker's tables default their ids to public.id(text), so it needs the same
+# helper closure every knowledge writer needs, not just the generator itself.
 sql('''
-GRANT USAGE ON SCHEMA public TO knowledge_test_scheduler;
+GRANT USAGE ON SCHEMA public, extensions TO knowledge_test_scheduler;
 GRANT SELECT, INSERT, UPDATE, DELETE ON
   public.company, public."user", public.employee, public."userToCompany",
   public."userPermission", public."purchaseOrder", public."knowledgeCommandReceipt",
   public."knowledgeProcurementSchedule" TO knowledge_test_scheduler;
-GRANT EXECUTE ON FUNCTION public.id(text) TO knowledge_test_scheduler;
+GRANT EXECUTE ON FUNCTION public.id(text), public.uuid_to_base58(uuid),
+  extensions.uuid_generate_v4() TO knowledge_test_scheduler;
 ''')
 print("Synthetic knowledge fixture is ready; no database reset performed")
