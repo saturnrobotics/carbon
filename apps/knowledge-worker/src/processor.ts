@@ -22,15 +22,35 @@ function asRecord(value: unknown): Record<string, unknown> {
     : {};
 }
 
+/**
+ * The readable provenance stored beside a captured object: the uploader's file
+ * name, or the URL it was acquired from when nobody named it. Both are written
+ * outside the content-addressed identity, so this is the only place a title can
+ * come from that is not the object's own hash.
+ */
+function capturedName(object: Record<string, unknown>): string | undefined {
+  for (const key of ["fileName", "acquiredFrom"]) {
+    const value = object[key];
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  return undefined;
+}
+
 export async function processKnowledgeOutbox(
   runtime: {
     pool: Pool;
     bucket: string;
     automationUserId: string;
     manualSourceId?: string;
+    /**
+     * `name` is the capture's own file name or acquisition URL when it had one.
+     * The object key is a content hash, so it is the only readable provenance
+     * the parser can propose a title from.
+     */
     parseDocument: (
       reference: ImmutableObjectReference,
-      mimeType: string
+      mimeType: string,
+      name?: string
     ) => Promise<
       ReturnType<typeof import("@carbon/knowledge/intake").createExtraction>
     >;
@@ -107,9 +127,12 @@ export async function processKnowledgeOutbox(
         sha256: captured.sha256,
         maxBytes: captured.bytes
       };
+      // The document's title is the Drive file's own name, synced by the
+      // connector; the object key here is a hash like every other capture's.
       const extraction = await runtime.parseDocument(
         reference,
-        captured.mimeType
+        captured.mimeType,
+        target.title
       );
       await publishDriveDocumentVersion(runtime.pool, principal, {
         documentId: target.documentId,
@@ -202,7 +225,11 @@ export async function processKnowledgeOutbox(
     sha256: object.sha256,
     maxBytes: typeof object.bytes === "number" ? object.bytes : undefined
   };
-  const extraction = await runtime.parseDocument(reference, object.mimeType);
+  const extraction = await runtime.parseDocument(
+    reference,
+    object.mimeType,
+    capturedName(object)
+  );
   await persistExtractionGeneration(runtime.pool, principal, {
     intakeId: event.entityId,
     createdBy: runtime.automationUserId,

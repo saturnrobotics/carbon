@@ -24,6 +24,9 @@ function parseRequest(bytes) {
     !boundedString(input.generation, 256) ||
     !/^[a-f0-9]{64}$/.test(input.sha256 ?? "") ||
     !boundedString(input.mimeType, 128) ||
+    // The capture's own file name or acquisition URL, which the job proposes a
+    // title from. Optional, and bounded because it is caller-supplied text.
+    (input.name !== undefined && !boundedString(input.name, 512)) ||
     (input.maxBytes !== undefined &&
       (!Number.isSafeInteger(input.maxBytes) ||
         input.maxBytes < 1 ||

@@ -22,6 +22,8 @@ export async function invokeIsolatedParser(
     storage?: Storage;
     fetchImpl?: typeof fetch;
     timeoutMs?: number;
+    /** The capture's own file name or acquisition URL; the parser proposes a title from it. */
+    name?: string;
   }
 ): Promise<ReturnType<typeof createExtraction>> {
   const parserUrl = new URL(options.parserUrl);
@@ -50,7 +52,8 @@ export async function invokeIsolatedParser(
           bucket: reference.bucket,
           objectKey: reference.objectKey,
           generation: reference.generation,
-          sha256: reference.sha256
+          sha256: reference.sha256,
+          ...(options.name ? { name: options.name } : {})
         },
         outputObjectKey:
           options.outputObjectKey ?? `${reference.objectKey}.extraction.json`,
@@ -111,6 +114,8 @@ export async function invokeCloudRunParserJob(
     accessToken?: () => Promise<string>;
     wait?: (milliseconds: number) => Promise<void>;
     maximumPolls?: number;
+    /** The capture's own file name or acquisition URL; the parser proposes a title from it. */
+    name?: string;
   }
 ): Promise<ReturnType<typeof createExtraction>> {
   const fetchImpl = options.fetchImpl ?? fetch;
@@ -141,7 +146,8 @@ export async function invokeCloudRunParserJob(
                     objectKey: reference.objectKey,
                     generation: reference.generation,
                     sha256: reference.sha256,
-                    mimeType
+                    mimeType,
+                    ...(options.name ? { name: options.name } : {})
                   })
                 },
                 {

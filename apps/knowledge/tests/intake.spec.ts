@@ -88,6 +88,12 @@ test.describe("intake review", () => {
         sourcePages.getByText("Page images are not available")
       ).toBeVisible();
 
+      // The title a reviewer is shown first is the name they uploaded, never the
+      // content-addressed object key. Asserted BEFORE the field is overwritten:
+      // every earlier run filled it unconditionally, which is how a proposal of
+      // the object's sha256 survived the whole suite.
+      await expect(page.getByLabel("Title")).toHaveValue("e2e-intake");
+
       // Correcting a proposed field keeps the evidence for that field in view.
       await page.getByLabel("Title").fill(filePart);
       await page.getByLabel("Manufacturer").fill("E2E Motors");

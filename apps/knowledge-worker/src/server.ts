@@ -198,6 +198,22 @@ function uploadedFile(
   return value instanceof File && value.size ? value : null;
 }
 
+/**
+ * The uploaded name, bounded and stripped of the directory the browser may have
+ * prefixed. It becomes the proposed title, so it is caller-supplied text that
+ * reaches a reviewer's screen: keep it short, one line, and path-free.
+ */
+function capturedFileName(value: string | undefined): string | undefined {
+  const name = (value ?? "")
+    .split(/[/\\]/)
+    .at(-1)
+    ?.replace(/[\p{C}\s]+/gu, " ")
+    .trim()
+    .slice(0, 255)
+    .trim();
+  return name || undefined;
+}
+
 async function acquireByUrl(
   value: string,
   dependencies: WorkerDependencies
@@ -235,11 +251,13 @@ async function captureRequest(
   let bytes: Buffer;
   let mimeType: string;
   let acquiredFrom: string | undefined;
+  let fileName: string | undefined;
   if (file) {
     if (file.size > 50_000_000 || !manualMimeTypes.has(file.type))
       throw new Error("unsupported intake file");
     bytes = Buffer.from(await file.arrayBuffer());
     mimeType = file.type;
+    fileName = capturedFileName(file.name);
   } else if (url) {
     const acquired = await acquireByUrl(url, dependencies);
     if (!manualMimeTypes.has(acquired.mimeType))
@@ -276,7 +294,11 @@ async function captureRequest(
   const persisted = await persistCapturedIntake(
     dependencies.reviewPool,
     databasePrincipal,
-    acquiredFrom ? { ...identity, acquiredFrom } : identity
+    {
+      ...identity,
+      ...(acquiredFrom ? { acquiredFrom } : {}),
+      ...(fileName ? { fileName } : {})
+    }
   );
   await dependencies
     .sendOutboxEvent?.(principal.companyId)
