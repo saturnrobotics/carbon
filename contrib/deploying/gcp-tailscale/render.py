@@ -189,7 +189,7 @@ def render(config, repo, output, state=Path("/var/lib/carbon"), *, materialize=T
             "POSTHOG_API_HOST": "https://" + config["ERP_HOST"],
             "POSTHOG_PROJECT_PUBLIC_KEY": "disabled",
             "INNGEST_BASE_URL": "http://inngest:8288/",
-            "INNGEST_SERVE_HOST": "http://erp:3000",
+            "INNGEST_SERVE_HOST": values["ERP_URL"],
             "DISABLE_RESEND": "" if config.get("RESEND_API_KEY") else "true", "RESEND_API_KEY": "__RESEND_API_KEY__",
             "RESEND_DOMAIN": config.get("RESEND_DOMAIN", config["AUTH_ALLOWED_GOOGLE_DOMAIN"]),
             "SOURCE_CODE_URL": app_releases[app]["source_url"],
@@ -208,11 +208,12 @@ def render(config, repo, output, state=Path("/var/lib/carbon"), *, materialize=T
     # Root middleware validates the request host even on /health. Use node:http
     # to send the configured Host over loopback; native fetch can override Host.
     # Both HTTP success and the dependency status are required for readiness.
-    services["erp"]["healthcheck"]["test"] = ["CMD", "node", "-e", """
+    for app, health_status in (("erp", "healthy"), ("mes", "ok")):
+        services[app]["healthcheck"]["test"] = ["CMD", "node", "-e", """
 const http = require('node:http');
 const request = http.get({
   hostname: '127.0.0.1', port: process.env.PORT || 3000, path: '/health',
-  headers: {host: new URL(process.env.ERP_URL).host},
+  headers: {host: new URL(process.env.__APP_URL__).host},
   signal: AbortSignal.timeout(5000)
 }, response => {
   if (response.statusCode !== 200) process.exit(1);
@@ -220,12 +221,12 @@ const request = http.get({
   response.on('data', chunk => { body += chunk; if (body.length > 4096) process.exit(1); });
   response.on('error', () => process.exit(1));
   response.on('end', () => {
-    try { process.exit(JSON.parse(body).status === 'healthy' ? 0 : 1); }
+    try { process.exit(JSON.parse(body).status === '__HEALTH_STATUS__' ? 0 : 1); }
     catch { process.exit(1); }
   });
 });
 request.on('error', () => process.exit(1));
-""".strip()]
+""".strip().replace("__APP_URL__", app.upper() + "_URL").replace("__HEALTH_STATUS__", health_status)]
 
     auth = services["gotrue"]
     auth["secrets"] += ["google_client_id", "google_client_secret"]
@@ -257,7 +258,7 @@ request.on('error', () => process.exit(1));
     edge["secrets"].append("inngest_event_key")
     edge["environment"].update({"INNGEST_BASE_URL": "http://inngest:8288/", "INNGEST_EVENT_KEY": "__INNGEST_EVENT_KEY__", "BROWSERLESS_WS_URL": "ws://chrome:3000", "ERP_URL": values["ERP_URL"], "MES_URL": values["MES_URL"]})
     edge["volumes"][-1]["source"] = str(repo / "contrib/deploying/gcp-tailscale/auth/edge-main")
-    services["inngest"]["command"] = ["inngest", "start", "--sqlite-dir", "/data", "--sdk-url", "http://erp:3000/api/inngest", "--poll-interval", "30"]
+    services["inngest"]["command"] = ["inngest", "start", "--sqlite-dir", "/data", "--sdk-url", values["ERP_URL"] + "/api/inngest", "--poll-interval", "30"]
     services["inngest"]["healthcheck"] = {"test": ["CMD", "inngest", "alpha", "doctor", "healthcheck"], "interval": "10s", "timeout": "10s", "retries": 24}
     services["chrome"] = {"image": "browserless/chrome:1-puppeteer-21.3.6", "restart": "unless-stopped", "networks": ["internal"], "environment": {"TOKEN": "", "CONNECTION_TIMEOUT": "60000"}, "shm_size": "256m", "mem_limit": "1g"}
     services["ops"] = {

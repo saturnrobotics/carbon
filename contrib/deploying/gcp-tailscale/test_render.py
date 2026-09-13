@@ -38,7 +38,13 @@ class PrivateStackTests(unittest.TestCase):
         self.stack = json.loads((self.output / "compose.json").read_text())
 
     def test_erp_health_probe_sends_configured_host_and_checks_dependency_health(self):
-        responses = [(200, '{"status":"healthy"}', 0),
+        self.check_application_health_probe("erp", "healthy")
+
+    def test_mes_health_probe_sends_configured_host_and_checks_liveness(self):
+        self.check_application_health_probe("mes", "ok")
+
+    def check_application_health_probe(self, service, healthy_status):
+        responses = [(200, json.dumps({"status": healthy_status}), 0),
                      (200, '{"status":"degraded"}', 1),
                      (500, '{"status":"healthy"}', 1),
                      (302, '{"status":"healthy"}', 1),
@@ -65,8 +71,8 @@ class PrivateStackTests(unittest.TestCase):
                     with self.subTest(status=status, body=body):
                         server.probe_response = (status, body)
                         result = subprocess.run(
-                            self.stack["services"]["erp"]["healthcheck"]["test"][1:],
-                            env={**os.environ, "ERP_URL": "https://erp.example.com",
+                            self.stack["services"][service]["healthcheck"]["test"][1:],
+                            env={**os.environ, service.upper() + "_URL": f"https://{service}.example.com",
                                  "PORT": str(server.server_port)},
                             capture_output=True, text=True, timeout=10,
                         )
@@ -74,7 +80,15 @@ class PrivateStackTests(unittest.TestCase):
             finally:
                 server.shutdown()
                 thread.join()
-        self.assertEqual(requests, [("/health", "erp.example.com")] * len(responses))
+        self.assertEqual(requests, [("/health", f"{service}.example.com")] * len(responses))
+
+    def test_inngest_discovers_and_calls_the_canonical_private_erp_origin(self):
+        for app in ("erp", "mes"):
+            self.assertEqual(self.stack["services"][app]["environment"]["INNGEST_SERVE_HOST"],
+                             "https://erp.example.com")
+        command = self.stack["services"]["inngest"]["command"]
+        self.assertEqual(command[command.index("--sdk-url") + 1],
+                         "https://erp.example.com/api/inngest")
 
     def test_preview_matches_real_render_without_writes_or_secret_generation(self):
         config = {**self.config, "POSTGRES_PRIVATE_IP": "10.73.0.2", "POSTGRES_CLIENT_CIDRS": ["10.81.0.0/26"],
