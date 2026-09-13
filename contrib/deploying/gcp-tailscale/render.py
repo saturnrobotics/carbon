@@ -205,8 +205,27 @@ def render(config, repo, output, state=Path("/var/lib/carbon"), *, materialize=T
     payment_sync.configure(config, services["erp"], directory, emit, materialize=materialize)
     portal_receiver.configure(config, services["erp"], directory, emit, materialize=materialize)
     invoice_inference.configure(config, services["erp"])
-    # A 200 response alone is insufficient: ERP reports dependency failures in JSON.
-    services["erp"]["healthcheck"]["test"] = ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/health').then(r=>r.json()).then(b=>process.exit(b.status==='healthy'?0:1)).catch(()=>process.exit(1))"]
+    # Root middleware validates the request host even on /health. Use node:http
+    # to send the configured Host over loopback; native fetch can override Host.
+    # Both HTTP success and the dependency status are required for readiness.
+    services["erp"]["healthcheck"]["test"] = ["CMD", "node", "-e", """
+const http = require('node:http');
+const request = http.get({
+  hostname: '127.0.0.1', port: process.env.PORT || 3000, path: '/health',
+  headers: {host: new URL(process.env.ERP_URL).host},
+  signal: AbortSignal.timeout(5000)
+}, response => {
+  if (response.statusCode !== 200) process.exit(1);
+  let body = '';
+  response.on('data', chunk => { body += chunk; if (body.length > 4096) process.exit(1); });
+  response.on('error', () => process.exit(1));
+  response.on('end', () => {
+    try { process.exit(JSON.parse(body).status === 'healthy' ? 0 : 1); }
+    catch { process.exit(1); }
+  });
+});
+request.on('error', () => process.exit(1));
+""".strip()]
 
     auth = services["gotrue"]
     auth["secrets"] += ["google_client_id", "google_client_secret"]
