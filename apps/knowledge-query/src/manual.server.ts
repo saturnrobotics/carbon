@@ -30,6 +30,33 @@ const applicability = z.object({
   lot: z.string().max(256).optional(),
   variant: z.string().max(256).optional()
 });
+/** What each receipt-read gap means to someone reading the answer. */
+const RECEIPT_GAPS: Record<string, string> = {
+  "bounded-result-truncated": "more receipt lines than one read returns",
+  "invalid-posting-date": "a receipt line whose posting date could not be read",
+  "ambiguous-lot": "a receipt line recording more than one lot"
+};
+
+/**
+ * The reasons that leave the candidate set short, in the caller's words. The
+ * reason string is a comma-separated set, so a gap must never be missed just
+ * because another reason travelled with it, and an unrecognised reason is
+ * reported rather than waved through — a source this build does not know is
+ * exactly when not to answer.
+ */
+export function receiptGaps(incompleteReason?: string): string[] {
+  const reasons = new Set(
+    (incompleteReason ?? "")
+      .split(",")
+      .map((reason) => reason.trim())
+      .filter(Boolean)
+  );
+  if (!reasons.size) return ["the source did not say what was missing"];
+  if (reasons.size === 1 && reasons.has("missing-identity")) return [];
+  reasons.delete("missing-identity");
+  return [...reasons].map((reason) => RECEIPT_GAPS[reason] ?? reason);
+}
+
 export async function resolveRecentManual(options: {
   request: Request;
   query: QueryRequest;
@@ -92,15 +119,17 @@ export async function resolveRecentManual(options: {
   const receipts = await carbon.recentReceiptItems(
     items.map((item) => item.id)
   );
-  if (
-    receipts.status !== "complete" &&
-    receipts.incompleteReason !== "missing-identity"
-  )
+  // `missing-identity` is not a gap in the read — those rows ARE present, and
+  // the resolver's own identity rules decide what to do with them. Every other
+  // reason means receipt lines were left out of the candidate set, so an answer
+  // drawn from what remains could be the wrong one. Say which, so this reads as
+  // a fact about the receipt rather than as the source being down.
+  const unresolvable = receiptGaps(receipts.incompleteReason);
+  if (receipts.status !== "complete" && unresolvable.length)
     return {
       ...result,
       partial: true,
-      message:
-        "The receipt source returned incomplete identity or reversal information. Review the receipt before selecting a manual."
+      message: `The receipt history could not be read in full (${unresolvable.join("; ")}), so the received item cannot be identified. Review the receipt in Carbon before selecting a manual.`
     };
   const links = await withKnowledgeTransaction(
     options.pool,

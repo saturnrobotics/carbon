@@ -7,7 +7,6 @@ import {
   knowledgePageLimit
 } from "./knowledge.models";
 import {
-  type LedgerRead,
   type ReceiptLineRead,
   summarizeReceiptIdentities,
   type TrackedEntityRead
@@ -70,8 +69,18 @@ export async function getRecentReceipts(
 }
 
 /**
- * Return bounded, posted line identities with net ledger reversals. The three
- * reads are batched across the bounded candidate set; no row triggers a query.
+ * Return bounded, posted receipt line identities.
+ *
+ * Two batched reads over a bounded candidate set; no row triggers a query. The
+ * inventory ledger is deliberately NOT one of them. `post-receipt` writes its
+ * `itemLedger` rows in the same transaction as the `status: "Posted"` flip, so
+ * the posted status this read already filters on IS the posting evidence — and
+ * a purchase receipt's ledger rows carry no `documentLineId` at all (only
+ * material issuing sets that column), so keying on the line found nothing for a
+ * genuinely posted receipt. Both facts the ledger would have supplied are on
+ * the line itself: `receivedQuantity` is the number the ledger is derived from,
+ * and the lot or serial is the tracked entity that names this receipt line —
+ * the same join `post-receipt` uses to stamp `itemLedger.trackedEntityId`.
  */
 export async function getRecentReceiptItems(
   client: SupabaseClient<Database>,
@@ -86,7 +95,7 @@ export async function getRecentReceiptItems(
   let linesQuery = client
     .from("receiptLine")
     .select(
-      "id,itemId,requiresBatchTracking,requiresSerialTracking,receipt!inner(id,postingDate,status),item!inner(revision,mpn)"
+      "id,itemId,receivedQuantity,requiresBatchTracking,requiresSerialTracking,receipt!inner(id,postingDate,status),item!inner(revision,mpn)"
     )
     .eq("companyId", companyId)
     .eq("receipt.companyId", companyId)
@@ -110,42 +119,21 @@ export async function getRecentReceiptItems(
   }
 
   const lineIds = lines.map((line) => line.id);
-  const ledgerResult = await client
-    .from("itemLedger")
-    .select("documentLineId,quantity,trackedEntityId")
+  const trackedResult = await client
+    .from("trackedEntity")
+    .select("id,readableId,attributes")
     .eq("companyId", companyId)
-    .eq("documentType", "Purchase Receipt")
-    .in("documentLineId", lineIds)
+    .in("attributes ->> Receipt Line", lineIds)
     .limit(101);
-  if (ledgerResult.error) return { data: null, error: ledgerResult.error };
-  const truncatedLedger = (ledgerResult.data?.length ?? 0) > 100;
-  const ledgers = (ledgerResult.data ?? []).slice(0, 100) as LedgerRead[];
-  const trackedIds = [
-    ...new Set(
-      ledgers
-        .map((entry) => entry.trackedEntityId)
-        .filter((id): id is string => Boolean(id))
-    )
-  ];
-  const trackedResult = trackedIds.length
-    ? await client
-        .from("trackedEntity")
-        .select("id,readableId,attributes")
-        .eq("companyId", companyId)
-        .in("id", trackedIds)
-        .limit(100)
-    : { data: [], error: null };
   if (trackedResult.error) return { data: null, error: trackedResult.error };
+  const truncatedTracking = (trackedResult.data?.length ?? 0) > 100;
   const summary = summarizeReceiptIdentities(
     lines,
-    ledgers,
-    (trackedResult.data ?? []) as TrackedEntityRead[]
+    (trackedResult.data ?? []).slice(0, 100) as TrackedEntityRead[]
   );
-  const partial =
-    truncatedLines ||
-    truncatedLedger ||
-    summary.items.length > 100 ||
-    summary.incompleteReasons.length > 0;
+  const truncated =
+    truncatedLines || truncatedTracking || summary.items.length > 100;
+  const partial = truncated || summary.incompleteReasons.length > 0;
   return {
     data: {
       items: summary.items.slice(0, 100),
@@ -153,11 +141,7 @@ export async function getRecentReceiptItems(
       ...(partial
         ? {
             incompleteReason: [
-              ...(truncatedLines ||
-              truncatedLedger ||
-              summary.items.length > 100
-                ? ["bounded-result-truncated"]
-                : []),
+              ...(truncated ? ["bounded-result-truncated"] : []),
               ...summary.incompleteReasons
             ].join(",")
           }
