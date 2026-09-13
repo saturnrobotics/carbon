@@ -45,7 +45,19 @@ describe("manual release production routes", () => {
       ...environment,
       KNOWLEDGE_VERTEX_JSON: "{}",
       KNOWLEDGE_STT_JSON: "{}",
-      KNOWLEDGE_SOURCES_JSON: "{}",
+      // A registry is live configuration now, so it carries a real value; the
+      // routes below stay closed whether or not a source is registered.
+      KNOWLEDGE_SOURCES_JSON: JSON.stringify({
+        version: 1,
+        sources: [
+          {
+            id: "carbon-source",
+            kind: "carbon",
+            origin: "https://erp.example",
+            audience: "erp-receiver-audience"
+          }
+        ]
+      }),
       KNOWLEDGE_ACTIONS_ORIGIN: "https://actions.example.com"
     });
     for (const path of [

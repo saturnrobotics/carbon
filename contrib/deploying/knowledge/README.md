@@ -6,7 +6,10 @@ query, ingestion, parser, schema and retention units. Drive synchronization,
 vector search, generated answers, voice, commands and generic source adapters are
 not part of this release. `release.py` rejects those units and rejects their
 environment variables or secrets even if deferred implementation remains in the
-repository.
+repository. A Carbon ERP may optionally be registered as a live source of
+records alongside the uploaded manuals — see [Live source registry](#live-source-registry-optional);
+that is a `carbon` source, not one of the generic adapters, and the planner
+refuses every other kind.
 
 Terraform creates the workload identities, private buckets, managed Redis,
 Direct VPC egress, Secret Manager containers, immutable Artifact Registry, the
@@ -348,6 +351,59 @@ says how its requests satisfy a company's Carbon MFA requirement
 There is no third mode and nothing is inferred from an email or a domain. The
 delegated path never marks a Carbon session as verified. A company that does
 not require MFA is unaffected by either mode.
+
+### Live source registry (optional)
+
+The query service reads registered live sources — today, a Carbon ERP — through
+one environment value on `knowledge-query` alone:
+
+```text
+KNOWLEDGE_SOURCES_JSON={"version":1,"sources":[{"id":"<carbon-source-id>","kind":"carbon","origin":"https://<erp-host>","audience":"<erp-receiver-audience>"}]}
+```
+
+Without the value the service registers no live source: item search answers
+`unavailable` so intake review can still publish a generic document, and every
+question is answered from the manual library. That is the shape the release
+shipped with, and it stays supported.
+
+**Present and malformed refuses to start.** `readSourceRegistryConfiguration`
+parses the value with the runtime schema at start-up, so `/health` answers
+`not-configured`, the staged revision never becomes Ready, and the promotion
+fails with the reason rather than the service starting with no sources — which
+would present as an empty corpus rather than as a typo. `release.py` checks the
+same shape first, so a malformed registry is refused before any cloud write.
+
+Origins are bare `https://` URLs with no embedded credentials, no path, query or
+fragment — the policy the transport already applies to a URL it acquires, so
+configuration is not a way around it. Source IDs are unique. `kind` must be
+`carbon`: kanban belongs to the deferred command surface and the generic source
+adapters are not part of this release, so the planner refuses those kinds even
+though the runtime schema knows them.
+
+Each registered source also needs a `knowledge.source` row for the reading
+company with `kind = 'carbon'` and `status = 'active'` — the reader's own row
+policy decides which registered sources a request may reach, and a registry entry
+on its own reaches nothing. The audience is Carbon's receiver audience, the same
+value the change feed below uses.
+
+Both read paths use the registry:
+
+- `POST /v1/items` (intake review's existing-item candidates) reads Carbon's
+  `resolveItems` operation.
+- `POST /v1/query` reaches a registered source for the structured intents the
+  router names — a part lookup, a purchase-order status, the applicable manual
+  for a recently received item. **The manual library stays primary**: a question
+  the router did not send to a structured capability, and a structured one no
+  registered source answers, is still answered from the uploaded manuals. The
+  manual source pin (`KNOWLEDGE_MANUAL_SOURCE_JSON`) confines the *document*
+  index read and does not constrain the live-source path.
+
+One limit worth knowing before registering a source for a multi-company
+deployment: "the manual for the item we received" is answered by the Carbon
+resolver as soon as any registry is configured, and a reading company with no
+active `carbon` source row of its own gets a clarification it cannot satisfy
+rather than a fallthrough to keyword search. Register the source for every
+company that asks that question, or leave the registry unset.
 
 ### Carbon change feed (optional)
 
