@@ -153,12 +153,13 @@ export function startServer(
                 bucket: dependencies.bucket,
                 automationUserId: dependencies.automationUserId,
                 manualSourceId: dependencies.manualSource.sourceId,
-                parseDocument: (reference, mimeType) =>
+                parseDocument: (reference, mimeType, name) =>
                   invokeCloudRunParserJob(reference, mimeType, {
                     project: parserProject!,
                     location: parserLocation!,
                     job: parserJob!,
-                    outputBucket: parserOutputBucket!
+                    outputBucket: parserOutputBucket!,
+                    ...(name ? { name } : {})
                   }),
                 ...(driveSources.length
                   ? {

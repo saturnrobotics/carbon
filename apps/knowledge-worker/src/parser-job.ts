@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import { pathToFileURL } from "node:url";
 import { createExtraction, type ParserOutput } from "@carbon/knowledge/intake";
+import { proposedTitle } from "./document-title";
 import {
   captureImmutableUpload,
   type ImmutableObjectReference,
@@ -8,8 +9,16 @@ import {
 } from "./gcs";
 import { manualMimeTypes } from "./manual-file";
 
-type JobInput = ImmutableObjectReference & { mimeType: string };
+/**
+ * `name` is the uploader's file name, or the URL an object was acquired from —
+ * provenance the content-addressed object key cannot carry. It is absent for a
+ * capture that never had one, which is a title proposal the first page has to
+ * answer for rather than an error.
+ */
+type JobInput = ImmutableObjectReference & { mimeType: string; name?: string };
 type JobOutput = { bucket: string; objectKey: string };
+/** Long enough for any file name a browser will send; short enough to bound the env. */
+const MAXIMUM_NAME = 512;
 
 function parseEnvironment(environment: NodeJS.ProcessEnv): {
   input: JobInput;
@@ -31,7 +40,11 @@ function parseEnvironment(environment: NodeJS.ProcessEnv): {
     !output.objectKey
   )
     throw new Error("immutable parser job references are required");
-  return { input, output };
+  const name =
+    typeof input.name === "string" && input.name.trim()
+      ? input.name.trim().slice(0, MAXIMUM_NAME)
+      : undefined;
+  return { input: { ...input, name }, output };
 }
 
 export function parserInvocation(mimeType: string): {
@@ -45,7 +58,17 @@ export function parserInvocation(mimeType: string): {
   throw new Error("unsupported parser input MIME type");
 }
 
-export function textParserOutput(text: string, title: string): ParserOutput {
+/**
+ * `name` is the capture's own file name or acquisition URL, when it had one.
+ * A proposal taken from the first page cites that page, so the reviewer can see
+ * where it came from; one taken from the name cannot, and so stays unresolved
+ * for the reviewer to confirm. When neither yields a title, `fields` carries no
+ * `title` key and the reviewer is asked for one.
+ */
+export function textParserOutput(
+  text: string,
+  options: { name?: string } = {}
+): ParserOutput {
   const evidence: Array<{ page: number; text: string }> = [];
   const pages = text.split("\f").slice(0, 2_000);
   for (const [index, page] of pages.entries()) {
@@ -60,9 +83,13 @@ export function textParserOutput(text: string, title: string): ParserOutput {
     }
     if (evidence.length >= 100) break;
   }
+  const title = proposedTitle({ name: options.name, text });
   return {
-    fields: { title },
-    evidence: { body: evidence },
+    fields: title ? { title: title.value } : {},
+    evidence: {
+      body: evidence,
+      ...(title?.evidence ? { title: [title.evidence] } : {})
+    },
     warnings:
       pages.length < text.split("\f").length || evidence.length >= 100
         ? ["Parser output was truncated to the bounded evidence envelope"]
@@ -133,10 +160,7 @@ export async function runParserJob(
   let parsed: ParserOutput;
   if (input.mimeType === "text/plain") {
     const text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
-    parsed = textParserOutput(
-      text,
-      input.objectKey.split("/").at(-1) ?? "Document"
-    );
+    parsed = textParserOutput(text, { name: input.name });
   } else {
     const invocation = parserInvocation(input.mimeType);
     const text = await externalParse(
@@ -145,10 +169,7 @@ export async function runParserJob(
       invocation.command,
       invocation.args
     );
-    parsed = textParserOutput(
-      text,
-      input.objectKey.split("/").at(-1) ?? "Document"
-    );
+    parsed = textParserOutput(text, { name: input.name });
   }
   const extraction = createExtraction(parsed);
   await captureImmutableUpload({
