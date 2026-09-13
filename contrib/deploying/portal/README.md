@@ -130,7 +130,7 @@ Terraform resources, creates secret values, enrolls users or changes IAM grants.
    Run Terraform from
    this checkout using its selected private backend; the command reads live
    `terraform output -json` and checks its project/region against the target.
-2. Install Git, Docker with Buildx, Python 3.10+, Terraform, PostgreSQL's `psql`,
+2. Install Git, Docker with Buildx, Python 3.10+, Terraform, PostgreSQL 16+ `psql`,
    Google Cloud CLI, GitHub CLI (`gh`) and curl. Authenticate `gh` and `gcloud` as
    the operator. Configure Docker's credential helper once:
    `gcloud auth configure-docker <region>-docker.pkg.dev`.
@@ -144,12 +144,21 @@ Terraform resources, creates secret values, enrolls users or changes IAM grants.
    scheduler identity itself receives only invocation access to ingestion.
    The existing narrow deployment service account alone does not provide all
    those permissions; use the reviewed operator identity.
+   The PostgreSQL client must support IP-address certificate subject alternative
+   names for the private database's `verify-full` connection; older clients can
+   reject a valid IP certificate. On macOS, install the separate client with
+   `brew install libpq`, then run
+   `PATH="$(brew --prefix libpq)/bin:$PATH" make deploy-portal-check` (or
+   `make deploy-portal` with the same PATH). This does not replace an existing
+   PostgreSQL server installation. Confirm the selected `psql --version` first.
 3. Configure a private libpq service named `portal-operator` in your
    `~/.pg_service.conf` (or `PGSERVICEFILE`), with a protected password file and
    `sslmode=verify-full`. It must reach the **same Carbon database** as the
    runtime secrets over your authenticated private connection. This connection
    is used by deployment only to check the public schema marker and read
-   `portal_migrations.ledger`. The initial bootstrap uses the separately reviewed
+   `portal_migrations.ledger`. Marker discovery reads PostgreSQL catalogs and
+   requires no `USAGE` on the application schema or application-function
+   `EXECUTE` privileges. The initial bootstrap uses the separately reviewed
    privileged connection; subsequent compatible migrations run as the restricted
    Cloud Run schema job. Keep any required tunnel connected while deploying.
 4. Copy the synthetic template and replace every `<placeholder>`:

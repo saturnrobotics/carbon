@@ -228,7 +228,13 @@ def live_ledger(config: dict, adapter) -> dict:
 
 
 def require_public_schema(config: dict, adapter) -> None:
-    marker = "SELECT to_regprocedure('public.portal_resolve_workforce_identity(text,text,text)') IS NOT NULL"
+    # Catalog observation needs no application-schema USAGE or function EXECUTE.
+    # The bootstrap observer holds only migration-ledger read access.
+    # Built-in pg_catalog.text has the stable type OID 25.
+    marker = ("SELECT EXISTS (SELECT 1 FROM pg_catalog.pg_proc AS p "
+              "JOIN pg_catalog.pg_namespace AS n ON n.oid = p.pronamespace "
+              "WHERE n.nspname = 'public' AND p.proname = 'portal_resolve_workforce_identity' "
+              "AND p.pronargs = 3 AND p.proargtypes = '25 25 25'::pg_catalog.oidvector AND p.prokind = 'f')")
     present = adapter.call(["psql", "-X", "--no-password", "--set", "ON_ERROR_STOP=1", "--tuples-only", "--no-align",
                             "service=" + config["pg_service"], "--command", marker], capture=True).strip()
     if present != "t":
