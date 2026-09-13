@@ -6,6 +6,7 @@
 import { createServer, type Server } from "node:http";
 import type { VerifiedWorkforceIdentity } from "@carbon/knowledge/identity.server";
 import { postgresIdentityStore } from "@carbon/knowledge/identity-store.server";
+import { writeWebResponse } from "@carbon/knowledge/query/request-boundary.server";
 import { Pool } from "pg";
 import { createReadHandler } from "../../../knowledge-query/src/query.server";
 import { createWorkerHandler, type WorkerDependencies } from "../server";
@@ -31,9 +32,11 @@ const callerConfiguration = {
 };
 
 type Actor = "bob" | "alice";
+// Reserved synthetic IAP subjects; the binding below is enrolled through the
+// owner function, the only writer of knowledge."identityBinding".
 const actorSubjects: Record<Actor, string> = {
-  bob: "subject-b",
-  alice: "subject-a"
+  bob: "accounts.google.com:100000000000000000002",
+  alice: "accounts.google.com:100000000000000000001"
 };
 
 function actorFromEvidence(request: Request): Actor {
@@ -70,7 +73,8 @@ function principal(actor: Actor): VerifiedWorkforceIdentity {
       "knowledge.document.delete",
       "knowledge.document.download"
     ],
-    accessLevels: ["e2e-test"]
+    accessLevels: ["e2e-test"],
+    assurance: { mode: "carbon-mfa" }
   };
 }
 
@@ -158,12 +162,7 @@ async function bridge(
           { method: incoming.method, headers, ...(body.length ? { body } : {}) }
         )
       );
-      response.headers.forEach((value, key) => {
-        outgoing.setHeader(key, value);
-      });
-      outgoing
-        .writeHead(response.status)
-        .end(Buffer.from(await response.arrayBuffer()));
+      await writeWebResponse(outgoing, response);
     } catch {
       outgoing
         .writeHead(503)
@@ -197,18 +196,13 @@ export async function startE2eGateway(
        AND id IN ('e2e-bob-read','e2e-bob-publish')`,
     [companyId]
   );
-  // The fixture's ordinary bindings use a non-IAP issuer. Add a narrowly
-  // scoped binding for this gateway's synthetic but verifier-shaped IAP claim,
-  // so the actual PostgreSQL identity-resolution function runs in the flow.
+  // The fixture's ordinary bindings use a non-IAP issuer. Enroll a narrowly
+  // scoped binding for this gateway's synthetic but verifier-shaped IAP claim
+  // through the owner function (idempotent), so the actual PostgreSQL
+  // identity-resolution function runs in the flow.
   await fixturePool.query(
-    `DELETE FROM knowledge."identityBinding" WHERE "companyId"=$1 AND id='e2e-bob-iap-binding'`,
-    [companyId]
-  );
-  await fixturePool.query(
-    `INSERT INTO knowledge."identityBinding"
-       (id,"companyId","createdBy",issuer,subject,"canonicalUserId",active,"revocationVersion",capabilities)
-     VALUES ('e2e-bob-iap-binding',$1,'bob','https://cloud.google.com/iap','subject-b','bob',true,1,ARRAY['knowledge.read']::text[])`,
-    [companyId]
+    "SELECT knowledge.enroll_workforce_identity($1::text,$2::text,$3::text,'bob',ARRAY['knowledge.read']::text[])",
+    [sourceIdentity.issuer, actorSubjects.bob, companyId]
   );
   await fixturePool.query(
     `

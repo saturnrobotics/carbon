@@ -3,40 +3,67 @@
  * It is reachable only through tests/vite.e2e.config.ts when the explicit
  * synthetic-fixture flag is set. Production Vite configuration never resolves
  * this module.
+ *
+ * Only Google's signature check is synthetic: the assertion travels in a cookie
+ * (IAP would place it in the request header), and the production
+ * `verifyIapBrowserRequest` decides audience, issuer, freshness and access
+ * levels. Forwarding maps the verified subject to the fixture's evidence label.
  */
-import type {
-  VerifiedIapBrowserRequest,
-  VerifiedWorkforceIdentity
+import {
+  IAP_ASSERTION_HEADER,
+  type VerifiedIapBrowserRequest,
+  type VerifiedWorkforceIdentity,
+  verifyIapBrowserRequest
 } from "@carbon/knowledge/identity.server";
+import {
+  ACTOR_COOKIE,
+  type Actor,
+  ASSERTION_COOKIE,
+  actorAssertion,
+  actorSubjects,
+  SYNTHETIC_ACCESS_LEVEL,
+  SYNTHETIC_IAP_AUDIENCE,
+  syntheticIapVerifier
+} from "./assertion";
 
 const companyId = "company-b";
-const issuer = "https://cloud.google.com/iap";
-const actors = new Set(["bob", "alice"]);
+const actors = new Set<string>(Object.keys(actorSubjects));
 
-function testActor(request: Request): "bob" | "alice" {
-  if (process.env.KNOWLEDGE_E2E_SYNTHETIC_FIXTURES !== "1") {
-    throw new Error("Synthetic browser identity is disabled");
-  }
-  const actor = request.headers
+function cookie(request: Request, name: string): string | undefined {
+  return request.headers
     .get("cookie")
     ?.split(";")
     .map((part) => part.trim())
-    .find((part) => part.startsWith("knowledge_e2e_actor="))
-    ?.slice("knowledge_e2e_actor=".length);
-  if (!actor || !actors.has(actor)) throw new Error("unauthorized test actor");
-  return actor as "bob" | "alice";
+    .find((part) => part.startsWith(`${name}=`))
+    ?.slice(name.length + 1);
+}
+
+/** Like IAP, the harness overwrites any browser-supplied assertion header. */
+function assertionFromCookie(request: Request): string | undefined {
+  const assertion = cookie(request, ASSERTION_COOKIE);
+  if (assertion) return decodeURIComponent(assertion);
+  const actor = cookie(request, ACTOR_COOKIE);
+  return actor && actors.has(actor)
+    ? actorAssertion(actor as Actor)
+    : undefined;
 }
 
 export async function verifyKnowledgeBrowserRequest(
   request: Request
 ): Promise<VerifiedIapBrowserRequest> {
-  const actor = testActor(request);
-  return {
-    kind: "iap-browser",
-    sourceIdentity: { issuer, subject: `e2e-${actor}` },
-    sourceIapAudience: "e2e-loopback-only",
-    accessLevels: ["e2e-test"]
-  };
+  if (process.env.KNOWLEDGE_E2E_SYNTHETIC_FIXTURES !== "1") {
+    throw new Error("Synthetic browser identity is disabled");
+  }
+  const headers = new Headers(request.headers);
+  headers.delete(IAP_ASSERTION_HEADER);
+  const assertion = assertionFromCookie(request);
+  if (assertion) headers.set(IAP_ASSERTION_HEADER, assertion);
+  return verifyIapBrowserRequest({
+    request: new Request(request.url, { method: request.method, headers }),
+    sourceIapAudience: SYNTHETIC_IAP_AUDIENCE,
+    requiredAccessLevels: [SYNTHETIC_ACCESS_LEVEL],
+    tokenVerifier: syntheticIapVerifier
+  });
 }
 
 export function forwardVerifiedWorkforceRequest(options: {
@@ -45,15 +72,14 @@ export function forwardVerifiedWorkforceRequest(options: {
   companyId: string;
   verified: VerifiedIapBrowserRequest | VerifiedWorkforceIdentity;
 }): Promise<Headers> {
-  const actor =
+  const subject =
     "principal" in options.verified
-      ? options.verified.principal.sourceIdentity.subject.replace(/^e2e-/, "")
-      : options.verified.sourceIdentity.subject.replace(/^e2e-/, "");
-  if (
-    !actors.has(actor) ||
-    options.companyId !== companyId ||
-    !options.targetAudience
-  ) {
+      ? options.verified.principal.sourceIdentity.subject
+      : options.verified.sourceIdentity.subject;
+  const actor = (Object.keys(actorSubjects) as Actor[]).find(
+    (candidate) => actorSubjects[candidate] === subject
+  );
+  if (!actor || options.companyId !== companyId || !options.targetAudience) {
     return Promise.reject(new Error("unauthorized test forwarding"));
   }
   return Promise.resolve(

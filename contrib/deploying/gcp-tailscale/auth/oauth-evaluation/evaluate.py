@@ -33,6 +33,17 @@ JWT_SECRET = "synthetic-oauth-evaluation-jwt-secret"
 CLIENT_REDIRECT = "http://127.0.0.1:18994/callback"
 SYNTHETIC_EMAIL = "oauth-evaluation@example.com"
 SYNTHETIC_PASSWORD = "Correct-Horse-Battery-42!"
+# Realtime resolves its tenant from the first Host label; compose.yml seeds `realtime-dev`.
+REALTIME_TENANT_HOST = "realtime-dev.localhost"
+# Seeded by the storage-init service in compose.yml.
+STORAGE_DENIED_BUCKET = "evaluation"
+STORAGE_GRANTED_BUCKET = "evaluation-granted"
+# A "fail" on any of these fails the native-delegation adoption gate.
+GATE_IDS = frozenset({
+    "postgrest_dml_replay", "postgrest_rpc_replay", "storage_write_replay", "storage_write_replay_granted_policy",
+    "realtime_write_replay", "privileged_function_replay", "gotrue_user_mutation_replay", "wrong_audience", "asymmetric_signing",
+})
+UNREACHABLE_NOTE = "An unreachable write surface is recorded as a failed check, never as untested: the gate cannot pass without evidence."
 
 
 def b64json(value: str) -> dict[str, Any]:
@@ -55,8 +66,8 @@ def sign_jwt(header: dict[str, Any], body: dict[str, Any], secret: str = JWT_SEC
 
 def request(base: str, path: str, method: str = "GET", *, token: str | None = None,
             data: bytes | None = None, content_type: str = "application/json",
-            follow: bool = False) -> dict[str, Any]:
-    headers = {"Accept": "application/json"}
+            follow: bool = False, headers: dict[str, str] | None = None) -> dict[str, Any]:
+    headers = {"Accept": "application/json", **(headers or {})}
     if token:
         headers["Authorization"] = f"Bearer {token}"
     if data is not None:
@@ -120,14 +131,53 @@ def write_probe_function(path: Path) -> None:
     )
 
 
-def wait_for(base: str, path: str, attempts: int = 45) -> dict[str, Any]:
+def wait_for(base: str, path: str, attempts: int = 45, *, token: str | None = None,
+             headers: dict[str, str] | None = None, ok: tuple[int, ...] = ()) -> dict[str, Any]:
+    """Poll until the endpoint answers (any status below 500, or one of `ok` when given)."""
     last: dict[str, Any] = {}
     for _ in range(attempts):
-        last = request(base, path)
-        if last.get("status") is not None and last["status"] < 500:
+        last = request(base, path, token=token, headers=headers)
+        status = last.get("status")
+        if status is not None and (status in ok if ok else status < 500):
             return last
         time.sleep(1)
     return last
+
+
+def unreachable(name: str, response: dict[str, Any], expected: str, *, note: str = "") -> dict[str, Any]:
+    observed = f"unreachable: {response.get('error') or 'no response'}"
+    return result(name, "fail", observed, expected, response, note=f"{note} {UNREACHABLE_NOTE}".strip())
+
+
+def storage_body_status(response: dict[str, Any]) -> str:
+    body = response.get("body")
+    return str(body.get("statusCode")) if isinstance(body, dict) and body.get("statusCode") is not None else ""
+
+
+def classify_storage_write(name: str, write: dict[str, Any], lookup: dict[str, Any], *, note: str = "") -> dict[str, Any]:
+    """Storage denies with HTTP 401/403 or with a 400 whose body carries statusCode 403.
+
+    A denial only counts when the service-role lookup confirms no object was written.
+    """
+    expected = "401/403 and no object written"
+    if write.get("status") is None:
+        return unreachable(name, write, expected, note=note)
+    body_status = storage_body_status(write)
+    denied = write.get("status") in (401, 403) or body_status in ("401", "403")
+    written = lookup.get("status") == 200
+    observed = f"http={write.get('status')} body.statusCode={body_status or 'none'} object_written={str(written).lower()}"
+    return result(name, "pass" if denied and not written else "fail", observed, expected, {"write": write, "lookup": lookup}, note=note)
+
+
+def classify_realtime_write(name: str, write: dict[str, Any], *, controls: dict[str, Any] | None = None, note: str = "") -> dict[str, Any]:
+    """Realtime's REST broadcast answers 202 when it accepts the message as a write."""
+    expected = "401/403"
+    if write.get("status") is None:
+        return unreachable(name, write, expected, note=note)
+    evidence: dict[str, Any] = {"write": write}
+    if controls:
+        evidence["controls"] = controls
+    return result(name, "pass" if write.get("status") in (401, 403) else "fail", f"http={write.get('status')}", expected, evidence, note=note)
 
 
 def evaluate_disposable() -> dict[str, Any]:
@@ -139,11 +189,12 @@ def evaluate_disposable() -> dict[str, Any]:
     ports = {"AUTH_PORT": "18999", "REST_PORT": "18998", "STORAGE_PORT": "18997", "REALTIME_PORT": "18996", "EDGE_PORT": "18995"}
     env = {**os.environ, "COMPOSE_PROJECT_NAME": project, "SYNTHETIC_ANON_KEY": anon, "SYNTHETIC_SERVICE_KEY": service,
            "EDGE_FUNCTIONS_PATH": str(functions), "EDGE_DISPATCHER_PATH": str(Path(__file__).resolve().parents[5] / "packages/dev/docker/edge-main"), **ports}
-    up = ["docker", "compose", "--file", str(COMPOSE), "up", "-d", "postgres", "db-init", "gotrue", "postgrest", "storage", "realtime", "edge-runtime"]
+    up = ["docker", "compose", "--file", str(COMPOSE), "up", "-d", "postgres", "db-init", "gotrue", "postgrest", "storage", "storage-init", "realtime", "edge-runtime"]
     results: list[dict[str, Any]] = []
     metadata: dict[str, Any] = {"mode": "disposable-synthetic", "compose_project": project, "images": {
         "gotrue": "supabase/gotrue:v2.189.0", "postgrest": "postgrest/postgrest:v13.0.8", "storage": "supabase/storage-api:v1.58.4", "realtime": "supabase/realtime:v2.89.0", "edge": "supabase/edge-runtime:v1.74.0"},
-        "synthetic_subject": SYNTHETIC_EMAIL}
+        "synthetic_subject": SYNTHETIC_EMAIL,
+        "fixtures": {"realtime_tenant_host": REALTIME_TENANT_HOST, "storage_denied_bucket": STORAGE_DENIED_BUCKET, "storage_granted_bucket": STORAGE_GRANTED_BUCKET}}
     try:
         started = subprocess.run(up, env=env, text=True, capture_output=True, timeout=180)
         if started.returncode:
@@ -155,6 +206,13 @@ def evaluate_disposable() -> dict[str, Any]:
         edge = "http://127.0.0.1:18995"
         health = wait_for(auth, "/health")
         results.append(result("gotrue_health", "pass" if health.get("status") == 200 else "fail", str(health.get("status")), "200", health))
+        # Readiness is recorded for every write surface so a later "unreachable" failure is attributable.
+        storage_health = wait_for(storage, "/status", 60)
+        results.append(result("storage_health", "pass" if storage_health.get("status") == 200 else "fail", str(storage_health.get("status")), "200", storage_health))
+        storage_fixture = wait_for(storage, f"/bucket/{STORAGE_GRANTED_BUCKET}", 60, token=service, ok=(200,))
+        results.append(result("storage_fixture", "pass" if storage_fixture.get("status") == 200 else "fail", str(storage_fixture.get("status")), "200 (storage-init seeded both buckets)", storage_fixture))
+        realtime_health = wait_for(realtime, "/api/tenants/realtime-dev/health", 90, token=service, headers={"Host": REALTIME_TENANT_HOST})
+        results.append(result("realtime_health", "pass" if realtime_health.get("status") == 200 else "fail", str(realtime_health.get("status")), "200", realtime_health))
         user = request(auth, "/admin/users", "POST", token=service, data=json_data({"email": SYNTHETIC_EMAIL, "password": SYNTHETIC_PASSWORD, "email_confirm": True}))
         if user.get("status") not in (200, 201):
             results.append(result("synthetic_user", "fail", str(user.get("status")), "201", user))
@@ -201,11 +259,26 @@ def evaluate_disposable() -> dict[str, Any]:
         results.append(result("postgrest_dml_replay", "pass" if dml.get("status") in (401, 403) else "fail", str(dml.get("status")), "401/403", dml, note="A successful DML replay fails the native-delegation adoption gate."))
         rpc = request(rest, "/rpc/oauth_probe_mutation", "POST", token=oauth_token, data=json_data({}))
         results.append(result("postgrest_rpc_replay", "pass" if rpc.get("status") in (401, 403) else "fail", str(rpc.get("status")), "401/403", rpc, note="The fixture intentionally grants authenticated EXECUTE to expose privileged-RPC replay risk."))
-        storage_write = request(storage, "/object/evaluation/owned.txt", "POST", token=oauth_token, data=b"synthetic", content_type="text/plain")
-        storage_status = "pass" if storage_write.get("status") in (401, 403) else ("untested" if storage_write.get("status") is None else "fail")
-        results.append(result("storage_write_replay", storage_status, str(storage_write.get("status")), "401/403", storage_write, note="A closed connection is recorded as untested rather than treated as a denial."))
-        realtime_write = request(realtime, "/api/broadcast", "POST", token=oauth_token, data=json_data({"messages": [{"topic": "synthetic", "event": "probe", "payload": {"source": "oauth"}}]}))
-        results.append(result("realtime_write_replay", "pass" if realtime_write.get("status") in (401, 403, 404, 422) else "untested", str(realtime_write.get("status")), "deny or explicitly unsupported", realtime_write, note="REST broadcast is the pinned Realtime write surface; an unavailable endpoint is reported as untested."))
+        # Storage addresses an object as /object/<bucket>/<key>; the service-role lookup is /object/info/<bucket>/<key>.
+        denied_key = f"{STORAGE_DENIED_BUCKET}/replayed.txt"
+        storage_write = request(storage, f"/object/{denied_key}", "POST", token=oauth_token, data=b"synthetic", content_type="text/plain")
+        storage_lookup = request(storage, f"/object/info/{denied_key}", token=service)
+        results.append(classify_storage_write("storage_write_replay", storage_write, storage_lookup,
+                                              note="The bucket has no INSERT policy, so this measures Storage's default deny for the read token."))
+        granted_key = f"{STORAGE_GRANTED_BUCKET}/replayed.txt"
+        granted_write = request(storage, f"/object/{granted_key}", "POST", token=oauth_token, data=b"synthetic", content_type="text/plain")
+        granted_lookup = request(storage, f"/object/info/{granted_key}", token=service)
+        results.append(classify_storage_write("storage_write_replay_granted_policy", granted_write, granted_lookup,
+                                              note="The fixture intentionally grants authenticated INSERT on this bucket, mirroring the privileged-RPC fixture: a written object shows Storage does not distinguish the read client's token from a first-party session."))
+        broadcast_message = {"topic": "synthetic", "event": "probe", "payload": {"source": "oauth"}}
+        realtime_headers = {"Host": REALTIME_TENANT_HOST}
+        realtime_write = request(realtime, "/api/broadcast", "POST", token=oauth_token, data=json_data({"messages": [broadcast_message]}), headers={**realtime_headers, "apikey": oauth_token})
+        realtime_controls = {
+            "no_token": request(realtime, "/api/broadcast", "POST", data=json_data({"messages": [broadcast_message]}), headers=realtime_headers),
+            "private_topic": request(realtime, "/api/broadcast", "POST", token=oauth_token, data=json_data({"messages": [{**broadcast_message, "private": True}]}), headers={**realtime_headers, "apikey": oauth_token}),
+        }
+        results.append(classify_realtime_write("realtime_write_replay", realtime_write, controls=realtime_controls,
+                                               note="REST broadcast is the pinned Realtime write surface, addressed to the seeded realtime-dev tenant; 202 Accepted means the read token was accepted as a broadcast writer. The no-token control shows the endpoint gates only on JWT validity."))
         privileged = request(edge, "/oauth-probe", "POST", token=oauth_token, data=json_data({"operation": "write"}))
         privileged_allowed = privileged.get("status") == 200 and (privileged.get("body") or {}).get("privileged_probe") is True
         results.append(result("privileged_function_replay", "fail" if privileged_allowed else "pass", str(privileged.get("status")), "401/403", privileged, note="The disposable dispatcher is configured without JWT verification to measure the exposed edge boundary."))
@@ -239,7 +312,7 @@ def evaluate_disposable() -> dict[str, Any]:
             result("firebase_origin_session", "supported", "web persistence is scoped to an origin", "documented browser behavior", "https://firebase.google.com/docs/auth/web/auth-state-persistence"),
             result("firebase_live_config", "untested", "no Firebase project, issuer, or credentials supplied", "live issuer/project/role/MFA/linking verification", note="Must be tested in a separately authorized environment."),
         ])
-        gate_failures = [item["id"] for item in results if item["status"] == "fail" and item["id"] in {"postgrest_dml_replay", "postgrest_rpc_replay", "storage_write_replay", "realtime_write_replay", "privileged_function_replay", "gotrue_user_mutation_replay", "wrong_audience", "asymmetric_signing"}]
+        gate_failures = [item["id"] for item in results if item["status"] == "fail" and item["id"] in GATE_IDS]
         metadata["gate_failures"] = gate_failures
         metadata["firebase_live_verification"] = "untested"
         return {"metadata": metadata, "adoption_gate": "failed" if gate_failures else "passed", "results": results}
@@ -267,7 +340,7 @@ def render_results(report: dict[str, Any]) -> str:
         if isinstance(value, list):
             return [sanitize(item, key) for item in value]
         if isinstance(value, str) and ("code=" in value or "Bearer ey" in value):
-            return re.sub(r"([?&]code=)[^&\\s]+", r"\\1<redacted>", value).replace("Bearer ey", "Bearer <redacted>")
+            return re.sub(r"([?&]code=)[^&\s]+", r"\1<redacted>", value).replace("Bearer ey", "Bearer <redacted>")
         return value
 
     safe_report = sanitize(report)

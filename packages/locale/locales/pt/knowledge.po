@@ -1,0 +1,427 @@
+msgid ""
+msgstr ""
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: @lingui/cli\n"
+"Language: pt\n"
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"PO-Revision-Date: \n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Plural-Forms: \n"
+
+msgid "A follow-up question keeps the evidence shown here in context."
+msgstr "Uma pergunta de acompanhamento mantém as evidências mostradas aqui em contexto."
+
+msgid "Access to this document was revoked."
+msgstr "O acesso a este documento foi revogado."
+
+msgid "Acknowledge the changed evidence before publishing."
+msgstr "Confirme a evidência alterada antes de publicar."
+
+msgid "Add a document"
+msgstr "Adicionar um documento"
+
+msgid "Additional proposed fields"
+msgstr "Campos adicionais propostos"
+
+msgid "Also proposed"
+msgstr "Também proposto"
+
+msgid "Answer"
+msgstr "Resposta"
+
+msgid "Back to company knowledge"
+msgstr "Voltar ao conhecimento da empresa"
+
+msgid "Back to manual search"
+msgstr "Voltar à pesquisa manual"
+
+msgid "Captured"
+msgstr "Capturado"
+
+msgid "Captured document"
+msgstr "Documento capturado"
+
+msgid "Check freshness"
+msgstr "Verificar atualidade"
+
+msgid "Choices"
+msgstr "Opções"
+
+msgid "Choose either a file or a URL, not both."
+msgstr "Escolha um arquivo ou uma URL, não ambos."
+
+msgid "Choose one PDF, image, photo, or HTTPS address."
+msgstr "Escolha um PDF, imagem, foto ou endereço HTTPS."
+
+msgid "Company knowledge"
+msgstr "Conhecimento da empresa"
+
+#. placeholder {0}: evidence.length
+msgid "Composing an answer from {0} evidence blocks…"
+msgstr "Preparando uma resposta a partir de {0} blocos de evidências…"
+
+msgid "Confirm removal"
+msgstr "Confirmar remoção"
+
+msgid "Confirm this field against the source evidence."
+msgstr "Confirme este campo em relação à evidência da fonte."
+
+msgid "Corrections are saved. The document can be published."
+msgstr "As correções foram salvas. O documento pode ser publicado."
+
+msgid "Current version"
+msgstr "Versão atual"
+
+msgid "Document"
+msgstr "Documento"
+
+msgid "Download original"
+msgstr "Baixar original"
+
+msgid "Download original · page {page}"
+msgstr "Baixar original · página {page}"
+
+msgid "Drag and drop a PDF or image here, or choose a file."
+msgstr "Arraste e solte um PDF ou imagem aqui, ou escolha um arquivo."
+
+msgid "Drive sources are enrolled by an administrator with a read-only connector credential held in Secret Manager. Signing into this portal does not authorize Drive access: a document is delivered only after a live check with your own Drive permissions."
+msgstr "As fontes do Google Drive são registradas por um administrador com uma credencial de conector somente leitura mantida no Gerenciador de Segredos. Fazer login neste portal não autoriza acesso ao Drive: um documento é entregue apenas após uma verificação em tempo real com suas próprias permissões do Drive."
+
+msgid "Existing item"
+msgstr "Item existente"
+
+msgid "Extracted text anchored to page numbers. Page images are not available for this document; download the original to see the layout."
+msgstr "Texto extraído ancorado aos números das páginas. As imagens das páginas não estão disponíveis para este documento; baixe o original para ver o layout."
+
+msgid "Extracting"
+msgstr "Extraindo"
+
+msgid "Extraction failed"
+msgstr "Falha na extração"
+
+msgid "Fetched from"
+msgstr "Obtido de"
+
+msgid "Find the right manual."
+msgstr "Encontre o manual correto."
+
+msgid "Google Drive sources"
+msgstr "Fontes do Google Drive"
+
+msgid "I reviewed this evidence"
+msgstr "Revisei esta evidência"
+
+msgid "Intake review"
+msgstr "Revisão de entrada"
+
+msgid "Item association"
+msgstr "Associação de item"
+
+msgid "Item lookup is not available for this library. The document can still be published as a generic document."
+msgstr "A busca de item não está disponível para esta biblioteca. O documento ainda pode ser publicado como um documento genérico."
+
+msgid "Item lookup is unavailable right now."
+msgstr "A busca de item não está disponível agora."
+
+msgid "Library"
+msgstr "Biblioteca"
+
+msgid "Library and access"
+msgstr "Biblioteca e acesso"
+
+msgid "Link this document to one existing item, or keep it as a generic document. Linking never creates or changes items."
+msgstr "Vincule este documento a um item existente, ou mantenha-o como um documento genérico. O vínculo nunca cria nem altera itens."
+
+msgid "Live record"
+msgstr "Registro ao vivo"
+
+msgid "Machine"
+msgstr "Máquina"
+
+msgid "Manual file"
+msgstr "Arquivo manual"
+
+msgid "Manual search is unavailable."
+msgstr "A pesquisa manual não está disponível."
+
+msgid "Manufacturer"
+msgstr "Fabricante"
+
+msgid "Manufacturer, part number, revision, machine, or keyword"
+msgstr "Fabricante, número da peça, revisão, máquina ou palavra-chave"
+
+msgid "Needs review"
+msgstr "Precisa de revisão"
+
+msgid "No evidence on any page"
+msgstr "Nenhuma evidência em nenhuma página"
+
+msgid "No item association (generic document)"
+msgstr "Nenhuma associação com item (documento genérico)"
+
+msgid "No matching items."
+msgstr "Nenhum item correspondente."
+
+msgid "No matching manuals found."
+msgstr "Nenhum manual correspondente encontrado."
+
+msgid "No text has been extracted yet."
+msgstr "Nenhum texto foi extraído ainda."
+
+msgid "Not set"
+msgstr "Não definido"
+
+msgid "Not yet decided. Saving the review records your choice."
+msgstr "Ainda não decidido. Salvar a revisão registra sua escolha."
+
+#. placeholder {0}: entity.observedAt
+msgid "Observed {0}"
+msgstr "Observado {0}"
+
+msgid "Only public HTTPS addresses are fetched, through the server's fetch policy, and the fetched copy is stored immutably."
+msgstr "Apenas endereços HTTPS públicos são buscados por meio da política de busca do servidor, e a cópia buscada é armazenada imutavelmente."
+
+msgid "Only the first candidates are shown; narrow the search."
+msgstr "Apenas os primeiros candidatos são mostrados; restrinja a pesquisa."
+
+msgid "Open record"
+msgstr "Abrir registro"
+
+#. placeholder {0}: selected?.classification ?? ""
+msgid "Owner: {actorId}. Access: {0}. Readers of this library can find the document once it is reviewed and published."
+msgstr "Responsável: {actorId}. Acesso: {0}. Os leitores desta biblioteca podem encontrar o documento depois que ele for revisado e publicado."
+
+#. placeholder {0}: source.page
+msgid "page {0}"
+msgstr "página {0}"
+
+msgid "Page {page}"
+msgstr "Página {page}"
+
+msgid "Page not found."
+msgstr "Página não encontrada."
+
+msgid "Part number"
+msgstr "Número da peça"
+
+msgid "Part number, MPN, or name"
+msgstr "Número da peça, MPN ou nome"
+
+msgid "Partial source answer"
+msgstr "Resposta de fonte parcial"
+
+msgid "PDF and image files are captured with their immutable object version before extraction."
+msgstr "Arquivos PDF e imagem são capturados com sua versão de objeto imutável antes da extração."
+
+msgid "Proposed fields"
+msgstr "Campos propostos"
+
+msgid "Proposed fields are ready. Confirm or correct them, then save."
+msgstr "Os campos propostos estão prontos. Confirme ou corrija-os e salve."
+
+#. placeholder {0}: model.proposed[field]
+msgid "Proposed: {0}"
+msgstr "Proposto: {0}"
+
+msgid "Publish manual"
+msgstr "Publicar manual"
+
+msgid "Published"
+msgstr "Publicado"
+
+msgid "Remove manual"
+msgstr "Remover manual"
+
+msgid "Remove this manual?"
+msgstr "Remover este manual?"
+
+msgid "Request unavailable"
+msgstr "Solicitação indisponível"
+
+msgid "Review document"
+msgstr "Revisar documento"
+
+msgid "Reviewed"
+msgstr "Revisado"
+
+msgid "Revision"
+msgstr "Revisão"
+
+msgid "Save review"
+msgstr "Salvar revisão"
+
+msgid "Save the review before publishing."
+msgstr "Salve a revisão antes de publicar."
+
+msgid "Saved correction"
+msgstr "Correção salva"
+
+msgid "Search items"
+msgstr "Pesquisar itens"
+
+msgid "Search manuals"
+msgstr "Pesquisar manuais"
+
+msgid "Search published company manuals by manufacturer, part number, revision, machine, or keyword. Open the exact original version from every result."
+msgstr "Pesquise manuais da empresa publicados por fabricante, número da peça, revisão, máquina ou palavra-chave. Abra a versão original exata de cada resultado."
+
+msgid "Searching authorized sources…"
+msgstr "Pesquisando fontes autorizadas…"
+
+msgid "Searching…"
+msgstr "Pesquisando…"
+
+msgid "see evidence"
+msgstr "ver evidência"
+
+msgid "Selected: {fileName}"
+msgstr "Selecionado: {fileName}"
+
+msgid "Show evidence ({evidenceCount})"
+msgstr "Mostrar evidência ({evidenceCount})"
+
+msgid "Some authorized manuals were unavailable."
+msgstr "Alguns manuais autorizados não estavam disponíveis."
+
+msgid "Some sources did not answer; results may be partial."
+msgstr "Algumas fontes não responderam; os resultados podem ser parciais."
+
+msgid "Source details"
+msgstr "Detalhes da fonte"
+
+msgid "Source evidence"
+msgstr "Evidência da fonte"
+
+msgid "Source pages"
+msgstr "Páginas da fonte"
+
+#. placeholder {0}: entity.sourceRevision
+msgid "Source revision: {0}"
+msgstr "Revisão de origem: {0}"
+
+msgid "Source unavailable"
+msgstr "Fonte indisponível"
+
+msgid "Source URL"
+msgstr "URL de origem"
+
+msgid "Sources"
+msgstr "Origens"
+
+msgid "Start a new question"
+msgstr "Iniciar uma nova pergunta"
+
+msgid "State:"
+msgstr "Estado:"
+
+msgid "Status {status}"
+msgstr "Status {status}"
+
+msgid "Take a photo of a nameplate or label"
+msgstr "Tire uma foto de uma placa de identificação ou rótulo"
+
+msgid "Text is being extracted from the document."
+msgstr "O texto está sendo extraído do documento."
+
+msgid "The document could not be fetched from that address."
+msgstr "O documento não pôde ser recuperado desse endereço."
+
+msgid "The document could not be fetched from that address. Check that it is a public HTTPS link to a PDF or image, or upload the file instead."
+msgstr "O documento não pôde ser recuperado desse endereço. Verifique se é um link HTTPS público para um PDF ou imagem, ou envie o arquivo."
+
+msgid "The document is queued for extraction."
+msgstr "O documento está na fila de extração."
+
+msgid "The document is stored and waiting for extraction."
+msgstr "O documento está armazenado e aguardando extração."
+
+msgid "The document was captured, but text could not be extracted. Review cannot start until extraction succeeds."
+msgstr "O documento foi capturado, mas o texto não pôde ser extraído. A revisão não pode ser iniciada até que a extração seja bem-sucedida."
+
+msgid "The knowledge company is not configured."
+msgstr "A empresa de conhecimento não está configurada."
+
+msgid "The knowledge service could not complete this request."
+msgstr "O serviço de conhecimento não pôde completar esta solicitação."
+
+msgid "The request did not complete within its time budget."
+msgstr "A solicitação não foi concluída dentro do seu orçamento de tempo."
+
+msgid "The request was not valid."
+msgstr "A solicitação não era válida."
+
+msgid "The review could not be saved. Check the fields and unresolved evidence."
+msgstr "A revisão não pôde ser salva. Verifique os campos e as evidências não resolvidas."
+
+msgid "The review service is unavailable. Nothing was changed."
+msgstr "O serviço de revisão está indisponível. Nada foi alterado."
+
+msgid "The upload could not be captured."
+msgstr "O envio não pôde ser capturado."
+
+msgid "The upload service is unavailable. The document was not captured."
+msgstr "O serviço de envio está indisponível. O documento não foi capturado."
+
+msgid "This action is not configured for the library."
+msgstr "Esta ação não está configurada para a biblioteca."
+
+msgid "This document changed since you opened it, or the same content was already reviewed. Reload and check before saving again."
+msgstr "Este documento foi alterado desde que você o abriu, ou o mesmo conteúdo já foi revisado. Recarregue e verifique antes de salvar novamente."
+
+msgid "This document changed while you were working. Reload it and try again."
+msgstr "Este documento foi alterado enquanto você estava trabalhando. Recarregue-o e tente novamente."
+
+msgid "This document is not available for review."
+msgstr "Este documento não está disponível para revisão."
+
+msgid "This document version is not available."
+msgstr "Esta versão do documento não está disponível."
+
+msgid "This removes the manual from {sourceDisplayName} search and blocks its original version from download."
+msgstr "Isso remove o manual da pesquisa de {sourceDisplayName} e bloqueia sua versão original de ser baixada."
+
+msgid "This review was published; it is now read-only."
+msgstr "Esta revisão foi publicada; agora é somente leitura."
+
+msgid "Title"
+msgstr "Título"
+
+msgid "Upload a manual"
+msgstr "Enviar um manual"
+
+msgid "Upload a manual, photograph a nameplate, or point at a public address. Access follows the library you choose."
+msgstr "Envie um manual, fotografe uma placa de identificação ou aponte para um endereço público. O acesso segue a biblioteca que você escolher."
+
+msgid "Upload manual"
+msgstr "Enviar manual"
+
+msgid "Valid review fields are required."
+msgstr "Campos de revisão válidos são necessários."
+
+msgid "You are not allowed to add documents to the selected library."
+msgstr "Você não tem permissão para adicionar documentos à biblioteca selecionada."
+
+msgid "You are not allowed to add documents to this library."
+msgstr "Você não tem permissão para adicionar documentos a esta biblioteca."
+
+msgid "You are not allowed to publish in this library. The review was kept."
+msgstr "Você não tem permissão para publicar nesta biblioteca. A revisão foi mantida."
+
+msgid "You are not allowed to review documents in this library."
+msgstr "Você não tem permissão para revisar documentos nesta biblioteca."
+
+msgid "You are not signed in to this library, or your access was revoked."
+msgstr "Você não está conectado a esta biblioteca, ou seu acesso foi revogado."
+
+msgid "You cannot add documents to any library. Ask an administrator for a library grant."
+msgstr "Você não pode adicionar documentos a nenhuma biblioteca. Peça a um administrador uma concessão de biblioteca."
+
+msgid "You do not have permission for this action in this library."
+msgstr "Você não tem permissão para esta ação nesta biblioteca."
+
+msgid "Your access changed while this request ran. Search again."
+msgstr "Seu acesso foi alterado enquanto esta solicitação estava em execução. Pesquise novamente."

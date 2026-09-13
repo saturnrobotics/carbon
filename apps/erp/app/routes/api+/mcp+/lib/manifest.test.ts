@@ -69,18 +69,24 @@ describe("buildMcpManifest", () => {
     }
   });
 
-  it("derives its counts from tool-metadata rather than restating them", () => {
+  it("derives its counts from the disclosed tool-metadata rather than restating them", () => {
     // This is the anti-drift property: remove a module and the manifest stops
-    // advertising it without anyone remembering to edit this file.
-    const modules = [
-      ...new Set(toolMetadata.tools.map((t) => t.module))
-    ].sort();
+    // advertising it without anyone remembering to edit this file. The knowledge
+    // module is the deliberate exception — restated here, independently of the
+    // filter the manifest uses, so it is pinned rather than merely derived: its
+    // operations serve delegated workforce callers only and must not be advertised.
+    const disclosed = toolMetadata.tools.filter(
+      (t) => t.module !== "knowledge"
+    );
+    const modules = [...new Set(disclosed.map((t) => t.module))].sort();
     const classifications = [
-      ...new Set(toolMetadata.tools.map((t) => t.classification))
+      ...new Set(disclosed.map((t) => t.classification))
     ].sort();
 
-    expect(meta.operations.total).toBe(toolMetadata.totalTools);
+    expect(disclosed.length).toBeLessThan(toolMetadata.totalTools);
+    expect(meta.operations.total).toBe(disclosed.length);
     expect(meta.operations.modules).toEqual(modules);
+    expect(meta.operations.modules).not.toContain("knowledge");
     expect(meta.operations.classifications).toEqual(classifications);
     expect(modules.length).toBeGreaterThan(0);
   });

@@ -9,12 +9,39 @@ export type BudgetReservation = {
   maxTokens: number;
   maxMicroUsd: number;
 };
-/** Separate operational functions cannot mutate any business/source table. */
-export function durableBudget(
-  pool: Pool,
+
+/** Pure guards below are the TypeScript half of the budget contract; the ledger arithmetic lives in `knowledge_metering`. */
+
+/** A ceiling is a positive safe integer pair; anything else is an invalid reservation, never a zero-cost one. */
+export function assertBillableCeiling(reservation: BudgetReservation): void {
+  if (
+    !Number.isSafeInteger(reservation.maxTokens) ||
+    !Number.isSafeInteger(reservation.maxMicroUsd) ||
+    reservation.maxTokens < 1 ||
+    reservation.maxMicroUsd < 1
+  )
+    throw Error("Invalid billable ceiling");
+}
+
+/** Settled usage is a non-negative safe integer pair; the ledger refuses usage above the reserved ceiling. */
+export function assertProviderUsage(
+  actualTokens: number,
+  actualMicroUsd: number
+): void {
+  if (
+    !Number.isSafeInteger(actualTokens) ||
+    !Number.isSafeInteger(actualMicroUsd) ||
+    actualTokens < 0 ||
+    actualMicroUsd < 0
+  )
+    throw Error("Invalid provider usage");
+}
+
+/** A machine principal may only be billed against a registered source it indexes. */
+export function requireBillableSource(
   principal: Principal,
   sourceId?: string
-) {
+): Principal & { sourceId?: string } {
   if (
     principal.kind === "machine" &&
     (!sourceId ||
@@ -22,16 +49,19 @@ export function durableBudget(
       !principal.capabilities.includes("source.index.read"))
   )
     throw Error("Registered machine source required for indexing billing");
-  const databasePrincipal = { ...principal, sourceId };
+  return { ...principal, sourceId };
+}
+
+/** Separate operational functions cannot mutate any business/source table. */
+export function durableBudget(
+  pool: Pool,
+  principal: Principal,
+  sourceId?: string
+) {
+  const databasePrincipal = requireBillableSource(principal, sourceId);
   return {
     async reserve(reservation: BudgetReservation) {
-      if (
-        !Number.isSafeInteger(reservation.maxTokens) ||
-        !Number.isSafeInteger(reservation.maxMicroUsd) ||
-        reservation.maxTokens < 1 ||
-        reservation.maxMicroUsd < 1
-      )
-        throw Error("Invalid billable ceiling");
+      assertBillableCeiling(reservation);
       const result = await withKnowledgeTransaction(
         pool,
         databasePrincipal,
@@ -63,13 +93,7 @@ export function durableBudget(
       actualTokens: number,
       actualMicroUsd: number
     ) {
-      if (
-        !Number.isSafeInteger(actualTokens) ||
-        !Number.isSafeInteger(actualMicroUsd) ||
-        actualTokens < 0 ||
-        actualMicroUsd < 0
-      )
-        throw Error("Invalid provider usage");
+      assertProviderUsage(actualTokens, actualMicroUsd);
       await withKnowledgeTransaction(
         pool,
         databasePrincipal,

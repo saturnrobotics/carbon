@@ -31,10 +31,69 @@ REQUIRED_SECRETS = {
     "knowledge-schema": {"KNOWLEDGE_MIGRATION_DATABASE_URL"},
     "knowledge-retention": {"KNOWLEDGE_MAINTENANCE_DATABASE_URL"},
 }
+# Audience environment variables are derived from the Terraform foundation
+# (`terraform output -json`, key `service_audiences`), keyed by the service whose
+# audience they carry. A plan value is accepted only when it matches, or with the
+# explicit --override-audiences flag.
+AUDIENCE_ENVIRONMENT = {
+    "knowledge-web": {"KNOWLEDGE_WEB_IAP_AUDIENCE": "knowledge-web", "KNOWLEDGE_QUERY_AUDIENCE": "knowledge-query", "KNOWLEDGE_WORKER_AUDIENCE": "knowledge-ingest"},
+    "knowledge-ingest": {"KNOWLEDGE_IDENTITY_AUDIENCE": "knowledge-query"},
+}
+# Service-level (not revision) annotations Terraform owns on knowledge-web. A v1
+# `replace` writes the whole Service, so the controller copies these from the
+# observed service instead of letting a promotion silently reset them.
+FOUNDATION_SERVICE_ANNOTATIONS = ("run.googleapis.com/iap-enabled", "run.googleapis.com/ingress", "run.googleapis.com/custom-audiences", "run.googleapis.com/binary-authorization")
+IAP_ANNOTATION = "run.googleapis.com/iap-enabled"
+IAP_SERVICES = {"knowledge-web"}
+# Units holding a database credential get the network tag the foundation's
+# egress firewall allows toward Carbon's private PostgreSQL listener.
+SOURCE_DATABASE_CLIENT_TAG = "knowledge-source-database-client"
+DATABASE_UNITS = frozenset(name for name, secrets in REQUIRED_SECRETS.items() if any(key.endswith("_DATABASE_URL") for key in secrets))
+# Knowledge migrations are `<14-digit timestamp>_<slug>` files applied in name order, so
+# the ledger head (`max(name)` in `knowledge_migrations.ledger`) and a unit's compatible
+# window compare as plain strings. Every database unit declares the window its build
+# was verified against; the controller refuses to promote it onto a ledger outside it.
+MIGRATION_NAME = re.compile(r"^[0-9]{14}_[a-z0-9-]+$")
+LEDGER_SCHEMA_VERSION = 1
 
 
 def canonical_digest(value: Any) -> str:
     return "sha256:" + hashlib.sha256(json.dumps(value, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+
+
+def foundation_audiences(outputs: dict[str, Any]) -> dict[str, str]:
+    """Read `service_audiences` from a `terraform output -json` document."""
+    audiences = outputs.get("service_audiences", {}).get("value") if isinstance(outputs.get("service_audiences"), dict) else None
+    if not isinstance(audiences, dict) or not audiences:
+        raise ValueError("Foundation outputs must contain the service_audiences map from `terraform output -json`")
+    expected = {receiver for mapping in AUDIENCE_ENVIRONMENT.values() for receiver in mapping.values()}
+    missing = sorted(expected - audiences.keys())
+    if missing or not all(isinstance(value, str) and value for value in audiences.values()):
+        raise ValueError(f"Foundation outputs lack an audience for: {', '.join(missing) or 'a receiver'}")
+    return {name: value for name, value in audiences.items()}
+
+
+def apply_foundation_audiences(plan: dict[str, Any], outputs: dict[str, Any], *, override: bool = False) -> dict[str, Any]:
+    """Fill audience environment from the foundation; refuse silent drift from it."""
+    audiences = foundation_audiences(outputs)
+    services = plan.get("services")
+    if not isinstance(services, dict):
+        raise ValueError("Release plan services must be an object")
+    for name, mapping in AUDIENCE_ENVIRONMENT.items():
+        spec = services.get(name)
+        if not isinstance(spec, dict):
+            continue
+        environment = spec.setdefault("environment", {})
+        if not isinstance(environment, dict):
+            raise ValueError(f"{name} environment and secrets must be objects")
+        for variable, receiver in mapping.items():
+            expected = audiences[receiver]
+            current = environment.get(variable)
+            if current is None:
+                environment[variable] = expected
+            elif current != expected and not override:
+                raise ValueError(f"{name} {variable} differs from the foundation output for {receiver}; pass --override-audiences to keep the plan value")
+    return plan
 
 
 def validate_plan(plan: dict[str, Any]) -> None:
@@ -92,6 +151,14 @@ def validate_plan(plan: dict[str, Any]) -> None:
             raise ValueError(f"{name} requires a bounded max_instances")
         if not isinstance(spec.get("concurrency"), int) or spec["concurrency"] < 1:
             raise ValueError(f"{name} requires bounded concurrency")
+        migrations = spec.get("migrations")
+        if name in DATABASE_UNITS:
+            if not isinstance(migrations, dict) or set(migrations) != {"minimum", "maximum"} or not all(isinstance(migrations[key], str) and MIGRATION_NAME.fullmatch(migrations[key]) for key in ("minimum", "maximum")):
+                raise ValueError(f"{name} requires migrations.minimum and migrations.maximum knowledge migration names")
+            if migrations["minimum"] > migrations["maximum"]:
+                raise ValueError(f"{name} migrations.minimum is newer than migrations.maximum")
+        elif migrations is not None:
+            raise ValueError(f"{name} holds no database credential and cannot declare migration compatibility")
     receipts = plan.get("build_receipt", {})
     if not isinstance(receipts, dict):
         raise ValueError("build_receipt must be an object")
@@ -102,12 +169,45 @@ def validate_plan(plan: dict[str, Any]) -> None:
             raise ValueError(f"{name} needs the verified build receipt for its selected immutable image")
 
 
+def ledger_head(ledger: dict[str, Any]) -> str | None:
+    """Head of an observed `knowledge_migrations.ledger`; None when no migration has been applied."""
+    if not isinstance(ledger, dict) or ledger.get("schema_version") != LEDGER_SCHEMA_VERSION or not isinstance(ledger.get("names"), list):
+        raise ValueError("Schema ledger observation must use schema_version 1 and a names list")
+    # `applyKnowledgeMigrations` records the file name, `.sql` included; windows use the bare name.
+    names = [name[:-4] if isinstance(name, str) and name.endswith(".sql") else name for name in ledger["names"]]
+    if not all(isinstance(name, str) and MIGRATION_NAME.fullmatch(name) for name in names):
+        raise ValueError("Schema ledger observation contains a name that is not a knowledge migration")
+    return max(names) if names else None
+
+
+def check_migration_compatibility(plan: dict[str, Any], ledger: dict[str, Any] | None) -> dict[str, str | None]:
+    """Refuse a database unit whose compatible window does not contain the deployed ledger head."""
+    selected = [name for name in sorted(plan.get("deploy", {})) if name in DATABASE_UNITS]
+    if not selected:
+        return {}
+    if ledger is None:
+        raise ValueError(f"Promoting {', '.join(selected)} requires --schema-ledger, the observed knowledge_migrations.ledger")
+    head = ledger_head(ledger)
+    for name in selected:
+        window = plan["services"][name]["migrations"]
+        if head is None:
+            if name != "knowledge-schema":
+                raise ValueError(f"{name} cannot be promoted before the schema job applies the first knowledge migration")
+            continue
+        if head < window["minimum"]:
+            raise ValueError(f"{name} requires migration {window['minimum']} but the ledger head is {head}; run the schema job first")
+        if head > window["maximum"]:
+            raise ValueError(f"{name} supports migrations up to {window['maximum']} but the ledger head is {head}; select a build verified against it")
+    return {name: head for name in selected}
+
+
 def revision_digest(spec: dict[str, Any]) -> str:
     return canonical_digest({key: spec[key] for key in ("image", "service_account", "environment", "secrets", "resources", "max_instances", "concurrency", "network", "subnetwork", "egress")})
 
 
-def select_mutations(plan: dict[str, Any], current: dict[str, Any], observed: dict[str, str]) -> list[dict[str, Any]]:
+def select_mutations(plan: dict[str, Any], current: dict[str, Any], observed: dict[str, str], ledger: dict[str, Any] | None = None) -> list[dict[str, Any]]:
     validate_plan(plan)
+    check_migration_compatibility(plan, ledger)
     if current.get("generation") != plan.get("expected_generation"):
         raise ValueError("Release manifest generation changed; re-plan before promotion")
     mutations = []
@@ -151,14 +251,26 @@ def secret_reference(value: str) -> tuple[str, str]:
     return parts[-3], parts[-1]
 
 
-def revision_document(name: str, spec: dict[str, Any], digest: str) -> dict[str, Any]:
+def foundation_service_annotations(name: str, observed: dict[str, Any] | None) -> dict[str, str]:
+    """Return the Terraform-owned service annotations a replacement must keep."""
+    annotations = (observed or {}).get("metadata", {}).get("annotations", {}) if observed else {}
+    kept = {key: annotations[key] for key in FOUNDATION_SERVICE_ANNOTATIONS if isinstance(annotations.get(key), str)}
+    if name in IAP_SERVICES and kept.get(IAP_ANNOTATION) != "true":
+        raise ValueError(f"{name} foundation shell with IAP enabled is not applied; run terraform apply before promoting it")
+    return kept
+
+
+def revision_document(name: str, spec: dict[str, Any], digest: str, observed: dict[str, Any] | None = None) -> dict[str, Any]:
     environment = [{"name": key, "value": value} for key, value in sorted(spec["environment"].items())]
     environment += [{"name": key, "valueFrom": {"secretKeyRef": {"name": secret_reference(value)[0], "key": secret_reference(value)[1]}}} for key, value in sorted(spec["secrets"].items())]
+    interface: dict[str, Any] = {"network": spec["network"], "subnetwork": spec["subnetwork"]}
+    if name in DATABASE_UNITS:
+        interface["tags"] = [SOURCE_DATABASE_CLIENT_TAG]
     template = {
         "metadata": {
             "labels": {"knowledge.carbon/revision-digest": digest},
             "annotations": {
-                "run.googleapis.com/network-interfaces": json.dumps([{"network": spec["network"], "subnetwork": spec["subnetwork"]}], separators=(",", ":")),
+                "run.googleapis.com/network-interfaces": json.dumps([interface], separators=(",", ":")),
                 "run.googleapis.com/vpc-access-egress": spec["egress"],
             },
         },
@@ -170,7 +282,11 @@ def revision_document(name: str, spec: dict[str, Any], digest: str) -> dict[str,
     if spec["kind"] == "job":
         return {"apiVersion": "run.googleapis.com/v1", "kind": "Job", "metadata": {"name": name}, "spec": {"template": {"template": template}}}
     template["metadata"]["annotations"]["autoscaling.knative.dev/maxScale"] = str(spec["max_instances"])
-    return {"apiVersion": "serving.knative.dev/v1", "kind": "Service", "metadata": {"name": name}, "spec": {"template": template}}
+    metadata: dict[str, Any] = {"name": name}
+    kept = foundation_service_annotations(name, observed)
+    if kept:
+        metadata["annotations"] = kept
+    return {"apiVersion": "serving.knative.dev/v1", "kind": "Service", "metadata": metadata, "spec": {"template": template}}
 
 
 def save_manifest(path: Path, plan: dict[str, Any], current: dict[str, Any], mutations: list[dict[str, Any]]) -> None:
@@ -180,6 +296,7 @@ def save_manifest(path: Path, plan: dict[str, Any], current: dict[str, Any], mut
             "revision_digest": mutation["revision_digest"],
             "image_digest": plan["services"][mutation["name"]]["image"].rsplit("@", 1)[1],
             "deployed_revision": mutation.get("deployed_revision"),
+            "migrations": plan["services"][mutation["name"]].get("migrations"),
         }
     path.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.NamedTemporaryFile("w", dir=path.parent, delete=False) as stream:
@@ -190,7 +307,7 @@ def save_manifest(path: Path, plan: dict[str, Any], current: dict[str, Any], mut
     temporary.replace(path)
 
 
-def promote(plan: dict[str, Any], current: dict[str, Any], *, project: str, region: str, manifest: Path, adapter: Gcloud) -> list[dict[str, Any]]:
+def promote(plan: dict[str, Any], current: dict[str, Any], *, project: str, region: str, manifest: Path, adapter: Gcloud, ledger: dict[str, Any] | None = None) -> list[dict[str, Any]]:
     selected = sorted(plan.get("deploy", {}))
     observed_documents: dict[str, dict[str, Any]] = {}
     observed = {}
@@ -201,11 +318,14 @@ def promote(plan: dict[str, Any], current: dict[str, Any], *, project: str, regi
             continue
         observed_documents[name] = document
         observed[name] = document.get("spec", {}).get("template", {}).get("metadata", {}).get("labels", {}).get("knowledge.carbon/revision-digest", "")
-    mutations = select_mutations(plan, current, observed)
+    mutations = select_mutations(plan, current, observed, ledger)
+    # Render every document before the first write so a missing IAP shell
+    # refuses the whole promotion instead of a partial one.
+    documents = {mutation["name"]: revision_document(mutation["name"], plan["services"][mutation["name"]], mutation["revision_digest"], observed_documents.get(mutation["name"])) for mutation in mutations}
     promoted: list[dict[str, Any]] = []
     for mutation in mutations:
         name, spec = mutation["name"], plan["services"][mutation["name"]]
-        document = revision_document(name, spec, mutation["revision_digest"])
+        document = documents[name]
         with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as stream:
             json.dump(document, stream)
             rendered = Path(stream.name)
@@ -253,15 +373,23 @@ def main() -> None:
     parser.add_argument("--current", required=True, type=Path, help="private last-successful manifest")
     parser.add_argument("--project", required=True)
     parser.add_argument("--region", required=True)
+    parser.add_argument("--foundation-outputs", type=Path, help="JSON from `terraform -chdir=contrib/deploying/knowledge output -json`; supplies every service audience")
+    parser.add_argument("--override-audiences", action="store_true", help="keep audience values written in the plan even where they differ from the foundation outputs")
+    parser.add_argument("--schema-ledger", type=Path, help="JSON observation of knowledge_migrations.ledger ({schema_version: 1, names: [...]}); required when a database unit is selected")
     parser.add_argument("--apply", action="store_true")
     args = parser.parse_args()
+    if args.foundation_outputs is None and not args.override_audiences:
+        parser.error("--foundation-outputs is required unless --override-audiences explicitly keeps the plan's audience values")
     plan, current = json.loads(args.plan.read_text()), json.loads(args.current.read_text())
+    if args.foundation_outputs is not None:
+        plan = apply_foundation_audiences(plan, json.loads(args.foundation_outputs.read_text()), override=args.override_audiences)
+    ledger = json.loads(args.schema_ledger.read_text()) if args.schema_ledger is not None else None
     selected = sorted(plan.get("deploy", {}))
-    mutations = select_mutations(plan, current, observed_revision_digests(args.project, args.region, selected) if args.apply else {name: current.get("services", {}).get(name, {}).get("revision_digest", "") for name in selected})
+    mutations = select_mutations(plan, current, observed_revision_digests(args.project, args.region, selected) if args.apply else {name: current.get("services", {}).get(name, {}).get("revision_digest", "") for name in selected}, ledger)
     if not args.apply:
         print(json.dumps({"mutations": mutations}, indent=2))
         return
-    promoted = promote(plan, current, project=args.project, region=args.region, manifest=args.current, adapter=Gcloud())
+    promoted = promote(plan, current, project=args.project, region=args.region, manifest=args.current, adapter=Gcloud(), ledger=ledger)
     print(json.dumps({"promoted": promoted}, indent=2))
 
 

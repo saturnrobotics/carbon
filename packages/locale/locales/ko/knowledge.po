@@ -1,0 +1,427 @@
+msgid ""
+msgstr ""
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: @lingui/cli\n"
+"Language: ko\n"
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"PO-Revision-Date: \n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Plural-Forms: \n"
+
+msgid "A follow-up question keeps the evidence shown here in context."
+msgstr "후속 질문은 여기에 표시된 증거를 문맥과 함께 유지합니다."
+
+msgid "Access to this document was revoked."
+msgstr "이 문서에 대한 접근 권한이 취소되었습니다."
+
+msgid "Acknowledge the changed evidence before publishing."
+msgstr "변경된 증거를 게시하기 전에 확인하십시오."
+
+msgid "Add a document"
+msgstr "문서 추가"
+
+msgid "Additional proposed fields"
+msgstr "추가 제안된 필드"
+
+msgid "Also proposed"
+msgstr "역시 제안됨"
+
+msgid "Answer"
+msgstr "답변"
+
+msgid "Back to company knowledge"
+msgstr "회사 지식으로 돌아가기"
+
+msgid "Back to manual search"
+msgstr "수동 검색으로 돌아가기"
+
+msgid "Captured"
+msgstr "캡처됨"
+
+msgid "Captured document"
+msgstr "캡처된 문서"
+
+msgid "Check freshness"
+msgstr "신선도 확인"
+
+msgid "Choices"
+msgstr "선택지"
+
+msgid "Choose either a file or a URL, not both."
+msgstr "파일 또는 URL 중 하나를 선택하십시오. 둘 다는 선택할 수 없습니다."
+
+msgid "Choose one PDF, image, photo, or HTTPS address."
+msgstr "PDF, 이미지, 사진 또는 HTTPS 주소 중 하나를 선택하십시오."
+
+msgid "Company knowledge"
+msgstr "회사 지식"
+
+#. placeholder {0}: evidence.length
+msgid "Composing an answer from {0} evidence blocks…"
+msgstr "{0}개의 증거 블록으로 답변 작성 중…"
+
+msgid "Confirm removal"
+msgstr "제거 확인"
+
+msgid "Confirm this field against the source evidence."
+msgstr "이 필드를 원본 증거와 대조하여 확인하세요."
+
+msgid "Corrections are saved. The document can be published."
+msgstr "수정 사항이 저장되었습니다. 문서를 게시할 수 있습니다."
+
+msgid "Current version"
+msgstr "현재 버전"
+
+msgid "Document"
+msgstr "문서"
+
+msgid "Download original"
+msgstr "원본 다운로드"
+
+msgid "Download original · page {page}"
+msgstr "원본 다운로드 · 페이지 {page}"
+
+msgid "Drag and drop a PDF or image here, or choose a file."
+msgstr "PDF 또는 이미지를 여기로 끌어서 놓거나 파일을 선택하십시오."
+
+msgid "Drive sources are enrolled by an administrator with a read-only connector credential held in Secret Manager. Signing into this portal does not authorize Drive access: a document is delivered only after a live check with your own Drive permissions."
+msgstr "Drive 소스는 Secret Manager에 저장된 읽기 전용 커넥터 자격증명을 가진 관리자가 등록합니다. 이 포털에 로그인하는 것만으로는 Drive 접근 권한이 부여되지 않습니다. 문서는 사용자의 Drive 권한과의 실시간 확인 후에만 제공됩니다."
+
+msgid "Existing item"
+msgstr "기존 품목"
+
+msgid "Extracted text anchored to page numbers. Page images are not available for this document; download the original to see the layout."
+msgstr "페이지 번호에 고정된 추출된 텍스트입니다. 이 문서에 대한 페이지 이미지를 사용할 수 없습니다. 원본을 다운로드하여 레이아웃을 확인하십시오."
+
+msgid "Extracting"
+msgstr "추출 중"
+
+msgid "Extraction failed"
+msgstr "추출 실패"
+
+msgid "Fetched from"
+msgstr "다음에서 가져옴"
+
+msgid "Find the right manual."
+msgstr "올바른 설명서를 찾으십시오."
+
+msgid "Google Drive sources"
+msgstr "Google Drive 소스"
+
+msgid "I reviewed this evidence"
+msgstr "이 증거를 검토했습니다."
+
+msgid "Intake review"
+msgstr "입고 검토"
+
+msgid "Item association"
+msgstr "품목 연계"
+
+msgid "Item lookup is not available for this library. The document can still be published as a generic document."
+msgstr "이 라이브러리에서 품목 조회를 사용할 수 없습니다. 문서를 여전히 일반 문서로 게시할 수 있습니다."
+
+msgid "Item lookup is unavailable right now."
+msgstr "품목 조회를 현재 사용할 수 없습니다."
+
+msgid "Library"
+msgstr "라이브러리"
+
+msgid "Library and access"
+msgstr "라이브러리 및 접근"
+
+msgid "Link this document to one existing item, or keep it as a generic document. Linking never creates or changes items."
+msgstr "이 문서를 기존 품목과 연결하거나 일반 문서로 유지하십시오. 연결은 품목을 만들거나 변경하지 않습니다."
+
+msgid "Live record"
+msgstr "실시간 기록"
+
+msgid "Machine"
+msgstr "기계"
+
+msgid "Manual file"
+msgstr "수동 파일"
+
+msgid "Manual search is unavailable."
+msgstr "수동 검색을 사용할 수 없습니다."
+
+msgid "Manufacturer"
+msgstr "제조업체"
+
+msgid "Manufacturer, part number, revision, machine, or keyword"
+msgstr "제조업체, 부품 번호, 리비전, 기계 또는 키워드"
+
+msgid "Needs review"
+msgstr "검토 필요"
+
+msgid "No evidence on any page"
+msgstr "페이지에 증거가 없습니다"
+
+msgid "No item association (generic document)"
+msgstr "항목 연결 없음(일반 문서)"
+
+msgid "No matching items."
+msgstr "일치하는 품목이 없습니다."
+
+msgid "No matching manuals found."
+msgstr "일치하는 매뉴얼을 찾을 수 없습니다."
+
+msgid "No text has been extracted yet."
+msgstr "아직 추출된 텍스트가 없습니다."
+
+msgid "Not set"
+msgstr "설정되지 않음"
+
+msgid "Not yet decided. Saving the review records your choice."
+msgstr "아직 결정되지 않았습니다. 검토를 저장하면 선택이 기록됩니다."
+
+#. placeholder {0}: entity.observedAt
+msgid "Observed {0}"
+msgstr "관찰됨 {0}"
+
+msgid "Only public HTTPS addresses are fetched, through the server's fetch policy, and the fetched copy is stored immutably."
+msgstr "공개 HTTPS 주소만 서버의 가져오기 정책을 통해 가져오며, 가져온 사본은 변경 불가능하게 저장됩니다."
+
+msgid "Only the first candidates are shown; narrow the search."
+msgstr "처음 몇 개의 후보만 표시됩니다. 검색을 좁혀보세요."
+
+msgid "Open record"
+msgstr "기록 열기"
+
+#. placeholder {0}: selected?.classification ?? ""
+msgid "Owner: {actorId}. Access: {0}. Readers of this library can find the document once it is reviewed and published."
+msgstr "책임자: {actorId}. 접근: {0}. 이 라이브러리의 읽기 권한자는 검토되어 게시된 후 문서를 찾을 수 있습니다."
+
+#. placeholder {0}: source.page
+msgid "page {0}"
+msgstr "페이지 {0}"
+
+msgid "Page {page}"
+msgstr "페이지 {page}"
+
+msgid "Page not found."
+msgstr "페이지를 찾을 수 없습니다."
+
+msgid "Part number"
+msgstr "부품 번호"
+
+msgid "Part number, MPN, or name"
+msgstr "부품 번호, MPN 또는 이름"
+
+msgid "Partial source answer"
+msgstr "부분 소스 답변"
+
+msgid "PDF and image files are captured with their immutable object version before extraction."
+msgstr "PDF 및 이미지 파일은 추출 전에 변경 불가능한 객체 버전으로 캡처됩니다."
+
+msgid "Proposed fields"
+msgstr "제안된 필드"
+
+msgid "Proposed fields are ready. Confirm or correct them, then save."
+msgstr "제안된 필드가 준비되었습니다. 확인하거나 수정한 다음 저장하세요."
+
+#. placeholder {0}: model.proposed[field]
+msgid "Proposed: {0}"
+msgstr "제안: {0}"
+
+msgid "Publish manual"
+msgstr "매뉴얼 게시"
+
+msgid "Published"
+msgstr "게시됨"
+
+msgid "Remove manual"
+msgstr "매뉴얼 제거"
+
+msgid "Remove this manual?"
+msgstr "이 매뉴얼을 제거하시겠습니까?"
+
+msgid "Request unavailable"
+msgstr "요청을 사용할 수 없습니다"
+
+msgid "Review document"
+msgstr "문서 검토"
+
+msgid "Reviewed"
+msgstr "검토됨"
+
+msgid "Revision"
+msgstr "리비전"
+
+msgid "Save review"
+msgstr "검토 저장"
+
+msgid "Save the review before publishing."
+msgstr "게시하기 전에 검토를 저장하세요."
+
+msgid "Saved correction"
+msgstr "저장된 수정"
+
+msgid "Search items"
+msgstr "품목 검색"
+
+msgid "Search manuals"
+msgstr "매뉴얼 검색"
+
+msgid "Search published company manuals by manufacturer, part number, revision, machine, or keyword. Open the exact original version from every result."
+msgstr "제조업체, 부품 번호, 리비전, 기계 또는 키워드로 게시된 회사 매뉴얼을 검색하세요. 모든 결과에서 정확한 원본 버전을 열 수 있습니다."
+
+msgid "Searching authorized sources…"
+msgstr "승인된 소스 검색 중…"
+
+msgid "Searching…"
+msgstr "검색 중…"
+
+msgid "see evidence"
+msgstr "증거 보기"
+
+msgid "Selected: {fileName}"
+msgstr "선택됨: {fileName}"
+
+msgid "Show evidence ({evidenceCount})"
+msgstr "증거 표시({evidenceCount})"
+
+msgid "Some authorized manuals were unavailable."
+msgstr "일부 인증된 매뉴얼을 사용할 수 없었습니다."
+
+msgid "Some sources did not answer; results may be partial."
+msgstr "일부 소스에서 응답하지 않았습니다. 결과가 부분적일 수 있습니다."
+
+msgid "Source details"
+msgstr "소스 세부 정보"
+
+msgid "Source evidence"
+msgstr "소스 증거"
+
+msgid "Source pages"
+msgstr "소스 페이지"
+
+#. placeholder {0}: entity.sourceRevision
+msgid "Source revision: {0}"
+msgstr "소스 리비전: {0}"
+
+msgid "Source unavailable"
+msgstr "소스를 사용할 수 없음"
+
+msgid "Source URL"
+msgstr "소스 URL"
+
+msgid "Sources"
+msgstr "소스"
+
+msgid "Start a new question"
+msgstr "새 질문 시작"
+
+msgid "State:"
+msgstr "상태:"
+
+msgid "Status {status}"
+msgstr "상태 {status}"
+
+msgid "Take a photo of a nameplate or label"
+msgstr "명판 또는 레이블의 사진 촬영"
+
+msgid "Text is being extracted from the document."
+msgstr "문서에서 텍스트를 추출 중입니다."
+
+msgid "The document could not be fetched from that address."
+msgstr "해당 주소에서 문서를 가져올 수 없습니다."
+
+msgid "The document could not be fetched from that address. Check that it is a public HTTPS link to a PDF or image, or upload the file instead."
+msgstr "해당 주소에서 문서를 가져올 수 없습니다. 공개 HTTPS 링크가 PDF 또는 이미지인지 확인하거나 대신 파일을 업로드하세요."
+
+msgid "The document is queued for extraction."
+msgstr "문서가 추출을 위해 대기열에 있습니다."
+
+msgid "The document is stored and waiting for extraction."
+msgstr "문서가 저장되었으며 추출을 대기 중입니다."
+
+msgid "The document was captured, but text could not be extracted. Review cannot start until extraction succeeds."
+msgstr "문서가 캡처되었지만 텍스트를 추출할 수 없습니다. 추출이 성공할 때까지 검토를 시작할 수 없습니다."
+
+msgid "The knowledge company is not configured."
+msgstr "지식 회사가 구성되지 않았습니다."
+
+msgid "The knowledge service could not complete this request."
+msgstr "지식 서비스가 이 요청을 완료할 수 없습니다."
+
+msgid "The request did not complete within its time budget."
+msgstr "요청이 시간 제한 내에 완료되지 않았습니다."
+
+msgid "The request was not valid."
+msgstr "요청이 유효하지 않습니다."
+
+msgid "The review could not be saved. Check the fields and unresolved evidence."
+msgstr "검토를 저장할 수 없습니다. 필드와 미해결 증거를 확인하세요."
+
+msgid "The review service is unavailable. Nothing was changed."
+msgstr "검토 서비스를 사용할 수 없습니다. 아무것도 변경되지 않았습니다."
+
+msgid "The upload could not be captured."
+msgstr "업로드를 캡처할 수 없습니다."
+
+msgid "The upload service is unavailable. The document was not captured."
+msgstr "업로드 서비스를 사용할 수 없습니다. 문서가 캡처되지 않았습니다."
+
+msgid "This action is not configured for the library."
+msgstr "이 작업이 라이브러리에 대해 구성되지 않았습니다."
+
+msgid "This document changed since you opened it, or the same content was already reviewed. Reload and check before saving again."
+msgstr "이 문서는 열린 이후 변경되었거나 같은 내용이 이미 검토되었습니다. 다시 저장하기 전에 다시 로드하고 확인하세요."
+
+msgid "This document changed while you were working. Reload it and try again."
+msgstr "작업 중에 이 문서가 변경되었습니다. 다시 로드하고 다시 시도하세요."
+
+msgid "This document is not available for review."
+msgstr "이 문서는 검토할 수 없습니다."
+
+msgid "This document version is not available."
+msgstr "이 문서 버전을 사용할 수 없습니다."
+
+msgid "This removes the manual from {sourceDisplayName} search and blocks its original version from download."
+msgstr "이는 {sourceDisplayName} 검색에서 설명서를 제거하고 원본 버전의 다운로드를 차단합니다."
+
+msgid "This review was published; it is now read-only."
+msgstr "이 검토는 게시되었습니다. 이제 읽기 전용입니다."
+
+msgid "Title"
+msgstr "제목"
+
+msgid "Upload a manual"
+msgstr "설명서 업로드"
+
+msgid "Upload a manual, photograph a nameplate, or point at a public address. Access follows the library you choose."
+msgstr "설명서를 업로드하거나 명판의 사진을 촬영하거나 공개 주소를 지정하세요. 접근은 선택한 라이브러리를 따릅니다."
+
+msgid "Upload manual"
+msgstr "설명서 업로드"
+
+msgid "Valid review fields are required."
+msgstr "유효한 검토 필드가 필요합니다."
+
+msgid "You are not allowed to add documents to the selected library."
+msgstr "선택한 라이브러리에 문서를 추가할 수 없습니다."
+
+msgid "You are not allowed to add documents to this library."
+msgstr "이 라이브러리에 문서를 추가할 수 없습니다."
+
+msgid "You are not allowed to publish in this library. The review was kept."
+msgstr "이 라이브러리에서 게시할 수 없습니다. 검토가 유지되었습니다."
+
+msgid "You are not allowed to review documents in this library."
+msgstr "이 라이브러리에서 문서를 검토할 수 없습니다."
+
+msgid "You are not signed in to this library, or your access was revoked."
+msgstr "이 라이브러리에 로그인하지 않았거나 접근 권한이 해제되었습니다."
+
+msgid "You cannot add documents to any library. Ask an administrator for a library grant."
+msgstr "어떤 라이브러리에도 문서를 추가할 수 없습니다. 라이브러리 권한에 대해 관리자에게 문의하세요."
+
+msgid "You do not have permission for this action in this library."
+msgstr "이 라이브러리에서 이 작업에 대한 권한이 없습니다."
+
+msgid "Your access changed while this request ran. Search again."
+msgstr "이 요청이 실행되는 동안 액세스 권한이 변경되었습니다. 다시 검색하세요."

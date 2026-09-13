@@ -1,4 +1,7 @@
-FROM node:22-alpine AS pruner
+# Reviewed multi-platform digest. base-images.json is the record;
+# test_base_image_pins.py keeps every knowledge Dockerfile equal to it.
+ARG NODE_IMAGE=node:22-alpine@sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32
+FROM ${NODE_IMAGE} AS pruner
 WORKDIR /repo
 RUN corepack enable
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc turbo.json ./
@@ -7,16 +10,34 @@ COPY packages ./packages
 COPY patches ./patches
 RUN corepack pnpm dlx turbo@2.9.6 prune knowledge --docker
 
-FROM node:22-alpine AS builder
+FROM ${NODE_IMAGE} AS builder
 WORKDIR /repo
 RUN corepack enable
 COPY --from=pruner /repo/out/json/ ./
 RUN pnpm install --frozen-lockfile --ignore-scripts
 COPY --from=pruner /repo/out/full/ ./
+# `turbo prune` copies workspace manifests only; the Lingui Vite plugin resolves
+# the root catalog configuration at build time and fails without it.
+COPY lingui.config.js ./
+COPY LICENSE ./LICENSE
 RUN pnpm --filter knowledge build
 RUN pnpm --filter knowledge deploy --prod --legacy --ignore-scripts /runtime
 
+# The disposable browser-harness image. React Router's route manifest is a
+# BUILD-time artifact, so the Drive surface the approved `manual-v1` profile
+# defers can only be admitted by a build that names it. This stage takes it as
+# a build argument and rebuilds the app with it, so the harness image carries
+# the route in its own bundle instead of depending on a container environment
+# variable that a served build would ignore.
+#
+# The argument is declared HERE and nowhere else: `runtime` below descends from
+# `builder`, which never receives it, so no release image can be built with the
+# Drive surface admitted even if the argument is passed. `test_images.py` pins
+# that, and `release.py` separately refuses the runtime variable on a revision.
 FROM builder AS e2e
+ARG KNOWLEDGE_DRIVE_ENABLED
+ENV KNOWLEDGE_DRIVE_ENABLED=${KNOWLEDGE_DRIVE_ENABLED}
+RUN pnpm --filter knowledge build
 WORKDIR /repo/apps/knowledge
 ENV NODE_ENV=test
 ENV KNOWLEDGE_RELEASE_PROFILE=manual-v1
@@ -26,12 +47,13 @@ COPY contrib/deploying/knowledge/images-web-e2e.mjs /usr/local/bin/images-web-e2
 EXPOSE 4200
 CMD ["node", "/usr/local/bin/images-web-e2e.mjs"]
 
-FROM node:22-alpine AS runtime
+FROM ${NODE_IMAGE} AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 ENV KNOWLEDGE_RELEASE_PROFILE=manual-v1
 ENV PORT=8080
 COPY --from=builder /runtime ./
+COPY LICENSE ./LICENSE
 RUN rm -rf app tests .react-router
 EXPOSE 8080
 CMD ["node", "node_modules/@react-router/serve/bin.js", "build/server/index.js"]

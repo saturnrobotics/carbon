@@ -4,13 +4,113 @@ import {
   type DatabasePrincipal,
   withKnowledgeTransaction
 } from "../database.server";
-import type { Evidence, Extraction } from "./contracts";
+import {
+  calibrateConfidence,
+  DEFAULT_EXTRACTION_SOURCE_KIND,
+  type ExtractionSourceKind,
+  isExtractionSourceKind,
+  requiresReviewerConfirmation
+} from "./confidence";
+import {
+  type Evidence,
+  EXTRACTION_CONTRACT_VERSION,
+  type Extraction,
+  MEASUREMENT_LIMIT,
+  measurementNamePattern,
+  measurementUnresolvedName,
+  PROPOSED_FIELD_NAMES,
+  type ProposedFields,
+  proposedFieldsSchema,
+  proposedMeasurementFieldSchema
+} from "./contracts";
 
 export type ParserOutput = {
   fields: Record<string, unknown>;
   evidence: Record<string, Evidence[]>;
+  /** Typed proposals; untrusted until normalized and recalibrated here. */
+  proposed?: unknown;
+  /** How the parser read the document; unknown kinds get the least trusted prior. */
+  sourceKind?: unknown;
   warnings?: string[];
 };
+
+function proposalWarning(name: string, reason: string): string {
+  return `Parser proposal "${name.slice(0, 64)}" was discarded: ${reason}`;
+}
+
+/**
+ * Validates each typed proposal on its own so one malformed field costs only
+ * that field, then replaces the parser's claimed score with the calibrated
+ * one. A proposal below the review threshold is unresolved, exactly like a
+ * field with no evidence.
+ */
+function normalizeProposed(
+  raw: unknown,
+  sourceKind: ExtractionSourceKind,
+  warnings: string[]
+): { proposed: ProposedFields; unresolved: string[] } {
+  const proposed: ProposedFields = {};
+  const unresolved: string[] = [];
+  if (raw === undefined || raw === null) return { proposed, unresolved };
+  if (typeof raw !== "object" || Array.isArray(raw)) {
+    warnings.push(
+      "Parser proposed fields were not an object and were discarded"
+    );
+    return { proposed, unresolved };
+  }
+  const calibrate = <T extends { confidence: number; evidence: unknown[] }>(
+    field: T
+  ): T => ({
+    ...field,
+    confidence: calibrateConfidence(
+      field.confidence,
+      field.evidence.length,
+      sourceKind
+    )
+  });
+  for (const [name, value] of Object.entries(raw as Record<string, unknown>)) {
+    if (value === undefined) continue;
+    if (name === "measurements") {
+      if (!value || typeof value !== "object" || Array.isArray(value)) {
+        warnings.push(proposalWarning(name, "measurements must be an object"));
+        continue;
+      }
+      const measurements: NonNullable<ProposedFields["measurements"]> = {};
+      for (const [key, entry] of Object.entries(
+        value as Record<string, unknown>
+      ).slice(0, MEASUREMENT_LIMIT)) {
+        const parsed = proposedMeasurementFieldSchema.safeParse(entry);
+        const unresolvedName = measurementUnresolvedName(key);
+        if (!parsed.success || !measurementNamePattern.test(key)) {
+          warnings.push(proposalWarning(unresolvedName, "invalid measurement"));
+          continue;
+        }
+        const measurement = calibrate(parsed.data);
+        measurements[key] = measurement;
+        if (requiresReviewerConfirmation(measurement.confidence))
+          unresolved.push(unresolvedName);
+      }
+      if (Object.keys(measurements).length)
+        proposed.measurements = measurements;
+      continue;
+    }
+    const known = PROPOSED_FIELD_NAMES.find((candidate) => candidate === name);
+    if (!known) {
+      warnings.push(proposalWarning(name, "not a typed field"));
+      continue;
+    }
+    const parsed = proposedFieldsSchema.shape[known].safeParse(value);
+    if (!parsed.success || !parsed.data) {
+      warnings.push(proposalWarning(known, "invalid proposal"));
+      continue;
+    }
+    const field = calibrate(parsed.data);
+    // Each name has its own schema; the parse above already proved the member.
+    (proposed as Record<string, unknown>)[known] = field;
+    if (requiresReviewerConfirmation(field.confidence)) unresolved.push(known);
+  }
+  return { proposed, unresolved };
+}
 
 /** Normalizes untrusted parser output without allowing it to declare readiness. */
 export function createExtraction(output: ParserOutput): Extraction {
@@ -33,14 +133,28 @@ export function createExtraction(output: ParserOutput): Extraction {
   const fields = Object.fromEntries(
     Object.entries(output.fields).slice(0, 500)
   );
-  const unresolved = Object.keys(fields)
-    .filter((field) => !evidence[field]?.length)
-    .sort();
-  const extraction = {
+  const warnings = [...(output.warnings ?? [])];
+  const sourceKind = isExtractionSourceKind(output.sourceKind)
+    ? output.sourceKind
+    : DEFAULT_EXTRACTION_SOURCE_KIND;
+  const { proposed, unresolved: lowConfidence } = normalizeProposed(
+    output.proposed,
+    sourceKind,
+    warnings
+  );
+  const unresolved = [
+    ...new Set([
+      ...Object.keys(fields).filter((field) => !evidence[field]?.length),
+      ...lowConfidence
+    ])
+  ].sort();
+  const extraction: Extraction = {
+    contractVersion: EXTRACTION_CONTRACT_VERSION,
     fields,
+    proposed,
     evidence,
     unresolved,
-    warnings: [...new Set(output.warnings ?? [])].slice(0, 100)
+    warnings: [...new Set(warnings)].slice(0, 100)
   };
   if (Buffer.byteLength(JSON.stringify(fields), "utf8") > 60_000)
     throw new Error("parser fields exceed the immutable intake byte limit");

@@ -5,8 +5,30 @@ directory=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 repository=$(CDPATH='' cd -- "$directory/../../.." && pwd)
 compose_file="$directory/compose.local.yaml"
 
+# Stack name, image tag and published loopback ports are overridable so a second
+# stack can run beside one that is already up, with its own volumes. CI leaves
+# all of them unset and gets the historical project name, `manual-v1` tags and
+# the fixed ports, so an unparameterised invocation is unchanged.
+KNOWLEDGE_LOCAL_STACK=${KNOWLEDGE_LOCAL_STACK:-knowledge-manual-local}
+KNOWLEDGE_LOCAL_TAG=${KNOWLEDGE_LOCAL_TAG:-manual-v1}
+KNOWLEDGE_LOCAL_PORTAL_PORT=${KNOWLEDGE_LOCAL_PORTAL_PORT:-4200}
+KNOWLEDGE_LOCAL_GATEWAY_PORT=${KNOWLEDGE_LOCAL_GATEWAY_PORT:-4301}
+KNOWLEDGE_LOCAL_QUERY_PORT=${KNOWLEDGE_LOCAL_QUERY_PORT:-4302}
+KNOWLEDGE_LOCAL_DRIVE_GATEWAY_PORT=${KNOWLEDGE_LOCAL_DRIVE_GATEWAY_PORT:-4303}
+KNOWLEDGE_LOCAL_DRIVE_QUERY_PORT=${KNOWLEDGE_LOCAL_DRIVE_QUERY_PORT:-4304}
+KNOWLEDGE_LOCAL_DATABASE_PORT=${KNOWLEDGE_LOCAL_DATABASE_PORT:-59910}
+KNOWLEDGE_LOCAL_REDIS_PORT=${KNOWLEDGE_LOCAL_REDIS_PORT:-59911}
+KNOWLEDGE_LOCAL_STORAGE_PORT=${KNOWLEDGE_LOCAL_STORAGE_PORT:-59912}
+KNOWLEDGE_LOCAL_INNGEST_PORT=${KNOWLEDGE_LOCAL_INNGEST_PORT:-59914}
+export KNOWLEDGE_LOCAL_STACK KNOWLEDGE_LOCAL_TAG \
+  KNOWLEDGE_LOCAL_PORTAL_PORT KNOWLEDGE_LOCAL_GATEWAY_PORT \
+  KNOWLEDGE_LOCAL_QUERY_PORT KNOWLEDGE_LOCAL_DRIVE_GATEWAY_PORT \
+  KNOWLEDGE_LOCAL_DRIVE_QUERY_PORT KNOWLEDGE_LOCAL_DATABASE_PORT \
+  KNOWLEDGE_LOCAL_REDIS_PORT KNOWLEDGE_LOCAL_STORAGE_PORT \
+  KNOWLEDGE_LOCAL_INNGEST_PORT
+
 compose() {
-  docker compose -f "$compose_file" "$@"
+  docker compose -p "$KNOWLEDGE_LOCAL_STACK" -f "$compose_file" "$@"
 }
 
 wait_http() {
@@ -46,12 +68,14 @@ start() {
   compose run --rm bootstrap
   compose run --rm schema
   compose run --rm fixture
-  compose up -d parser ingest inngest query portal
-  wait_http http://127.0.0.1:4301/health 120
-  wait_http http://127.0.0.1:4302/health 120
-  wait_http http://127.0.0.1:59914/ 120
-  wait_http https://127.0.0.1:4200/ 120
-  echo "Knowledge manual stack is ready at https://localhost:4200"
+  compose up -d parser ingest inngest query drive portal
+  wait_http "http://127.0.0.1:$KNOWLEDGE_LOCAL_GATEWAY_PORT/health" 120
+  wait_http "http://127.0.0.1:$KNOWLEDGE_LOCAL_QUERY_PORT/health" 120
+  wait_http "http://127.0.0.1:$KNOWLEDGE_LOCAL_DRIVE_GATEWAY_PORT/health" 120
+  wait_http "http://127.0.0.1:$KNOWLEDGE_LOCAL_DRIVE_QUERY_PORT/health" 120
+  wait_http "http://127.0.0.1:$KNOWLEDGE_LOCAL_INNGEST_PORT/" 120
+  wait_http "https://127.0.0.1:$KNOWLEDGE_LOCAL_PORTAL_PORT/" 120
+  echo "Knowledge manual stack is ready at https://localhost:$KNOWLEDGE_LOCAL_PORTAL_PORT"
 }
 
 case "${1:-up}" in
@@ -61,12 +85,14 @@ case "${1:-up}" in
   test)
     start
     database_container=$(compose ps -q postgres)
-    KNOWLEDGE_E2E_BASE_URL=https://localhost:4200 \
+    KNOWLEDGE_E2E_BASE_URL="https://localhost:$KNOWLEDGE_LOCAL_PORTAL_PORT" \
     KNOWLEDGE_E2E_DATABASE_CONTAINER=$database_container \
-    KNOWLEDGE_E2E_DATABASE_PORT=59910 \
-    KNOWLEDGE_E2E_DATABASE_URL=postgresql://supabase_admin:synthetic-test-only@127.0.0.1:59910/knowledge_test \
-    KNOWLEDGE_E2E_GATEWAY_URL=http://127.0.0.1:4301 \
-    KNOWLEDGE_E2E_QUERY_FIXTURE_URL=http://127.0.0.1:4302 \
+    KNOWLEDGE_E2E_DATABASE_PORT="$KNOWLEDGE_LOCAL_DATABASE_PORT" \
+    KNOWLEDGE_E2E_DATABASE_URL="postgresql://supabase_admin:synthetic-test-only@127.0.0.1:$KNOWLEDGE_LOCAL_DATABASE_PORT/knowledge_test" \
+    KNOWLEDGE_E2E_GATEWAY_URL="http://127.0.0.1:$KNOWLEDGE_LOCAL_GATEWAY_PORT" \
+    KNOWLEDGE_E2E_QUERY_FIXTURE_URL="http://127.0.0.1:$KNOWLEDGE_LOCAL_QUERY_PORT" \
+    KNOWLEDGE_E2E_DRIVE_GATEWAY_URL="http://127.0.0.1:$KNOWLEDGE_LOCAL_DRIVE_GATEWAY_PORT" \
+    KNOWLEDGE_E2E_DRIVE_QUERY_URL="http://127.0.0.1:$KNOWLEDGE_LOCAL_DRIVE_QUERY_PORT" \
     KNOWLEDGE_E2E_SYNTHETIC_FIXTURES=1 \
       corepack pnpm --dir "$repository" --filter knowledge test:e2e
     ;;
@@ -83,8 +109,11 @@ case "${1:-up}" in
   stop)
     compose stop
     ;;
+  down)
+    compose down --volumes --remove-orphans
+    ;;
   *)
-    echo "usage: local-stack.sh up|test|status|logs [service]|stop" >&2
+    echo "usage: local-stack.sh up|test|status|logs [service]|stop|down" >&2
     exit 2
     ;;
 esac

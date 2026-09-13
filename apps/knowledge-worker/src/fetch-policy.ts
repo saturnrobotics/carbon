@@ -7,6 +7,8 @@ export function validateFetchUrl(value: string): URL {
   const url = new URL(value);
   if (url.protocol !== "https:")
     throw new Error("Only HTTPS intake URLs are allowed");
+  if (url.username || url.password)
+    throw new Error("credentialed intake URLs are forbidden");
   const hostname = url.hostname.toLowerCase();
   if (
     privateHosts.has(hostname) ||

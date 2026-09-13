@@ -1,48 +1,17 @@
+import { expect, type Page, test } from "@playwright/test";
 import {
-  type Browser,
-  type BrowserContext,
-  expect,
-  type Page,
-  test
-} from "@playwright/test";
+  actorPage,
+  e2eGateway,
+  queryFixture,
+  submitSearch,
+  textPdf,
+  waitForClientNavigation
+} from "./harness/browser";
 
-const e2eGateway =
-  process.env.KNOWLEDGE_E2E_GATEWAY_URL ?? "http://127.0.0.1:4301";
-const queryFixture =
-  process.env.KNOWLEDGE_E2E_QUERY_FIXTURE_URL ?? "http://127.0.0.1:4302";
 const runId = crypto.randomUUID();
 const manualTitle = `E2E motor manual ${runId}`;
 const manualPart = `EM-${runId.slice(0, 8)}`;
 const replacementPart = `${manualPart}-B`;
-
-function textPdf(text: string): Buffer {
-  const escaped = text
-    .replace(/\\/g, "\\\\")
-    .replace(/\(/g, "\\(")
-    .replace(/\)/g, "\\)");
-  const stream = `BT\n/F1 18 Tf\n72 720 Td\n(${escaped}) Tj\nET\n`;
-  const objects = [
-    "<< /Type /Catalog /Pages 2 0 R >>",
-    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>",
-    `<< /Length ${Buffer.byteLength(stream)} >>\nstream\n${stream}endstream`,
-    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>"
-  ];
-  let body = "%PDF-1.4\n";
-  const offsets = [0];
-  for (const [index, object] of objects.entries()) {
-    offsets.push(Buffer.byteLength(body));
-    body += `${index + 1} 0 obj\n${object}\nendobj\n`;
-  }
-  const xref = Buffer.byteLength(body);
-  body += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
-  body += offsets
-    .slice(1)
-    .map((offset) => `${String(offset).padStart(10, "0")} 00000 n \n`)
-    .join("");
-  body += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
-  return Buffer.from(body, "ascii");
-}
 
 const manualPdf = textPdf(
   `${manualPart} ${manualTitle} revision A Test bench replacement procedure`
@@ -50,39 +19,6 @@ const manualPdf = textPdf(
 const replacementPdf = textPdf(
   `${replacementPart} ${manualTitle} revision B Test bench inspection procedure`
 );
-
-async function actorPage(
-  browser: Browser,
-  actor: "bob" | "alice"
-): Promise<{
-  context: BrowserContext;
-  page: Page;
-}> {
-  const context = await browser.newContext({ ignoreHTTPSErrors: true });
-  await context.addCookies([
-    {
-      name: "knowledge_e2e_actor",
-      value: actor,
-      domain: "localhost",
-      path: "/",
-      secure: true,
-      sameSite: "Lax"
-    }
-  ]);
-  return { context, page: await context.newPage() };
-}
-
-async function waitForClientNavigation(page: Page) {
-  // React Router progressively enhances forms. In a cold Vite server the route
-  // module can arrive after the SSR HTML, so wait for the client bundle before
-  // exercising a mutation rather than falling back to an unhydrated form post.
-  await page.waitForFunction(() =>
-    Boolean(
-      (window as { __reactRouterManifest?: unknown }).__reactRouterManifest
-    )
-  );
-  await page.waitForTimeout(250);
-}
 
 async function uploadReviewAndPublish(page: Page) {
   const uploadStarted = performance.now();
@@ -103,11 +39,20 @@ async function uploadReviewAndPublish(page: Page) {
     page.getByRole("heading", { name: "Review document" })
   ).toBeVisible();
 
+  // Address the evidence panel by ROLE, not by label text. `getByLabel` is a
+  // case-insensitive substring match, and every unresolved review field asks
+  // the reviewer to "confirm this field against the source evidence" from
+  // inside its own `<label>` — so the label form matched the panel AND the
+  // field inputs. Unresolved fields are this page's normal first state, which
+  // is why this was ambiguous on every run rather than intermittently.
+  const sourceEvidence = page.getByRole("complementary", {
+    name: "Source evidence"
+  });
   await expect
     .poll(
       async () => {
         await page.reload();
-        return page.getByLabel("Source evidence").textContent();
+        return sourceEvidence.textContent();
       },
       { timeout: 90_000 }
     )
@@ -141,20 +86,25 @@ async function uploadReviewAndPublish(page: Page) {
 
   const publishStarted = performance.now();
   await page.goto("/");
-  await page.getByLabel("Search manuals").fill(manualPart);
-  await page.getByRole("button", { name: "Search manuals" }).click();
+  await waitForClientNavigation(page);
+  await submitSearch(page, manualPart);
   const download = page.getByRole("link", {
     name: "Download original",
     exact: true
   });
   await expect(download).toBeVisible();
   const searchMilliseconds = performance.now() - publishStarted;
+  // Ask the identical question again, as a NEW question. Repeating it inside
+  // the same conversation sends the first answer's evidence back as follow-up
+  // context, and context is deliberately part of the answer cache's key, so
+  // only a fresh question asks the cache what the first search stored.
+  await page.getByRole("button", { name: "Start a new question" }).click();
   const repeated = page.waitForResponse(
     (response) =>
       new URL(response.url()).pathname === "/api/query" &&
       response.request().method() === "POST"
   );
-  await page.getByRole("button", { name: "Search manuals" }).click();
+  await submitSearch(page, manualPart);
   expect((await repeated).status()).toBe(200);
   const href = await download.getAttribute("href");
   return {
@@ -248,8 +198,8 @@ test("manual workflow uses real extraction, durable delivery, Redis, and exact i
     // receives an actor/company override from the browser; its synthetic test
     // identity is emitted only by the loopback-only server alias.
     await alice.page.goto("/");
-    await alice.page.getByLabel("Search manuals").fill(manualPart);
-    await alice.page.getByRole("button", { name: "Search manuals" }).click();
+    await waitForClientNavigation(alice.page);
+    await submitSearch(alice.page, manualPart);
     await expect(alice.page.getByRole("alert")).toBeVisible();
     await expect(alice.page.getByText(manualTitle)).toHaveCount(0);
     const deniedOriginal = await alice.page.goto(downloadPath!);
@@ -278,8 +228,8 @@ test("manual workflow uses real extraction, durable delivery, Redis, and exact i
       (await request.post(`${e2eGateway}/__e2e/revoke/bob`)).ok()
     ).toBeTruthy();
     await bob.page.goto("/");
-    await bob.page.getByLabel("Search manuals").fill(manualPart);
-    await bob.page.getByRole("button", { name: "Search manuals" }).click();
+    await waitForClientNavigation(bob.page);
+    await submitSearch(bob.page, manualPart);
     await expect(bob.page.getByRole("alert")).toBeVisible();
     const revokedOriginal = await bob.page.goto(downloadPath!);
     expect(revokedOriginal?.status()).not.toBe(200);
@@ -290,15 +240,15 @@ test("manual workflow uses real extraction, durable delivery, Redis, and exact i
       (await request.post(`${e2eGateway}/__e2e/restore/bob`)).ok()
     ).toBeTruthy();
     await bob.page.goto("/");
-    await bob.page.getByLabel("Search manuals").fill(manualPart);
-    await bob.page.getByRole("button", { name: "Search manuals" }).click();
+    await waitForClientNavigation(bob.page);
+    await submitSearch(bob.page, manualPart);
     await bob.page.getByRole("link", { name: "Remove manual" }).first().click();
     await Promise.all([
       bob.page.waitForURL("/"),
       bob.page.getByRole("button", { name: "Confirm removal" }).click()
     ]);
-    await bob.page.getByLabel("Search manuals").fill(manualPart);
-    await bob.page.getByRole("button", { name: "Search manuals" }).click();
+    await waitForClientNavigation(bob.page);
+    await submitSearch(bob.page, manualPart);
     await expect(
       bob.page.getByText("No matching manuals found.")
     ).toBeVisible();
@@ -322,24 +272,44 @@ test("manual workflow uses real extraction, durable delivery, Redis, and exact i
       .poll(
         async () => {
           await bob.page.reload();
-          return bob.page.getByLabel("Source evidence").textContent();
+          return bob.page
+            .getByRole("complementary", { name: "Source evidence" })
+            .textContent();
         },
         { timeout: 90_000 }
       )
       .toContain(manualPart);
     await waitForClientNavigation(bob.page);
-    await bob.page.getByLabel("Title").fill(`${manualPart} duplicate`);
-    await bob.page.getByLabel("Manufacturer").fill("E2E Motors");
-    await bob.page.getByLabel("Part number").fill(manualPart);
-    await bob.page.getByLabel("Revision").fill("A");
-    await bob.page.getByLabel("Machine").fill("Test bench");
-    const duplicateReview = bob.page.waitForResponse(
-      (response) =>
-        /\/intake\/[^/]+$/.test(new URL(response.url()).pathname) &&
-        response.request().method() === "POST"
-    );
-    await bob.page.getByRole("button", { name: "Save review" }).click();
-    expect((await duplicateReview).status()).toBe(409);
+    // Identical bytes resolve to the intake that was already published, which
+    // the page shows read-only. The server still refuses a review write for
+    // the existing content hash, proved through the same route action.
+    await expect(
+      bob.page.getByText("Published", { exact: true })
+    ).toBeVisible();
+    await expect(
+      bob.page.getByRole("button", { name: "Save review" })
+    ).toBeDisabled();
+    const duplicateReview = await bob.page.request.post(bob.page.url(), {
+      headers: { origin: new URL(bob.page.url()).origin },
+      form: {
+        intent: "review",
+        expectedGeneration: await bob.page
+          .locator('input[name="expectedGeneration"]')
+          .inputValue(),
+        expectedVersion: await bob.page
+          .locator('input[name="expectedVersion"]')
+          .inputValue(),
+        metadata: JSON.stringify({
+          title: `${manualPart} duplicate`,
+          manufacturer: "E2E Motors",
+          partNumber: manualPart,
+          revision: "A",
+          machine: "Test bench"
+        }),
+        item: "null"
+      }
+    });
+    expect(duplicateReview.status()).toBe(409);
 
     // Preserve a second, distinct document for performance and recovery checks.
     // The first document remains tombstoned and its original download denied.
@@ -358,7 +328,9 @@ test("manual workflow uses real extraction, durable delivery, Redis, and exact i
       .poll(
         async () => {
           await bob.page.reload();
-          return bob.page.getByLabel("Source evidence").textContent();
+          return bob.page
+            .getByRole("complementary", { name: "Source evidence" })
+            .textContent();
         },
         { timeout: 90_000 }
       )
@@ -385,8 +357,8 @@ test("manual workflow uses real extraction, durable delivery, Redis, and exact i
     await bob.page.getByRole("button", { name: "Publish manual" }).click();
     expect((await replacementPublish).status()).toBeLessThan(400);
     await bob.page.goto("/");
-    await bob.page.getByLabel("Search manuals").fill(replacementPart);
-    await bob.page.getByRole("button", { name: "Search manuals" }).click();
+    await waitForClientNavigation(bob.page);
+    await submitSearch(bob.page, replacementPart);
     await expect(
       bob.page.getByRole("link", { name: "Download original", exact: true })
     ).toBeVisible();

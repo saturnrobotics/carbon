@@ -4,6 +4,8 @@ import { sourceEntityRequestSchema } from "@carbon/knowledge";
 import { withKnowledgeTransaction } from "@carbon/knowledge/database.server";
 import type { VerifiedWorkforceIdentity } from "@carbon/knowledge/identity.server";
 import type { QueryResult } from "@carbon/knowledge/query";
+import { type QueryRoute, routeQuery } from "@carbon/knowledge/query/router";
+import type { SourceOutcome } from "@carbon/knowledge/sources/contract";
 import {
   createSourceRegistry,
   type SourceRegistryConfiguration
@@ -15,6 +17,49 @@ import { resolveRecentManual } from "./manual.server";
 function revision(value: unknown) {
   return `projection:${createHash("sha256").update(JSON.stringify(value)).digest("hex")}`;
 }
+/**
+ * A structured source outcome rendered for the reader. Nothing here names or
+ * counts hidden rows: an outage is labelled as such, a denial as such, and
+ * `moreHidden` only says the list is not the whole population.
+ */
+export function outcomeResult(
+  base: QueryResult,
+  outcome: SourceOutcome
+): QueryResult | null {
+  if (outcome.kind === "ok") return null;
+  if (outcome.kind === "ambiguous")
+    return {
+      ...base,
+      kind: "clarification",
+      message: outcome.moreHidden
+        ? "More than one record matches. Select one, or narrow the description; some matches are not shown."
+        : "More than one record matches. Select one.",
+      choices: outcome.choices.slice(0, 20)
+    };
+  if (outcome.kind === "insufficient-permission")
+    return {
+      ...base,
+      kind: "abstention",
+      message: "This source did not authorize the request.",
+      partial: true
+    };
+  if (outcome.kind === "not-found")
+    return {
+      ...base,
+      kind: "abstention",
+      message: "No authorized matching records were found."
+    };
+  return {
+    ...base,
+    kind: "abstention",
+    message:
+      outcome.reason === "deadline"
+        ? "A source did not answer within its time budget; this is not an empty result."
+        : "A source could not complete this request; this is not an empty result.",
+    partial: true
+  };
+}
+
 async function permittedSources(
   pool: Pool,
   identity: VerifiedWorkforceIdentity,
@@ -116,36 +161,113 @@ export async function getSourceEntity(options: {
   throw Error("Source entity operation unavailable");
 }
 
-/** Live facts bypass answer caching; each owner service enforces its own ACLs. */
+function entityEvidence(options: {
+  sourceId: string;
+  entity: {
+    id: string;
+    title: string;
+    description?: string | null;
+    revision: string;
+    fields: Record<string, string | number | boolean | null>;
+  };
+  origin: string;
+  observedAt: string;
+  policyVersion: string;
+}): Evidence {
+  const { entity, sourceId } = options;
+  return {
+    id: revision([sourceId, entity.id]),
+    sourceId,
+    entityId: entity.id,
+    sourceRevision: entity.revision,
+    title: entity.title,
+    excerpt:
+      entity.description?.slice(0, 2000) ??
+      Object.entries(entity.fields)
+        .filter(([key, value]) => key !== "link" && value !== null)
+        .slice(0, 6)
+        .map(([key, value]) => `${key}: ${value}`)
+        .join("\n"),
+    // The owning application's authenticated page when the source gave one.
+    sourceUri:
+      typeof entity.fields.link === "string"
+        ? entity.fields.link
+        : new URL(
+            `/sources/${encodeURIComponent(sourceId)}/entities/${encodeURIComponent(entity.id)}`,
+            options.origin
+          ).toString(),
+    observedAt: options.observedAt,
+    policyVersion: options.policyVersion,
+    freshness: "current"
+  };
+}
+
+/** One record the reader chose from an ambiguity, read directly and once. */
+async function selectedEntityEvidence(options: {
+  registry: ReturnType<typeof createSourceRegistry>;
+  source: { id: string; kind: string };
+  entityId: string;
+  origin: string;
+  policyVersion: string;
+}): Promise<{ evidence: Evidence[]; outcome: SourceOutcome | null }> {
+  const { source, entityId, registry } = options;
+  if (source.kind === "carbon" || source.kind === "kanban") {
+    const result = await registry.adapter(source.id).getEntity(entityId);
+    if (!result.entity) return { evidence: [], outcome: result.outcome };
+    return {
+      outcome: null,
+      evidence: [
+        entityEvidence({
+          sourceId: source.id,
+          entity: result.entity,
+          origin: options.origin,
+          observedAt: result.observedAt,
+          policyVersion: options.policyVersion
+        })
+      ]
+    };
+  }
+  const entity = await registry.generic(source.id).getEntity(entityId);
+  if (entity.id !== entityId) throw Error("Source returned a different entity");
+  return {
+    outcome: null,
+    evidence: [
+      entityEvidence({
+        sourceId: source.id,
+        entity,
+        origin: options.origin,
+        observedAt: now("UTC").toAbsoluteString(),
+        policyVersion: options.policyVersion
+      })
+    ]
+  };
+}
+
+/**
+ * Live facts bypass answer caching; each owner service enforces its own ACLs.
+ * The intent is the router's deterministic decision, made from the request
+ * text before this function runs; nothing a source returns can change it.
+ */
 export async function structuredSourceQuery(options: {
   request: Request;
   query: QueryRequest;
+  /** The router's decision for `query`; derived from the text when omitted. */
+  route?: QueryRoute;
   identity: VerifiedWorkforceIdentity;
   pool: Pool;
   configuration: SourceRegistryConfiguration;
   origin: string;
+  businessTimezone?: string;
   workerOrigin?: string;
   workerAudience?: string;
 }): Promise<QueryResult | null> {
   const { query, identity } = options;
-  const ticketIntent = /\b(?:ticket|tickets|task|tasks)\b/i.test(query.text);
-  const purchaseIntent =
-    /\b(?:purchase order|PO)[\s:#-]*([A-Za-z0-9_./-]+)/i.exec(query.text);
-  const manualIntent =
-    /\bmanual\b/i.test(query.text) &&
-    /\b(?:recently|got|received|bought|purchased)\b/i.test(query.text);
-  const genericIntent =
-    /^(?:please\s+)?(?:find|show|open|locate)(?:\s+me)?\s+(?:the\s+)?(?:customers?|contacts?|parts?|assembl(?:y|ies)|pcbs?|machines?)\b/i.test(
-      query.text
-    );
-  if (
-    !ticketIntent &&
-    !purchaseIntent &&
-    !manualIntent &&
-    !genericIntent &&
-    !query.context?.source
-  )
-    return null;
+  const intent = (options.route ?? routeQuery(query)).structured;
+  const ticketIntent = intent?.kind === "tickets" ? intent : undefined;
+  const purchaseIntent = intent?.kind === "purchase-order" ? intent : undefined;
+  const manualIntent = intent?.kind === "received-manual";
+  const partIntent = intent?.kind === "parts" ? intent : undefined;
+  if (!intent && !query.context?.source) return null;
   const sources = await permittedSources(
     options.pool,
     identity,
@@ -158,25 +280,74 @@ export async function structuredSourceQuery(options: {
       sourceIds: sources.map((source) => source.id)
     });
   const registry = createSourceRegistry(options.configuration, options);
+  const evidence: Evidence[] = [];
+  let partial = false;
+  let blocking: SourceOutcome | null = null;
+  const observedAt = now("UTC").toAbsoluteString();
+  const base = (): QueryResult => ({
+    requestId: query.requestId,
+    kind: evidence.length ? "results" : "abstention",
+    evidence: evidence.slice(0, 8),
+    claims: [],
+    message: evidence.length
+      ? ""
+      : partial
+        ? "A source could not complete this request; this is not an empty result."
+        : "No authorized matching records were found.",
+    partial
+  });
+  // An ambiguity choice names one record; read it directly instead of
+  // searching again, from the sources the intent would have searched.
+  const chosen = query.context?.entityId;
+  if (chosen && intent && !manualIntent && !purchaseIntent) {
+    const candidates = sources.filter((source) =>
+      ticketIntent
+        ? source.kind === "kanban"
+        : source.kind === "carbon" ||
+          source.kind === "engineering" ||
+          source.kind === "crm"
+    );
+    if (!candidates.length) return null;
+    const results = await Promise.allSettled(
+      candidates.map((source) =>
+        selectedEntityEvidence({
+          registry,
+          source,
+          entityId: chosen,
+          origin: options.origin,
+          policyVersion: identity.principal.policyVersion
+        })
+      )
+    );
+    for (const result of results) {
+      if (result.status !== "fulfilled") {
+        partial = true;
+        continue;
+      }
+      evidence.push(...result.value.evidence);
+      if (result.value.outcome && result.value.outcome.kind !== "not-found")
+        blocking = result.value.outcome;
+    }
+    const structured =
+      blocking && !evidence.length ? outcomeResult(base(), blocking) : null;
+    return structured ?? base();
+  }
   const selected = sources.filter((source) =>
     ticketIntent
       ? source.kind === "kanban"
       : purchaseIntent
         ? source.kind === "carbon"
-        : source.kind === "engineering" || source.kind === "crm"
+        : partIntent
+          ? source.kind === "carbon" ||
+            source.kind === "engineering" ||
+            source.kind === "crm"
+          : source.kind === "engineering" || source.kind === "crm"
   );
   if (!selected.length) return null;
-  const evidence: Evidence[] = [];
-  let partial = false;
-  const observedAt = now("UTC").toAbsoluteString();
   const results = await Promise.allSettled(
     selected.map(async (source) => {
       if (ticketIntent) {
-        const search = query.text
-          .replace(/^(?:please\s+)?(?:find|show|open|locate)(?:\s+me)?\s+/i, "")
-          .replace(/\b(?:tickets?|tasks?|the|for)\b/gi, " ")
-          .replace(/\s+/g, " ")
-          .trim();
+        const search = ticketIntent.searchText;
         if (!search) return [];
         const result = await registry.kanban(source.id).searchTickets(search);
         if (result.nextCursor) partial = true;
@@ -199,6 +370,44 @@ export async function structuredSourceQuery(options: {
           observedAt,
           policyVersion: identity.principal.policyVersion,
           freshness: "current" as const
+        }));
+      }
+      if (source.kind === "carbon" && partIntent) {
+        const search = partIntent.searchText;
+        if (!search) return [];
+        const { outcome, page } = await registry
+          .adapter(source.id)
+          .searchEntities({ query: search, limit: 40 });
+        if (!page) {
+          blocking = outcome;
+          return [];
+        }
+        if (page.status !== "complete") partial = true;
+        return page.items.slice(0, 8).map((entity) => ({
+          id: revision([source.id, entity.id]),
+          sourceId: source.id,
+          entityId: entity.id,
+          sourceRevision: entity.revision,
+          title: entity.title,
+          excerpt: Object.entries(entity.fields)
+            .filter(([key, value]) => key !== "link" && value !== null)
+            .slice(0, 6)
+            .map(([key, value]) => `${key}: ${value}`)
+            .join("\n"),
+          // The owning application's authenticated page: Carbon re-authorizes
+          // on open, and the freshness stamp says when this row was observed.
+          sourceUri:
+            typeof entity.fields.link === "string"
+              ? entity.fields.link
+              : new URL(
+                  `/sources/${encodeURIComponent(source.id)}/entities/${encodeURIComponent(entity.id)}`,
+                  options.origin
+                ).toString(),
+          observedAt: page.observedAt,
+          policyVersion: identity.principal.policyVersion,
+          freshness: (page.status === "complete" ? "current" : "partial") as
+            | "current"
+            | "partial"
         }));
       }
       if (source.kind === "engineering" || source.kind === "crm") {
@@ -227,7 +436,7 @@ export async function structuredSourceQuery(options: {
           freshness: "current" as const
         }));
       }
-      const purchaseId = purchaseIntent?.[1];
+      const purchaseId = purchaseIntent?.purchaseOrderId;
       if (!purchaseId) return [];
       const purchase = await registry
         .carbon(source.id)
@@ -259,21 +468,15 @@ export async function structuredSourceQuery(options: {
   if (
     !ticketIntent &&
     !purchaseIntent &&
+    !partIntent &&
     !query.context?.source &&
     !evidence.length &&
     !partial
   )
     return null;
-  return {
-    requestId: query.requestId,
-    kind: evidence.length ? "results" : "abstention",
-    evidence: evidence.slice(0, 8),
-    claims: [],
-    message: evidence.length
-      ? ""
-      : partial
-        ? "A source could not complete this request."
-        : "No authorized matching records were found.",
-    partial
-  };
+  // A structured refusal from a source outranks an empty page: an outage or a
+  // denial is never rendered as an authoritative "nothing found".
+  const structured =
+    blocking && !evidence.length ? outcomeResult(base(), blocking) : null;
+  return structured ?? base();
 }

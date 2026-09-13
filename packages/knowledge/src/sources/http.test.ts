@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { StepUpRequiredError } from "../step-up";
 import { createSourceTransport } from "./http.server";
 
 const identity = {
@@ -13,7 +14,8 @@ const identity = {
   },
   companyGroupId: "g",
   allowedOperations: [],
-  accessLevels: []
+  accessLevels: [],
+  assurance: { mode: "carbon-mfa" as const }
 };
 const request = new Request("https://query.example", {
   headers: {
@@ -83,5 +85,49 @@ describe("source transport boundary", () => {
     await expect(
       source.post("/api/v1/knowledge/getItemIdentity", {})
     ).rejects.toThrow("response limit");
+  });
+  it("surfaces a step-up denial as its own error and keeps other denials opaque", async () => {
+    const transport = (body: unknown, status: number) =>
+      createSourceTransport(
+        { origin: "https://source.example", audience: "source-aud" },
+        {
+          request,
+          identity,
+          headers: async () => new Headers(),
+          fetch: async () => Response.json(body, { status })
+        }
+      );
+    await expect(
+      transport(
+        {
+          defined: false,
+          code: "FORBIDDEN",
+          status: 403,
+          message:
+            "This request requires a Carbon sign-in with two-factor authentication",
+          data: { code: "step_up_required", method: "carbon-mfa" }
+        },
+        403
+      ).post("/api/v1/knowledge/getItemIdentity", {})
+    ).rejects.toBeInstanceOf(StepUpRequiredError);
+    // Any other 403 is a status-aware denial: nothing about the body reaches
+    // the caller.
+    await expect(
+      transport(
+        { code: "FORBIDDEN", status: 403, message: "not authorized" },
+        403
+      ).post("/api/v1/knowledge/getItemIdentity", {})
+    ).rejects.toMatchObject({
+      name: "SourceTransportError",
+      reason: "denied",
+      status: 403,
+      message: "Source access denied"
+    });
+    await expect(
+      transport({ data: { code: "step_up_required" } }, 200).post(
+        "/api/v1/knowledge/getItemIdentity",
+        {}
+      )
+    ).resolves.toEqual({ data: { code: "step_up_required" } });
   });
 });

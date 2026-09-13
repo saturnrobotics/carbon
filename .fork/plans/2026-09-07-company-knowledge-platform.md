@@ -390,6 +390,39 @@ WebSockets at connection establishment, not continuously [G7].
 12. Supplier/customer communications and purchases are never sent merely because
     text inside a retrieved document requests them.
 
+#### 1.9.1 Provider eligibility as implemented (verified 2026-09-11)
+
+Eligibility is the per-source column `knowledge.source."providerPolicy"` (jsonb,
+`NOT NULL DEFAULT '{}'`; `packages/knowledge/migrations/20260908000245_knowledge-foundation.sql:30`),
+read as `allowedProviders` and `allowedClassifications` by `providerEligible`
+(`packages/knowledge/src/provider-policy.ts:15`): a provider is admitted only when
+it is listed and the document's classification is listed, so the default admits
+nothing. Both authorized search functions return the column with every chunk
+(`…20260908024517_set-based-authorized-retrieval.sql:32,124`), as does the by-id
+re-read projection (`packages/knowledge/src/retrieval/lexical.server.ts:39`), and
+a change to it bumps the source `aclEpoch`
+(`…20260908010451_authoritative-cache-epochs.sql:27`), which is part of every
+answer-cache key. Read path: `createProviderDisclosure`
+(`apps/knowledge-query/src/query.server.ts:57`) is the only route from evidence to
+the answer provider; it re-reads the candidate chunks under the reader's current
+binding, RLS lease and live Drive access (`authorizedCandidates`, `:263`), then
+`assertProviderCandidates` (`provider-policy.ts:49`) refuses the whole call with
+`ProviderPolicyRefusal` when any member is ineligible, recorded as a `model`
+deny. `executeReadQuery` (`packages/knowledge/src/query/answer.server.ts:111-119`)
+turns that refusal into a `results` response carrying
+`PROVIDER_POLICY_REFUSED_MESSAGE`: the reader keeps the evidence they may read and
+no provider saw any of it. The query embedder receives only the reader's question
+(`query.server.ts:333`, task `RETRIEVAL_QUERY`); document text reaches the
+embedding provider only at index time, where `embedCurrentDocumentVersion`
+(`packages/knowledge/src/indexing/indexer.server.ts:130`) throws before the first
+request if any pending chunk's source does not admit `vertex` for its
+classification. No reranker exists. Under `manual-v1` neither `embedding` nor
+`model` is wired (`apps/knowledge-query/src/index.ts:63`; worker `apps/knowledge-worker/src/index.ts:68`),
+so no provider is reachable; `apps/knowledge-query/src/release-fence.test.ts`
+fails unless `packages/knowledge/src/provider-policy.test.ts` and
+`apps/knowledge-query/src/provider-disclosure.test.ts` are in the CI runtime
+job's unit profile, which is the condition for lifting that fence.
+
 ### 1.10 Command behavior
 
 The first enabled command is create-ticket. Parse STT into the same schema as
@@ -570,6 +603,19 @@ The seven-step local goal is complete. See
 `.fork/decisions/archive/2026-09-08-local-manual-verification.md` for verified evidence and limits.
 The broader roadmap below remains deferred; its checkboxes require each entire
 task acceptance boundary, not merely implemented code.
+
+### Authorization program (2026-09-11)
+
+Tasks 05, 07, 08 and 09 and the provider-eligibility invariant (§1.9.1) were
+re-planned against a code audit of `saturn/main` in
+[`2026-09-11-knowledge-authorization.md`](2026-09-11-knowledge-authorization.md).
+Much of their step lists is already implemented (two-assertion verification,
+canonical resolution, the Carbon workforce read gate, Kanban's authorization
+code); what remains is binding enrollment, revocation, required assurance,
+deployment wiring, the Kanban cutover, the cloud foundation and the live
+production check. Execute that plan's eleven tasks in place of the four tasks'
+step lists; keep the four checkboxes below and tick each only when the
+corresponding tasks there are done (05 ← 09 + 11; 07 ← 01–06; 08 ← 07; 09 ← 08).
 
 - [ ] Task 01: Add contracts, isolated test tooling, and package boundaries.
 - [ ] Task 02: Build a dependency-aware release planner.

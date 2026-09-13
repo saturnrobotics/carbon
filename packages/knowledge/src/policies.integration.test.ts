@@ -15,4 +15,14 @@ describe("private knowledge RLS on non-owner runtime roles", () => {
       )
     ).not.toThrow();
   });
+
+  it("lets only the migrate role enroll or unbind workforce identities", () => {
+    expect(() =>
+      execFileSync(
+        "python3",
+        [resolve(import.meta.dirname, "../scripts/test_enrollment.py")],
+        { stdio: "pipe" }
+      )
+    ).not.toThrow();
+  });
 });

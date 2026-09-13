@@ -8,6 +8,7 @@ import {
   verifyWorkforceRequest
 } from "@carbon/knowledge/identity.server";
 import { requestBoundary } from "@carbon/knowledge/query/request-boundary.server";
+import { createActionsMcpHandler } from "./mcp";
 import { handleProcurementCommand } from "./procurement-server";
 import { handleTicketCommand } from "./server";
 
@@ -52,74 +53,81 @@ export function createHandler(environment: NodeJS.ProcessEnv = process.env) {
   }
   const configuration = parseTrustedCallerConfiguration(callers);
   const verifier = new GoogleWorkforceTokenVerifier();
+  // Named once so the HTTP dispatch and the optional MCP transport below run
+  // the same handler with the same dependencies; there is no second path.
+  const ticketRoute = async (request: Request) => {
+    if (!sourceId || !sourceUrl || !sourceAudience) {
+      return new Response(
+        JSON.stringify({ error: "ticket_action_not_configured" }),
+        { status: 503 }
+      );
+    }
+    return handleTicketCommand(request, {
+      sourceId,
+      sourceUrl,
+      verifyWorkforce: (incoming) =>
+        verifyWorkforceRequest({
+          request: incoming,
+          operation: "kanban.ticket.create",
+          configuration,
+          tokenVerifier: verifier,
+          identityStore: createRemoteWorkforceIdentityStore({
+            request: incoming,
+            resolverUrl,
+            resolverAudience
+          })
+        }),
+      forwardingHeaders: (incoming, identity) =>
+        createWorkforceForwardingHeaders({
+          request: incoming,
+          targetAudience: sourceAudience,
+          companyId: identity.principal.companyId,
+          verified: identity
+        })
+    });
+  };
+  const procurementRoute = async (request: Request) => {
+    if (!carbonUrl || !carbonAudience) {
+      return new Response(
+        JSON.stringify({ error: "procurement_action_not_configured" }),
+        { status: 503 }
+      );
+    }
+    return handleProcurementCommand(request, {
+      sourceUrl: carbonUrl,
+      verifyWorkforce: (incoming) =>
+        verifyWorkforceRequest({
+          request: incoming,
+          operation: "knowledge_createProcurementDraft",
+          configuration,
+          tokenVerifier: verifier,
+          identityStore: createRemoteWorkforceIdentityStore({
+            request: incoming,
+            resolverUrl,
+            resolverAudience
+          })
+        }),
+      forwardingHeaders: (incoming, identity) =>
+        createWorkforceForwardingHeaders({
+          request: incoming,
+          targetAudience: carbonAudience,
+          companyId: identity.principal.companyId,
+          verified: identity
+        })
+    });
+  };
+  // Optional transport over the command routes mounted below; off by default.
+  const mcpHandler = createActionsMcpHandler({
+    environment,
+    routes: { "/commands/tickets": ticketRoute }
+  });
   return requestBoundary("actions", async (request: Request) => {
-    if (
-      request.method === "POST" &&
-      new URL(request.url).pathname === "/commands/tickets"
-    ) {
-      if (!sourceId || !sourceUrl || !sourceAudience) {
-        return new Response(
-          JSON.stringify({ error: "ticket_action_not_configured" }),
-          { status: 503 }
-        );
-      }
-      return handleTicketCommand(request, {
-        sourceId,
-        sourceUrl,
-        verifyWorkforce: (incoming) =>
-          verifyWorkforceRequest({
-            request: incoming,
-            operation: "kanban.ticket.create",
-            configuration,
-            tokenVerifier: verifier,
-            identityStore: createRemoteWorkforceIdentityStore({
-              request: incoming,
-              resolverUrl,
-              resolverAudience
-            })
-          }),
-        forwardingHeaders: (incoming, identity) =>
-          createWorkforceForwardingHeaders({
-            request: incoming,
-            targetAudience: sourceAudience,
-            companyId: identity.principal.companyId,
-            verified: identity
-          })
-      });
-    }
-    if (
-      request.method === "POST" &&
-      new URL(request.url).pathname === "/commands/procurement"
-    ) {
-      if (!carbonUrl || !carbonAudience) {
-        return new Response(
-          JSON.stringify({ error: "procurement_action_not_configured" }),
-          { status: 503 }
-        );
-      }
-      return handleProcurementCommand(request, {
-        sourceUrl: carbonUrl,
-        verifyWorkforce: (incoming) =>
-          verifyWorkforceRequest({
-            request: incoming,
-            operation: "knowledge_createProcurementDraft",
-            configuration,
-            tokenVerifier: verifier,
-            identityStore: createRemoteWorkforceIdentityStore({
-              request: incoming,
-              resolverUrl,
-              resolverAudience
-            })
-          }),
-        forwardingHeaders: (incoming, identity) =>
-          createWorkforceForwardingHeaders({
-            request: incoming,
-            targetAudience: carbonAudience,
-            companyId: identity.principal.companyId,
-            verified: identity
-          })
-      });
-    }
+    const pathname = new URL(request.url).pathname;
+    if (request.method === "POST" && pathname === "/commands/tickets")
+      return ticketRoute(request);
+    if (request.method === "POST" && pathname === "/commands/procurement")
+      return procurementRoute(request);
+    if (pathname === "/mcp") return mcpHandler(request);
     return new Response(JSON.stringify({ error: "not_found" }), {
       status: 404
     });

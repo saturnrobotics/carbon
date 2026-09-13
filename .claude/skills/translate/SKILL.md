@@ -11,7 +11,8 @@ approved domain terms for that chunk**, chunks them into jobs, **Haiku
 subagents** translate the chunks (invoked with `model: "haiku"` so the expensive
 main model only orchestrates), and a deterministic merge script writes them back
 — no model in the write path. Input → output: empty `msgstr` in
-`packages/locale/locales/{locale}/{erp,mes}.po` → filled `msgstr`.
+`packages/locale/locales/{locale}/{catalog}.po` → filled `msgstr`. The catalogs
+are read from `lingui.config.js`, so every configured one is covered.
 
 **Announce at start:** "Using the translate skill — filling missing .po translations via Haiku subagents, with the approved glossary attached."
 
@@ -287,7 +288,7 @@ run, but clean up here too so the tree is tidy.)
 
 ## Output
 
-Filled `msgstr` values in `packages/locale/locales/{locale}/{erp,mes}.po`. Commit
+Filled `msgstr` values in `packages/locale/locales/{locale}/{catalog}.po`. Commit
 only if the user asks, via `/check-and-commit` (the `.po` files are the artifact;
 `.mjs` stay gitignored). Scratch under `.ai/scratch/translate/` is disposable.
 

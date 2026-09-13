@@ -11,6 +11,7 @@ Purchase orders, supplier management, supplier quotes/interactions, RFQs, and pr
 - **RFQ (Request for Quotation)** — solicits pricing from multiple suppliers. Links to supplier quotes via `purchasingRfqToSupplierQuote`. Statuses managed by `updatePurchasingRFQStatus`.
 - **Conversion Factor** — when a supplier's UoM differs from stocking UoM, `conversionFactor` on `purchaseOrderLine` scales quantities at receipt: `inventoryQty = purchaseQty × conversionFactor`. See `.claude/rules/purchasing-conversion-factors.md`.
 - **Purchasing Planning** — MRP-driven planned orders surfaced via `getPurchasingPlanning` (calls `get_purchasing_planning` RPC).
+- **Procurement Draft** — `createProcurementDraft` (Kysely transaction) is how the knowledge platform's `carbon.procurement.draft` command becomes a Draft PO: header, supplier delivery/payment defaults, validated lines and a `knowledgeCommandReceipt` in one transaction, with the `knowledgeSourceOutbox` trigger recording the change alongside them. `resolveProcurementDraft` is its read-only half — it derives every value from Carbon (supplier currency, `get_exchange_rate`, `supplierPart` UoM/factor/price, the current released item revision, the unreleased-ECO guard) and treats the proposal's UoMs, factor and price as stale-data assertions to compare, never as authority. Both take an `authorizedContext` whose `canCreatePurchasing` the CALLER has already decided, so both are in `MCP_BLOCKED_TOOL_NAMES`; `knowledge_createProcurementDraft` is the only entry point and it stamps that context server-side. Submission, approval, release and supplier communication remain separate operations.
 
 ## Safety
 
@@ -52,6 +53,7 @@ cd apps/erp && pnpm exec vitest run app/modules/purchasing
 | `supplierQuote` / `supplierQuoteLine` / `supplierQuoteLinePrice` | Vendor pricing at quantity breaks |
 | `purchasingRfq` / `purchasingRfqLine` / `purchasingRfqSupplier` | RFQ header, lines, and invited suppliers |
 | `terms` | Payment/delivery terms reference data |
+| `knowledgeCommandReceipt` | Written by `createProcurementDraft` inside its transaction: actor, company, action, idempotency key, payload hash and `version`, plus the PO it created. Its uniqueness on `(companyId, actorId, action, idempotencyKey)` is the concurrency authority — a retry that loses the race rolls back and replays the committed order |
 | `purchaseReturnOrder` / `purchaseReturnOrderLine` / `purchaseReturnOrders` (view) | Supplier returns: authorize → ship (via shipments, source "Purchase Return Order") → credit. Statuses Draft → Confirmed → Partially Shipped → Shipped → Completed/Cancelled; `supplierReference` carries the supplier's own RMA number; line quantities/prices are ALWAYS inventory-UOM (converted once at authoring) |
 | `purchaseReturnOrderLineTrackedEntity` / `purchaseReturnOrderCreditLine` | Entities to send back (picked from Available stock from that supplier) — the `create` edge fn (`shipmentFromPurchaseReturnOrder`) stamps these onto the shipment's tracked entities (`attributes ->> Shipment`/`Shipment Line`) so the batch/serial flows through; `post-shipment` **splits** a batch when the returned quantity is less than the entity's (mirrors the Sales Order path, `buildBatchSplitRecords`). Per-line credit breakdown behind the AP `memo` (`memo.purchaseReturnOrderId`, reason account = GRNI). The memo is a **Debit** memo (`DR-` sequence): direction alone picks the control side, so Credit would INCREASE AP and re-debit GRNI — a vendor return must DR AP / CR GRNI |
 
@@ -65,6 +67,7 @@ cd apps/erp && pnpm exec vitest run app/modules/purchasing
 - `finalizePurchaseOrder` / `finalizeSupplierQuote` — lock documents for processing
 - `sendSupplierQuote` — sends quote to supplier
 - `getPurchasingPlanning` — MRP-driven planned order view (RPC `get_purchasing_planning`)
+- `createProcurementDraft` / `resolveProcurementDraft` — the knowledge command's Draft-PO transaction and its read-only preflight (`procurementDraftInputValidator` + `PROCUREMENT_DRAFT_PAYLOAD_VERSION` in `purchasing.models.ts`); proven against the real schema by `procurement-draft.integration.test.ts`
 - `getSupplierApprovalContext` — reads approval workflow state
 - `getPurchasingRFQ` / `getPurchasingRFQs` / `upsertPurchasingRFQ` — RFQ management
 - `getSupplierQuotesForComparison` — side-by-side quote comparison

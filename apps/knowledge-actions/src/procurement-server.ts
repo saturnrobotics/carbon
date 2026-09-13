@@ -1,3 +1,4 @@
+import { currentInstant } from "@carbon/knowledge/commands/procurement";
 import type { VerifiedWorkforceIdentity } from "@carbon/knowledge/identity.server";
 import { executeProcurementDraftCommand } from "./procurement";
 
@@ -9,6 +10,8 @@ export type ProcurementActionDependencies = {
   ) => Promise<Headers>;
   sourceUrl: string;
   fetchImpl?: typeof fetch;
+  /** Injectable so a test pins date resolution without freezing the clock. */
+  now?: () => string;
 };
 
 export async function handleProcurementCommand(
@@ -32,10 +35,12 @@ export async function handleProcurementCommand(
       principal: identity.principal,
       sourceUrl: dependencies.sourceUrl,
       forwardHeaders: headers,
-      fetchImpl: dependencies.fetchImpl
+      fetchImpl: dependencies.fetchImpl,
+      now: (dependencies.now ?? currentInstant)()
     });
     return Response.json(result, { status: result.replayed ? 200 : 201 });
   } catch {
+    // Authentication/verifier details and bearer assertions never leave this edge.
     return new Response(
       "Procurement command was not authorized or could not be completed",
       { status: 403 }

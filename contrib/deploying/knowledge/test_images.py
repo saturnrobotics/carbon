@@ -15,6 +15,42 @@ import unittest
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[2]
 UNITS = ("web", "query", "ingest", "parser", "schema", "retention")
+DRIVE_VARIABLE = "KNOWLEDGE_DRIVE_ENABLED"
+
+
+def dockerfile_stages(text):
+    """Split a Dockerfile into its named build stages.
+
+    Text searches cannot answer "does the release image build receive this
+    argument" — the file holds several images and only one of them is shipped.
+    Line continuations are joined so an instruction is one entry.
+    """
+    joined = text.replace("\\\n", " ")
+    stages = {}
+    current = None
+    for line in joined.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        words = stripped.split()
+        if words[0].upper() == "FROM":
+            base = words[1]
+            name = words[3] if len(words) > 3 and words[2].upper() == "AS" else base
+            current = name
+            stages[current] = {"base": base, "instructions": []}
+            continue
+        if current is not None:
+            stages[current]["instructions"].append(stripped)
+    return stages
+
+
+def stage_ancestry(stages, name):
+    """`name` and every stage it is built from, nearest first."""
+    seen = []
+    while name in stages and name not in seen:
+        seen.append(name)
+        name = stages[name]["base"]
+    return seen
 
 
 class ManualImageContracts(unittest.TestCase):
@@ -35,6 +71,88 @@ class ManualImageContracts(unittest.TestCase):
         ):
             with self.subTest(route=deferred):
                 self.assertNotIn(deferred, routes)
+
+    def test_deferred_drive_surface_is_gated_and_no_release_path_enables_it(self):
+        """The manifest above stays clean because the Drive settings route is
+        spread in by a build-time gate that is off unless an environment names
+        `KNOWLEDGE_DRIVE_ENABLED=true`. That variable reaches no release image
+        and no deployed revision, so the gate is what keeps the fence real
+        rather than the absence of a literal from one file."""
+        manifest = (ROOT / "apps/knowledge/app/routes.ts").read_text()
+        gated = (ROOT / "apps/knowledge/app/routes.deferred.ts").read_text()
+        self.assertIn("deferredDriveRoutes", manifest)
+        self.assertIn("settings.sources", gated)
+        self.assertIn("isDriveSurfaceEnabled", gated)
+        # release.py rejects any environment key outside REQUIRED_ENVIRONMENT as
+        # deferred runtime configuration, so its absence here is the refusal.
+        self.assertNotIn(DRIVE_VARIABLE, (HERE / "release.py").read_text())
+        for unit in UNITS:
+            # Dockerfile.web names it in its disposable `e2e` stage, which the
+            # test below pins to that stage alone.
+            if unit == "web":
+                continue
+            with self.subTest(unit=unit):
+                self.assertNotIn(
+                    DRIVE_VARIABLE, (HERE / f"Dockerfile.{unit}").read_text()
+                )
+
+    def test_release_web_image_build_receives_no_drive_build_argument(self):
+        """The browser harness needs the deferred Drive route compiled into its
+        own web image, because a route manifest is a BUILD-time artifact. That
+        is a build argument on the `e2e` stage, and this is the assertion that
+        stops it reaching a release: `runtime` and every stage it descends from
+        must never declare or read the variable, so passing the argument to a
+        release build is inert rather than dangerous, and no release build
+        command passes one at all."""
+        stages = dockerfile_stages((HERE / "Dockerfile.web").read_text())
+        naming = sorted(
+            name
+            for name, stage in stages.items()
+            if any(DRIVE_VARIABLE in line for line in stage["instructions"])
+        )
+        self.assertEqual(naming, ["e2e"])
+        self.assertIn(
+            f"ARG {DRIVE_VARIABLE}",
+            "\n".join(stages["e2e"]["instructions"]),
+        )
+        # The release image is the LAST stage, which is what an untargeted
+        # `docker build` selects; walk its bases and require every one of them
+        # to be argument-free.
+        release = list(stages)[-1]
+        self.assertEqual(release, "runtime")
+        for name in stage_ancestry(stages, release):
+            with self.subTest(stage=name):
+                self.assertNotIn(
+                    DRIVE_VARIABLE, "\n".join(stages[name]["instructions"])
+                )
+
+        # cloudbuild.yaml is the release build. It selects no target, so it
+        # builds `runtime`, and it passes no build argument whatsoever.
+        cloudbuild = (HERE / "cloudbuild.yaml").read_text()
+        self.assertIn("docker build --file", cloudbuild)
+        self.assertNotIn("--build-arg", cloudbuild)
+        self.assertNotIn("--target", cloudbuild)
+
+        # build-images.sh: the argument appears only in the `e2e` branch, and
+        # the release loop that builds `--target runtime` passes none.
+        script = (HERE / "build-images.sh").read_text()
+        e2e_branch = script.index('if [ "$mode" = "e2e" ]')
+        release_loop = script.index(
+            "for unit in web query ingest parser schema retention; do"
+        )
+        self.assertLess(e2e_branch, release_loop)
+        self.assertEqual(
+            [
+                index
+                for index in range(len(script))
+                if script.startswith(f"--build-arg {DRIVE_VARIABLE}=true", index)
+            ],
+            [script.index(f"--build-arg {DRIVE_VARIABLE}=true")],
+        )
+        self.assertLess(
+            script.index(f"--build-arg {DRIVE_VARIABLE}=true"), release_loop
+        )
+        self.assertNotIn("--build-arg", script[release_loop:])
 
     def test_parser_image_keeps_test_adapter_out_of_final_finite_job(self):
         dockerfile = (HERE / "Dockerfile.parser").read_text()

@@ -7,6 +7,7 @@ import { jsonSchema, jsonSchemaInput } from "@carbon/api/schema";
 import { base, gate, mapThrownErrors } from "./base.server";
 import { dispatchOperation } from "./dispatch.server";
 import {
+  DISCLOSED_OPERATIONS,
   OPERATIONS,
   operationId,
   outputSchema,
@@ -64,6 +65,22 @@ export const router: Record<
       );
     }
     (out[meta.module] ??= {})[id] = buildProcedure(meta, id);
+  }
+  return out;
+})();
+
+/**
+ * The router the public OpenAPI document is generated from: the same procedure
+ * objects, minus the operations `isDisclosedOperation` withholds. The HTTP
+ * handler and server-side `call()` keep using the full `router`, so a workforce
+ * caller still reaches a knowledge operation; only the document stops promising
+ * it to API-key clients that would get 404.
+ */
+export const disclosedRouter: typeof router = (() => {
+  const out: typeof router = {};
+  for (const meta of DISCLOSED_OPERATIONS) {
+    const id = operationId(meta);
+    (out[meta.module] ??= {})[id] = router[meta.module][id];
   }
   return out;
 })();

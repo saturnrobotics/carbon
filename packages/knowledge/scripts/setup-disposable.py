@@ -39,6 +39,12 @@ sql("""DO $$ BEGIN IF NOT EXISTS(SELECT FROM pg_roles WHERE rolname='knowledge_t
  GRANT EXECUTE ON FUNCTION public.knowledge_fixture_mutator() TO authenticated;
 """)
 sql((root / "packages/database/supabase/migrations/20260908012959_knowledge-function-execution-boundary.sql").read_text())
+# Source-owned revocation triggers on public."user" / "userToCompany"; the
+# migration is idempotent and needs the enrollment owner role applied above.
+sql((root / "packages/database/supabase/migrations/20260911211525_knowledge-identity-revocation.sql").read_text())
+# The vitest login drives the deactivation trigger through the same fixture
+# mutator the authenticated-role boundary test uses; it is not a runtime role.
+sql("GRANT EXECUTE ON FUNCTION public.knowledge_fixture_mutator() TO knowledge_test_migrator;")
 sql(Path(__file__).with_name("policy-fixtures.sql").read_text())
 sql('INSERT INTO knowledge_metering."requestPolicy" VALUES (\'company-a\',\'knowledge.query\',1000,10000),(\'company-b\',\'knowledge.query\',1000,10000) ON CONFLICT DO NOTHING;')
 # The jobs integration exercises canonical scheduler SQL against actual feature

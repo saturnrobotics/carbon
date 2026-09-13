@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "receiver": {
+    "id": "knowledge-query",
+    "audience": "https://knowledge-query.example.com"
+  },
+  "callers": [
+    {
+      "callerId": "knowledge-web",
+      "serviceAccountSubject": "100000000000000000001",
+      "sourceIapAudience": "/projects/123456789012/locations/us-central1/services/knowledge-web",
+      "operations": ["knowledge.identity", "knowledge.query"],
+      "capabilities": ["knowledge.read"],
+      "requiredAccessLevels": [
+        "accessPolicies/123456789012/accessLevels/managed_device"
+      ],
+      "assurance": {
+        "mode": "workspace-equivalent",
+        "accessLevel": "accessPolicies/123456789012/accessLevels/workspace_2sv"
+      }
+    },
+    {
+      "callerId": "knowledge-ingest",
+      "serviceAccountSubject": "100000000000000000002",
+      "sourceIapAudience": "/projects/123456789012/locations/us-central1/services/knowledge-web",
+      "operations": ["knowledge.identity"],
+      "capabilities": [
+        "knowledge.read",
+        "knowledge.intake.capture",
+        "knowledge.intake.review",
+        "knowledge.intake.publish",
+        "knowledge.document.delete",
+        "knowledge.document.download"
+      ],
+      "requiredAccessLevels": [
+        "accessPolicies/123456789012/accessLevels/managed_device"
+      ],
+      "assurance": { "mode": "carbon-mfa" }
+    }
+  ]
+}

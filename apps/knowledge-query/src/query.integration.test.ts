@@ -1,6 +1,12 @@
+import {
+  createLineSplitter,
+  decodeQueryStreamLine,
+  type QueryStreamEvent
+} from "@carbon/knowledge/query/stream";
 import { getDisposableLocalDatabaseUrl } from "@carbon/knowledge/test/database";
 import { Pool } from "pg";
 import { afterAll, describe, expect, it } from "vitest";
+import { createConversationStore } from "./conversation.server";
 import { createReadHandler } from "./query.server";
 
 const pool = new Pool({
@@ -110,7 +116,7 @@ describe("read endpoint over real non-owner PostgreSQL RLS", () => {
       identityStore: { resolveHuman: async () => binding },
       origin: "https://portal.example",
       businessTimezone: "UTC",
-      cacheStore: { get: async () => undefined, set: async () => {} }
+      cacheStore: { get: async () => undefined, set: async () => undefined }
     });
     const manualRequest = (body: Record<string, unknown>) =>
       new Request("https://query.example/v1/query", {
@@ -144,6 +150,103 @@ describe("read endpoint over real non-owner PostgreSQL RLS", () => {
     const command = await handler(manualRequest({ text: "create a ticket" }));
     expect(command.status).toBe(403);
   });
+  it("streams authorized evidence before the result and keeps follow-up context only while authorized", async () => {
+    let active = true;
+    const conversations = new Map<string, unknown>();
+    const handler = createReadHandler({
+      pool,
+      configuration,
+      tokenVerifier,
+      nowEpochSeconds: 1000,
+      manualSourceId: "source-b",
+      identityStore: {
+        resolveHuman: async () => ({ ...binding, membershipActive: active })
+      },
+      origin: "https://portal.example",
+      businessTimezone: "UTC",
+      cacheStore: { get: async () => undefined, set: async () => undefined },
+      conversationStore: createConversationStore({
+        get: async (key) => conversations.get(key),
+        set: async (key, value) => {
+          conversations.set(key, value);
+        }
+      })
+    });
+    const streamed = (text: string, id: string) =>
+      new Request("https://query.example/v1/query", {
+        method: "POST",
+        headers: {
+          authorization: "Bearer service",
+          accept: "application/x-ndjson",
+          "x-portal-user-evidence": "iap",
+          "x-portal-company-id": "company-b",
+          "content-type": "application/json"
+        },
+        body: JSON.stringify({
+          requestId: id,
+          text,
+          mode: "auto",
+          locale: "en",
+          context: { conversationId: "conversation-1" }
+        })
+      });
+    const events = async (response: Response) => {
+      const reader = response
+        .body!.pipeThrough(createLineSplitter())
+        .getReader();
+      const seen: QueryStreamEvent[] = [];
+      for (;;) {
+        const next = await reader.read();
+        if (next.done) break;
+        const event = decodeQueryStreamLine(next.value);
+        if (event) seen.push(event);
+      }
+      return seen;
+    };
+    const first = await handler(streamed("manual", "stream-1"));
+    expect(first.status).toBe(200);
+    expect(first.headers.get("content-type")).toBe("application/x-ndjson");
+    const firstEvents = await events(first);
+    expect(firstEvents.map((event) => event.type)).toEqual([
+      "progress",
+      "evidence",
+      "result"
+    ]);
+    expect(firstEvents[1]).toMatchObject({
+      evidence: [{ id: "chunk-doc-b" }]
+    });
+    expect(firstEvents[2]).toMatchObject({
+      result: { requestId: "stream-1", kind: "results" }
+    });
+    // Only evidence ids were stored, under this actor.
+    expect([...conversations.values()]).toEqual([
+      expect.objectContaining({
+        actorId: "bob",
+        companyId: "company-b",
+        evidenceIds: ["chunk-doc-b"]
+      })
+    ]);
+    // A follow-up whose words match nothing still has the shown manual in context.
+    const followUp = await events(
+      await handler(streamed("zzqx-no-such-term", "stream-2"))
+    );
+    expect(followUp.at(-1)).toMatchObject({
+      result: { kind: "results", evidence: [{ id: "chunk-doc-b" }] }
+    });
+    // Once the membership is revoked the context grants nothing: the same
+    // follow-up is refused before any evidence is streamed.
+    active = false;
+    const revoked = await handler(streamed("zzqx-no-such-term", "stream-3"));
+    const revokedEvents = revoked.ok ? await events(revoked) : [];
+    expect(revokedEvents.some((event) => event.type === "evidence")).toBe(
+      false
+    );
+    expect(
+      revokedEvents.some(
+        (event) => event.type === "result" && event.result.evidence.length > 0
+      )
+    ).toBe(false);
+  });
   it("rejects a company switch before any private result", async () => {
     const handler = createReadHandler({
       pool,
@@ -153,7 +256,7 @@ describe("read endpoint over real non-owner PostgreSQL RLS", () => {
       identityStore: { resolveHuman: async () => binding },
       origin: "https://portal.example",
       businessTimezone: "UTC",
-      cacheStore: { get: async () => undefined, set: async () => {} }
+      cacheStore: { get: async () => undefined, set: async () => undefined }
     });
     const denied = await handler(request("company-a"));
     expect(denied.status).not.toBe(200);

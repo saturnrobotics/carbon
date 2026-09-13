@@ -9,11 +9,137 @@ environment variables or secrets even if deferred implementation remains in the
 repository.
 
 Terraform creates the workload identities, private buckets, managed Redis,
-Direct VPC egress, Secret Manager containers and immutable Artifact Registry.
-It does not migrate a database, write a secret value, download a service-account
-key or deploy an application revision. `terraform apply` is an operator action
-after review of private `terraform.tfvars`. Keep endpoints, certificates, secret
-values, IAP evidence and staging results outside tracked files.
+Direct VPC egress, Secret Manager containers, immutable Artifact Registry, the
+IAP-protected `knowledge-web` service shell, the exact service-to-service invoker
+grants and the private path to Carbon's PostgreSQL listener. It does not migrate
+a database, write a secret value, download a service-account key or deploy an
+application revision. `terraform apply` is an operator action after review of
+private `terraform.tfvars`. Keep endpoints, certificates, secret values, IAP
+evidence and staging results outside tracked files.
+
+## Cloud foundation
+
+All identifiers below are synthetic. Real project IDs, bucket names, brand
+names and addresses belong in ignored `.local/` files.
+
+### State backend
+
+`main.tf` declares a partial `gcs` backend. The bucket and the per-environment
+prefix are supplied at `init`, so a tracked file never names a project and the
+two environments cannot share a state object:
+
+```bash
+terraform -chdir=contrib/deploying/knowledge init \
+  -backend-config="bucket=example-knowledge-terraform-state" \
+  -backend-config="prefix=knowledge/nonproduction"
+terraform -chdir=contrib/deploying/knowledge init -reconfigure \
+  -backend-config="bucket=example-knowledge-terraform-state" \
+  -backend-config="prefix=knowledge/production"
+```
+
+Keep the backend values in `contrib/deploying/knowledge/.local/backend.<environment>.hcl`
+and pass `-backend-config=.local/backend.production.hcl`. The state bucket must
+have object versioning and uniform bucket-level access, with write access limited
+to the operators who apply. Local state files (`*.tfstate`) are ignored by Git;
+never commit one. CI validates with `init -backend=false`, which needs no bucket.
+
+### IAP client and audiences
+
+`knowledge-web` is a Terraform-created Cloud Run service shell with
+`iap_enabled = true`, the IAP service agent as its only `run.invoker`, and
+`roles/iap.httpsResourceAccessor` for exactly `var.iap_workspace_group`. Its
+revision template is the synthetic probe image (`var.probe_image`) and is
+ignored by every later apply; the release controller owns it. The controller
+copies the service-level `run.googleapis.com/iap-enabled` and `ingress`
+annotations from the observed service onto each replacement, and refuses to
+promote `knowledge-web` when that shell is absent or IAP is off — a promotion
+cannot switch IAP off, and the foundation must be applied before the first
+release.
+
+IAP on Cloud Run uses a Google-managed OAuth client for users inside the
+Workspace organization, which is the only admission this deployment allows, so
+no OAuth brand or client exists in this configuration. The Terraform
+`google_iap_client` and `google_iap_brand` resources are deprecated and the
+provider reports that the IAP OAuth Admin API behind them stopped functioning
+after July 2025, so declaring them would produce a foundation that cannot
+apply; `test_infrastructure.py` fails if either reappears. A custom OAuth
+client is only relevant for admitting users outside the organization, which is
+not a supported configuration here. If that ever changes, the brand and client
+are created manually in the console and attached through IAP settings, and
+that manual step must be recorded privately with the deployment evidence.
+
+Audiences are outputs, never typed values:
+
+| Output key | Value | Consumed as |
+|---|---|---|
+| `service_audiences["knowledge-web"]` | `/projects/<number>/locations/<region>/services/knowledge-web` | `KNOWLEDGE_WEB_IAP_AUDIENCE` on web; `sourceIapAudience` in the caller registries |
+| `service_audiences["knowledge-query"]` | `https://knowledge-query-<number>.<region>.run.app` | `KNOWLEDGE_QUERY_AUDIENCE` on web, `KNOWLEDGE_IDENTITY_AUDIENCE` on ingest |
+| `service_audiences["knowledge-ingest"]` | `https://knowledge-ingest-<number>.<region>.run.app` | `KNOWLEDGE_WORKER_AUDIENCE` on web |
+| `service_audiences["knowledge-actions"]` | `https://knowledge-actions-<number>.<region>.run.app` | reserved; the actions unit is not part of manual-v1 |
+
+Export them privately and hand them to the controller:
+
+```bash
+terraform -chdir=contrib/deploying/knowledge output -json \
+  > contrib/deploying/knowledge/.local/foundation-outputs.json
+```
+
+`release.py --foundation-outputs <file>` fills every audience variable in
+`AUDIENCE_ENVIRONMENT` from `service_audiences` and rejects a plan whose own
+value differs. To keep a plan's audience values instead (for example a custom
+domain audience under test), pass `--override-audiences`; without either flag
+the controller refuses to run, so an audience cannot drift silently between the
+foundation and a release.
+
+### Invoker grants
+
+Cloud Run IAM is the entrance check for every internal hop; the receiver still
+verifies the service token and the forwarded IAP assertion. Grants are exactly
+the platform plan's §1.4 forwarding table plus the two job triggers. Each is a
+`roles/run.invoker` member bound by an exact `resource.name` condition — the
+receivers are controller-created, so a service-level binding cannot exist before
+the first release — and `test_infrastructure.py` fails on any grant outside this
+table, on any unconditioned `run.invoker`, and on `allUsers` or
+`allAuthenticatedUsers` anywhere.
+
+| Caller identity | Receiver |
+|---|---|
+| `knowledge-web` | `services/knowledge-query` |
+| `knowledge-web` | `services/knowledge-actions` |
+| `knowledge-ingest` | `services/knowledge-query` |
+| `knowledge-ingest` | `jobs/knowledge-parser` |
+| `knowledge-maintenance` (Cloud Scheduler) | `jobs/knowledge-retention` |
+| IAP service agent | `services/knowledge-web`, `services/knowledge-probe` (service-level) |
+
+### Private source path
+
+Carbon's PostgreSQL listener is reachable only over VPC peering plus Direct VPC
+egress, the same path Kanban uses (`../kanban/deploy/shared-database-setup.py`).
+There is no Cloud NAT and no public route. Set both variables together:
+
+```hcl
+private_source_network = "projects/example-carbon/global/networks/carbon-vpc"
+private_source_cidrs   = ["10.73.0.2/32"]
+```
+
+Terraform creates the peering in both directions (the second needs
+`compute.networks.addPeering` in the Carbon project), an egress allow for TCP
+5432 to `private_source_cidrs` for instances tagged
+`knowledge-source-database-client`, and an egress deny of that destination for
+everything else. `release.py` stamps that tag only on units holding a database
+credential (`DATABASE_UNITS`: query, ingest, schema, retention); web and parser
+can never open the listener. Carbon admits only the client subnets listed in its
+own `POSTGRES_CLIENT_CIDRS`, so `var.subnet_cidr` (default `10.82.0.0/24`) must
+be added there and Carbon redeployed before the first connection succeeds.
+
+Transport security is the listener's TLS certificate. Copy only Carbon's
+`ca.crt` into the `knowledge-source-database-ca` secret through an authenticated
+operator connection, and build every database URL with `sslmode=verify-full`
+and `sslrootcert` pointing at that CA. Every identity holding a database URL
+also holds the CA; web and parser hold neither. Mounting the CA file into the
+database units is controller work that is not yet wired: until it is, the
+database URL secrets are the only place the CA path is referenced, and no unit
+should be promoted with a URL that lacks `verify-full`.
 
 ## Database and library enrollment
 
@@ -21,23 +147,108 @@ Apply the public Carbon migrations first, followed by every private migration in
 `packages/knowledge/migrations` through the schema job. Use separate login roles
 whose only memberships are the matching NOLOGIN runtime roles:
 `knowledge_read`, `knowledge_ingest`, `knowledge_review` and
-`knowledge_maintenance`. The schema login is used only by the finite schema job.
-Do not give the web or parser service a database credential.
+`knowledge_maintenance`. The schema login is used only by the finite schema job
+and by the enrollment command below. Do not give the web or parser service a
+database credential.
 
 Before traffic, a human administrator must review and apply an enrollment change
 through the privileged source database administration path. Runtime roles cannot
-create identities, sources or initial grants. The change must atomically create:
+create identities, sources or initial grants. The change must create:
 
 1. one active `upload` source for the company;
-2. an active IAP subject binding to an existing active Carbon user and current
+2. an active IAP subject binding to an existing active Carbon user with current
    company membership;
 3. explicit source-level local grants for each user or managed group; and
 4. a bounded `knowledge.query` request policy.
 
-The following is a shape-only SQL template. Replace every angle-bracket value,
-review the exact subject, company, source, user and rate limits, and run it as the
-source database owner in one transaction. Never use email as the IAP subject and
+### Workforce identity binding
+
+`knowledge."identityBinding"` accepts no direct `INSERT`, `UPDATE` or `DELETE`
+from any role: the runtime policies are `false`, and the only writers are
+`knowledge.enroll_workforce_identity` and `knowledge.unbind_workforce_identity`,
+`SECURITY DEFINER` functions owned by the NOLOGIN `knowledge_enrollment_owner`
+role and executable only by `knowledge_migrate` and `service_role`. Enroll with
+the operator command, connected as the schema login:
+
+```bash
+KNOWLEDGE_MIGRATION_DATABASE_URL='postgresql://<schema-login>@127.0.0.1:<port>/<database>' \
+pnpm --filter @carbon/knowledge identity:enroll -- \
+  --company <company-id> \
+  --user-email <workspace-email> \
+  --iap-subject accounts.google.com:<numeric-iap-user-id> \
+  --capabilities knowledge.read,knowledge.intake.capture,knowledge.intake.review,knowledge.intake.publish,knowledge.document.download,knowledge.document.delete
+```
+
+The email is a lookup hint only: the command resolves it to the Carbon user id,
+prints that id, and binds the id. Pass `--user-id <carbon-user-id>` instead when
+the connection cannot read `public."user"`. The subject is printed once, on the
+confirmation line, and nowhere else. A non-local database URL is refused unless
+`--allow-remote` is given and the interactive confirmation is answered.
+
+The function refuses, and writes nothing, when the subject contains `@` or does
+not match `accounts.google.com:<numeric id>`; when the user does not exist, is
+inactive, or has no current membership in an active company; and when the
+subject is already bound to a different user for the issuer, in any company.
+Re-running with identical input is a no-op; a different capability list updates
+the ceiling in place and bumps the row version. `revocationVersion` is `1` on
+first insert and only advances: `knowledge.unbind_workforce_identity(issuer,
+subject, company)` deactivates a binding and increments it, and a later
+re-enrollment keeps the advanced value. Never use email as the IAP subject and
 never auto-enroll an assertion observed at runtime.
+
+### Emergency disablement
+
+Three things revoke a binding. Each sets it inactive and advances its
+`revocationVersion`, which is part of every cached principal's `policyVersion`
+and of the answer-cache policy snapshot, so a warmed cache entry is never
+delivered again and the next request that presents the subject is refused.
+
+1. The operator command, for one subject or for every binding of one user,
+   connected as the schema login:
+
+   ```bash
+   KNOWLEDGE_MIGRATION_DATABASE_URL='postgresql://<schema-login>@127.0.0.1:<port>/<database>' \
+   pnpm --filter @carbon/knowledge identity:revoke -- \
+     --company <company-id> --iap-subject accounts.google.com:<numeric-iap-user-id>
+
+   pnpm --filter @carbon/knowledge identity:revoke -- \
+     --user-id <carbon-user-id>            # or --user-email <hint>; --company narrows it
+   ```
+
+   It prints one `revocationVersion=<n>` line per binding and nothing else
+   that identifies the binding. Listing a user's bindings needs a connection
+   that can `SET ROLE knowledge_migrate`; otherwise pass `--iap-subject` with
+   `--company`. A non-local database URL is refused unless `--allow-remote` is
+   given and the interactive confirmation is answered.
+2. Deactivating the Carbon user (`public."user".active` to false) revokes every
+   binding of that user in every company, through the source-owned trigger
+   installed by Carbon migration `20260911211525_knowledge-identity-revocation`.
+   Re-activating the user does not re-enable a binding; re-enroll explicitly.
+3. Removing the user's company membership (`public."userToCompany"` row)
+   revokes that user's bindings in that company only.
+
+Permission edits need no revocation: the resolver's `permissionsVersion`
+already changes with every `userPermission` write.
+
+Propagation budget: a local revocation takes effect on the next request to
+any knowledge service, with no cache flush or restart, because every delivery
+re-reads the binding. Google Workspace suspension and IAP session or access
+level propagation are separate systems with their own delays and are not
+promised here; revoke locally first and treat the Workspace side as a second,
+independent step.
+
+The trigger function is owned by `knowledge_enrollment_owner` and returns
+without touching anything while `knowledge."identityBinding"` does not exist,
+so the Carbon migration applies on installs without the knowledge platform and
+the triggers start working once the private enrollment migration has run,
+whichever order the two are applied in.
+
+### Source, grants and request policy
+
+The remaining rows are a shape-only SQL template. Replace every angle-bracket
+value, review the exact company, source, user and rate limits, and run it as the
+source database owner in one transaction. Run it before or after the enrollment
+command; the binding does not depend on the source.
 
 ```sql
 BEGIN;
@@ -54,22 +265,6 @@ INSERT INTO knowledge.source (
     'ingestDatabaseRoles', jsonb_build_array('<ingest-session-user>')
   ),
   'active'
-);
-
-INSERT INTO knowledge."identityBinding" (
-  id, "companyId", "createdBy", issuer, subject, "canonicalUserId", active,
-  capabilities
-) VALUES (
-  '<identity-binding-id>', '<company-id>', '<existing-user-id>',
-  'https://cloud.google.com/iap', '<iap-subject>', '<existing-user-id>', true,
-  ARRAY[
-    'knowledge.read',
-    'knowledge.intake.capture',
-    'knowledge.intake.review',
-    'knowledge.intake.publish',
-    'knowledge.document.download',
-    'knowledge.document.delete'
-  ]
 );
 
 INSERT INTO knowledge."grant" (
@@ -106,10 +301,211 @@ The web service account must be registered as a trusted caller of query for
 capabilities above. The ingestion service account must also be registered as a
 query caller for `knowledge.identity`, because ingestion resolves the forwarded
 IAP subject through query without holding identity tables. Caller capability
-ceilings must contain only the capabilities each receiver uses. Configure the
-machine caller with `source.index.read`, the enrolled company and source only;
-its caller ID and database login must match the source `providerPolicy` values.
-Validate trusted-caller JSON against `callers.schema.json` before release.
+ceilings must contain only the capabilities each receiver uses. Every caller's
+`sourceIapAudience` is `service_audiences["knowledge-web"]` from the foundation
+outputs. Configure the machine caller with `source.index.read`, the enrolled
+company and source only; its caller ID and database login must match the source
+`providerPolicy` values.
+
+Validate every trusted-caller registry before release:
+
+```bash
+pnpm --filter @carbon/knowledge callers:validate contrib/deploying/knowledge/.local/callers.json
+```
+
+The validator parses the file with the runtime zod schema the receivers use,
+checks it against `callers.schema.json`, and applies the release rules the
+runtime leaves open for local fixtures: the receiver audience must be a bare
+https URL, service-account subjects must be Google's numeric unique IDs (never
+an email) and unique across callers, and IAP audiences must be `/projects/...`
+resource paths. It prints each caller's subject, operations and audiences and
+exits non-zero on any issue. `callers.example.json` is a synthetic shape
+reference that the `fork-checks` workflow validates on every change; a test pins
+the zod schema and the JSON Schema to the same verdicts. Real registries belong
+in `.local/` or the deployment secret store, never in a tracked file.
+
+### Required assurance
+
+An IAP assertion proves admission, never assurance. Each caller's `assurance`
+says how its requests satisfy a company's Carbon MFA requirement
+(`companySettings.requireMfa`, forced on under `CONTROLLED_ENVIRONMENT`):
+
+- `{"mode": "carbon-mfa"}` (the default when omitted): Carbon's own MFA gate
+  applies. The forwarding contract carries no Carbon session, so a company that
+  requires MFA denies every delegated read with `step_up_required` and the
+  portal tells the user to sign in to Carbon with two-factor authentication.
+  The web service renders a login link on that page when
+  `KNOWLEDGE_CARBON_LOGIN_URL` (a bare https URL) is set; `release.py` does
+  not accept that key yet, so until the receiver deployment wiring lands the
+  page shows the instruction without a link.
+- `{"mode": "workspace-equivalent", "accessLevel": "<IAP access level>"}`:
+  the operator has recorded, in the decision record for the production
+  verification, that Workspace 2-step verification plus that access level is
+  accepted as equivalent. The verifier then requires the level in the
+  assertion's `google.access_levels` and refuses the request without it; it
+  never falls back to `carbon-mfa`.
+
+There is no third mode and nothing is inferred from an email or a domain. The
+delegated path never marks a Carbon session as verified. A company that does
+not require MFA is unaffected by either mode.
+
+### Carbon change feed (optional)
+
+The ingestion worker can carry Carbon's `knowledgeSourceOutbox` into the
+knowledge index. It is registered only when both sides are configured; without
+either value the worker's function list and Carbon's route stay closed.
+
+- Worker: `KNOWLEDGE_CARBON_SOURCE_JSON={"sourceId":"<carbon-source-id>","origin":"https://<erp-host>","audience":"<erp-receiver-audience>"}`.
+  The companies it serves are the machine callers in
+  `KNOWLEDGE_MACHINE_CALLERS_JSON` that hold `source.changes.read` for that
+  source id. Pulls run every minute (`knowledge-carbon-changes`); the
+  reconciliation sweep for trigger-silenced bulk reloads runs every fifteen
+  minutes (`knowledge-carbon-reconcile`), one keyset page per entity type per run.
+- Carbon: `KNOWLEDGE_MACHINE_CALLERS_JSON` with the same shape the worker uses
+  (`audience` is Carbon's receiver audience; each caller lists the worker
+  service-account subject, `companyIds`, the knowledge `sourceIds` and
+  `capabilities: ["source.changes.read"]`). The feed is
+  `POST /api/v1/knowledge/source-changes`, machine-only: it refuses forwarded
+  employee evidence and is not an employee operation of the `$.ts` dispatch.
+  The `knowledge.source` row for that source id must exist in Carbon's database
+  with `kind = 'carbon'` and `status = 'active'`, and its `providerPolicy` must
+  name the worker's `machineCallers` and `ingestDatabaseRoles`.
+
+### MCP transport (disabled; not deployable yet)
+
+MCP is an optional transport over the query and command handlers that HTTP
+already exposes, and **HTTP remains the primary integration surface**. It is off
+in every deployment today, and turning it on takes three deliberate changes, not
+one:
+
+1. `KNOWLEDGE_MCP_ENABLED=true` on the service (`knowledge-query` serves it at
+   `POST /v1/mcp`, `knowledge-actions` at `POST /mcp`). Only the exact string
+   `true` counts; `1`, `yes` and `TRUE` are off.
+2. A `KNOWLEDGE_RELEASE_PROFILE` other than `manual-v1`. The approved manual
+   release is read-only document retrieval and activates no deferred surface
+   even when old environment values are present, so the mount answers `404`
+   under it regardless of the flag.
+3. An edit to `REQUIRED_ENVIRONMENT` in `release.py`, which today rejects the
+   variable as deferred runtime configuration and so refuses to stage a revision
+   carrying it. That refusal is deliberate: it keeps the transport out of a
+   deployed service until an intended client has passed authentication and the
+   permission-parity gates below.
+
+Do not make those changes until, on the real services:
+
+- an intended MCP client authenticates with the ordinary machine pair —
+  `Authorization: Bearer <receiver-audience service-account ID token>` plus
+  `X-Portal-User-Evidence` and `X-Portal-Company-Id` headers. A browser IAP
+  session **cookie is not an MCP authentication protocol**: cookies are never
+  read as a credential and never forwarded, so a client holding only a browser
+  session is refused; and
+- `pnpm --filter @carbon/knowledge test mcp-parity` passes, which is what proves
+  MCP exposes no operation and no data beyond HTTP for the same actor and
+  caller. Every tool delegates to the service's own HTTP route — same identity
+  verification, caller authorization, budgets, rate limits and idempotency key —
+  and a tool whose path the service does not mount is neither listed nor
+  callable.
+
+The reviewed surface is `MCP_TOOLS` in `packages/knowledge/src/mcp/surface.ts`:
+`knowledge_query`, `knowledge_get_source_entity` and `knowledge_create_ticket`.
+The generated ERP tool catalog is a different, unrelated surface and is never
+exposed here.
+
+## Google Drive enrollment (deferred connector)
+
+Drive synchronization is not part of `manual-v1`; `release.py` still rejects its
+environment. The connector exists in the repository behind an explicit
+enrollment so that a later release can enable it without a schema change.
+Enrolling a Shared Drive or a set of folders is the same privileged
+administrator action as enrolling the upload library. It never happens from
+the portal, and signing into the portal never authorizes Drive access.
+
+An enrollment records, in one transaction:
+
+1. one active `drive` source whose `externalId` is the Drive scope identity,
+   with the machine caller and ingest login that may synchronize it;
+2. one `knowledge."driveEnrollment"` row naming the corpus (`drive` with a
+   shared-drive id, or `user` with at least one root folder), the read-only
+   connector scope (`drive.readonly` is the only value the table accepts), the
+   Secret Manager **reference** of the OAuth refresh credential (never its
+   value), the minimum scope the reader-delegated live check uses
+   (`drive.metadata.readonly` by default), and `domainWideDelegation = false`
+   (the worker refuses to sync an enrollment that sets it);
+3. a `sourceUserBinding` for every employee whose Drive identity is known, so
+   file permissions can be mapped to a canonical user (an unbound Drive
+   principal receives no grant);
+4. explicit local grants that admit employees to the source. A source-scoped
+   local grant is required for a reader to see the source at all; the
+   connector's per-file source grants are intersected with it, and a
+   source-scoped **source** grant (the shared-drive membership the
+   administrator vouches for) is what lets a reader list the source under
+   Settings. The connector itself writes only file-level source grants and
+   never broadens access.
+
+```sql
+BEGIN;
+
+INSERT INTO knowledge.source (
+  id, "companyId", "createdBy", kind, "externalId", "displayName",
+  "ownerId", classification, "providerPolicy", status
+) VALUES (
+  '<drive-source-id>', '<company-id>', '<existing-user-id>', 'drive',
+  '<shared-drive-id>', '<friendly-drive-name>', '<existing-user-id>',
+  'source-restricted',
+  jsonb_build_object(
+    'machineCallers', jsonb_build_array('<drive-sync-caller-id>'),
+    'ingestDatabaseRoles', jsonb_build_array('<ingest-session-user>'),
+    'allowedProviders', jsonb_build_array(),
+    'allowedClassifications', jsonb_build_array()
+  ),
+  'active'
+);
+
+INSERT INTO knowledge."driveEnrollment" (
+  "companyId", "createdBy", "sourceId", corpora, "driveId", "rootFolderIds",
+  "oauthScope", "credentialSecretRef", "userAccessScope",
+  "notificationChannelId", "notificationTokenHash", "reconcileAfterHours"
+) VALUES (
+  '<company-id>', '<existing-user-id>', '<drive-source-id>', 'drive',
+  '<shared-drive-id>', ARRAY['<folder-id>']::text[],
+  'https://www.googleapis.com/auth/drive.readonly',
+  'projects/<project>/secrets/<secret>/versions/<n>',
+  'https://www.googleapis.com/auth/drive.metadata.readonly',
+  '<channel-id>', encode(sha256('<channel-token>'::bytea), 'hex'), 24
+);
+
+INSERT INTO knowledge."sourceUserBinding" (
+  id, "companyId", "createdBy", "sourceId", "canonicalUserId", "sourceUserId", active
+) VALUES (
+  '<binding-id>', '<company-id>', '<existing-user-id>', '<drive-source-id>',
+  '<existing-user-id>', '<employee@example.com>', true
+);
+
+INSERT INTO knowledge."grant" (
+  id, "companyId", "createdBy", "sourceId", "subjectKind", "subjectId",
+  capability, origin, "policyVersion"
+) VALUES
+  ('<local-grant-id>', '<company-id>', '<existing-user-id>', '<drive-source-id>',
+   'user', '<existing-user-id>', 'read', 'local', 1),
+  ('<member-grant-id>', '<company-id>', '<existing-user-id>', '<drive-source-id>',
+   'user', '<existing-user-id>', 'read', 'source', 1);
+
+COMMIT;
+```
+
+The worker synchronizes an enrolled source only when both
+`KNOWLEDGE_DRIVE_TOKEN_BROKER_URL` and `KNOWLEDGE_DRIVE_TOKEN_BROKER_AUDIENCE`
+are set and its machine caller configuration lists the source with
+`source.changes.read`. The broker exchanges the Secret Manager reference for a
+short-lived connector token (`kind: "connector"`) and, for the live check that
+runs before any restricted Drive text is delivered, cached or disclosed to a
+provider, a token delegated by the reader (`kind: "user"`) — without one the
+document is not delivered. Push notifications are registered with the
+enrollment's channel id and token and addressed to
+`/v1/drive/<source-id>/notifications?company=<company-id>`; a valid hint only
+schedules the cursor-based sync that the five-minute cron runs anyway. A
+reader's ingestion caller must also be allowed the `knowledge.read` operation
+so the query service can perform the live check.
 
 ## Runtime requirements
 
@@ -144,8 +540,48 @@ python3 -m unittest discover -s contrib/deploying/knowledge -p 'test_*.py'
 python3 contrib/deploying/knowledge/release.py \
   --plan contrib/deploying/knowledge/.local/release-plan.json \
   --current contrib/deploying/knowledge/.local/release-manifest.json \
+  --foundation-outputs contrib/deploying/knowledge/.local/foundation-outputs.json \
+  --schema-ledger contrib/deploying/knowledge/.local/schema-ledger.json \
   --project example-project --region us-central1
 ```
+
+### Compatible migration window
+
+Every unit holding a database credential (`DATABASE_UNITS`: query, ingest,
+schema, retention) declares in its plan entry the knowledge migrations its build
+was verified against, as bare migration names (`<14-digit timestamp>_<slug>`,
+the file name without `.sql`):
+
+```json
+"migrations": {
+  "minimum": "20260908000245_knowledge-foundation",
+  "maximum": "20260908050421_ingest-source-visibility-execute"
+}
+```
+
+Migrations apply in name order, so the window compares as strings. Before
+promoting such a unit the controller needs the deployed ledger head and refuses
+a unit whose window does not contain it: below `minimum` means the schema job
+must run first, above `maximum` means the build predates the schema and a
+verified build must be selected instead. A ledger with no applied migration
+admits only `knowledge-schema`. Web and parser hold no credential and must not
+declare a window. The window is recorded next to the revision in the private
+manifest.
+
+Carbon's listener is reachable only over the private path, so the controller
+does not read the ledger itself. Export it through the same authenticated
+operator connection used for the CA copy, verbatim (the runner records file
+names with their `.sql` suffix, which the controller normalizes):
+
+```bash
+psql "$KNOWLEDGE_OPERATOR_DATABASE_URL" -X -At -c \
+  "SELECT json_build_object('schema_version', 1, 'names', coalesce(json_agg(name ORDER BY name), '[]'::json)) FROM knowledge_migrations.ledger" \
+  > contrib/deploying/knowledge/.local/schema-ledger.json
+```
+
+Additive changes keep the previous build inside the new window, so query and
+ingestion can straddle a schema release; a destructive contraction is a later
+explicit maintenance release that narrows `minimum`.
 
 ## Release validation: local first
 
@@ -170,6 +606,10 @@ parser execution, upload-to-search freshness, exact-version download, revocation
 deletion, health-gated promotion and rollback before broader use. Follow
 `recovery.md` for retention and an isolated restore proof. Keep evidence private.
 
+Before any release, run `callers:validate` (see "Database and library
+enrollment") on each receiver's `KNOWLEDGE_TRUSTED_CALLERS_JSON` value and keep
+the output with the private release evidence.
+
 See the approved plan's “Revised release approach: local Docker validation” for
 execution order. No cloud environment has been provisioned for this release.
 
@@ -179,10 +619,13 @@ execution order. No cloud environment has been provisioned for this release.
 Use Docker Compose v2, Corepack/pnpm, Python 3 and a Chromium installation for
 Playwright. Run commands from the repository root. All fixture identities and
 passwords are synthetic; these test images must never be deployed publicly.
-The runner uses ports 4200, 4301, 4302 and 59910–59914 on loopback. Resolve a
-port conflict without stopping an unrelated development database. The host-facing
-Compose network uses a normal bridge so loopback published ports work on Docker
-Desktop. The parser has only an internal network, with storage reached through
+The runner uses ports 4200, 4301, 4302, 4303, 4304 and 59910–59914 on loopback.
+Resolve a port conflict without stopping an unrelated development database: every
+published port, the Compose project name and the image tag are environment
+variables that default to those values, so a second stack can run beside a
+long-lived one without retagging or stopping it (see "Running a second stack"
+below). The host-facing Compose network uses a normal bridge so loopback
+published ports work on Docker Desktop. The parser has only an internal network, with storage reached through
 the test proxy. Local bridge networking does not prove production egress policy.
 
 ```bash
@@ -201,12 +644,74 @@ fixtures without resetting a developer database. Use `local-stack.sh status`,
 `local-stack.sh logs ingest` and `local-stack.sh stop` to inspect or stop only
 this stack. Stopping preserves its volumes.
 
+`local-stack.sh down` removes this stack's containers and its named volumes.
+
+### Running a second stack
+
+Set a distinct project name, image tag and ports; unset variables keep the
+defaults above, so an unparameterised invocation is unchanged.
+
+```bash
+export KNOWLEDGE_STACK_NAME=knowledge-mine KNOWLEDGE_IMAGE_PREFIX=knowledge-mine
+export KNOWLEDGE_IMAGE_TAG=mine-v1
+export KNOWLEDGE_PORT_PORTAL=4270 KNOWLEDGE_PORT_GATEWAY=4371
+export KNOWLEDGE_PORT_QUERY=4372 KNOWLEDGE_PORT_DRIVE_GATEWAY=4373
+export KNOWLEDGE_PORT_DRIVE_QUERY=4374 KNOWLEDGE_PORT_POSTGRES=59970
+export KNOWLEDGE_PORT_REDIS=59971 KNOWLEDGE_PORT_STORAGE=59972
+export KNOWLEDGE_PORT_INNGEST=59974
+contrib/deploying/knowledge/build-images.sh e2e
+contrib/deploying/knowledge/local-stack.sh test
+contrib/deploying/knowledge/local-stack.sh down
+```
+
+### The deferred Drive surface in the harness
+
+`drive-source.spec.ts` exercises the Drive connector, which `manual-v1` defers.
+Two pieces make that possible without touching the release fence:
+
+- The route manifest is a BUILD-time artifact, so `build-images.sh e2e` passes
+  `--build-arg KNOWLEDGE_DRIVE_ENABLED=true` to `Dockerfile.web`'s `e2e` stage
+  only. The release `runtime` stage descends from `builder`, which never receives
+  the argument, so passing it to a release build changes nothing;
+  `test_images.py` pins that and `release.py` separately refuses the variable on
+  a deployed revision.
+- The `drive` Compose service runs the loopback Drive fixture (an in-memory
+  Drive, no Google credential) on its own two ports, because the manual
+  library's query fixture is pinned to the upload source and can never answer
+  for a Drive one. The manual gateway forwards `/v1/drive/*` there, so the
+  portal keeps a single worker URL as it does in production.
+
 For an explicit production architecture build, use `build-images.sh amd64`.
 Production targets use their production entry points; separate `e2e` targets
 supply local identity and job-transport adapters. The browser portal runs the
 application through its Vite test configuration. Production entry points also
 require separate runtime smoke checks; browser success alone does not establish
 that production configuration is correct.
+
+### Base images and the license boundary
+
+Every `Dockerfile.*` builds from `${NODE_IMAGE}`, whose default is the reviewed
+multi-platform digest recorded once in `base-images.json`;
+`test_base_image_pins.py` fails on a floating tag, an unreviewed `FROM`, or a
+Dockerfile whose default drifts from the record. Refresh the pin by updating the
+record and every Dockerfile default together (`docker buildx imagetools inspect
+node:22-alpine` reports the current index digest); the build scripts pass no
+override.
+
+Carbon's LICENSE reserves commercial terms for `packages/ee` and files with
+`.ee` in their names. `verify-license-boundary.py` walks the workspace closure
+each Dockerfile prunes and refuses the enterprise package anywhere in the build
+closure or a `.ee.` file in what `pnpm deploy --prod` ships, and requires the
+shipped `runtime`/`e2e` stages to copy `LICENSE` (and `NOTICE` when one exists)
+beside the code. With `--image` it inspects a built image through
+`docker export` without running it. CI runs the static check with the
+foundation tests and the image check against the six production images.
+
+```bash
+python3 contrib/deploying/knowledge/verify-license-boundary.py
+python3 contrib/deploying/knowledge/verify-license-boundary.py \
+  --image knowledge-manual-local-query:manual-v1
+```
 
 Verify private build-context exclusions and run the parser proof independently
 of the browser stack:

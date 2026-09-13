@@ -12,8 +12,8 @@ const pool = new pg.Pool({ connectionString, max: 1, connectionTimeoutMillis: 50
 try {
   const client = await pool.connect();
   try {
-    const applied = await applyKnowledgeMigrations(client, resolve(import.meta.dirname, "../migrations"));
-    console.log(JSON.stringify({ applied, unchanged: applied.length === 0 }));
+    const { applied, extensions } = await applyKnowledgeMigrations(client, resolve(import.meta.dirname, "../migrations"));
+    console.log(JSON.stringify({ applied, unchanged: applied.length === 0, extensions }));
   } finally {
     client.release();
   }

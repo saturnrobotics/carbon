@@ -20,6 +20,8 @@ import type { Pool } from "pg";
 import { z } from "zod";
 import { createDriveAccessChecker } from "./drive-access.server";
 
+/** How far back "recently received" reaches, in business calendar days. */
+export const RECENT_RECEIPT_DAYS = 90;
 const applicability = z.object({
   revision: z.string().max(256),
   manufacturer: z.string().min(1).max(256),
@@ -36,6 +38,7 @@ export async function resolveRecentManual(options: {
   configuration: SourceRegistryConfiguration;
   origin: string;
   sourceIds: string[];
+  businessTimezone?: string;
   workerOrigin?: string;
   workerAudience?: string;
 }): Promise<QueryResult> {
@@ -159,7 +162,11 @@ export async function resolveRecentManual(options: {
         }
       : receipt;
   });
-  const resolved = resolveReceivedManual(enriched, links);
+  // "Recently" is a business-calendar window in the company's timezone.
+  const resolved = resolveReceivedManual(enriched, links, {
+    businessTimezone: options.businessTimezone,
+    recentDays: RECENT_RECEIPT_DAYS
+  });
   if (resolved.status === "ambiguous")
     return {
       ...result,

@@ -34,6 +34,13 @@ export default defineConfig({
         "packages/printing/src/ui"
       ],
       exclude: ["**/*.server.*", "**/*.test.*", "**/*.spec.*"]
+    },
+    {
+      // The knowledge portal is deployed on its own and shares no UI package
+      // with ERP/MES, so its catalog contains only its own strings.
+      path: "packages/locale/locales/{locale}/knowledge",
+      include: ["apps/knowledge/app"],
+      exclude: ["**/*.server.*", "**/*.test.*", "**/*.spec.*"]
     }
   ]
 });

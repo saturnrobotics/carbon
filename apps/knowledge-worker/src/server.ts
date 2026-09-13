@@ -13,6 +13,7 @@ import {
 import {
   captureIdentity,
   getManualUploadSource,
+  getWritableUploadSources,
   type IntakeInput,
   manualReviewDecisions,
   persistCapturedIntake,
@@ -26,7 +27,9 @@ import {
 import { readManualSourceConfiguration } from "@carbon/knowledge/release-profile";
 import type { Storage } from "@google-cloud/storage";
 import { Pool } from "pg";
+import { type DriveSyncRequest, handleDriveRoute } from "./drive-routes";
 import { createDriveTokenBroker } from "./drive-tokens";
+import { fetchBoundedUrl } from "./fetch-policy";
 import { captureImmutableUpload, readImmutableObject } from "./gcs";
 import {
   type MachineCallerConfiguration,
@@ -55,6 +58,10 @@ export type WorkerDependencies = {
     sourceId: string
   ) => Promise<string | null>;
   sendOutboxEvent?: (companyId: string) => Promise<void>;
+  /** Bounded HTTPS acquisition for URL intake; defaults to the fetch policy. */
+  fetchUrl?: typeof fetchBoundedUrl;
+  /** Present only when a Drive sync function is registered (never under manual-v1). */
+  requestDriveSync?: (input: DriveSyncRequest) => Promise<void>;
 };
 
 function databasePool(connectionString: string): Pool {
@@ -151,6 +158,58 @@ async function verifyHumanCapability(
   return identity;
 }
 
+async function selectedUploadSource(
+  form: FormData,
+  principal: HumanPrincipal,
+  dependencies: WorkerDependencies
+): Promise<{ sourceId: string; classification: string }> {
+  const databasePrincipal = {
+    companyId: principal.companyId,
+    actorId: principal.actorId,
+    callerId: principal.callerId
+  };
+  const requested = form.get("sourceId");
+  if (typeof requested !== "string" || !requested.trim())
+    return getManualUploadSource(
+      dependencies.reviewPool,
+      databasePrincipal,
+      dependencies.manualSource.sourceId
+    );
+  // The browser may only choose among libraries this actor can capture into.
+  // This release exposes exactly the configured manual library.
+  const writable = await getWritableUploadSources(
+    dependencies.reviewPool,
+    databasePrincipal,
+    { onlySourceId: dependencies.manualSource.sourceId }
+  );
+  const selected = writable.find((source) => source.sourceId === requested);
+  if (!selected) throw new Error("forbidden library selection");
+  return {
+    sourceId: selected.sourceId,
+    classification: selected.classification
+  };
+}
+
+function uploadedFile(
+  form: FormData,
+  field: "document" | "photo"
+): File | null {
+  const value = form.get(field);
+  return value instanceof File && value.size ? value : null;
+}
+
+async function acquireByUrl(
+  value: string,
+  dependencies: WorkerDependencies
+): Promise<{ bytes: Buffer; mimeType: string; finalUrl: string }> {
+  try {
+    return await (dependencies.fetchUrl ?? fetchBoundedUrl)(value);
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : "unknown";
+    throw new Error(`acquisition failed: ${reason}`);
+  }
+}
+
 async function captureRequest(
   request: Request,
   principal: HumanPrincipal,
@@ -162,47 +221,53 @@ async function captureRequest(
     actorId: principal.actorId,
     callerId: principal.callerId
   };
-  const source = await getManualUploadSource(
-    dependencies.reviewPool,
-    databasePrincipal,
-    dependencies.manualSource.sourceId
+  if (!contentType.includes("multipart/form-data"))
+    throw new Error("multipart manual upload is required");
+  const form = await request.formData();
+  if (form.has("classification"))
+    throw new Error("invalid intake: access follows the selected library");
+  const source = await selectedUploadSource(form, principal, dependencies);
+  const file = uploadedFile(form, "document") ?? uploadedFile(form, "photo");
+  const sourceUrl = form.get("sourceUrl");
+  const url =
+    typeof sourceUrl === "string" && sourceUrl.trim() ? sourceUrl.trim() : null;
+  if (file && url) throw new Error("invalid intake: choose a file or a URL");
+  let bytes: Buffer;
+  let mimeType: string;
+  let acquiredFrom: string | undefined;
+  if (file) {
+    if (file.size > 50_000_000 || !manualMimeTypes.has(file.type))
+      throw new Error("unsupported intake file");
+    bytes = Buffer.from(await file.arrayBuffer());
+    mimeType = file.type;
+  } else if (url) {
+    const acquired = await acquireByUrl(url, dependencies);
+    if (!manualMimeTypes.has(acquired.mimeType))
+      throw new Error("acquisition failed: unsupported intake content type");
+    bytes = acquired.bytes;
+    mimeType = acquired.mimeType;
+    acquiredFrom = acquired.finalUrl;
+  } else throw new Error("a PDF, image, or HTTPS URL is required");
+  validateManualFile(mimeType, bytes);
+  const hash = createHash("sha256").update(bytes).digest("hex");
+  const captured = await captureImmutableUpload(
+    {
+      bucket: dependencies.bucket,
+      objectKey: `intake/${principal.companyId}/${principal.actorId}/${hash}`,
+      bytes,
+      mimeType
+    },
+    dependencies.storage
   );
-  let input: IntakeInput;
-  if (contentType.includes("multipart/form-data")) {
-    const form = await request.formData();
-    if (
-      form.has("sourceId") ||
-      form.has("classification") ||
-      form.has("sourceUrl")
-    )
-      throw new Error("manual source is server configured");
-    const file = form.get("document");
-    if (file instanceof File && file.size) {
-      if (file.size > 50_000_000 || !manualMimeTypes.has(file.type))
-        throw new Error("unsupported intake file");
-      const bytes = Buffer.from(await file.arrayBuffer());
-      validateManualFile(file.type, bytes);
-      const hash = createHash("sha256").update(bytes).digest("hex");
-      const captured = await captureImmutableUpload(
-        {
-          bucket: dependencies.bucket,
-          objectKey: `intake/${principal.companyId}/${principal.actorId}/${hash}`,
-          bytes,
-          mimeType: file.type
-        },
-        dependencies.storage
-      );
-      input = {
-        kind: "object",
-        objectKey: captured.objectKey,
-        generation: captured.generation,
-        sha256: captured.sha256,
-        mimeType: captured.mimeType,
-        bytes: captured.bytes
-      };
-    } else throw new Error("a PDF or image is required");
-  } else throw new Error("multipart manual upload is required");
-  const captured = captureIdentity({
+  const input: IntakeInput = {
+    kind: "object",
+    objectKey: captured.objectKey,
+    generation: captured.generation,
+    sha256: captured.sha256,
+    mimeType: captured.mimeType,
+    bytes: captured.bytes
+  };
+  const identity = captureIdentity({
     sourceId: source.sourceId,
     ownerId: principal.actorId,
     acl: source.classification,
@@ -211,7 +276,7 @@ async function captureRequest(
   const persisted = await persistCapturedIntake(
     dependencies.reviewPool,
     databasePrincipal,
-    captured
+    acquiredFrom ? { ...identity, acquiredFrom } : identity
   );
   await dependencies
     .sendOutboxEvent?.(principal.companyId)
@@ -230,13 +295,35 @@ export function createWorkerHandler(
   return async (request) => {
     const url = new URL(request.url);
     try {
+      if (request.method === "GET" && url.pathname === "/v1/sources/writable") {
+        const identity = await verifyHumanCapability(
+          request,
+          "knowledge.intake.capture",
+          dependencies
+        );
+        const sources = await getWritableUploadSources(
+          dependencies.reviewPool,
+          {
+            companyId: identity.principal.companyId,
+            actorId: identity.principal.actorId,
+            callerId: identity.principal.callerId
+          },
+          { onlySourceId: dependencies.manualSource.sourceId }
+        );
+        return Response.json(
+          { actorId: identity.principal.actorId, sources },
+          { headers: { "cache-control": "no-store" } }
+        );
+      }
       if (request.method === "POST" && url.pathname === "/v1/intake") {
         const identity = await verifyHumanCapability(
           request,
           "knowledge.intake.capture",
           dependencies
         );
-        return captureRequest(request, identity.principal, dependencies);
+        // Awaited so a capture failure reaches the error mapping below instead
+        // of escaping as an unhandled rejection from the returned promise.
+        return await captureRequest(request, identity.principal, dependencies);
       }
       const intakeMatch = url.pathname.match(/^\/v1\/intake\/([^/]+)$/);
       if (intakeMatch && request.method === "GET") {
@@ -275,7 +362,8 @@ export function createWorkerHandler(
         )
           return errorResponse(422, "invalid_review");
         const review = manualReviewDecisions(
-          reviewedManualMetadataSchema.parse(body.metadata)
+          reviewedManualMetadataSchema.parse(body.metadata),
+          body.item
         );
         await saveReviewDecisions(
           dependencies.reviewPool,
@@ -431,6 +519,8 @@ export function createWorkerHandler(
           }
         });
       }
+      const drive = await handleDriveRoute(request, url, dependencies);
+      if (drive) return drive;
       return errorResponse(404, "not_found");
     } catch (error) {
       const message = error instanceof Error ? error.message : "request_failed";
@@ -444,6 +534,9 @@ export function createWorkerHandler(
         message.includes("manual cannot be deleted")
       )
         return errorResponse(403, "forbidden");
+      if (message.startsWith("acquisition failed"))
+        return errorResponse(422, "acquisition_failed");
+      if (message.includes("forbidden")) return errorResponse(403, "forbidden");
       if (message.includes("changed"))
         return errorResponse(409, "version_conflict");
       if (

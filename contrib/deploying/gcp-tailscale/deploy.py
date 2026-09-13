@@ -17,6 +17,7 @@ import urllib.request
 import private_postgres
 import payment_sync
 import invoice_inference
+import knowledge_receiver
 import release_plan
 import prepare_release
 import verify_source
@@ -99,10 +100,11 @@ def private_json(path):
 
 
 def validate(config, secrets):
-    if set(config) - CONFIG_KEYS - private_postgres.OPTIONAL_KEYS - payment_sync.CONFIG_KEYS - invoice_inference.CONFIG_KEYS or set(secrets) - SECRET_KEYS - payment_sync.SECRET_KEYS:
+    if set(config) - CONFIG_KEYS - private_postgres.OPTIONAL_KEYS - payment_sync.CONFIG_KEYS - invoice_inference.CONFIG_KEYS - knowledge_receiver.CONFIG_KEYS or set(secrets) - SECRET_KEYS - payment_sync.SECRET_KEYS - knowledge_receiver.SECRET_KEYS:
         raise ValueError("Unknown configuration keys; see config.example.json and secrets.example.json")
     private_postgres.validate(config)
     payment_sync.validate({**config, **secrets})
+    knowledge_receiver.validate({**config, **secrets})
     invoice_inference.validate(config, project=config.get("PROJECT_ID"))
     for key in CONFIG_KEYS:
         if key not in config:

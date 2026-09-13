@@ -7,25 +7,14 @@
  * document stays valid against that schema rather than growing ad-hoc top-level
  * keys a strict validator would reject.
  *
- * The tool counts and module list are derived from `tool-metadata.json` — the
- * same file the server registers from — so the manifest cannot drift from what
- * `search_tools` actually returns. Hard-coding them here is how a manifest ends
- * up promising a module that was removed two releases ago.
+ * The tool counts and module list are derived from the disclosed operations of
+ * `tool-metadata.json` — the same set `search_tools` indexes — so the manifest
+ * cannot drift from what `search_tools` actually returns. Hard-coding them here
+ * is how a manifest ends up promising a module that was removed two releases
+ * ago, or one that only a delegated workforce caller can use.
  */
 
-import toolMetadataJson from "./tool-metadata.json";
-
-type ToolSummary = {
-  name: string;
-  module: string;
-  classification: string;
-};
-
-const toolMetadata = toolMetadataJson as unknown as {
-  totalTools: number;
-  modules: number;
-  tools: ToolSummary[];
-};
+import { DISCLOSED_OPERATIONS } from "../../v1+/lib/operations.server";
 
 const SERVER_JSON_SCHEMA =
   "https://static.modelcontextprotocol.io/schemas/2025-09-29/server.schema.json";
@@ -75,11 +64,11 @@ const TOOLS = [
 ] as const;
 
 const MODULES = [
-  ...new Set(toolMetadata.tools.map((tool) => tool.module))
+  ...new Set(DISCLOSED_OPERATIONS.map((tool) => tool.module))
 ].sort();
 
 const CLASSIFICATIONS = [
-  ...new Set(toolMetadata.tools.map((tool) => tool.classification))
+  ...new Set(DISCLOSED_OPERATIONS.map((tool) => tool.classification))
 ].sort();
 
 /**
@@ -136,7 +125,7 @@ export function buildMcpManifest(origin: string) {
         operations: {
           description:
             "search_tools, describe_tool and call_tool reach every ERP operation Carbon exposes, each classified READ, WRITE or DESTRUCTIVE.",
-          total: toolMetadata.totalTools,
+          total: DISCLOSED_OPERATIONS.length,
           modules: MODULES,
           classifications: CLASSIFICATIONS
         },

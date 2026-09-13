@@ -20,13 +20,14 @@
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { existsSync } from "node:fs";
 import { buildMatcher, doNotTranslate, glossaryForItems, loadGlossary, localeCoverage } from "./lib-glossary.mjs";
-import { parsePo, readLocaleConfig } from "./lib-po.mjs";
+import { parsePo, readCatalogNames, readLocaleConfig } from "./lib-po.mjs";
 
 const REPO = process.cwd();
 const CONFIG = `${REPO}/packages/locale/src/config.ts`;
+const LINGUI_CONFIG = `${REPO}/lingui.config.js`;
 const LOCALES_DIR = `${REPO}/packages/locale/locales`;
 const OUT_DIR = `${REPO}/.ai/scratch/translate`;
-const CATALOGS = ["erp", "mes"];
+const CATALOGS = readCatalogNames(LINGUI_CONFIG, readFileSync);
 const CHUNK_SIZE = Number(process.env.TRANSLATE_CHUNK_SIZE || 40);
 
 const { codes, labels } = readLocaleConfig(CONFIG, readFileSync);
