@@ -448,8 +448,8 @@ Adoption gate: **failed**
     },
     {
       "evidence": {
-        "body": "<a href=\"http://127.0.0.1:18994/callback?error=invalid_request&amp;error_description=unsupported+scope%3A+knowledge%3Aread&amp;state=unsupported\">Found</a>.\n\n",
-        "location": "http://127.0.0.1:18994/callback?error=invalid_request&error_description=unsupported+scope%3A+knowledge%3Aread&state=unsupported",
+        "body": "<a href=\"http://127.0.0.1:18994/callback?error=invalid_request&amp;error_description=unsupported+scope%3A+portal%3Aread&amp;state=unsupported\">Found</a>.\n\n",
+        "location": "http://127.0.0.1:18994/callback?error=invalid_request&error_description=unsupported+scope%3A+portal%3Aread&state=unsupported",
         "status": 302
       },
       "expected": "error response",

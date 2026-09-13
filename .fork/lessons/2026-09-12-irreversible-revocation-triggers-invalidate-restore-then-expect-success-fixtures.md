@@ -1,6 +1,6 @@
 # A deliberately irreversible revocation invalidates every restore-then-expect-success fixture
 
-**Context:** A knowledge-platform program branch added database triggers that propagate a
+**Context:** A portal-platform program branch added database triggers that propagate a
 canonical user's deactivation to its identity bindings, deactivating each binding and
 advancing a monotonic revocation counter, with re-activation deliberately not restoring
 them — re-enrollment is explicit. A pre-existing integration test on another branch proved

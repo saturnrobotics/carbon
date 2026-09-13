@@ -138,11 +138,11 @@ describe("getServerInstructions", () => {
 
   test("lists every disclosed module name and not the workforce-only one", () => {
     const modules = [...new Set(toolMetadata.tools.map((t) => t.module))];
-    expect(modules).toContain("knowledge");
-    for (const module of modules.filter((m) => m !== "knowledge")) {
+    expect(modules).toContain("portal");
+    for (const module of modules.filter((m) => m !== "portal")) {
       expect(instructions).toContain(module);
     }
-    expect(instructions).not.toContain("knowledge");
+    expect(instructions).not.toContain("portal");
   });
 
   test("derives the default page size from the constant", () => {

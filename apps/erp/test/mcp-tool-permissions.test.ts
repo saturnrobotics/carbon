@@ -23,17 +23,17 @@ const EXPECTED_OVERRIDES: Record<string, Tool["permission"]> = {
   settings_getApiKeys: { module: "users", actions: ["update"] },
   settings_upsertApiKey: { module: "users", actions: ["update"] },
   settings_deleteApiKey: { module: "users", actions: ["update"] },
-  knowledge_resolveItems: { module: "parts", actions: ["view"] },
-  knowledge_getItemIdentity: { module: "parts", actions: ["view"] },
-  knowledge_getDocumentReferences: { module: "parts", actions: ["view"] },
-  knowledge_getRecentReceipts: { module: "inventory", actions: ["view"] },
-  knowledge_getRecentReceiptItems: { module: "inventory", actions: ["view"] },
-  knowledge_getPurchaseStatus: { module: "purchasing", actions: ["view"] },
-  knowledge_getItemSupplierPricing: {
+  portal_resolveItems: { module: "parts", actions: ["view"] },
+  portal_getItemIdentity: { module: "parts", actions: ["view"] },
+  portal_getDocumentReferences: { module: "parts", actions: ["view"] },
+  portal_getRecentReceipts: { module: "inventory", actions: ["view"] },
+  portal_getRecentReceiptItems: { module: "inventory", actions: ["view"] },
+  portal_getPurchaseStatus: { module: "purchasing", actions: ["view"] },
+  portal_getItemSupplierPricing: {
     module: "purchasing",
     actions: ["view"]
   },
-  knowledge_createProcurementDraft: {
+  portal_createProcurementDraft: {
     module: "purchasing",
     actions: ["create"]
   }

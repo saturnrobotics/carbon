@@ -12,7 +12,7 @@ import subprocess
 import tempfile
 
 import invoice_inference
-import knowledge_receiver
+import portal_receiver
 import payment_sync
 import release_plan
 import runtime_inputs
@@ -28,10 +28,10 @@ MAINTENANCE_PATHS = ["packages/database/supabase/migrations", "packages/database
                      HERE_REL + "certificates.sh", HERE_REL + "private-client-isolation.sql",
                      HERE_REL + "auth/google-domain-hook.sql", HERE_REL + "auth/edge-main"]
 COMMON_CONFIG = {"ERP_HOST", "MES_HOST", "SUPABASE_HOST", "AUTH_ALLOWED_GOOGLE_DOMAIN", "RESEND_DOMAIN"}
-APP_CONFIG = (COMMON_CONFIG | payment_sync.CONFIG_KEYS | invoice_inference.CONFIG_KEYS | knowledge_receiver.CONFIG_KEYS
-              | payment_sync.SECRET_KEYS | knowledge_receiver.SECRET_KEYS | {"RESEND_API_KEY"})
+APP_CONFIG = (COMMON_CONFIG | payment_sync.CONFIG_KEYS | invoice_inference.CONFIG_KEYS | portal_receiver.CONFIG_KEYS
+              | payment_sync.SECRET_KEYS | portal_receiver.SECRET_KEYS | {"RESEND_API_KEY"})
 # ERP-only secrets supplied through the private files; pinned by content hash like the host-generated set.
-ERP_SUPPLIED_SECRETS = payment_sync.SECRET_KEYS | knowledge_receiver.SECRET_KEYS
+ERP_SUPPLIED_SECRETS = payment_sync.SECRET_KEYS | portal_receiver.SECRET_KEYS
 # Cloudflare/Tailscale enrollment credentials do not describe an app release.
 OPERATOR_ONLY = {"CLOUDFLARE_API_TOKEN", "TAILSCALE_AUTH_KEY", "SOURCE_REPO_URL"}
 BASE_DEFAULTS = {"NODE_IMAGE": "node:22", "NODE_SLIM_IMAGE": "node:22-slim"}

@@ -3469,7 +3469,7 @@ async function readProcurementReceipt(
   input: Pick<ProcurementDraftInput, "idempotencyKey" | "payloadHash">
 ): Promise<{ purchaseOrderId: string; replayed: true } | undefined> {
   const receipt = await db
-    .selectFrom("knowledgeCommandReceipt")
+    .selectFrom("portalCommandReceipt")
     .select(["payloadHash", "purchaseOrderId"])
     .where("companyId", "=", context.companyId)
     .where("actorId", "=", context.actorId)
@@ -3484,9 +3484,9 @@ async function readProcurementReceipt(
 }
 
 /**
- * The one way a knowledge command becomes a purchase order. Creates only a
+ * The one way a portal command becomes a purchase order. Creates only a
  * Draft: header, supplier delivery/payment defaults, validated lines and the
- * command receipt land in one transaction, and the `knowledgeSourceOutbox`
+ * command receipt land in one transaction, and the `portalSourceOutbox`
  * trigger on `purchaseOrder` records the change in that same transaction. A
  * failure anywhere leaves nothing behind; a retry of the same command finds its
  * receipt and returns the order it already created. Submission, approval and
@@ -3599,7 +3599,7 @@ export async function createProcurementDraft(
       // Last, so that a concurrent retry which already committed loses here on
       // the unique key and rolls back everything above.
       await trx
-        .insertInto("knowledgeCommandReceipt")
+        .insertInto("portalCommandReceipt")
         .values({
           companyId: context.companyId,
           actorId: context.actorId,

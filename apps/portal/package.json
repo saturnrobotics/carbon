@@ -1,0 +1,43 @@
+{
+  "name": "portal",
+  "version": "0.0.0",
+  "type": "module",
+  "private": true,
+  "sideEffects": false,
+  "scripts": {
+    "build": "react-router build",
+    "clean": "rimraf .cache .turbo node_modules build",
+    "dev": "react-router dev",
+    "start": "NODE_ENV=production react-router-serve ./build/server/index.js",
+    "test": "vitest run --passWithNoTests=false",
+    "test:e2e": "playwright test",
+    "typecheck": "tsgo --noEmit",
+    "typegen": "react-router typegen"
+  },
+  "dependencies": {
+    "@carbon/portal": "workspace:*",
+    "@lingui/core": "catalog:",
+    "@lingui/react": "catalog:",
+    "@react-router/dev": "catalog:",
+    "@react-router/serve": "catalog:",
+    "@vercel/react-router": "catalog:",
+    "isbot": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "react-router": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@carbon/config": "workspace:*",
+    "@lingui/macro": "catalog:",
+    "@lingui/vite-plugin": "catalog:",
+    "@playwright/test": "1.62.0",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "rimraf": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vite-plugin-babel-macros": "catalog:",
+    "vitest": "catalog:"
+  }
+}

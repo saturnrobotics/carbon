@@ -1,0 +1,399 @@
+/**
+ * Docker-only manual workflow fixture. It substitutes signed Google assertions
+ * at the outer verification boundary, while using the production worker,
+ * canonical identity resolver, role-scoped transactions, immutable object
+ * storage, outbox leasing, processor, and parser result contract.
+ */
+
+import { lookup } from "node:dns/promises";
+import { createServer } from "node:http";
+import { verifyWorkforceRequest } from "@carbon/portal/identity.server";
+import { postgresIdentityStore } from "@carbon/portal/identity-store.server";
+import { createExtraction, type ParserOutput } from "@carbon/portal/intake";
+import { Storage } from "@google-cloud/storage";
+import { serve } from "inngest/node";
+import { Pool } from "pg";
+import { fetchBoundedUrl } from "../fetch-policy";
+import { createOutboxDeliveryFunction } from "../functions";
+import {
+  captureExistingObject,
+  type ImmutableObjectReference,
+  readImmutableObject
+} from "../gcs";
+import { portalInngest } from "../inngest";
+import { createOutboxInvalidationFunction } from "../invalidation";
+import { processPortalOutbox } from "../processor";
+import { createWorkerHandler, type WorkerDependencies } from "../server";
+import {
+  actorSubjects,
+  cleanCapturedIntakes,
+  localBucket,
+  localCallerConfiguration,
+  localCapabilities,
+  localCompanyId,
+  localSourceId,
+  localTokenVerifier,
+  syntheticUrlIntakeFetch,
+  syntheticUrlIntakeResolve
+} from "./local-fixture";
+import { handleLocalHttpRequest } from "./local-http";
+
+function required(name: string): string {
+  const value = process.env[name]?.trim();
+  if (!value) throw new Error(`${name} is required for the local fixture`);
+  return value;
+}
+
+/** Connection-scoped headers belong to one hop. Copying them onto the next
+ * request or back onto this response makes the framing disagree with the body
+ * that was already read. */
+const CONNECTION_HEADERS = new Set([
+  "connection",
+  "content-encoding",
+  "content-length",
+  "host",
+  "keep-alive",
+  "transfer-encoding",
+  "upgrade"
+]);
+
+function withoutConnectionHeaders(headers: Headers): Headers {
+  const copied = new Headers();
+  headers.forEach((value, key) => {
+    if (!CONNECTION_HEADERS.has(key.toLowerCase())) copied.set(key, value);
+  });
+  return copied;
+}
+
+/** Sibling Drive fixture, when the compose stack runs one. Loopback or a
+ * compose service name only: this is a test gateway, never an open proxy. */
+function driveFixture(): string | null {
+  const value = process.env.PORTAL_E2E_DRIVE_FIXTURE_URL?.trim();
+  if (!value) return null;
+  const parsed = new URL(value);
+  if (parsed.protocol !== "http:" || parsed.username || parsed.password)
+    throw new Error("PORTAL_E2E_DRIVE_FIXTURE_URL must be a plain HTTP URL");
+  return parsed.origin;
+}
+
+function rolePool(
+  connectionString: string,
+  role: "portal_ingest" | "portal_read" | "portal_review"
+) {
+  return new Pool({
+    connectionString,
+    options: `-c role=${role}`,
+    max: 4,
+    connectionTimeoutMillis: 2_000,
+    statement_timeout: 2_000
+  });
+}
+
+async function parseWithLocalContainer(
+  reference: ImmutableObjectReference,
+  mimeType: string,
+  storage: Storage,
+  parserUrl: string,
+  name?: string
+) {
+  const outputObjectKey = `parser/${reference.sha256}/extraction-v1.json`;
+  const response = await fetch(new URL("/parse", parserUrl), {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      input: { ...reference, mimeType, ...(name ? { name } : {}) },
+      output: { bucket: localBucket, objectKey: outputObjectKey }
+    }),
+    signal: AbortSignal.timeout(300_000)
+  });
+  if (!response.ok)
+    throw new Error(`local parser failed with status ${response.status}`);
+  const output = await captureExistingObject(
+    localBucket,
+    outputObjectKey,
+    8_000_000,
+    storage
+  );
+  const bytes = await readImmutableObject(output, storage);
+  return createExtraction(JSON.parse(bytes.toString("utf8")) as ParserOutput);
+}
+
+async function main() {
+  if (process.env.PORTAL_E2E_SYNTHETIC_FIXTURES !== "1")
+    throw new Error("Local synthetic identity is disabled");
+  const databaseUrl = required("PORTAL_E2E_DATABASE_URL");
+  const parserUrl = required("PORTAL_E2E_PARSER_URL");
+  const driveFixtureUrl = driveFixture();
+  const reviewPool = rolePool(databaseUrl, "portal_review");
+  const readPool = rolePool(databaseUrl, "portal_read");
+  const ingestPool = rolePool(databaseUrl, "portal_ingest");
+  const fixturePool = new Pool({ connectionString: databaseUrl, max: 2 });
+  const storage = new Storage({ projectId: "portal-e2e" });
+  try {
+    await storage.createBucket(localBucket);
+  } catch (error) {
+    if (
+      !error ||
+      typeof error !== "object" ||
+      ![409, 412].includes(Number((error as { code?: unknown }).code))
+    )
+      throw error;
+  }
+
+  const identityStore = postgresIdentityStore(readPool);
+  const configuration = localCallerConfiguration("e2e-worker");
+  const capturedIntakes = new Set<string>();
+  const stats = {
+    processAttempts: 0,
+    parserCalls: 0,
+    injectedFailures: 0,
+    maximumAttempt: 0
+  };
+  let failNextParser = false;
+
+  const dependencies: WorkerDependencies = {
+    reviewPool,
+    readPool,
+    ingestPool,
+    bucket: localBucket,
+    storage,
+    verifyHuman: (request, operation) =>
+      verifyWorkforceRequest({
+        request,
+        operation,
+        configuration,
+        identityStore,
+        tokenVerifier: localTokenVerifier
+      }),
+    machineConfiguration: {
+      audience: "e2e-machine",
+      callers: [
+        {
+          callerId: "local-indexer",
+          subject: "e2e-indexer",
+          companyIds: [localCompanyId],
+          sourceIds: [localSourceId],
+          capabilities: ["source.index.read"]
+        }
+      ]
+    },
+    automationUserId: "automation",
+    manualSource: {
+      sourceId: localSourceId,
+      displayName: "Operations manuals"
+    },
+    connectorAccessToken: async () => null,
+    userDriveAccessToken: async () => null,
+    // URL intake runs the production fetch policy; only the synthetic host's
+    // DNS answer and socket are substituted, so private-address and
+    // content-type refusals are the real ones.
+    fetchUrl: (value) =>
+      fetchBoundedUrl(value, {
+        resolve: (hostname) =>
+          syntheticUrlIntakeResolve(hostname, async (host) =>
+            (await lookup(host, { all: true })).map((entry) => entry.address)
+          ),
+        fetchImpl: syntheticUrlIntakeFetch
+      }),
+    sendOutboxEvent: async (companyId) => {
+      await portalInngest.send({
+        name: "portal/outbox.deliver",
+        data: { companyId },
+        id: `portal-outbox-${companyId}-${crypto.randomUUID()}`
+      });
+    }
+  };
+  const worker = createWorkerHandler(dependencies);
+  const delivery = createOutboxDeliveryFunction({
+    pool: ingestPool,
+    companies: [{ companyId: localCompanyId, callerId: "local-indexer" }],
+    workerId: `local-worker-${process.pid}`,
+    sourceId: localSourceId,
+    embeddingProfile: "manual-v1",
+    process: async (principal, event, attempt) => {
+      stats.processAttempts += 1;
+      stats.maximumAttempt = Math.max(stats.maximumAttempt, attempt);
+      if (failNextParser && event.entityType === "intake") {
+        failNextParser = false;
+        stats.injectedFailures += 1;
+        throw new Error("injected local parser failure");
+      }
+      await processPortalOutbox(
+        {
+          pool: ingestPool,
+          bucket: localBucket,
+          automationUserId: "automation",
+          manualSourceId: localSourceId,
+          parseDocument: async (reference, mimeType, name) => {
+            stats.parserCalls += 1;
+            return parseWithLocalContainer(
+              reference,
+              mimeType,
+              storage,
+              parserUrl,
+              name
+            );
+          }
+        },
+        principal,
+        event
+      );
+    }
+  });
+  const inngestHandler = serve({
+    client: portalInngest,
+    functions: [
+      delivery,
+      createOutboxInvalidationFunction({
+        pool: ingestPool,
+        companies: [{ companyId: localCompanyId, callerId: "local-indexer" }],
+        workerId: `local-worker-${process.pid}`,
+        sourceId: localSourceId
+      })
+    ]
+  });
+
+  const localHandler = async (request: Request) => {
+    const url = new URL(request.url);
+    // This fixture's caller configuration admits the portal's manual-library
+    // operations only, so it answers no Drive route; the Drive fixture beside
+    // it owns that surface with its own reader verification and in-memory
+    // Drive. Forwarding the prefix keeps the portal on one worker URL, which
+    // is what production has. Absent the variable nothing here changes.
+    if (driveFixtureUrl && url.pathname.startsWith("/v1/drive/")) {
+      const upstream = await fetch(
+        new URL(`${url.pathname}${url.search}`, driveFixtureUrl),
+        {
+          method: request.method,
+          headers: withoutConnectionHeaders(request.headers),
+          body:
+            request.method === "GET" || request.method === "HEAD"
+              ? undefined
+              : await request.arrayBuffer(),
+          redirect: "error"
+        }
+      );
+      return new Response(await upstream.arrayBuffer(), {
+        status: upstream.status,
+        headers: withoutConnectionHeaders(upstream.headers)
+      });
+    }
+    if (request.method === "GET" && url.pathname === "/health") {
+      await fixturePool.query("SELECT 1");
+      return Response.json({
+        status: "ok",
+        service: "local-ingest",
+        delivery: "inngest"
+      });
+    }
+    if (request.method === "GET" && url.pathname === "/__e2e/status") {
+      const outbox = await fixturePool.query<{
+        pending: string;
+        delivered: string;
+        maximumAttempts: string | null;
+      }>(
+        `SELECT count(*) FILTER (WHERE "deliveredAt" IS NULL)::text AS pending,
+                  count(*) FILTER (WHERE "deliveredAt" IS NOT NULL)::text AS delivered,
+                  max(attempts)::text AS "maximumAttempts"
+             FROM portal.outbox WHERE "companyId"=$1`,
+        [localCompanyId]
+      );
+      return Response.json({
+        ...stats,
+        pending: Number(outbox.rows[0]?.pending ?? 0),
+        delivered: Number(outbox.rows[0]?.delivered ?? 0),
+        maximumLeaseAttempts: Number(outbox.rows[0]?.maximumAttempts ?? 0)
+      });
+    }
+    if (
+      request.method === "POST" &&
+      url.pathname === "/__e2e/fail-next-parser"
+    ) {
+      failNextParser = true;
+      return Response.json({ state: "armed" });
+    }
+    if (request.method === "POST" && url.pathname === "/__e2e/revoke/bob") {
+      await fixturePool.query(
+        `UPDATE public."user" SET active=false WHERE id='bob'`
+      );
+      return Response.json({ state: "revoked" });
+    }
+    if (request.method === "POST" && url.pathname === "/__e2e/restore/bob") {
+      await fixturePool.query(
+        `UPDATE public."user" SET active=true WHERE id='bob'`
+      );
+      // Reactivation deliberately does not restore a revoked workforce binding.
+      // This synthetic admin endpoint resets the fixture through the same
+      // explicit enrollment function used by local-stack-fixture.sql.
+      await fixturePool.query(
+        `SELECT portal.enroll_workforce_identity($1,$2,$3,$4,$5::text[])`,
+        [
+          "https://cloud.google.com/iap",
+          actorSubjects.bob,
+          localCompanyId,
+          "bob",
+          [...localCapabilities]
+        ]
+      );
+      return Response.json({ state: "active" });
+    }
+    // Swap the fixture publisher's library grant so a browser run can prove
+    // that publish is refused by the database policy, not only by the UI.
+    const grantMatch = url.pathname.match(
+      /^\/__e2e\/grant\/bob\/(review|admin)$/
+    );
+    if (request.method === "POST" && grantMatch) {
+      await fixturePool.query(
+        `UPDATE portal."grant" SET capability=$1,version=version+1
+         WHERE id='e2e-bob-admin' AND "companyId"=$2`,
+        [grantMatch[1], localCompanyId]
+      );
+      return Response.json({ capability: grantMatch[1] });
+    }
+    if (request.method === "POST" && url.pathname === "/__e2e/cleanup") {
+      await cleanCapturedIntakes(fixturePool, [...capturedIntakes]);
+      capturedIntakes.clear();
+      return new Response(null, { status: 204 });
+    }
+    const response = await worker(request);
+    if (
+      request.method === "POST" &&
+      url.pathname === "/v1/intake" &&
+      response.status === 202
+    ) {
+      const body = (await response.clone().json()) as { id?: string };
+      if (body.id) capturedIntakes.add(body.id);
+    }
+    return response;
+  };
+  const server = createServer((incoming, outgoing) => {
+    const pathname = new URL(
+      incoming.url ?? "/",
+      `http://${incoming.headers.host ?? "localhost"}`
+    ).pathname;
+    if (pathname === "/api/inngest") {
+      void inngestHandler(incoming, outgoing);
+      return;
+    }
+    void handleLocalHttpRequest(incoming, outgoing, 52_000_000, localHandler);
+  });
+  server.requestTimeout = 310_000;
+  server.headersTimeout = 10_000;
+  server.listen(Number(process.env.PORT ?? "4301"), "0.0.0.0");
+
+  const close = async () => {
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+    await Promise.all([
+      reviewPool.end(),
+      readPool.end(),
+      ingestPool.end(),
+      fixturePool.end()
+    ]);
+  };
+  process.once("SIGINT", () => void close());
+  process.once("SIGTERM", () => void close());
+}
+
+void main().catch(() => {
+  process.exitCode = 1;
+});

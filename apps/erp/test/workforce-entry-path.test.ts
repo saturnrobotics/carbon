@@ -174,7 +174,7 @@ import * as callback from "../app/routes/_public+/callback";
 import * as login from "../app/routes/_public+/login";
 
 const ORIGIN = "https://erp.example.com";
-const REDIRECT_TO = "/x/knowledge?tab=1";
+const REDIRECT_TO = "/x/portal?tab=1";
 
 const authSession = {
   accessToken: "access-token",

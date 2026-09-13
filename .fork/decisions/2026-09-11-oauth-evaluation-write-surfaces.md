@@ -1,6 +1,6 @@
 # OAuth evaluation: Storage and Realtime write replays observed
 
-Context: Task 06 of `.fork/plans/2026-09-07-company-knowledge-platform.md` recorded
+Context: Task 06 of `.fork/plans/2026-09-07-company-portal-platform.md` recorded
 the native-delegation adoption gate as failed, but its Storage and Realtime
 write-replay rows were `untested` because the disposable stack was probed before
 those services listened.

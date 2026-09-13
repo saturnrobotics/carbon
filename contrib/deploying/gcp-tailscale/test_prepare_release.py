@@ -66,22 +66,22 @@ class PreparationTests(unittest.TestCase):
         self.assertEqual(set(prepare.plan_release(changed, observed["manifest"])["deploy"]), {"erp"})
         self.assertFalse(changed["maintenance_required"])
 
-    def test_knowledge_receiver_inputs_reconfigure_only_erp_and_pin_the_registry(self):
+    def test_portal_receiver_inputs_reconfigure_only_erp_and_pin_the_registry(self):
         initial = self.generate()
         observed = observation()
         observed["manifest"] = {"generation": 4, "services": prepare.plan_release(initial, observed["manifest"])["services"],
                                 "maintenance_fingerprint": initial["maintenance_fingerprint"]}
         for service in observed["manifest"]["services"].values():
             service["image_digest"] = "sha256:" + "a" * 64
-        registry = json.dumps({"version": 1, "receiver": {"id": "carbon-erp", "audience": "https://erp.example.com"}, "callers": [{"callerId": "knowledge-query", "serviceAccountSubject": "synthetic-subject-1", "sourceIapAudience": "/projects/0/global/backendServices/0", "operations": ["knowledge_resolveItems"], "capabilities": ["knowledge.read"], "requiredAccessLevels": []}]})
-        config = {**CONFIG, "KNOWLEDGE_RECEIVER_AUDIENCE": "https://erp.example.com", "KNOWLEDGE_TRUSTED_CALLERS_JSON": registry}
+        registry = json.dumps({"version": 1, "receiver": {"id": "carbon-erp", "audience": "https://erp.example.com"}, "callers": [{"callerId": "portal-query", "serviceAccountSubject": "synthetic-subject-1", "sourceIapAudience": "/projects/0/global/backendServices/0", "operations": ["portal_resolveItems"], "capabilities": ["portal.read"], "requiredAccessLevels": []}]})
+        config = {**CONFIG, "PORTAL_RECEIVER_AUDIENCE": "https://erp.example.com", "PORTAL_TRUSTED_CALLERS_JSON": registry}
         desired = self.generate(config=config, observed=observed)
         result = prepare.plan_release(desired, observed["manifest"])
         self.assertEqual(set(result["deploy"]), {"erp"})
         self.assertEqual(result["build"], {})
         self.assertFalse(desired["maintenance_required"])
-        self.assertEqual(desired["services"]["erp"]["secret_versions"]["knowledge_trusted_callers_json"], prepare.secret_digest(registry))
-        self.assertNotIn("knowledge_trusted_callers_json", desired["services"]["mes"]["secret_versions"])
+        self.assertEqual(desired["services"]["erp"]["secret_versions"]["portal_trusted_callers_json"], prepare.secret_digest(registry))
+        self.assertNotIn("portal_trusted_callers_json", desired["services"]["mes"]["secret_versions"])
         self.assertNotIn("synthetic-subject-1", json.dumps(desired))
         self.assertNotIn("erp.example.com", json.dumps(desired["services"]["erp"]["secret_versions"]))
         # A rotated registry with the same audience is a new pinned version, still ERP-only.
@@ -89,7 +89,7 @@ class PreparationTests(unittest.TestCase):
         for service in planned["services"].values():
             service["image_digest"] = "sha256:" + "a" * 64
         observed["manifest"] = {"generation": 5, "services": planned["services"], "maintenance_fingerprint": desired["maintenance_fingerprint"]}
-        rotated = self.generate(config={**config, "KNOWLEDGE_TRUSTED_CALLERS_JSON": registry.replace("synthetic-subject-1", "synthetic-subject-2")}, observed=observed)
+        rotated = self.generate(config={**config, "PORTAL_TRUSTED_CALLERS_JSON": registry.replace("synthetic-subject-1", "synthetic-subject-2")}, observed=observed)
         self.assertEqual(set(prepare.plan_release(rotated, observed["manifest"])["configure"]), {"erp"})
         self.assertFalse(rotated["maintenance_required"])
 

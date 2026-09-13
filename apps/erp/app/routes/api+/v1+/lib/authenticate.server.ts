@@ -5,7 +5,7 @@
 // gate + expiry are handled by reusing the carbon-key branch of requirePermissions; the
 // per-operation scope gate lives in oRPC middleware and reads the scopes we attach here.
 // Any other bearer, or portal user evidence, selects the delegated workforce branch
-// (resolveApiContext), whose registry comes from KNOWLEDGE_TRUSTED_CALLERS_JSON.
+// (resolveApiContext), whose registry comes from PORTAL_TRUSTED_CALLERS_JSON.
 
 import {
   getCompanyIdFromAPIKey,

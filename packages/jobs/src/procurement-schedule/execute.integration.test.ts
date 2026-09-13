@@ -3,16 +3,16 @@ import { Pool } from "pg";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { dueProcurementSchedules, executeProcurementSchedule } from "./execute";
 
-const databaseUrl = process.env.KNOWLEDGE_TEST_DATABASE_URL;
+const databaseUrl = process.env.PORTAL_TEST_DATABASE_URL;
 const enabled = (() => {
-  if (process.env.KNOWLEDGE_TEST_DATABASE_DISPOSABLE !== "1" || !databaseUrl)
+  if (process.env.PORTAL_TEST_DATABASE_DISPOSABLE !== "1" || !databaseUrl)
     return false;
   const url = new URL(databaseUrl);
   return (
     ["localhost", "127.0.0.1"].includes(url.hostname) &&
     url.port !== "5432" &&
-    url.pathname === "/knowledge_test" &&
-    url.username === "knowledge_test_migrator"
+    url.pathname === "/portal_test" &&
+    url.username === "portal_test_migrator"
   );
 })();
 
@@ -37,7 +37,7 @@ const payload = {
 // guard still requires an explicitly disposable fixture; read-role proofs keep
 // their original restricted login and grants.
 const schedulerUrl = enabled && databaseUrl ? new URL(databaseUrl) : undefined;
-if (schedulerUrl) schedulerUrl.username = "knowledge_test_scheduler";
+if (schedulerUrl) schedulerUrl.username = "portal_test_scheduler";
 const pool = schedulerUrl
   ? new Pool({ connectionString: schedulerUrl.toString() })
   : undefined;
@@ -72,7 +72,7 @@ async function seed(permission: Record<string, string[]>) {
 
 async function schedule(executeAt: "past" | "future") {
   await sql`
-    INSERT INTO public."knowledgeProcurementSchedule" (
+    INSERT INTO public."portalProcurementSchedule" (
       id, "companyId", "companyGroupId", "actorId", action, version, payload,
       "payloadHash", "idempotencyKey", "executeAt", "createdBy"
     ) VALUES (
@@ -86,7 +86,7 @@ async function schedule(executeAt: "past" | "future") {
 
 async function status() {
   const result = await sql<{ status: string; purchaseOrderId: string | null }>`
-    SELECT status, "purchaseOrderId" FROM public."knowledgeProcurementSchedule" WHERE id = ${scheduleId}
+    SELECT status, "purchaseOrderId" FROM public."portalProcurementSchedule" WHERE id = ${scheduleId}
   `.execute(db!);
   const row = result.rows[0];
   if (!row) throw new Error("Expected the scheduled procurement row");
@@ -97,10 +97,10 @@ describe.skipIf(!enabled)(
   "scheduled procurement against disposable PostgreSQL",
   () => {
     beforeEach(async () => {
-      await sql`DELETE FROM public."knowledgeProcurementSchedule" WHERE id = ${scheduleId}`.execute(
+      await sql`DELETE FROM public."portalProcurementSchedule" WHERE id = ${scheduleId}`.execute(
         db!
       );
-      await sql`DELETE FROM public."knowledgeCommandReceipt" WHERE id = ${receiptId}`.execute(
+      await sql`DELETE FROM public."portalCommandReceipt" WHERE id = ${receiptId}`.execute(
         db!
       );
       await sql`DELETE FROM public."purchaseOrder" WHERE id = ${purchaseOrderId}`.execute(
@@ -110,10 +110,10 @@ describe.skipIf(!enabled)(
 
     afterAll(async () => {
       if (db) {
-        await sql`DELETE FROM public."knowledgeProcurementSchedule" WHERE id = ${scheduleId}`.execute(
+        await sql`DELETE FROM public."portalProcurementSchedule" WHERE id = ${scheduleId}`.execute(
           db
         );
-        await sql`DELETE FROM public."knowledgeCommandReceipt" WHERE id = ${receiptId}`.execute(
+        await sql`DELETE FROM public."portalCommandReceipt" WHERE id = ${receiptId}`.execute(
           db
         );
         await sql`DELETE FROM public."purchaseOrder" WHERE id = ${purchaseOrderId}`.execute(
@@ -168,7 +168,7 @@ describe.skipIf(!enabled)(
           db!
         );
         await sql`
-        INSERT INTO public."knowledgeCommandReceipt" (
+        INSERT INTO public."portalCommandReceipt" (
           id, "companyId", "actorId", action, "idempotencyKey", "payloadHash", "purchaseOrderId"
         ) VALUES (
           ${receiptId}, ${companyId}, ${actorId}, 'carbon.procurement.draft',
@@ -185,7 +185,7 @@ describe.skipIf(!enabled)(
       await expect(
         dueProcurementSchedules(db! as never)
       ).resolves.not.toContain(scheduleId);
-      await sql`UPDATE public."knowledgeProcurementSchedule" SET "executeAt" = clock_timestamp() - interval '1 minute' WHERE id = ${scheduleId}`.execute(
+      await sql`UPDATE public."portalProcurementSchedule" SET "executeAt" = clock_timestamp() - interval '1 minute' WHERE id = ${scheduleId}`.execute(
         db!
       );
       await expect(dueProcurementSchedules(db! as never)).resolves.toContain(
@@ -204,7 +204,7 @@ describe.skipIf(!enabled)(
       });
       const receipts = await sql<{
         count: string;
-      }>`SELECT count(*)::text AS count FROM public."knowledgeCommandReceipt" WHERE "companyId" = ${companyId} AND "actorId" = ${actorId}`.execute(
+      }>`SELECT count(*)::text AS count FROM public."portalCommandReceipt" WHERE "companyId" = ${companyId} AND "actorId" = ${actorId}`.execute(
         db!
       );
       expect(receipts.rows[0]?.count).toBe("1");

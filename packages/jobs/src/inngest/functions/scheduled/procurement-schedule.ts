@@ -10,12 +10,12 @@ const eventData = z.object({ scheduleId: z.string().min(1).max(256) });
 
 export const procurementScheduleExecuteFunction = inngest.createFunction(
   {
-    id: "knowledge-procurement-schedule-execute",
+    id: "portal-procurement-schedule-execute",
     retries: 3,
     concurrency: { limit: 1, key: "event.data.scheduleId" },
     idempotency: "event.data.scheduleId"
   },
-  { event: "knowledge/procurement.schedule.execute" },
+  { event: "portal/procurement.schedule.execute" },
   async ({ event, step }) => {
     const { scheduleId } = eventData.parse(event.data);
     return await step.run("execute-scheduled-procurement-draft", () =>
@@ -26,7 +26,7 @@ export const procurementScheduleExecuteFunction = inngest.createFunction(
 
 /** Durable backstop for a process crash between schedule persistence and event send. */
 export const procurementScheduleSweepFunction = inngest.createFunction(
-  { id: "knowledge-procurement-schedule-sweep", retries: 2 },
+  { id: "portal-procurement-schedule-sweep", retries: 2 },
   { cron: "* * * * *" },
   async ({ step }) => {
     const ids = await step.run("list-due-procurement-schedules", () =>
@@ -36,7 +36,7 @@ export const procurementScheduleSweepFunction = inngest.createFunction(
     await step.sendEvent(
       "dispatch-due-procurement-schedules",
       ids.map((scheduleId) => ({
-        name: "knowledge/procurement.schedule.execute" as const,
+        name: "portal/procurement.schedule.execute" as const,
         data: { scheduleId }
       }))
     );

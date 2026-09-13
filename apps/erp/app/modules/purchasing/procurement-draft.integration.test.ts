@@ -21,10 +21,10 @@ const { createProcurementDraft, resolveProcurementDraft } = await import(
   "./purchasing.service"
 );
 
-// Same harness as the knowledge outbox/changes suites: skip without an isolated
+// Same harness as the portal outbox/changes suites: skip without an isolated
 // local database and refuse anything that is not local. The full Carbon schema
 // is the point of this suite — the real sequence function, the real supplier
-// interceptors, the real knowledge outbox trigger and real rollback.
+// interceptors, the real portal outbox trigger and real rollback.
 const url = process.env.PROCUREMENT_DRAFT_TEST_DATABASE_URL;
 let db: Kysely<KyselyDatabase>;
 
@@ -240,12 +240,12 @@ async function fixture(run: (f: Fixture) => Promise<void>) {
   } finally {
     const orderIds = (await orders(userId)).map((order) => order.id);
     await db
-      .deleteFrom("knowledgeCommandReceipt")
+      .deleteFrom("portalCommandReceipt")
       .where("actorId", "=", userId)
       .execute();
     if (orderIds.length > 0) {
       await db
-        .deleteFrom("knowledgeSourceOutbox")
+        .deleteFrom("portalSourceOutbox")
         .where("entityType", "=", "purchaseOrder")
         .where("entityId", "in", orderIds)
         .execute();
@@ -285,7 +285,7 @@ async function fixture(run: (f: Fixture) => Promise<void>) {
     // Last: deleting the fixture's items announced tombstones of their own, and
     // every outbox row references the user that caused it.
     await db
-      .deleteFrom("knowledgeSourceOutbox")
+      .deleteFrom("portalSourceOutbox")
       .where("createdBy", "=", userId)
       .execute();
     await db.deleteFrom("user").where("id", "=", userId).execute();
@@ -321,7 +321,7 @@ async function counts(f: Fixture) {
     return Number(rows.rows[0]?.count ?? 0);
   };
   const receipts = await db
-    .selectFrom("knowledgeCommandReceipt")
+    .selectFrom("portalCommandReceipt")
     .select(({ fn }) => fn.countAll<string>().as("count"))
     .where("actorId", "=", f.userId)
     .executeTakeFirstOrThrow();
@@ -335,7 +335,7 @@ async function counts(f: Fixture) {
     orderIds.length === 0
       ? []
       : await db
-          .selectFrom("knowledgeSourceOutbox")
+          .selectFrom("portalSourceOutbox")
           .select(["entityType", "entityId", "eventType"])
           .where("entityType", "=", "purchaseOrder")
           .where("entityId", "in", orderIds)
@@ -419,7 +419,7 @@ describe.skipIf(!url)("createProcurementDraft", () => {
       });
 
       const receipt = await db
-        .selectFrom("knowledgeCommandReceipt")
+        .selectFrom("portalCommandReceipt")
         .selectAll()
         .where("actorId", "=", f.userId)
         .executeTakeFirstOrThrow();
@@ -434,7 +434,7 @@ describe.skipIf(!url)("createProcurementDraft", () => {
       // node-postgres driver as a string, so it is compared numerically.
       expect(Number(receipt.version)).toBe(1);
 
-      // The knowledge outbox event was written by the source trigger in the
+      // The portal outbox event was written by the source trigger in the
       // SAME transaction; no post-commit notification is involved.
       expect(await counts(f)).toMatchObject({
         orders: 1,
@@ -664,7 +664,7 @@ describe.skipIf(!url)("createProcurementDraft", () => {
       `.execute(db);
       await sql`
         create trigger procurement_draft_fault
-        before insert on public."knowledgeCommandReceipt"
+        before insert on public."portalCommandReceipt"
         for each row execute function public.procurement_draft_fault()
       `.execute(db);
       try {
@@ -673,7 +673,7 @@ describe.skipIf(!url)("createProcurementDraft", () => {
         ).rejects.toThrow(/injected receipt failure/);
       } finally {
         await sql`
-          drop trigger if exists procurement_draft_fault on public."knowledgeCommandReceipt"
+          drop trigger if exists procurement_draft_fault on public."portalCommandReceipt"
         `.execute(db);
         await sql`
           drop function if exists public.procurement_draft_fault()

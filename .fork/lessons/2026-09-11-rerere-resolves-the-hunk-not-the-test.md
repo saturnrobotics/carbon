@@ -1,6 +1,6 @@
 # Rerere resolves the hunk, not the test
 
-**Context:** Building Task 18 on four merged knowledge branches. Git rerere
+**Context:** Building Task 18 on four merged portal branches. Git rerere
 auto-staged resolutions for four conflicted files, and the one remaining
 conflict was resolved by hand.
 
@@ -17,6 +17,6 @@ every touched package's typecheck and tests separately (or `--continue`) so a
 first failure cannot hide the rest. Treat "the merge applied" and "the merged
 tests are green" as two different claims.
 
-**Applies to:** every multi-branch integration on this fork (`feat/knowledge-*`
-stacks, `integration/knowledge-platform`), and any repository with rerere
+**Applies to:** every multi-branch integration on this fork (`feat/portal-*`
+stacks, `integration/portal-platform`), and any repository with rerere
 enabled.

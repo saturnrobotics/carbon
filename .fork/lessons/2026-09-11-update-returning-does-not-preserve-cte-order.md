@@ -1,6 +1,6 @@
 # UPDATE … RETURNING does not preserve the locking query's order
 
-Context → The knowledge outbox claim leased rows with `SELECT … ORDER BY priority FOR UPDATE SKIP LOCKED LIMIT n` in a CTE, then `UPDATE … WHERE id IN (SELECT id FROM cte) RETURNING …`. Consumers iterated the returned rows believing revocations came first. An integration test that delivered a revocation behind a correction showed the returned order was arbitrary.
+Context → The portal outbox claim leased rows with `SELECT … ORDER BY priority FOR UPDATE SKIP LOCKED LIMIT n` in a CTE, then `UPDATE … WHERE id IN (SELECT id FROM cte) RETURNING …`. Consumers iterated the returned rows believing revocations came first. An integration test that delivered a revocation behind a correction showed the returned order was arbitrary.
 
 Problem → The `ORDER BY` in a locking CTE only decides which rows fit under the `LIMIT`. PostgreSQL gives no ordering guarantee for `UPDATE … RETURNING`, so "prioritise revocations" was true of selection and false of processing, and no unit test could see it because the fake pool echoed the input order.
 

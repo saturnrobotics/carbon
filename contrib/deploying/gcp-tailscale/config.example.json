@@ -13,5 +13,5 @@
   "ACME_EMAIL": "admin@example.com",
   "TAILSCALE_HOSTNAME": "carbon",
   "SOURCE_REPO_URL": "https://github.com/your-organization/carbon",
-  "KNOWLEDGE_RECEIVER_AUDIENCE": "https://erp.hq.example.com"
+  "PORTAL_RECEIVER_AUDIENCE": "https://erp.hq.example.com"
 }

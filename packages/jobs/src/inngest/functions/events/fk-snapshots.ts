@@ -90,7 +90,7 @@ export function resolveSnapshotSpec(
       // precisely for constraint-less columns), so fall back to the tenancy
       // of ANY schema FK referencing the same target table — a global table
       // like "user" is global no matter which column points at it. Default
-      // to tenant-scoped only when the fkMap has no knowledge of the target.
+      // to tenant-scoped only when the fkMap has no portal of the target.
       hasCompanyId:
         fk && fk.targetTable === override.table
           ? fk.targetHasCompanyId

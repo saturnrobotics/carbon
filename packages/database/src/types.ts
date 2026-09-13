@@ -27494,513 +27494,6 @@ export type Database = {
           }
         ]
       }
-      knowledgeCommandReceipt: {
-        Row: {
-          action: string
-          actorId: string
-          companyId: string
-          createdAt: string
-          id: string
-          idempotencyKey: string
-          payloadHash: string
-          purchaseOrderId: string
-          version: number
-        }
-        Insert: {
-          action: string
-          actorId: string
-          companyId: string
-          createdAt?: string
-          id?: string
-          idempotencyKey: string
-          payloadHash: string
-          purchaseOrderId: string
-          version?: number
-        }
-        Update: {
-          action?: string
-          actorId?: string
-          companyId?: string
-          createdAt?: string
-          id?: string
-          idempotencyKey?: string
-          payloadHash?: string
-          purchaseOrderId?: string
-          version?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "knowledgeCommandReceipt_actorId_fkey"
-            columns: ["actorId"]
-            isOneToOne: false
-            referencedRelation: "employeeSummary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "knowledgeCommandReceipt_actorId_fkey"
-            columns: ["actorId"]
-            isOneToOne: false
-            referencedRelation: "employees"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "knowledgeCommandReceipt_actorId_fkey"
-            columns: ["actorId"]
-            isOneToOne: false
-            referencedRelation: "employeesAcrossCompanies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "knowledgeCommandReceipt_actorId_fkey"
-            columns: ["actorId"]
-            isOneToOne: false
-            referencedRelation: "user"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "knowledgeCommandReceipt_actorId_fkey"
-            columns: ["actorId"]
-            isOneToOne: false
-            referencedRelation: "userDefaults"
-            referencedColumns: ["userId"]
-          },
-          {
-            foreignKeyName: "knowledgeCommandReceipt_companyId_fkey"
-            columns: ["companyId"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "knowledgeCommandReceipt_companyId_fkey"
-            columns: ["companyId"]
-            isOneToOne: false
-            referencedRelation: "company"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "knowledgeCommandReceipt_companyId_fkey"
-            columns: ["companyId"]
-            isOneToOne: false
-            referencedRelation: "customFieldTables"
-            referencedColumns: ["companyId"]
-          },
-          {
-            foreignKeyName: "knowledgeCommandReceipt_companyId_fkey"
-            columns: ["companyId"]
-            isOneToOne: false
-            referencedRelation: "integrations"
-            referencedColumns: ["companyId"]
-          },
-          {
-            foreignKeyName: "knowledgeCommandReceipt_purchaseOrderId_fkey"
-            columns: ["purchaseOrderId"]
-            isOneToOne: false
-            referencedRelation: "purchaseOrder"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "knowledgeCommandReceipt_purchaseOrderId_fkey"
-            columns: ["purchaseOrderId"]
-            isOneToOne: false
-            referencedRelation: "purchaseOrderLocations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "knowledgeCommandReceipt_purchaseOrderId_fkey"
-            columns: ["purchaseOrderId"]
-            isOneToOne: false
-            referencedRelation: "purchaseOrders"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-      knowledgeProcurementSchedule: {
-        Row: {
-          action: string
-          actorId: string
-          claimedAt: string | null
-          companyGroupId: string
-          companyId: string
-          createdAt: string
-          createdBy: string
-          executeAt: string
-          failureCode: string | null
-          id: string
-          idempotencyKey: string
-          payload: Json
-          payloadHash: string
-          purchaseOrderId: string | null
-          revocationCheckedAt: string | null
-          revocationVersion: string | null
-          status: string
-          updatedAt: string | null
-          updatedBy: string | null
-          version: number
-        }
-        Insert: {
-          action: string
-          actorId: string
-          claimedAt?: string | null
-          companyGroupId: string
-          companyId: string
-          createdAt?: string
-          createdBy: string
-          executeAt: string
-          failureCode?: string | null
-          id?: string
-          idempotencyKey: string
-          payload: Json
-          payloadHash: string
-          purchaseOrderId?: string | null
-          revocationCheckedAt?: string | null
-          revocationVersion?: string | null
-          status?: string
-          updatedAt?: string | null
-          updatedBy?: string | null
-          version: number
-        }
-        Update: {
-          action?: string
-          actorId?: string
-          claimedAt?: string | null
-          companyGroupId?: string
-          companyId?: string
-          createdAt?: string
-          createdBy?: string
-          executeAt?: string
-          failureCode?: string | null
-          id?: string
-          idempotencyKey?: string
-          payload?: Json
-          payloadHash?: string
-          purchaseOrderId?: string | null
-          revocationCheckedAt?: string | null
-          revocationVersion?: string | null
-          status?: string
-          updatedAt?: string | null
-          updatedBy?: string | null
-          version?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "knowledgeProcurementSchedule_actorId_fkey"
-            columns: ["actorId"]
-            isOneToOne: false
-            referencedRelation: "employeeSummary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "knowledgeProcurementSchedule_actorId_fkey"
-            columns: ["actorId"]
-            isOneToOne: false
-            referencedRelation: "employees"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "knowledgeProcurementSchedule_actorId_fkey"
-            columns: ["actorId"]
-            isOneToOne: false
-            referencedRelation: "employeesAcrossCompanies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "knowledgeProcurementSchedule_actorId_fkey"
-            columns: ["actorId"]
-            isOneToOne: false
-            referencedRelation: "user"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "knowledgeProcurementSchedule_actorId_fkey"
-            columns: ["actorId"]
-            isOneToOne: false
-            referencedRelation: "userDefaults"
-            referencedColumns: ["userId"]
-          },
-          {
-            foreignKeyName: "knowledgeProcurementSchedule_companyId_fkey"
-            columns: ["companyId"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "knowledgeProcurementSchedule_companyId_fkey"
-            columns: ["companyId"]
-            isOneToOne: false
-            referencedRelation: "company"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "knowledgeProcurementSchedule_companyId_fkey"
-            columns: ["companyId"]
-            isOneToOne: false
-            referencedRelation: "customFieldTables"
-            referencedColumns: ["companyId"]
-          },
-          {
-            foreignKeyName: "knowledgeProcurementSchedule_companyId_fkey"
-            columns: ["companyId"]
-            isOneToOne: false
-            referencedRelation: "integrations"
-            referencedColumns: ["companyId"]
-          },
-          {
-            foreignKeyName: "knowledgeProcurementSchedule_createdBy_fkey"
-            columns: ["createdBy"]
-            isOneToOne: false
-            referencedRelation: "employeeSummary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "knowledgeProcurementSchedule_createdBy_fkey"
-            columns: ["createdBy"]
-            isOneToOne: false
-            referencedRelation: "employees"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "knowledgeProcurementSchedule_createdBy_fkey"
-            columns: ["createdBy"]
-            isOneToOne: false
-            referencedRelation: "employeesAcrossCompanies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "knowledgeProcurementSchedule_createdBy_fkey"
-            columns: ["createdBy"]
-            isOneToOne: false
-            referencedRelation: "user"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "knowledgeProcurementSchedule_createdBy_fkey"
-            columns: ["createdBy"]
-            isOneToOne: false
-            referencedRelation: "userDefaults"
-            referencedColumns: ["userId"]
-          },
-          {
-            foreignKeyName: "knowledgeProcurementSchedule_purchaseOrderId_fkey"
-            columns: ["purchaseOrderId"]
-            isOneToOne: false
-            referencedRelation: "purchaseOrder"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "knowledgeProcurementSchedule_purchaseOrderId_fkey"
-            columns: ["purchaseOrderId"]
-            isOneToOne: false
-            referencedRelation: "purchaseOrderLocations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "knowledgeProcurementSchedule_purchaseOrderId_fkey"
-            columns: ["purchaseOrderId"]
-            isOneToOne: false
-            referencedRelation: "purchaseOrders"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "knowledgeProcurementSchedule_updatedBy_fkey"
-            columns: ["updatedBy"]
-            isOneToOne: false
-            referencedRelation: "employeeSummary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "knowledgeProcurementSchedule_updatedBy_fkey"
-            columns: ["updatedBy"]
-            isOneToOne: false
-            referencedRelation: "employees"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "knowledgeProcurementSchedule_updatedBy_fkey"
-            columns: ["updatedBy"]
-            isOneToOne: false
-            referencedRelation: "employeesAcrossCompanies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "knowledgeProcurementSchedule_updatedBy_fkey"
-            columns: ["updatedBy"]
-            isOneToOne: false
-            referencedRelation: "user"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "knowledgeProcurementSchedule_updatedBy_fkey"
-            columns: ["updatedBy"]
-            isOneToOne: false
-            referencedRelation: "userDefaults"
-            referencedColumns: ["userId"]
-          }
-        ]
-      }
-      knowledgeSourceOutbox: {
-        Row: {
-          attempts: number
-          availableAt: string
-          claimedAt: string | null
-          companyId: string
-          createdAt: string
-          createdBy: string
-          deliveredAt: string | null
-          entityId: string
-          entityType: string
-          eventType: string
-          id: string
-          leaseExpiresAt: string | null
-          leaseOwner: string | null
-          payload: Json
-          source: string
-          sourceVersion: string
-          updatedAt: string | null
-          updatedBy: string | null
-        }
-        Insert: {
-          attempts?: number
-          availableAt?: string
-          claimedAt?: string | null
-          companyId: string
-          createdAt?: string
-          createdBy: string
-          deliveredAt?: string | null
-          entityId: string
-          entityType: string
-          eventType: string
-          id?: string
-          leaseExpiresAt?: string | null
-          leaseOwner?: string | null
-          payload?: Json
-          source?: string
-          sourceVersion: string
-          updatedAt?: string | null
-          updatedBy?: string | null
-        }
-        Update: {
-          attempts?: number
-          availableAt?: string
-          claimedAt?: string | null
-          companyId?: string
-          createdAt?: string
-          createdBy?: string
-          deliveredAt?: string | null
-          entityId?: string
-          entityType?: string
-          eventType?: string
-          id?: string
-          leaseExpiresAt?: string | null
-          leaseOwner?: string | null
-          payload?: Json
-          source?: string
-          sourceVersion?: string
-          updatedAt?: string | null
-          updatedBy?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "knowledgeSourceOutbox_companyId_fkey"
-            columns: ["companyId"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "knowledgeSourceOutbox_companyId_fkey"
-            columns: ["companyId"]
-            isOneToOne: false
-            referencedRelation: "company"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "knowledgeSourceOutbox_companyId_fkey"
-            columns: ["companyId"]
-            isOneToOne: false
-            referencedRelation: "customFieldTables"
-            referencedColumns: ["companyId"]
-          },
-          {
-            foreignKeyName: "knowledgeSourceOutbox_companyId_fkey"
-            columns: ["companyId"]
-            isOneToOne: false
-            referencedRelation: "integrations"
-            referencedColumns: ["companyId"]
-          },
-          {
-            foreignKeyName: "knowledgeSourceOutbox_createdBy_fkey"
-            columns: ["createdBy"]
-            isOneToOne: false
-            referencedRelation: "employeeSummary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "knowledgeSourceOutbox_createdBy_fkey"
-            columns: ["createdBy"]
-            isOneToOne: false
-            referencedRelation: "employees"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "knowledgeSourceOutbox_createdBy_fkey"
-            columns: ["createdBy"]
-            isOneToOne: false
-            referencedRelation: "employeesAcrossCompanies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "knowledgeSourceOutbox_createdBy_fkey"
-            columns: ["createdBy"]
-            isOneToOne: false
-            referencedRelation: "user"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "knowledgeSourceOutbox_createdBy_fkey"
-            columns: ["createdBy"]
-            isOneToOne: false
-            referencedRelation: "userDefaults"
-            referencedColumns: ["userId"]
-          },
-          {
-            foreignKeyName: "knowledgeSourceOutbox_updatedBy_fkey"
-            columns: ["updatedBy"]
-            isOneToOne: false
-            referencedRelation: "employeeSummary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "knowledgeSourceOutbox_updatedBy_fkey"
-            columns: ["updatedBy"]
-            isOneToOne: false
-            referencedRelation: "employees"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "knowledgeSourceOutbox_updatedBy_fkey"
-            columns: ["updatedBy"]
-            isOneToOne: false
-            referencedRelation: "employeesAcrossCompanies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "knowledgeSourceOutbox_updatedBy_fkey"
-            columns: ["updatedBy"]
-            isOneToOne: false
-            referencedRelation: "user"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "knowledgeSourceOutbox_updatedBy_fkey"
-            columns: ["updatedBy"]
-            isOneToOne: false
-            referencedRelation: "userDefaults"
-            referencedColumns: ["userId"]
-          }
-        ]
-      }
       lessonCompletion: {
         Row: {
           courseId: string
@@ -40531,6 +40024,513 @@ export type Database = {
           userBasedPricing?: boolean
         }
         Relationships: []
+      }
+      portalCommandReceipt: {
+        Row: {
+          action: string
+          actorId: string
+          companyId: string
+          createdAt: string
+          id: string
+          idempotencyKey: string
+          payloadHash: string
+          purchaseOrderId: string
+          version: number
+        }
+        Insert: {
+          action: string
+          actorId: string
+          companyId: string
+          createdAt?: string
+          id?: string
+          idempotencyKey: string
+          payloadHash: string
+          purchaseOrderId: string
+          version?: number
+        }
+        Update: {
+          action?: string
+          actorId?: string
+          companyId?: string
+          createdAt?: string
+          id?: string
+          idempotencyKey?: string
+          payloadHash?: string
+          purchaseOrderId?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portalCommandReceipt_actorId_fkey"
+            columns: ["actorId"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portalCommandReceipt_actorId_fkey"
+            columns: ["actorId"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portalCommandReceipt_actorId_fkey"
+            columns: ["actorId"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portalCommandReceipt_actorId_fkey"
+            columns: ["actorId"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portalCommandReceipt_actorId_fkey"
+            columns: ["actorId"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "portalCommandReceipt_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portalCommandReceipt_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portalCommandReceipt_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "customFieldTables"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "portalCommandReceipt_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "integrations"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "portalCommandReceipt_purchaseOrderId_fkey"
+            columns: ["purchaseOrderId"]
+            isOneToOne: false
+            referencedRelation: "purchaseOrder"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portalCommandReceipt_purchaseOrderId_fkey"
+            columns: ["purchaseOrderId"]
+            isOneToOne: false
+            referencedRelation: "purchaseOrderLocations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portalCommandReceipt_purchaseOrderId_fkey"
+            columns: ["purchaseOrderId"]
+            isOneToOne: false
+            referencedRelation: "purchaseOrders"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      portalProcurementSchedule: {
+        Row: {
+          action: string
+          actorId: string
+          claimedAt: string | null
+          companyGroupId: string
+          companyId: string
+          createdAt: string
+          createdBy: string
+          executeAt: string
+          failureCode: string | null
+          id: string
+          idempotencyKey: string
+          payload: Json
+          payloadHash: string
+          purchaseOrderId: string | null
+          revocationCheckedAt: string | null
+          revocationVersion: string | null
+          status: string
+          updatedAt: string | null
+          updatedBy: string | null
+          version: number
+        }
+        Insert: {
+          action: string
+          actorId: string
+          claimedAt?: string | null
+          companyGroupId: string
+          companyId: string
+          createdAt?: string
+          createdBy: string
+          executeAt: string
+          failureCode?: string | null
+          id?: string
+          idempotencyKey: string
+          payload: Json
+          payloadHash: string
+          purchaseOrderId?: string | null
+          revocationCheckedAt?: string | null
+          revocationVersion?: string | null
+          status?: string
+          updatedAt?: string | null
+          updatedBy?: string | null
+          version: number
+        }
+        Update: {
+          action?: string
+          actorId?: string
+          claimedAt?: string | null
+          companyGroupId?: string
+          companyId?: string
+          createdAt?: string
+          createdBy?: string
+          executeAt?: string
+          failureCode?: string | null
+          id?: string
+          idempotencyKey?: string
+          payload?: Json
+          payloadHash?: string
+          purchaseOrderId?: string | null
+          revocationCheckedAt?: string | null
+          revocationVersion?: string | null
+          status?: string
+          updatedAt?: string | null
+          updatedBy?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portalProcurementSchedule_actorId_fkey"
+            columns: ["actorId"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portalProcurementSchedule_actorId_fkey"
+            columns: ["actorId"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portalProcurementSchedule_actorId_fkey"
+            columns: ["actorId"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portalProcurementSchedule_actorId_fkey"
+            columns: ["actorId"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portalProcurementSchedule_actorId_fkey"
+            columns: ["actorId"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "portalProcurementSchedule_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portalProcurementSchedule_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portalProcurementSchedule_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "customFieldTables"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "portalProcurementSchedule_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "integrations"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "portalProcurementSchedule_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portalProcurementSchedule_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portalProcurementSchedule_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portalProcurementSchedule_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portalProcurementSchedule_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "portalProcurementSchedule_purchaseOrderId_fkey"
+            columns: ["purchaseOrderId"]
+            isOneToOne: false
+            referencedRelation: "purchaseOrder"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portalProcurementSchedule_purchaseOrderId_fkey"
+            columns: ["purchaseOrderId"]
+            isOneToOne: false
+            referencedRelation: "purchaseOrderLocations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portalProcurementSchedule_purchaseOrderId_fkey"
+            columns: ["purchaseOrderId"]
+            isOneToOne: false
+            referencedRelation: "purchaseOrders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portalProcurementSchedule_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portalProcurementSchedule_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portalProcurementSchedule_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portalProcurementSchedule_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portalProcurementSchedule_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          }
+        ]
+      }
+      portalSourceOutbox: {
+        Row: {
+          attempts: number
+          availableAt: string
+          claimedAt: string | null
+          companyId: string
+          createdAt: string
+          createdBy: string
+          deliveredAt: string | null
+          entityId: string
+          entityType: string
+          eventType: string
+          id: string
+          leaseExpiresAt: string | null
+          leaseOwner: string | null
+          payload: Json
+          source: string
+          sourceVersion: string
+          updatedAt: string | null
+          updatedBy: string | null
+        }
+        Insert: {
+          attempts?: number
+          availableAt?: string
+          claimedAt?: string | null
+          companyId: string
+          createdAt?: string
+          createdBy: string
+          deliveredAt?: string | null
+          entityId: string
+          entityType: string
+          eventType: string
+          id?: string
+          leaseExpiresAt?: string | null
+          leaseOwner?: string | null
+          payload?: Json
+          source?: string
+          sourceVersion: string
+          updatedAt?: string | null
+          updatedBy?: string | null
+        }
+        Update: {
+          attempts?: number
+          availableAt?: string
+          claimedAt?: string | null
+          companyId?: string
+          createdAt?: string
+          createdBy?: string
+          deliveredAt?: string | null
+          entityId?: string
+          entityType?: string
+          eventType?: string
+          id?: string
+          leaseExpiresAt?: string | null
+          leaseOwner?: string | null
+          payload?: Json
+          source?: string
+          sourceVersion?: string
+          updatedAt?: string | null
+          updatedBy?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portalSourceOutbox_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portalSourceOutbox_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portalSourceOutbox_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "customFieldTables"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "portalSourceOutbox_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "integrations"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "portalSourceOutbox_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portalSourceOutbox_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portalSourceOutbox_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portalSourceOutbox_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portalSourceOutbox_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "portalSourceOutbox_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portalSourceOutbox_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portalSourceOutbox_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portalSourceOutbox_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portalSourceOutbox_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          }
+        ]
       }
       pricingRule: {
         Row: {
@@ -85131,14 +85131,6 @@ export type Database = {
         }[]
       }
       jsonb_to_text_array: { Args: { "": Json }; Returns: string[] }
-      knowledge_resolve_workforce_identity: {
-        Args: {
-          requested_company_id: string
-          requested_issuer: string
-          requested_subject: string
-        }
-        Returns: Json
-      }
       location_today: {
         Args: { p_company_id: string; p_location_id: string }
         Returns: string
@@ -85174,6 +85166,14 @@ export type Database = {
       populate_sales_search_results: {
         Args: { p_company_id: string }
         Returns: undefined
+      }
+      portal_resolve_workforce_identity: {
+        Args: {
+          requested_company_id: string
+          requested_issuer: string
+          requested_subject: string
+        }
+        Returns: Json
       }
       prevent_posted_purchase_invoice_deletion: {
         Args: { p_new: Json; p_old: Json; p_operation: string; p_table: string }

@@ -3,14 +3,14 @@
 import type { ManifestEntry, ToolPermission } from "@carbon/api";
 import type { Permission } from "@carbon/auth";
 import type { Database } from "@carbon/database";
-import type { PrincipalAssurance } from "@carbon/knowledge/identity.server";
-import { STEP_UP_REQUIRED_CODE } from "@carbon/knowledge/step-up";
+import type { PrincipalAssurance } from "@carbon/portal/identity.server";
+import { STEP_UP_REQUIRED_CODE } from "@carbon/portal/step-up";
 import { ORPCError, os } from "@orpc/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
-  isKnowledgeOperation,
-  knowledgeCapabilityFor
-} from "~/modules/knowledge/knowledge.server";
+  isPortalOperation,
+  portalCapabilityFor
+} from "~/modules/portal/portal.server";
 import { isMcpBlockedTool } from "../../mcp+/lib/mcp-blocked-tools";
 
 /**
@@ -67,8 +67,8 @@ export function assertScopes(
 
 /**
  * A delegated workforce caller may run an operation only when the caller
- * registry names it, the principal holds the capability the knowledge module
- * assigns to it (`KNOWLEDGE_OPERATIONS` — the one allowlist), and the user's
+ * registry names it, the principal holds the capability the portal module
+ * assigns to it (`PORTAL_OPERATIONS` — the one allowlist), and the user's
  * fresh Carbon permissions cover the operation for the active company. An
  * operation the module does not list has no capability and is refused.
  */
@@ -77,7 +77,7 @@ export function assertWorkforceAuthorization(
   meta: ManifestEntry
 ): void {
   const workforce = context.workforce;
-  const capability = knowledgeCapabilityFor(meta.name);
+  const capability = portalCapabilityFor(meta.name);
   if (
     !workforce ||
     !capability ||
@@ -101,7 +101,7 @@ export function assertWorkforceAuthorization(
     }
   }
   // Checked last so the step-up message is shown only when MFA is the one
-  // thing missing. The structured `data.code` is what the knowledge services
+  // thing missing. The structured `data.code` is what the portal services
   // and the portal recognise; API callers see the same 403 JSON envelope.
   const { assurance } = workforce;
   if (assurance.required && !assurance.satisfied) {
@@ -118,7 +118,7 @@ export function assertWorkforceAuthorization(
  *  from the manifest at generation time, so this only fires if that exclusion
  *  ever regresses — the surface stays closed instead of silently opening.
  *
- *  Knowledge operations exist only for delegated workforce callers. Every other
+ *  Portal operations exist only for delegated workforce callers. Every other
  *  kind — API key, OAuth connector, in-process session — gets NOT_FOUND rather
  *  than FORBIDDEN, so to them the surface is invisible, not merely closed; the
  *  same rule keeps those operations out of MCP discovery and the public OpenAPI
@@ -126,7 +126,7 @@ export function assertWorkforceAuthorization(
 export const gate = (meta: ManifestEntry) =>
   base.middleware(async ({ context, next }) => {
     if (isMcpBlockedTool(meta.name)) throw new ORPCError("NOT_FOUND");
-    if (isKnowledgeOperation(meta) && context.authKind !== "workforce") {
+    if (isPortalOperation(meta) && context.authKind !== "workforce") {
       throw new ORPCError("NOT_FOUND");
     }
     if (context.authKind === "api-key") {

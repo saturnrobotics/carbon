@@ -1,0 +1,29 @@
+# Reviewed multi-platform digest. base-images.json is the record;
+# test_base_image_pins.py keeps every portal Dockerfile equal to it.
+ARG NODE_IMAGE=node:22-alpine@sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32
+FROM ${NODE_IMAGE} AS pruner
+WORKDIR /repo
+RUN corepack enable
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc turbo.json ./
+COPY apps ./apps
+COPY packages ./packages
+COPY patches ./patches
+RUN corepack pnpm dlx turbo@2.9.6 prune portal-worker --docker
+
+FROM ${NODE_IMAGE} AS builder
+WORKDIR /repo
+RUN corepack enable
+COPY --from=pruner /repo/out/json/ ./
+RUN pnpm install --frozen-lockfile --ignore-scripts
+COPY --from=pruner /repo/out/full/ ./
+COPY LICENSE ./LICENSE
+RUN pnpm --filter portal-worker build
+RUN pnpm --filter portal-worker deploy --prod --legacy --ignore-scripts /runtime
+
+FROM ${NODE_IMAGE} AS runtime
+WORKDIR /app
+ENV NODE_ENV=production
+ENV PORTAL_RELEASE_PROFILE=manual-v1
+COPY --from=builder /runtime ./
+COPY LICENSE ./LICENSE
+CMD ["node", "dist/retention-job.js"]

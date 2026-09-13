@@ -36,10 +36,10 @@ export default defineConfig({
       exclude: ["**/*.server.*", "**/*.test.*", "**/*.spec.*"]
     },
     {
-      // The knowledge portal is deployed on its own and shares no UI package
+      // The Portal web app is deployed on its own and shares no UI package
       // with ERP/MES, so its catalog contains only its own strings.
-      path: "packages/locale/locales/{locale}/knowledge",
-      include: ["apps/knowledge/app"],
+      path: "packages/locale/locales/{locale}/portal",
+      include: ["apps/portal/app"],
       exclude: ["**/*.server.*", "**/*.test.*", "**/*.spec.*"]
     }
   ]

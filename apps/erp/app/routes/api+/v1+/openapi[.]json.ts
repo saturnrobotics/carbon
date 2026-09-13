@@ -3,7 +3,7 @@
 // scope (the router and its schemas are static for the process lifetime).
 //
 // Generated from `disclosedRouter`, not `router`: the document describes what an
-// API key can call, and the workforce-only knowledge operations answer 404 to one.
+// API key can call, and the workforce-only portal operations answer 404 to one.
 
 import { CarbonJsonSchemaConverter } from "@carbon/api/schema";
 import { OpenAPIGenerator } from "@orpc/openapi";

@@ -363,12 +363,12 @@ exports into the same module namespace), and writes `apps/erp/app/routes/api+/mc
 ## The 16 modules (current `tool-metadata.json`)
 
 `account` · `accounting` · `documents` · `inventory` · `invoicing` · `items` ·
-`knowledge` · `people` · `production` · `purchasing` · `quality` · `resources` ·
+`portal` · `people` · `production` · `purchasing` · `quality` · `resources` ·
 `sales` · `settings` · `shared` · `users`. Each maps 1:1 to a
 `apps/erp/app/modules/<module>/<module>.service.ts` namespace (accounting is the
 `.ee`-licensed `accounting.ee.service.ts`; the registry key stays `accounting`).
 
-`knowledge` is in the manifest but is **not disclosed**: its operations serve
+`portal` is in the manifest but is **not disclosed**: its operations serve
 only the delegated `workforce` auth kind (the v1 gate answers NOT_FOUND to API
 keys, OAuth connectors and in-process sessions), so `isDisclosedOperation` /
 `DISCLOSED_OPERATIONS` in `api+/v1+/lib/operations.server.ts` withhold it from
@@ -376,9 +376,9 @@ keys, OAuth connectors and in-process sessions), so `isDisclosedOperation` /
 (`disclosedOperationsByName`), `/.well-known/mcp.json`, the server instructions
 and `/api/v1/openapi.json` (generated from `disclosedRouter`). It stays in
 `OPERATIONS`, the full `router` and the committed digest so the permission pin
-still covers it. The module's own allowlist (`KNOWLEDGE_OPERATIONS` in
-`~/modules/knowledge/knowledge.server.ts`) maps each operation to its workforce
-capability; pinned by `api+/v1+/lib/knowledge.gate.test.ts`.
+still covers it. The module's own allowlist (`PORTAL_OPERATIONS` in
+`~/modules/portal/portal.server.ts`) maps each operation to its workforce
+capability; pinned by `api+/v1+/lib/portal.gate.test.ts`.
 
 <!-- UNVERIFIED: exact per-module/total tool counts (~1200) drift on every regen — read tool-metadata.json for the live number, don't trust a hardcoded count. -->
 

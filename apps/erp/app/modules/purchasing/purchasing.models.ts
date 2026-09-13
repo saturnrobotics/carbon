@@ -731,7 +731,7 @@ export const purchaseReturnOrderCreditValidator = z.object({
     )
 });
 
-// ─── Procurement draft (knowledge command) ───
+// ─── Procurement draft (portal command) ───
 
 /**
  * The version of the procurement-draft payload contract below. It is written on

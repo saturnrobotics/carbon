@@ -25,6 +25,6 @@ batch split clones the parent's attributes, so a split child names the same rece
 line. Before adding a column to a projection because a table "has" it, find the
 writer and confirm it is set on the path you care about.
 
-**Applies to** — any read over `itemLedger.documentLineId`; knowledge receipt reads
-in `apps/erp/app/modules/knowledge/`; new projections over receipts, shipments or
+**Applies to** — any read over `itemLedger.documentLineId`; portal receipt reads
+in `apps/erp/app/modules/portal/`; new projections over receipts, shipments or
 any other document whose ledger rows are keyed by document rather than by line.

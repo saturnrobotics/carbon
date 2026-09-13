@@ -1,0 +1,152 @@
+/** Docker-only query fixture using the production query handler and Redis. */
+import { createRedisCache } from "@carbon/portal/cache/redis.server";
+import { postgresIdentityStore } from "@carbon/portal/identity-store.server";
+import { Pool } from "pg";
+import {
+  CONVERSATION_TTL_SECONDS,
+  createConversationStore
+} from "../../../portal-query/src/conversation.server";
+import { createItemSearchHandler } from "../../../portal-query/src/items.server";
+import { createReadHandler } from "../../../portal-query/src/query.server";
+import {
+  localCallerConfiguration,
+  localItemSourceId,
+  localSourceId,
+  localTokenVerifier,
+  syntheticItemSourceFetch
+} from "./local-fixture";
+import { startLocalHttpServer } from "./local-http";
+
+function required(name: string): string {
+  const value = process.env[name]?.trim();
+  if (!value) throw new Error(`${name} is required for the local fixture`);
+  return value;
+}
+
+/** The portal origin evidence links open. Either spelling the harness supplies
+ * is accepted — a whole origin, or just the port the local stack published (see
+ * compose.local.yaml) — and unset keeps the historical 4200. */
+function loopbackPortalOrigin(): string {
+  const port = process.env.PORTAL_E2E_PORTAL_PORT?.trim();
+  const parsed = new URL(
+    process.env.PORTAL_WEB_ORIGIN?.trim() ||
+      `https://localhost:${port || "4200"}`
+  );
+  if (
+    parsed.protocol !== "https:" ||
+    !["localhost", "127.0.0.1", "[::1]"].includes(parsed.hostname)
+  )
+    throw new Error("PORTAL_WEB_ORIGIN must be an HTTPS loopback origin");
+  return parsed.origin;
+}
+
+async function main() {
+  if (process.env.PORTAL_E2E_SYNTHETIC_FIXTURES !== "1")
+    throw new Error("Local synthetic identity is disabled");
+  const portalOrigin = loopbackPortalOrigin();
+  const pool = new Pool({
+    connectionString: required("PORTAL_E2E_DATABASE_URL"),
+    options: "-c role=portal_read",
+    max: 8,
+    connectionTimeoutMillis: 2_000,
+    statement_timeout: 2_000
+  });
+  const redis = createRedisCache(required("PORTAL_REDIS_URL"));
+  // Follow-up context, as in production: its own bounded store on the same Redis.
+  const conversations = createRedisCache(required("PORTAL_REDIS_URL"), {
+    maxTtlSeconds: CONVERSATION_TTL_SECONDS
+  });
+  await redis.store.set("portal:e2e:health", { ready: true }, 1);
+  if (
+    !((await redis.store.get("portal:e2e:health")) as { ready?: boolean })
+      ?.ready
+  )
+    throw new Error("Local Redis fixture is unavailable");
+
+  const cacheStats = { gets: 0, hits: 0, sets: 0 };
+  const query = createReadHandler({
+    pool,
+    configuration: localCallerConfiguration("e2e-query"),
+    identityStore: postgresIdentityStore(pool),
+    tokenVerifier: localTokenVerifier,
+    cacheStore: {
+      async get(key) {
+        cacheStats.gets += 1;
+        const value = await redis.store.get(key);
+        if (value !== undefined) cacheStats.hits += 1;
+        return value;
+      },
+      async set(key, value, ttlSeconds) {
+        cacheStats.sets += 1;
+        await redis.store.set(key, value, ttlSeconds);
+      }
+    },
+    // The portal origin this fixture stamps onto evidence `sourceUri` links.
+    // It follows the harness's portal port: a fixture that kept a fixed 4200
+    // while the portal moved would hand the browser download links pointing at
+    // whatever else holds that port.
+    origin: portalOrigin,
+    businessTimezone: "UTC",
+    manualSourceId: localSourceId,
+    conversationStore: createConversationStore(conversations.store)
+  });
+
+  // Existing-item candidates come from a synthetic Carbon canonical source: the
+  // production registry transport, deadline and contract run, while the only
+  // stubbed pieces are the outbound HTTPS call and its forwarding headers.
+  const items = createItemSearchHandler({
+    pool,
+    configuration: localCallerConfiguration("e2e-query"),
+    identityStore: postgresIdentityStore(pool),
+    tokenVerifier: localTokenVerifier,
+    sources: {
+      version: 1,
+      sources: [
+        {
+          id: localItemSourceId,
+          kind: "carbon",
+          origin: "https://carbon.e2e.invalid/",
+          audience: "e2e-carbon"
+        }
+      ]
+    },
+    registryContext: () => ({
+      fetch: syntheticItemSourceFetch,
+      headers: async () => new Headers({ authorization: "Bearer e2e-carbon" })
+    })
+  });
+
+  const server = startLocalHttpServer({
+    port: Number(process.env.PORT ?? "4302"),
+    maximumBytes: 32_768,
+    handler: async (request) => {
+      const url = new URL(request.url);
+      if (request.method === "GET" && url.pathname === "/health") {
+        await pool.query("SELECT 1");
+        return Response.json({
+          status: "ok",
+          service: "local-query",
+          cache: "redis"
+        });
+      }
+      if (request.method === "GET" && url.pathname === "/__e2e/cache")
+        return Response.json(cacheStats);
+      if (request.method === "POST" && url.pathname === "/v1/query")
+        return query(request);
+      if (request.method === "POST" && url.pathname === "/v1/items")
+        return items(request);
+      return Response.json({ error: "not_found" }, { status: 404 });
+    }
+  });
+
+  const close = async () => {
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+    await Promise.all([pool.end(), redis.close(), conversations.close()]);
+  };
+  process.once("SIGINT", () => void close());
+  process.once("SIGTERM", () => void close());
+}
+
+void main().catch(() => {
+  process.exitCode = 1;
+});

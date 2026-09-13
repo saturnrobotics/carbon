@@ -1,0 +1,138 @@
+name: Portal platform checks
+
+on:
+  pull_request:
+    paths:
+      - "Makefile"
+      - "apps/portal*/**"
+      - "packages/portal/**"
+      - "packages/database/supabase/migrations/**"
+      - "contrib/deploying/portal/**"
+      - "contrib/deploying/gcp-tailscale/release*"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "turbo.json"
+      - ".dockerignore"
+      - ".github/workflows/portal-check.yml"
+  push:
+    branches: [saturn/main]
+    # deploy-portal requires verification of the exact integration commit,
+    # including merges whose authored changes are outside the portal tree.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  foundation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: hashicorp/setup-terraform@v3
+      - run: terraform -chdir=contrib/deploying/portal init -backend=false
+      - run: terraform -chdir=contrib/deploying/portal validate
+      - run: python3 -m unittest discover -s contrib/deploying/portal -p 'test_*.py'
+      - run: python3 contrib/deploying/portal/verify-license-boundary.py
+
+  runtime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      PORTAL_TEST_DATABASE_DISPOSABLE: "1"
+      PORTAL_TEST_DATABASE_URL: postgresql://portal_test_migrator:synthetic-test-only@127.0.0.1:59910/portal_test
+      PORTAL_TEST_REDIS_URL: redis://127.0.0.1:59913
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: corepack pnpm install --frozen-lockfile
+      - run: corepack pnpm --filter @carbon/config build
+      - name: Start isolated synthetic PostgreSQL and Redis
+        run: |
+          # Disable crashing permission hints, preserving actual denials and extensions.
+          # https://github.com/supabase/supautils/issues/214
+          docker run -d --name portal-schema-test --label portal.disposable=true --tmpfs /var/lib/postgresql/data:rw,size=2147483648 -p 127.0.0.1:59910:5432 -e POSTGRES_USER=supabase_admin -e POSTGRES_PASSWORD=synthetic-test-only -e POSTGRES_DB=portal_test supabase/postgres:15.14.1.112 postgres -D /etc/postgresql -c supautils.hint_roles= -c max_wal_size=128MB -c min_wal_size=32MB -c checkpoint_timeout=30s
+          docker run -d --name portal-cache-test --label portal.disposable=true -p 127.0.0.1:59913:6379 redis:7-alpine redis-server --save '' --appendonly no --maxmemory 64mb --maxmemory-policy allkeys-lru
+          for _ in $(seq 1 30); do
+            if docker exec -e PGPASSWORD=synthetic-test-only portal-schema-test psql -X -h 127.0.0.1 -U supabase_admin -d portal_test -At -c 'SELECT 1'; then break; fi
+            sleep 1
+          done
+          python3 packages/portal/scripts/test_fixture_setup.py
+      - name: Verify generated Portal database types
+        run: |
+          corepack pnpm --filter @carbon/portal generate:types
+          corepack pnpm exec biome check --write packages/portal/src/database.types.ts
+          git diff --exit-code -- packages/portal/src/database.types.ts
+      - name: Verify legacy-to-Portal database upgrade
+        run: python3 packages/portal/scripts/test_portal_rename.py
+      - name: Runtime unit and integration tests
+        run: |
+          python3 packages/portal/scripts/test_sql_runner.py
+          corepack pnpm --filter @carbon/portal test
+          corepack pnpm --filter portal test
+          corepack pnpm --filter portal-query test
+          corepack pnpm --filter portal-worker test
+          corepack pnpm --filter portal-actions test
+          corepack pnpm --filter @carbon/portal test:integration
+          corepack pnpm --filter @carbon/jobs exec vitest run src/procurement-schedule/execute.integration.test.ts
+          corepack pnpm --filter portal-query exec vitest run --config ../../packages/portal/vitest.integration.config.ts src/query.integration.test.ts src/local-security.integration.test.ts
+          python3 packages/portal/scripts/test_schema.py
+          python3 packages/portal/scripts/test_function_boundary.py
+          python3 packages/portal/scripts/test_epochs.py
+          python3 packages/portal/scripts/test_budgets.py
+          python3 packages/portal/scripts/test_machine_budgets.py
+          python3 packages/portal/scripts/test_request_limits.py
+          corepack pnpm --filter @carbon/portal verify:security
+      - name: Release integration fixture ports
+        run: docker rm -f portal-schema-test portal-cache-test
+      - name: Build local manual workflow images
+        run: |
+          python3 contrib/deploying/portal/verify-build-context.py
+          python3 contrib/deploying/portal/verify-license-boundary.py
+          contrib/deploying/portal/build-images.sh e2e
+      - name: Manual browser workflow
+        run: |
+          corepack pnpm --filter portal exec playwright install --with-deps chromium
+          # Both modes must pass their final-state assertion. A normal-only run
+          # cannot catch a later spec erasing the retained recovery fixture.
+          PORTAL_E2E_PRESERVE_FIXTURE=1 contrib/deploying/portal/local-stack.sh test
+          contrib/deploying/portal/local-stack.sh test
+      - name: Stop local manual workflow stack
+        run: contrib/deploying/portal/local-stack.sh stop
+      - name: License boundary of the production images
+        run: |
+          contrib/deploying/portal/build-images.sh native
+          python3 contrib/deploying/portal/verify-license-boundary.py \
+            --image portal-manual-local-web:manual-v1 \
+            --image portal-manual-local-query:manual-v1 \
+            --image portal-manual-local-ingest:manual-v1 \
+            --image portal-manual-local-parser:manual-v1 \
+            --image portal-manual-local-schema:manual-v1 \
+            --image portal-manual-local-retention:manual-v1
+      - name: Independent production builds and typechecks
+        run: |
+          corepack pnpm exec turbo run typecheck --concurrency=2 --filter=@carbon/portal --filter=portal --filter=portal-query --filter=portal-worker --filter=portal-actions
+          # The deferred Drive surface first: its routes reach the client graph
+          # only under this variable, so a default build proves nothing about
+          # them and React Router's `dot-server` boundary goes unchecked. Run
+          # outside turbo, whose `build` task declares no `env` and would serve
+          # the flag-off artifact from cache.
+          PORTAL_DRIVE_ENABLED=true corepack pnpm --filter portal build
+          corepack pnpm exec turbo run build --concurrency=2 --filter=portal --filter=portal-query --filter=portal-worker --filter=portal-actions
+      - name: Stop only this job's synthetic services
+        if: always()
+        run: |
+          # Keep crash evidence from synthetic fixtures before deleting them.
+          docker logs --tail 200 portal-schema-test 2>&1 || true
+          contrib/deploying/portal/local-stack.sh stop || true
+          docker rm -f portal-schema-test portal-cache-test 2>/dev/null || true

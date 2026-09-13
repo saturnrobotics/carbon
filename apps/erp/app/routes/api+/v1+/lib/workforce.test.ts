@@ -15,8 +15,8 @@ function context(
     authKind: "workforce",
     scopes: {},
     workforce: {
-      allowedOperations: ["knowledge_getItemIdentity"],
-      capabilities: ["knowledge.read"],
+      allowedOperations: ["portal_getItemIdentity"],
+      capabilities: ["portal.read"],
       permissions: {
         parts: {
           view: ["cmp_alpha"],
@@ -44,8 +44,8 @@ function stepUpCode(run: () => void): unknown {
 }
 
 const itemIdentity = {
-  name: "knowledge_getItemIdentity",
-  module: "knowledge",
+  name: "portal_getItemIdentity",
+  module: "portal",
   permission: { module: "parts", actions: ["view"] }
 } as ManifestEntry;
 
@@ -137,21 +137,21 @@ describe("workforce operation authorization", () => {
     expect(() =>
       assertWorkforceAuthorization(context(), {
         ...itemIdentity,
-        name: "knowledge_updateItem"
+        name: "portal_updateItem"
       })
     ).toThrow();
   });
 
   it("requires the dedicated procurement capability and purchasing-create permission", () => {
     const procurement = {
-      name: "knowledge_createProcurementDraft",
-      module: "knowledge",
+      name: "portal_createProcurementDraft",
+      module: "portal",
       permission: { module: "purchasing", actions: ["create"] }
     } as ManifestEntry;
     expect(() =>
       assertWorkforceAuthorization(
         context({
-          allowedOperations: ["knowledge_createProcurementDraft"],
+          allowedOperations: ["portal_createProcurementDraft"],
           capabilities: ["carbon.procurement.draft"],
           permissions: {
             purchasing: {
@@ -168,7 +168,7 @@ describe("workforce operation authorization", () => {
     expect(() =>
       assertWorkforceAuthorization(
         context({
-          allowedOperations: ["knowledge_createProcurementDraft"],
+          allowedOperations: ["portal_createProcurementDraft"],
           capabilities: ["carbon.procurement.draft"],
           permissions: {
             purchasing: { view: [], create: [], update: [], delete: [] }

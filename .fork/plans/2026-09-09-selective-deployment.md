@@ -20,7 +20,7 @@ deployments are handled against each service's last successful content receipt.
   review. Document evidence and limitations.
 
 Local evidence: 264 deployment/operator tests and 152 safeguard tests passed;
-source/knowledge/build/routes generated groups matched the reviewed index. Actual
+source/portal/build/routes generated groups matched the reviewed index. Actual
 ERP and MES production images built, generated runtime assets were present, and
 the Docker dependency cache proof passed. A real first-run isolated Python
 bootstrap passed. Production observation was read-only.

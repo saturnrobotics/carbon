@@ -39,7 +39,7 @@ export const MCP_BLOCKED_TOOL_NAMES: readonly string[] = [
   // already-decided `canCreatePurchasing` — so a published operation would let a
   // caller supply its own authorization and tenancy for the write. The
   // authorization, the payload-hash check and the idempotency receipt belong to
-  // the command boundary, and `knowledge_createProcurementDraft` is the one
+  // the command boundary, and `portal_createProcurementDraft` is the one
   // entry point that applies them (it stamps the context server-side).
   "purchasing_createProcurementDraft",
   "purchasing_resolveProcurementDraft",
