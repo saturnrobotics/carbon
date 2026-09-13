@@ -7,7 +7,14 @@ const mocks = vi.hoisted(() => ({
   read: vi.fn(),
   structured: vi.fn()
 }));
-vi.mock("@carbon/knowledge/identity.server", () => ({
+// Partial, as everywhere else in this directory: the handler's catch reads
+// `UnauthorizedRequestError` off this module, so a total replacement leaves the
+// refusal branch testing `instanceof undefined` and every failure path throws
+// before it can be classified.
+vi.mock("@carbon/knowledge/identity.server", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("@carbon/knowledge/identity.server")
+  >()),
   verifyWorkforceRequest: mocks.verify
 }));
 vi.mock("@carbon/knowledge/budgets.server", () => ({
