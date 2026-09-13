@@ -11,13 +11,25 @@ import { Trans, useLingui } from "@lingui/react/macro";
 import { useEffect, useRef, useState } from "react";
 import { EvidenceCard, evidenceAnchor } from "./EvidenceCard";
 
-async function requiresStepUp(response: Response): Promise<boolean> {
-  if (response.status !== 403) return false;
+/**
+ * The refusal class the gateway named, or unavailability when it named none.
+ *
+ * The body is read once: `response.json()` consumes it, and the step-up check
+ * and the message the reader sees both need that read.
+ */
+async function denialCode(response: Response): Promise<string> {
+  let body: unknown;
   try {
-    return isStepUpRequiredBody(await response.json());
+    body = await response.json();
   } catch {
-    return false;
+    return "query_unavailable";
   }
+  if (response.status === 403 && isStepUpRequiredBody(body))
+    return "step_up_required";
+  const code = (body as { error?: unknown } | null)?.error;
+  return typeof code === "string" && /^[a-z_]{1,64}$/.test(code)
+    ? code
+    : "query_unavailable";
 }
 
 type Progress = Extract<QueryStreamEvent, { type: "progress" }>;
@@ -72,6 +84,14 @@ export function QueryInput({
       return t`Your access changed while this request ran. Search again.`;
     if (code === "request_deadline_exceeded")
       return t`The request did not complete within its time budget.`;
+    // A refusal is not an outage, and telling a reader to try again later when
+    // the answer will not change is the defect this names. The wording is the
+    // portal's existing copy for `forbidden`, and says nothing about what
+    // exists — only that this reader may not have it.
+    if (code === "forbidden")
+      return t`You do not have permission for this action in this library.`;
+    if (code === "unauthorized")
+      return t`You are not signed in to this library, or your access was revoked.`;
     return t`Manual search is unavailable.`;
   }
 
@@ -124,13 +144,17 @@ export function QueryInput({
         })
       });
       if (!response.ok) {
-        if (await requiresStepUp(response)) {
+        const denial = await denialCode(response);
+        if (denial === "step_up_required") {
           // A document navigation: the step-up page is server-rendered with
           // a 403 status and needs no client-side router state.
           window.location.assign("/step-up");
           return;
         }
-        throw new Error("unavailable");
+        setEvidence([]);
+        setResult(undefined);
+        setError(describeError(denial));
+        return;
       }
       if (
         response.body &&

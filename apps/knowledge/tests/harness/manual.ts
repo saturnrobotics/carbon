@@ -96,10 +96,17 @@ export async function search(page: Page, term: string) {
   return (await response).status();
 }
 
+/**
+ * A refused search answers 403 and says so. The exact status is the assertion:
+ * `>= 400` passed just as happily on the 503 this used to return, which is what
+ * let a denial reach a reader as "Manual search is unavailable."
+ */
 export async function expectSearchDenied(page: Page, term: string) {
   const status = await search(page, term);
-  expect(status).toBeGreaterThanOrEqual(400);
-  await expect(page.getByRole("alert")).toBeVisible();
+  expect(status).toBe(403);
+  await expect(page.getByRole("alert")).toHaveText(
+    "You do not have permission for this action in this library."
+  );
 }
 
 /** Upload, review, publish and locate one synthetic manual; returns its download path. */

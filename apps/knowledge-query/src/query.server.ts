@@ -10,7 +10,10 @@ import {
 } from "@carbon/knowledge/budgets.server";
 import type { CacheStore } from "@carbon/knowledge/cache";
 import { withKnowledgeTransaction } from "@carbon/knowledge/database.server";
-import { verifyWorkforceRequest } from "@carbon/knowledge/identity.server";
+import {
+  UnauthorizedRequestError,
+  verifyWorkforceRequest
+} from "@carbon/knowledge/identity.server";
 import { assertProviderCandidates } from "@carbon/knowledge/provider-policy";
 import {
   executeReadQuery,
@@ -517,6 +520,17 @@ export function createReadHandler(
       // A source that requires Carbon MFA is the one failure the portal must
       // be able to name; everything else stays an opaque unavailability.
       if (error instanceof StepUpRequiredError) return stepUpRequiredResponse();
+      // An identity this service will not act for is a refusal. It was
+      // indistinguishable from an outage, which is what made a cross-company
+      // question read as "Manual search is unavailable". The CLASS is all that
+      // surfaces: `forbidden` is the same answer for an unknown caller, a
+      // revoked binding and another company's question, so the refusal still
+      // says nothing about what exists.
+      if (error instanceof UnauthorizedRequestError)
+        return Response.json(
+          { error: "forbidden" },
+          { status: 403, headers: { "cache-control": "no-store" } }
+        );
       return Response.json(
         { error: "query_unavailable" },
         { status: 503, headers: { "cache-control": "no-store" } }

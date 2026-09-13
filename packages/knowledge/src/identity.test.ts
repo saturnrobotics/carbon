@@ -12,6 +12,7 @@ import {
   IAP_ASSERTION_HEADER,
   PORTAL_COMPANY_HEADER,
   PORTAL_USER_EVIDENCE_HEADER,
+  UnauthorizedRequestError,
   verifyIapBrowserRequest,
   verifyWorkforceRequest
 } from "./identity.server";
@@ -501,5 +502,57 @@ describe("machine service authorization", () => {
       } as never)
     ).rejects.toThrow(/audience/i);
     expect(getIdTokenClient).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * Every identity denial in this module is one class, so a handler can answer it
+ * with a status of its own instead of the 500 or 503 a bare Error produced. The
+ * class carries no reason and must not grow one: the same type is thrown for a
+ * missing assertion, a forged signature and another company's request alike.
+ */
+describe("the denial every identity gate throws", () => {
+  it("is one type, whichever gate refused", async () => {
+    const denials = [
+      verifyWorkforceRequest({
+        request: new Request("https://carbon-api.example.com/api", {
+          method: "POST"
+        }),
+        operation: "knowledge_getItemIdentity",
+        configuration,
+        tokenVerifier: verifier(),
+        identityStore: identityStore(),
+        nowEpochSeconds: now
+      }),
+      verifyIapBrowserRequest({
+        request: new Request("https://knowledge.example.test/documents/doc"),
+        sourceIapAudience: sourceAudience,
+        tokenVerifier: verifier(),
+        nowEpochSeconds: now
+      }),
+      createWorkforceForwardingHeaders({
+        request: new Request("https://knowledge.example.test/documents/doc"),
+        targetAudience: receiverAudience,
+        companyId: "cmp_alpha",
+        verified: {
+          kind: "iap-browser",
+          sourceIdentity: {
+            issuer: "https://cloud.google.com/iap",
+            subject: "100000000000000000001"
+          },
+          sourceIapAudience: sourceAudience,
+          accessLevels: []
+        }
+      })
+    ];
+    for (const denial of denials)
+      await expect(denial).rejects.toBeInstanceOf(UnauthorizedRequestError);
+  });
+
+  it("says what it always said, and nothing about what exists", () => {
+    const denial = new UnauthorizedRequestError();
+    expect(denial).toBeInstanceOf(Error);
+    expect(denial.name).toBe("UnauthorizedRequestError");
+    expect(denial.message).toBe("unauthorized workforce request");
   });
 });
