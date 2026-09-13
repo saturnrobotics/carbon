@@ -2,6 +2,9 @@
 
 import importlib.util
 import json
+import os
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+import threading
 from pathlib import Path
 import subprocess
 import tempfile
@@ -33,6 +36,45 @@ class PrivateStackTests(unittest.TestCase):
         }
         module.render(self.config, REPO, self.output, self.state)
         self.stack = json.loads((self.output / "compose.json").read_text())
+
+    def test_erp_health_probe_sends_configured_host_and_checks_dependency_health(self):
+        responses = [(200, '{"status":"healthy"}', 0),
+                     (200, '{"status":"degraded"}', 1),
+                     (500, '{"status":"healthy"}', 1),
+                     (302, '{"status":"healthy"}', 1),
+                     (200, 'not json', 1),
+                     (200, 'x' * 4097, 1)]
+        requests = []
+
+        class HealthHandler(BaseHTTPRequestHandler):
+            def do_GET(self):
+                requests.append((self.path, self.headers.get("Host")))
+                status, body = self.server.probe_response
+                self.send_response(status)
+                self.end_headers()
+                self.wfile.write(body.encode())
+
+            def log_message(self, format, *args):
+                pass
+
+        with ThreadingHTTPServer(("127.0.0.1", 0), HealthHandler) as server:
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            try:
+                for status, body, expected in responses:
+                    with self.subTest(status=status, body=body):
+                        server.probe_response = (status, body)
+                        result = subprocess.run(
+                            self.stack["services"]["erp"]["healthcheck"]["test"][1:],
+                            env={**os.environ, "ERP_URL": "https://erp.example.com",
+                                 "PORT": str(server.server_port)},
+                            capture_output=True, text=True, timeout=10,
+                        )
+                        self.assertEqual(result.returncode, expected, result.stderr)
+            finally:
+                server.shutdown()
+                thread.join()
+        self.assertEqual(requests, [("/health", "erp.example.com")] * len(responses))
 
     def test_preview_matches_real_render_without_writes_or_secret_generation(self):
         config = {**self.config, "POSTGRES_PRIVATE_IP": "10.73.0.2", "POSTGRES_CLIENT_CIDRS": ["10.81.0.0/26"],
