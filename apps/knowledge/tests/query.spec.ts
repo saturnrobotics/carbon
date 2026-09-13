@@ -154,8 +154,14 @@ test("another company's reader gets neither the evidence nor the follow-up conte
     await alice.page.goto("/");
     await waitForClientNavigation(alice.page);
     const denied = await search(alice.page, manualPart);
-    expect(denied.status()).not.toBe(200);
-    await expect(alice.page.getByRole("alert")).toBeVisible();
+    // The reported defect: this answered 503 and the reader was told "Manual
+    // search is unavailable", so a refusal read as an outage. `not 200` could
+    // not tell the two apart; the status and the words are both the assertion.
+    expect(denied.status()).toBe(403);
+    expect(await denied.json()).toEqual({ error: "forbidden" });
+    await expect(alice.page.getByRole("alert")).toHaveText(
+      "You do not have permission for this action in this library."
+    );
     await expect(alice.page.getByText(manualTitle)).toHaveCount(0);
     await expect(alice.page.locator(".evidence-card")).toHaveCount(0);
   } finally {

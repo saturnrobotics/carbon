@@ -112,8 +112,11 @@ test("no credential is denied at every portal path", async ({ browser }) => {
   const page = await context.newPage();
   try {
     await expectSearchDenied(page, probe);
+    // An unauthenticated download is an authentication failure. It answered 500
+    // with `Error: unauthorized workforce request` in the body, which `not 200`
+    // could never have caught.
     const denied = await page.goto("/documents/doc/versions/version");
-    expect(denied?.status()).not.toBe(200);
+    expect(denied?.status()).toBe(401);
   } finally {
     await context.close();
   }
@@ -144,7 +147,9 @@ for (const scenario of denied) {
       const download = await session.page.goto(
         "/documents/doc/versions/version"
       );
-      expect(download?.status()).not.toBe(200);
+      // Every scenario above fails the browser identity gate, so every one is
+      // 401 — the class, never which of them it was.
+      expect(download?.status()).toBe(401);
     } finally {
       await session.context.close();
     }

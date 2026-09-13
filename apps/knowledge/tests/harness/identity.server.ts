@@ -11,6 +11,7 @@
  */
 import {
   IAP_ASSERTION_HEADER,
+  UnauthorizedRequestError,
   type VerifiedIapBrowserRequest,
   type VerifiedWorkforceIdentity,
   verifyIapBrowserRequest
@@ -80,7 +81,11 @@ export function forwardVerifiedWorkforceRequest(options: {
     (candidate) => actorSubjects[candidate] === subject
   );
   if (!actor || options.companyId !== companyId || !options.targetAudience) {
-    return Promise.reject(new Error("unauthorized test forwarding"));
+    // The production `createWorkforceForwardingHeaders` refuses with the one
+    // identity denial, and a handler picks its status from that type. A bare
+    // Error here made the harness answer an unknown subject 503 where the
+    // deployed portal answers 403 — the harness inventing an outage.
+    return Promise.reject(new UnauthorizedRequestError());
   }
   return Promise.resolve(
     new Headers({

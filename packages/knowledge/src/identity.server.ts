@@ -164,8 +164,24 @@ export interface VerifiedIapBrowserRequest {
   accessLevels: string[];
 }
 
+/**
+ * A request that established no identity this service will act for.
+ *
+ * It carries no reason, and must not grow one. `unauthorized()` is thrown for a
+ * missing assertion, a forged signature, an unknown caller, a revoked binding
+ * and another company's request alike; the class exists so a handler can choose
+ * a STATUS, never so a caller can learn which of those it was.
+ */
+export class UnauthorizedRequestError extends Error {
+  override readonly name = "UnauthorizedRequestError";
+
+  constructor() {
+    super("unauthorized workforce request");
+  }
+}
+
 function unauthorized(): Error {
-  return new Error("unauthorized workforce request");
+  return new UnauthorizedRequestError();
 }
 
 function epochSeconds(): number {
