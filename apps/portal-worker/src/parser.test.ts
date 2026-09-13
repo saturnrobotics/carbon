@@ -115,3 +115,73 @@ it("invokes a finite Cloud Run parser job with immutable references and reads it
   });
   expect(requestBody).not.toContain("cloud-platform-token");
 });
+
+it("does not start a parser job after the scheduler deadline expires", async () => {
+  const controller = new AbortController();
+  controller.abort();
+  let tokens = 0;
+  await expect(
+    invokeCloudRunParserJob(
+      {
+        bucket: "input",
+        objectKey: "manual.pdf",
+        generation: "1",
+        sha256: "a".repeat(64)
+      },
+      "application/pdf",
+      {
+        project: "synthetic-project",
+        location: "us-central1",
+        job: "parser",
+        outputBucket: "output",
+        signal: controller.signal,
+        accessToken: async () => {
+          tokens++;
+          throw Error("Unexpected token request");
+        }
+      }
+    )
+  ).rejects.toThrow();
+  expect(tokens).toBe(0);
+});
+
+it("cancels a pending parser transport request at the scheduler deadline", async () => {
+  const controller = new AbortController();
+  let requestSignal: AbortSignal | null | undefined;
+  let started!: () => void;
+  const transportStarted = new Promise<void>((resolve) => {
+    started = resolve;
+  });
+  const result = invokeCloudRunParserJob(
+    {
+      bucket: "input",
+      objectKey: "manual.pdf",
+      generation: "1",
+      sha256: "a".repeat(64)
+    },
+    "application/pdf",
+    {
+      project: "synthetic-project",
+      location: "us-central1",
+      job: "parser",
+      outputBucket: "output",
+      signal: controller.signal,
+      accessToken: async () => "synthetic-token",
+      fetchImpl: async (...[, init]) => {
+        requestSignal = init?.signal;
+        started();
+        const result = Promise.withResolvers<Response>();
+        init?.signal?.addEventListener(
+          "abort",
+          () => result.reject(Error("Aborted parser transport")),
+          { once: true }
+        );
+        return result.promise;
+      }
+    }
+  );
+  await transportStarted;
+  expect(requestSignal).toBe(controller.signal);
+  controller.abort();
+  await expect(result).rejects.toThrow();
+});

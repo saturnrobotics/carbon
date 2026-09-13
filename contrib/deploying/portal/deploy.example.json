@@ -72,10 +72,10 @@
         "PORTAL_PARSER_OUTPUT_BUCKET": "<portal-parser-output-bucket>",
         "PORTAL_PARSER_PROJECT": "<portal-parser-project>",
         "PORTAL_RELEASE_PROFILE": "manual-v1",
-        "PORTAL_TRUSTED_CALLERS_JSON": "<portal-trusted-callers-json>"
+        "PORTAL_TRUSTED_CALLERS_JSON": "<portal-trusted-callers-json>",
+        "PORTAL_SCHEDULER_MODE": "cloud-scheduler"
       },
       "secrets": {
-        "INNGEST_SIGNING_KEY": "projects/<project-id>/secrets/portal-inngest-signing-key/versions/<version-number>",
         "PORTAL_INGEST_DATABASE_URL": "projects/<project-id>/secrets/portal-ingest-db-url/versions/<version-number>",
         "PORTAL_READ_DATABASE_URL": "projects/<project-id>/secrets/portal-read-db-url/versions/<version-number>",
         "PORTAL_REVIEW_DATABASE_URL": "projects/<project-id>/secrets/portal-review-db-url/versions/<version-number>"

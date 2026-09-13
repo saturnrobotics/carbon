@@ -14,14 +14,18 @@ identifiers, provider responses, credentials or run logs belong in this plan.
   version in revision identity, and prove TLS trust and rejection boundaries.
 - [x] Run deployment Python tests, scoped runtime tests/typechecks, Terraform
   validation, formatting, privacy review and branch review.
-- [ ] Resolve the background scheduler decision below before provisioning a
+- [x] Resolve the background scheduler decision below before provisioning a
   production processing path or changing authentication contracts.
+- [x] Implement authenticated Cloud Scheduler processing, fail-closed release
+  activation, bounded monitoring retries and content-free failure telemetry.
+- [x] Prove real PostgreSQL lease recovery and the restricted post-bootstrap
+  migration role; correct provider-rejected alert filters and shell resources.
 - [ ] Provision the reviewed foundation and verify the actual network, secrets,
   database observer, enrollment, library grants and request policy.
 - [ ] Integrate through the normal PR/CI gate, then run deployment preflight and
   real authentication, upload, processing, retrieval and revocation checks.
 
-## Background scheduler decision — proposed, not yet approved
+## Background scheduler decision — approved
 
 The platform plan specifies an independent Inngest application. The current GCP
 release only supplies a signing key; it has no configured event transport,
@@ -50,9 +54,9 @@ Recommended bounded alternative for manual-v1:
    duplicate delivery, aborted extraction, lease expiry, lost acknowledgment and
    subsequent recovery. Preserve the existing Inngest test suite.
 
-This changes the approved scheduler architecture and adds an authentication
-endpoint. It requires an explicit decision before implementation. An alternative
-is to retain Inngest and provision its production event/callback integration.
+The user approved this scheduler architecture and authentication endpoint on
+2026-09-13. Implement the bounded manual-v1 path above; preserve Inngest behavior
+for other profiles.
 
 ## Remaining operational verification
 

@@ -282,6 +282,7 @@ class FoundationTests(unittest.TestCase):
         ("web", "services/portal-actions"),
         ("web", "services/portal-ingest"),
         ("ingest", "services/portal-query"),
+        ("scheduler", "services/portal-ingest"),
         ("maintenance", "jobs/portal-retention"),
     }
 
@@ -392,7 +393,7 @@ class FoundationTests(unittest.TestCase):
 
     def test_runtime_identities_are_separate_and_never_project_runtime_admins(self):
         locals_ = self.config.locals()
-        self.assertEqual(set(list_items(re.search(r"toset\((\[.*?\])\)", locals_["runtime_identities"]).group(1))), {"deployment", "web", "query", "ingest", "parser", "migration", "maintenance"})
+        self.assertEqual(set(list_items(re.search(r"toset\((\[.*?\])\)", locals_["runtime_identities"]).group(1))), {"deployment", "web", "query", "ingest", "parser", "migration", "maintenance", "scheduler"})
         roles = {unquote(block.attrs["role"]) for block in self.config.all_resources() if "role" in block.attrs}
         for forbidden in ("roles/run.admin", "roles/owner", "roles/editor", "roles/iam.serviceAccountKeyAdmin"):
             self.assertNotIn(forbidden, roles)
@@ -470,6 +471,42 @@ class FoundationTests(unittest.TestCase):
         holders = [RUNTIME_MEMBER.search(block.attrs["member"]).group(1) for block in self.config.resources("google_storage_bucket_iam_member").values() if block.attrs["role"] == "google_project_iam_custom_role.retention_object_deleter.name"]
         self.assertEqual(holders, ["maintenance"])
         self.assertIn("retention", self.config.resources("google_cloud_scheduler_job"))
+
+    def test_outbox_scheduler_starts_paused_and_has_only_its_exact_ingest_edge(self):
+        jobs = self.config.resources("google_cloud_scheduler_job")
+        self.assertIn("outbox", jobs)
+        job = jobs["outbox"]
+        self.assertEqual(job.attrs["for_each"], 'toset(["drain", "check"])')
+        self.assertEqual(unquote(job.attrs["name"]), "portal-outbox-${each.value}")
+        self.assertEqual(unquote(job.attrs["schedule"]), "* * * * *")
+        self.assertEqual(unquote(job.attrs["time_zone"]), "Etc/UTC")
+        self.assertEqual(unquote(job.attrs["attempt_deadline"]), "450s")
+        self.assertEqual(job.attrs["paused"], "true")
+        self.assertEqual(list_items(job.child("lifecycle").attrs["ignore_changes"]), ["paused"])
+        self.assertEqual(job.child("retry_config").attrs["retry_count"], "0")
+        target = job.child("http_target")
+        self.assertEqual(unquote(target.attrs["http_method"]), "POST")
+        self.assertNotIn("body", target.attrs, "scheduler endpoints accept no request body")
+        self.assertEqual(unquote(target.attrs["uri"]), '${local.service_urls["portal-ingest"]}/internal/outbox/${each.value}')
+        token = target.child("oidc_token")
+        self.assertEqual(token.attrs["service_account_email"], 'google_service_account.runtime["scheduler"].email')
+        self.assertEqual(token.attrs["audience"], 'local.service_urls["portal-ingest"]')
+        self.assertIsNone(target.child("oauth_token"))
+        self.assertEqual({edge for edge in invoker_edges(self.config) if edge[0] == "scheduler"}, {("scheduler", "services/portal-ingest")})
+        self.assertNotIn("scheduler", {identity for identity, _ in ACCESS.findall(self.config.locals()["secret_access"])})
+        output = self.config.outputs()["outbox_scheduler"].attrs["value"]
+        self.assertIn('google_service_account.runtime["scheduler"].unique_id', output)
+        self.assertIn('google_cloud_scheduler_job.outbox["check"].id', output)
+        self.assertIn('google_cloud_scheduler_job.outbox["drain"].id', output)
+
+    def test_only_ingest_can_write_the_predeclared_database_metric(self):
+        roles = self.config.resources("google_project_iam_custom_role")
+        self.assertIn("ingest_metrics_writer", roles)
+        self.assertEqual(list_items(roles["ingest_metrics_writer"].attrs["permissions"]), ["monitoring.timeSeries.create"])
+        grants = [block for block in self.config.resources("google_project_iam_member").values() if block.attrs["role"] == "google_project_iam_custom_role.ingest_metrics_writer.name"]
+        self.assertEqual(len(grants), 1)
+        self.assertEqual(unquote(grants[0].attrs["member"]), 'serviceAccount:${google_service_account.runtime["ingest"].email}')
+        self.assertEqual(self.config.outputs()["database_connection_utilization_metric_type"].attrs["value"], "var.database_connection_utilization_metric_type")
 
     def test_content_free_operational_alerts_cover_critical_stages(self):
         monitoring = (HERE / "monitoring.tf").read_text()

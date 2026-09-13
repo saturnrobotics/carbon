@@ -30,7 +30,8 @@ REQUIRED_ENVIRONMENT = {
 # only: absence is never an error. `PORTAL_SOURCES_JSON` is the query service's
 # live-source registry, and only the query service reads it, so admitting it
 # anywhere else would stage a revision carrying configuration nothing consumes.
-OPTIONAL_ENVIRONMENT = {"portal-query": {"PORTAL_SOURCES_JSON"}}
+SCHEDULER_ENVIRONMENT = {"PORTAL_SCHEDULER_MODE", "PORTAL_SCHEDULER_AUDIENCE", "PORTAL_SCHEDULER_SUBJECT", "PORTAL_DATABASE_METRIC_TYPE"}
+OPTIONAL_ENVIRONMENT = {"portal-query": {"PORTAL_SOURCES_JSON"}, "portal-ingest": SCHEDULER_ENVIRONMENT}
 # The manual release registers live CARBON sources only. Kanban belongs to the
 # deferred command surface and `engineering`/`crm` are the generic source adapters
 # this release excludes, so admitting the registry key without this would reverse
@@ -108,7 +109,28 @@ def apply_foundation_audiences(plan: dict[str, Any], outputs: dict[str, Any], *,
                 environment[variable] = expected
             elif current != expected and not override:
                 raise ValueError(f"{name} {variable} differs from the foundation output for {receiver}; pass --override-audiences to keep the plan value")
+    ingest = services.get("portal-ingest", {}).get("environment", {})
+    if ingest.get("PORTAL_SCHEDULER_MODE") == "cloud-scheduler":
+        scheduler = foundation_scheduler(outputs)
+        values = {"PORTAL_SCHEDULER_SUBJECT": scheduler["subject"], "PORTAL_SCHEDULER_AUDIENCE": scheduler["audience"],
+                  "PORTAL_DATABASE_METRIC_TYPE": outputs.get("database_connection_utilization_metric_type", {}).get("value")}
+        if not isinstance(values["PORTAL_DATABASE_METRIC_TYPE"], str) or not values["PORTAL_DATABASE_METRIC_TYPE"].startswith("custom.googleapis.com/"):
+            raise ValueError("Foundation outputs must contain database_connection_utilization_metric_type")
+        for variable, expected in values.items():
+            if variable in ingest and ingest[variable] != expected:
+                raise ValueError(f"Portal scheduler {variable} differs from the foundation output")
+            ingest[variable] = expected
     return plan
+
+
+def foundation_scheduler(outputs: dict[str, Any]) -> dict[str, str]:
+    scheduler = outputs.get("outbox_scheduler", {}).get("value")
+    fields = {"service_account", "subject", "audience", "drain_job", "check_job"}
+    if not isinstance(scheduler, dict) or set(scheduler) != fields or any(not isinstance(value, str) or not value for value in scheduler.values()):
+        raise ValueError("Foundation outputs must contain the outbox_scheduler map")
+    if not re.fullmatch(r"[0-9]{6,30}", scheduler["subject"]) or scheduler["audience"] != foundation_audiences(outputs)["portal-ingest"]:
+        raise ValueError("Foundation outbox_scheduler requires the numeric service-account identity and ingest audience")
+    return dict(scheduler)
 
 
 def check_source_registry(name: str, value: Any) -> None:
@@ -191,12 +213,31 @@ def validate_plan(plan: dict[str, Any]) -> None:
         if name in NO_SECRET_UNITS and spec["secrets"]:
             raise ValueError(f"{name} must not receive runtime secrets")
         extra_environment = spec["environment"].keys() - REQUIRED_ENVIRONMENT[name] - OPTIONAL_ENVIRONMENT.get(name, set())
-        extra_secrets = spec["secrets"].keys() - REQUIRED_SECRETS[name]
+        required_secrets = set(REQUIRED_SECRETS[name])
+        if name == "portal-ingest":
+            environment = spec["environment"]
+            mode = environment.get("PORTAL_SCHEDULER_MODE", "inngest")
+            if mode not in {"inngest", "cloud-scheduler"}:
+                raise ValueError("Unknown Portal scheduler mode")
+            if mode == "cloud-scheduler":
+                if not SCHEDULER_ENVIRONMENT <= environment.keys():
+                    raise ValueError("Portal cloud scheduler requires its audience, subject and database metric")
+                audience = urlsplit(environment["PORTAL_SCHEDULER_AUDIENCE"])
+                if audience.scheme != "https" or not audience.netloc or audience.path or audience.query or audience.fragment or audience.username or audience.password:
+                    raise ValueError("Portal scheduler audience must be an HTTPS service origin")
+                if not re.fullmatch(r"[0-9]{6,30}", environment["PORTAL_SCHEDULER_SUBJECT"]):
+                    raise ValueError("Portal scheduler subject must be a numeric service-account identity")
+                if not environment["PORTAL_DATABASE_METRIC_TYPE"].startswith("custom.googleapis.com/"):
+                    raise ValueError("Portal scheduler requires its custom database metric type")
+                required_secrets.remove("INNGEST_SIGNING_KEY")
+            elif (SCHEDULER_ENVIRONMENT - {"PORTAL_SCHEDULER_MODE"}) & environment.keys():
+                raise ValueError("Portal scheduler identity and metric inputs require cloud-scheduler mode")
+        extra_secrets = spec["secrets"].keys() - required_secrets
         if extra_environment or extra_secrets:
             deferred = sorted(extra_environment | extra_secrets)
             raise ValueError(f"{name} contains deferred runtime configuration: {', '.join(deferred)}")
         missing_environment = REQUIRED_ENVIRONMENT[name] - spec["environment"].keys()
-        missing_secrets = REQUIRED_SECRETS[name] - spec["secrets"].keys()
+        missing_secrets = required_secrets - spec["secrets"].keys()
         if missing_environment or missing_secrets:
             missing = sorted(missing_environment | missing_secrets)
             raise ValueError(f"{name} is missing mandatory runtime configuration: {', '.join(missing)}")
@@ -389,6 +430,8 @@ def revision_document(name: str, spec: dict[str, Any], digest: str, observed: di
         return {"apiVersion": "run.googleapis.com/v1", "kind": "Job", "metadata": {"name": name}, "spec": {"template": {"metadata": template["metadata"], "spec": {"taskCount": 1, "parallelism": 1, "template": {"spec": template["spec"]}}}}}
     template["metadata"]["name"] = f"{name}-{uuid4().hex[:16]}"
     template["spec"]["containerConcurrency"] = spec["concurrency"]
+    if name == "portal-ingest" and spec["environment"].get("PORTAL_SCHEDULER_MODE") == "cloud-scheduler":
+        template["spec"]["timeoutSeconds"] = 420
     # Cloud Run runs this against the staged container before declaring its
     # revision ready, without routing to the old revision or bypassing IAP.
     template["spec"]["containers"][0]["startupProbe"] = {

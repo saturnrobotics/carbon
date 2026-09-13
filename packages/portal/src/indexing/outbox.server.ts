@@ -54,8 +54,11 @@ export async function claimOutbox(
   principal: DatabasePrincipal,
   workerId: string,
   limit = 50,
-  eventTypes: readonly OutboxEventType[] = OUTBOX_EVENT_TYPES
+  eventTypes: readonly OutboxEventType[] = OUTBOX_EVENT_TYPES,
+  leaseSeconds = 300
 ): Promise<LeasedOutboxEvent[]> {
+  if (!Number.isInteger(leaseSeconds) || leaseSeconds < 1 || leaseSeconds > 600)
+    throw Error("Invalid outbox lease duration");
   if (!eventTypes.length) return [];
   return withPortalTransaction(pool, principal, "write", async (client) => {
     // UPDATE ... RETURNING does not preserve the locking query's order, so the
@@ -68,14 +71,15 @@ export async function claimOutbox(
         ORDER BY 3, "createdAt" LIMIT $2 FOR UPDATE SKIP LOCKED
       ), claimable AS (
         SELECT id,row_number() OVER (ORDER BY priority,"createdAt",id) AS ordinal FROM locked
-      ) UPDATE portal.outbox o SET "leaseOwner"=$3,"leaseUntil"=now()+interval '5 minutes',attempts=attempts+1,version=version+1
+      ) UPDATE portal.outbox o SET "leaseOwner"=$3,"leaseUntil"=now()+$5::integer*interval '1 second',attempts=attempts+1,version=version+1
       FROM claimable WHERE o.id=claimable.id AND o."companyId"=$1
       RETURNING o.id,o."sourceId" AS "sourceId",o."entityType" AS "entityType",o."entityId" AS "entityId",o."sourceVersion" AS "sourceVersion",o."eventType" AS "eventType",o.payload,claimable.ordinal`,
       [
         principal.companyId,
         Math.min(Math.max(limit, 1), 100),
         workerId,
-        [...new Set(eventTypes)]
+        [...new Set(eventTypes)],
+        leaseSeconds
       ]
     );
     return result.rows

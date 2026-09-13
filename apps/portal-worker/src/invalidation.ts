@@ -35,12 +35,14 @@ export async function applyOutboxInvalidation(
   pool: Pool,
   principal: InvalidationPrincipal,
   workerId: string,
-  events: readonly LeasedOutboxEvent[]
+  events: readonly LeasedOutboxEvent[],
+  signal?: AbortSignal
 ): Promise<{
   plan: SourceEpochBump[];
   acknowledged: string[];
   deferred: string[];
 }> {
+  signal?.throwIfAborted();
   const plan = planInvalidation(events);
   if (plan.length)
     await withPortalTransaction(pool, principal, "write", (client) =>
@@ -49,12 +51,14 @@ export async function applyOutboxInvalidation(
   const acknowledged: string[] = [];
   const deferred: string[] = [];
   for (const event of events) {
+    signal?.throwIfAborted();
     try {
       if (
         event.entityType === "document" &&
         (event.eventType === "delete" || event.eventType === "acl-change")
       )
         await confirmOutboxApplied(pool, principal, event);
+      signal?.throwIfAborted();
       await acknowledgeOutbox(pool, principal, workerId, [event.id]);
       acknowledged.push(event.id);
     } catch {

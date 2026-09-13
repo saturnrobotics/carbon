@@ -166,7 +166,7 @@ class ReleaseControllerTests(unittest.TestCase):
 
     def test_live_source_registry_is_admitted_on_the_query_unit_alone(self):
         registry = json.dumps({"version": 1, "sources": [{"id": "carbon-source", "kind": "carbon", "origin": "https://erp.example", "audience": "erp-receiver-audience"}]})
-        self.assertEqual(release.OPTIONAL_ENVIRONMENT, {"portal-query": {"PORTAL_SOURCES_JSON"}})
+        self.assertEqual(release.OPTIONAL_ENVIRONMENT["portal-query"], {"PORTAL_SOURCES_JSON"})
         # Optional, so the query unit is valid with it and valid without it.
         release.validate_plan(database_plan())
         admitted = database_plan()

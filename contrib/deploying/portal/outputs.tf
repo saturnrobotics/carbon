@@ -9,3 +9,14 @@ output "web_url" { value = google_cloud_run_v2_service.web.uri }
 output "service_audiences" { value = local.service_audiences }
 output "service_urls" { value = local.service_urls }
 output "source_database_client_tag" { value = local.source_database_client_tag }
+output "database_connection_utilization_metric_type" { value = var.database_connection_utilization_metric_type }
+
+output "outbox_scheduler" {
+  value = {
+    service_account = google_service_account.runtime["scheduler"].email
+    subject         = google_service_account.runtime["scheduler"].unique_id
+    audience        = local.service_urls["portal-ingest"]
+    drain_job       = google_cloud_scheduler_job.outbox["drain"].id
+    check_job       = google_cloud_scheduler_job.outbox["check"].id
+  }
+}
