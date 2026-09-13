@@ -301,6 +301,16 @@ def read_scheduler(job: str, adapter) -> dict:
     return observed
 
 
+def scheduler_retries_disabled(observed: dict) -> bool:
+    """Both API-default zero limits are required to disable Scheduler retries."""
+    retry = observed.get("retryConfig", {})
+    if not isinstance(retry, dict):
+        return False
+    count = retry.get("retryCount", 0)
+    duration = retry.get("maxRetryDuration", "0s")
+    return isinstance(count, int) and not isinstance(count, bool) and count == 0 and isinstance(duration, str) and re.fullmatch(r"0(?:\.0{1,9})?s", duration) is not None
+
+
 def observe_scheduler(config: dict, candidate: dict, foundation: dict, adapter) -> dict | None:
     """Read the actual identity and target policy before any image or cloud write."""
     environment = candidate["services"]["portal-ingest"]["environment"]
@@ -323,7 +333,7 @@ def observe_scheduler(config: dict, candidate: dict, foundation: dict, adapter) 
         expected_token = {"serviceAccountEmail": expected_account, "audience": scheduler["audience"]}
         if target.get("uri") != scheduler["audience"] + "/internal/outbox/" + kind or target.get("httpMethod") != "POST" or target.get("oidcToken") != expected_token or "oauthToken" in target or target.get("body", ""):
             raise ValueError("Portal scheduler target or authentication drift must be reconciled before deployment")
-        if observed.get("schedule") != "* * * * *" or observed.get("timeZone") not in {"Etc/UTC", "UTC"} or observed.get("attemptDeadline") != "450s" or observed.get("retryConfig", {}).get("retryCount", 0) != 0:
+        if observed.get("schedule") != "* * * * *" or observed.get("timeZone") not in {"Etc/UTC", "UTC"} or observed.get("attemptDeadline") != "450s" or not scheduler_retries_disabled(observed):
             raise ValueError("Portal scheduler timing drift must be reconciled before deployment")
         if kind == "check" and observed["state"] != "PAUSED":
             raise ValueError("Portal scheduler check job must remain paused")
@@ -408,7 +418,7 @@ def wait_scheduler_attempt(scheduler: dict, kind: str, adapter, *, after: dateti
 
 def settle_scheduler(scheduler: dict, kind: str, adapter, *, maximum_polls=120, wait=time.sleep, now=lambda: datetime.now(timezone.utc)) -> None:
     observed = read_scheduler(scheduler[kind + "_job"], adapter)
-    if observed.get("attemptDeadline") != "450s" or observed.get("retryConfig", {}).get("retryCount", 0) != 0:
+    if observed.get("attemptDeadline") != "450s" or not scheduler_retries_disabled(observed):
         raise ValueError("Portal scheduler timing drift prevents safe release quiescence")
     if observed.get("lastAttemptTime"):
         attempt = observed["lastAttemptTime"]

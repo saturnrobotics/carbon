@@ -241,6 +241,44 @@ class SchedulerActivationTests(unittest.TestCase):
         self.assertFalse(any(args[:4] == ["gcloud", "scheduler", "jobs", "resume"] for args in adapter.calls))
 
 
+    def test_api_omitted_and_normalized_zero_retry_defaults_are_accepted(self):
+        config = scheduler_config(self.deploy)
+        candidate = self.deploy.prepare_plan(config, "a" * 40, scheduler_outputs(), [FIRST, LAST])
+        for retries in (None, {}, {"retryCount": 0, "maxRetryDuration": "0s"},
+                        {"maxRetryDuration": "0.000000000s", "minBackoffDuration": "5s", "maxBackoffDuration": "3600s", "maxDoublings": 5}):
+            with self.subTest(retries=retries):
+                adapter = SchedulerAdapter()
+                for job in adapter.jobs.values():
+                    if retries is None:
+                        job.pop("retryConfig", None)
+                    else:
+                        job["retryConfig"] = retries
+                self.assertEqual(self.deploy.observe_scheduler(config, candidate, scheduler_outputs(), adapter), self.scheduler)
+
+    def test_either_nonzero_retry_limit_blocks_preflight_before_mutation(self):
+        config = scheduler_config(self.deploy)
+        candidate = self.deploy.prepare_plan(config, "a" * 40, scheduler_outputs(), [FIRST, LAST])
+        for kind in ("drain", "check"):
+            for retries in ({"retryCount": 1}, {"maxRetryDuration": "60s"},
+                            {"retryCount": 0, "maxRetryDuration": "0.001s"},
+                            {"retryCount": False}, {"retryCount": "0"}, {"maxRetryDuration": 0}, None):
+                with self.subTest(kind=kind, retries=retries):
+                    adapter = SchedulerAdapter()
+                    adapter.jobs[self.scheduler[kind + "_job"]]["retryConfig"] = retries
+                    with self.assertRaisesRegex(ValueError, "timing drift"):
+                        self.deploy.observe_scheduler(config, candidate, scheduler_outputs(), adapter)
+                    self.assertFalse(any(args[:4] in (["gcloud", "scheduler", "jobs", "run"], ["gcloud", "scheduler", "jobs", "resume"])
+                                         for args in adapter.calls))
+
+    def test_nonzero_retry_duration_prevents_forced_readiness_attempt(self):
+        adapter = SchedulerAdapter()
+        adapter.jobs[self.scheduler["check_job"]]["retryConfig"] = {"retryCount": 0, "maxRetryDuration": "60s"}
+        with self.assertRaisesRegex(ValueError, "timing drift"):
+            self.activate(adapter)
+        self.assertFalse(any(args[:4] in (["gcloud", "scheduler", "jobs", "run"], ["gcloud", "scheduler", "jobs", "resume"])
+                             for args in adapter.calls))
+
+
 class SchedulerOrchestrationTests(unittest.TestCase):
     def exercise(self, *, apply=True, release_failure=False):
         deploy = module()
