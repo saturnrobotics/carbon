@@ -22,6 +22,9 @@ resource "google_cloud_run_v2_service" "probe" {
   iap_enabled         = true
   deletion_protection = var.environment == "production"
 
+  # The API returns this default block; declaring it prevents perpetual drift.
+  scaling { min_instance_count = 0 }
+
   template {
     service_account                  = google_service_account.runtime["web"].email
     max_instance_request_concurrency = 10
@@ -40,7 +43,7 @@ resource "google_cloud_run_v2_service" "probe" {
     containers {
       image = var.probe_image
       ports { container_port = 8080 }
-      resources { limits = { cpu = "1", memory = "256Mi" } }
+      resources { limits = { cpu = "1", memory = "512Mi" } }
     }
   }
 
@@ -86,6 +89,9 @@ resource "google_cloud_run_v2_service" "web" {
   iap_enabled         = true
   deletion_protection = var.environment == "production"
 
+  # The API returns this default block; declaring it prevents perpetual drift.
+  scaling { min_instance_count = 0 }
+
   template {
     service_account                  = google_service_account.runtime["web"].email
     max_instance_request_concurrency = 10
@@ -103,7 +109,7 @@ resource "google_cloud_run_v2_service" "web" {
     containers {
       image = var.probe_image
       ports { container_port = 8080 }
-      resources { limits = { cpu = "1", memory = "256Mi" } }
+      resources { limits = { cpu = "1", memory = "512Mi" } }
     }
   }
 

@@ -1,6 +1,7 @@
 import { createServiceAuthorizationHeader } from "@carbon/portal/identity.server";
 import { createExtraction, type ParserOutput } from "@carbon/portal/intake";
 import type { Storage } from "@google-cloud/storage";
+import { withAbortSignal } from "./abort";
 import {
   captureExistingObject,
   type ImmutableObjectReference,
@@ -88,10 +89,13 @@ export async function invokeIsolatedParser(
   return createExtraction(parsed);
 }
 
-async function metadataAccessToken(fetchImpl: typeof fetch): Promise<string> {
+async function metadataAccessToken(
+  fetchImpl: typeof fetch,
+  signal?: AbortSignal
+): Promise<string> {
   const response = await fetchImpl(
     "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token",
-    { headers: { "Metadata-Flavor": "Google" } }
+    { headers: { "Metadata-Flavor": "Google" }, signal }
   );
   if (!response.ok)
     throw new Error("Cloud Run job authorization is unavailable");
@@ -114,20 +118,23 @@ export async function invokeCloudRunParserJob(
     accessToken?: () => Promise<string>;
     wait?: (milliseconds: number) => Promise<void>;
     maximumPolls?: number;
+    signal?: AbortSignal;
     /** The capture's own file name or acquisition URL; the parser proposes a title from it. */
     name?: string;
   }
 ): Promise<ReturnType<typeof createExtraction>> {
   const fetchImpl = options.fetchImpl ?? fetch;
-  const token = await (
-    options.accessToken ?? (() => metadataAccessToken(fetchImpl))
-  )();
+  const signal = options.signal;
+  const token = await withAbortSignal(
+    signal,
+    options.accessToken ?? (() => metadataAccessToken(fetchImpl, signal))
+  );
   const outputObjectKey = `parser/${reference.sha256}/extraction-v1.json`;
   const jobName = `projects/${encodeURIComponent(options.project)}/locations/${encodeURIComponent(options.location)}/jobs/${encodeURIComponent(options.job)}`;
-  const response = await fetchImpl(
-    `https://run.googleapis.com/v2/${jobName}:run`,
-    {
+  const response = await withAbortSignal(signal, () =>
+    fetchImpl(`https://run.googleapis.com/v2/${jobName}:run`, {
       method: "POST",
+      signal,
       headers: {
         authorization: `Bearer ${token}`,
         "content-type": "application/json"
@@ -162,13 +169,13 @@ export async function invokeCloudRunParserJob(
           ]
         }
       })
-    }
+    })
   );
   if (!response.ok)
     throw new Error(
       `Cloud Run parser job failed to start (${response.status})`
     );
-  const operation = (await response.json()) as {
+  const operation = (await withAbortSignal(signal, () => response.json())) as {
     name?: string;
     done?: boolean;
     error?: unknown;
@@ -185,24 +192,32 @@ export async function invokeCloudRunParserJob(
     !state.done && poll < (options.maximumPolls ?? 150);
     poll += 1
   ) {
-    await wait(2_000);
-    const status = await fetchImpl(
-      `https://run.googleapis.com/v2/${state.name}`,
-      { headers: { authorization: `Bearer ${token}` } }
+    await withAbortSignal(signal, () => wait(2_000));
+    const status = await withAbortSignal(signal, () =>
+      fetchImpl(`https://run.googleapis.com/v2/${state.name}`, {
+        headers: { authorization: `Bearer ${token}` },
+        signal
+      })
     );
     if (!status.ok)
       throw new Error(`Cloud Run parser operation failed (${status.status})`);
-    state = (await status.json()) as typeof state;
+    state = (await withAbortSignal(signal, () =>
+      status.json()
+    )) as typeof state;
   }
   if (!state.done || state.error)
     throw new Error("Cloud Run parser job did not complete successfully");
-  const output = await captureExistingObject(
-    options.outputBucket,
-    outputObjectKey,
-    8_000_000,
-    options.storage
+  const output = await withAbortSignal(signal, () =>
+    captureExistingObject(
+      options.outputBucket,
+      outputObjectKey,
+      8_000_000,
+      options.storage
+    )
   );
-  const outputBytes = await readImmutableObject(output, options.storage);
+  const outputBytes = await withAbortSignal(signal, () =>
+    readImmutableObject(output, options.storage)
+  );
   try {
     return createExtraction(
       JSON.parse(outputBytes.toString("utf8")) as ParserOutput

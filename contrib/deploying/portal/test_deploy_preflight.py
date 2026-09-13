@@ -47,7 +47,7 @@ class ProviderReads:
             return "[]"
         if args[0] == "psql" and "SELECT to_regclass" in args[-1]:
             return "f"
-        if args[0] == "psql" and "SELECT to_regprocedure" in args[-1]:
+        if args[0] == "psql" and "portal_resolve_workforce_identity" in args[-1]:
             return "t"
         if args[0] == "docker" and args[1:] in (["info"], ["buildx", "version"]):
             return "synthetic available"
@@ -102,7 +102,7 @@ class DeploymentPreflightTests(unittest.TestCase):
         class OldDatabase(ProviderReads):
             def call(self, args, *, capture=False):
                 result = super().call(args, capture=capture)
-                return "f" if args[0] == "psql" and "SELECT to_regprocedure" in args[-1] else result
+                return "f" if args[0] == "psql" and "portal_resolve_workforce_identity" in args[-1] else result
 
         adapter = OldDatabase()
         with tempfile.TemporaryDirectory() as directory, patch.object(self.deploy, "source_revision", return_value="a" * 40):

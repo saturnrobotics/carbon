@@ -12,6 +12,7 @@ import {
   publishDriveDocumentVersion
 } from "@carbon/portal/sources/drive-publication.server";
 import type { Pool } from "pg";
+import { withAbortSignal } from "./abort";
 import { fetchBoundedUrl } from "./fetch-policy";
 import type { ImmutableObjectReference } from "./gcs";
 import { captureImmutableUpload } from "./gcs";
@@ -69,8 +70,10 @@ export async function processPortalOutbox(
     };
   },
   principal: { companyId: string; callerId: string },
-  event: LeasedOutboxEvent
+  event: LeasedOutboxEvent,
+  signal?: AbortSignal
 ): Promise<void> {
+  signal?.throwIfAborted();
   if (runtime.manualSourceId) {
     if (event.sourceId !== runtime.manualSourceId)
       throw new Error("Manual source unavailable");
@@ -129,6 +132,7 @@ export async function processPortalOutbox(
       };
       // The document's title is the Drive file's own name, synced by the
       // connector; the object key here is a hash like every other capture's.
+      signal?.throwIfAborted();
       const extraction = await runtime.parseDocument(
         reference,
         captured.mimeType,
@@ -225,11 +229,11 @@ export async function processPortalOutbox(
     sha256: object.sha256,
     maxBytes: typeof object.bytes === "number" ? object.bytes : undefined
   };
-  const extraction = await runtime.parseDocument(
-    reference,
-    object.mimeType,
-    capturedName(object)
+  const objectMimeType = object.mimeType;
+  const extraction = await withAbortSignal(signal, () =>
+    runtime.parseDocument(reference, objectMimeType, capturedName(object))
   );
+  signal?.throwIfAborted();
   await persistExtractionGeneration(runtime.pool, principal, {
     intakeId: event.entityId,
     createdBy: runtime.automationUserId,

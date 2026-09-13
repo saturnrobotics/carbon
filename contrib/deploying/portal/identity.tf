@@ -1,5 +1,5 @@
 locals {
-  runtime_identities = toset(["deployment", "web", "query", "ingest", "parser", "migration", "maintenance"])
+  runtime_identities = toset(["deployment", "web", "query", "ingest", "parser", "migration", "maintenance", "scheduler"])
   secret_names = toset([
     "portal-read-db-url",
     "portal-review-db-url",
@@ -8,6 +8,7 @@ locals {
     "portal-maintenance-db-url",
     "portal-source-database-ca",
     "portal-redis-url",
+    "portal-redis-ca",
     "portal-inngest-signing-key",
   ])
 }
@@ -65,7 +66,7 @@ resource "google_secret_manager_secret" "runtime" {
 locals {
   secret_access = {
     web         = []
-    query       = ["portal-read-db-url", "portal-source-database-ca", "portal-redis-url"]
+    query       = ["portal-read-db-url", "portal-source-database-ca", "portal-redis-url", "portal-redis-ca"]
     ingest      = ["portal-review-db-url", "portal-read-db-url", "portal-ingest-db-url", "portal-source-database-ca", "portal-inngest-signing-key"]
     parser      = []
     migration   = ["portal-migration-db-url", "portal-source-database-ca"]
@@ -89,9 +90,11 @@ resource "google_secret_manager_secret_iam_member" "runtime" {
 # service-level binding that cannot exist before the first release.
 locals {
   invoker_edges = {
-    "web-query"    = { caller = "web", receiver = "portal-query" }
-    "web-actions"  = { caller = "web", receiver = "portal-actions" }
-    "ingest-query" = { caller = "ingest", receiver = "portal-query" }
+    "web-query"        = { caller = "web", receiver = "portal-query" }
+    "web-actions"      = { caller = "web", receiver = "portal-actions" }
+    "web-ingest"       = { caller = "web", receiver = "portal-ingest" }
+    "ingest-query"     = { caller = "ingest", receiver = "portal-query" }
+    "scheduler-ingest" = { caller = "scheduler", receiver = "portal-ingest" }
   }
 }
 
@@ -106,12 +109,22 @@ resource "google_project_iam_member" "service_invoker" {
   }
 }
 
-# The ingestion worker can start only the parser job. Operation polling is a
-# separate read-only API permission because Cloud Run operation resources do not
-# carry their originating job name for an IAM condition.
+# The ingestion worker supplies per-capture environment overrides when starting
+# the parser job, requiring runWithOverrides as well as run (run.invoker alone
+# does not grant overrides). It cannot update the job's saved configuration.
+# https://cloud.google.com/run/docs/reference/rest/v2/projects.locations.jobs/run
+# Operation polling is a separate read-only API permission because Cloud Run
+# operation resources do not carry their originating job name for an IAM condition.
+resource "google_project_iam_custom_role" "parser_job_executor" {
+  project     = var.project_id
+  role_id     = "portalParserJobExecutor"
+  title       = "Portal parser job executor"
+  permissions = ["run.jobs.run", "run.jobs.runWithOverrides"]
+}
+
 resource "google_project_iam_member" "ingest_parser_invoker" {
   project = var.project_id
-  role    = "roles/run.invoker"
+  role    = google_project_iam_custom_role.parser_job_executor.name
   member  = "serviceAccount:${google_service_account.runtime["ingest"].email}"
   condition {
     title      = "portal_parser_job_only"
@@ -129,6 +142,21 @@ resource "google_project_iam_custom_role" "parser_operation_reader" {
 resource "google_project_iam_member" "ingest_parser_operation_reader" {
   project = var.project_id
   role    = google_project_iam_custom_role.parser_operation_reader.name
+  member  = "serviceAccount:${google_service_account.runtime["ingest"].email}"
+}
+
+# The descriptor is foundation-owned. Ingest can emit observations, never create
+# or edit metric descriptors, alert policies, or monitoring configuration.
+resource "google_project_iam_custom_role" "ingest_metrics_writer" {
+  project     = var.project_id
+  role_id     = "portalIngestMetricsWriter"
+  title       = "Portal ingestion database metrics writer"
+  permissions = ["monitoring.timeSeries.create"]
+}
+
+resource "google_project_iam_member" "ingest_metrics_writer" {
+  project = var.project_id
+  role    = google_project_iam_custom_role.ingest_metrics_writer.name
   member  = "serviceAccount:${google_service_account.runtime["ingest"].email}"
 }
 
@@ -165,6 +193,43 @@ resource "google_cloud_scheduler_job" "retention" {
     max_backoff_duration = "300s"
   }
   depends_on = [google_project_service.apis, google_project_iam_member.maintenance_retention_invoker]
+}
+
+# Both jobs start paused. The release controller manually runs the no-work check
+# and verifies its completed authenticated attempt before enabling drain. A later
+# Terraform apply must preserve that release-owned pause state.
+resource "google_cloud_scheduler_job" "outbox" {
+  for_each         = toset(["drain", "check"])
+  project          = var.project_id
+  region           = var.region
+  name             = "portal-outbox-${each.value}"
+  description      = "Bounded Portal outbox ${each.value}"
+  schedule         = "* * * * *"
+  time_zone        = "Etc/UTC"
+  attempt_deadline = "450s"
+  paused           = true
+  http_target {
+    http_method = "POST"
+    uri         = "${local.service_urls["portal-ingest"]}/internal/outbox/${each.value}"
+    headers     = { "Content-Type" = "application/json" }
+    oidc_token {
+      service_account_email = google_service_account.runtime["scheduler"].email
+      audience              = local.service_urls["portal-ingest"]
+    }
+  }
+  # Both zero limits disable retries. Include the API's backoff defaults so the
+  # provider sends a nonempty block that matches reads after create or update.
+  retry_config {
+    retry_count          = 0
+    max_retry_duration   = "0s"
+    min_backoff_duration = "5s"
+    max_backoff_duration = "3600s"
+    max_doublings        = 5
+  }
+  lifecycle {
+    ignore_changes = [paused]
+  }
+  depends_on = [google_project_service.apis, google_project_iam_member.service_invoker]
 }
 
 # There is deliberately no google_iap_client or google_iap_brand here. IAP on

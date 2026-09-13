@@ -86,6 +86,7 @@ jobs:
           corepack pnpm --filter @carbon/portal test:integration
           corepack pnpm --filter @carbon/jobs exec vitest run src/procurement-schedule/execute.integration.test.ts
           corepack pnpm --filter portal-query exec vitest run --config ../../packages/portal/vitest.integration.config.ts src/query.integration.test.ts src/local-security.integration.test.ts
+          corepack pnpm --filter portal-worker exec vitest run --config ../../packages/portal/vitest.integration.config.ts src/cloud-scheduler.integration.test.ts
           python3 packages/portal/scripts/test_schema.py
           python3 packages/portal/scripts/test_function_boundary.py
           python3 packages/portal/scripts/test_epochs.py

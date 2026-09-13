@@ -9,6 +9,11 @@ import {
   createCarbonReconciliationFunction,
   readCarbonSourceConfiguration
 } from "./carbon-changes";
+import {
+  createCloudSchedulerHandler,
+  readSchedulerConfiguration
+} from "./cloud-scheduler";
+import { createDatabaseConnectionObserver } from "./database-monitoring";
 import { createDriveApiClient, downloadDriveDocument } from "./drive-client";
 import { createDriveSyncFunction } from "./drive-sync";
 import { createOutboxDeliveryFunction } from "./functions";
@@ -24,6 +29,7 @@ export function startServer(
   port = Number(process.env.PORT ?? "8080"),
   environment: NodeJS.ProcessEnv = process.env
 ) {
+  const schedulerConfiguration = readSchedulerConfiguration(environment);
   const signingKey = environment.INNGEST_SIGNING_KEY?.trim();
   const configuredDependencies = configuredWorkerDependencies(environment);
   const parserProject = environment.PORTAL_PARSER_PROJECT;
@@ -31,7 +37,7 @@ export function startServer(
   const parserJob = environment.PORTAL_PARSER_JOB;
   const parserOutputBucket = environment.PORTAL_PARSER_OUTPUT_BUCKET;
   const dependencies =
-    signingKey &&
+    (schedulerConfiguration || signingKey) &&
     parserProject &&
     parserLocation &&
     parserJob &&
@@ -57,7 +63,7 @@ export function startServer(
           )
         )
     : [];
-  if (dependencies) {
+  if (dependencies && !schedulerConfiguration) {
     dependencies.sendOutboxEvent = async (companyId) => {
       await portalInngest.send({
         name: "portal/outbox.deliver",
@@ -127,26 +133,107 @@ export function startServer(
           automationUserId: dependencies.automationUserId
         }
       : null;
-  const functions = dependencies
-    ? [
-        ...(carbonRuntime
-          ? [
-              createCarbonChangeFunction(carbonRuntime),
-              createCarbonReconciliationFunction(carbonRuntime)
-            ]
-          : []),
-        createOutboxDeliveryFunction({
+  const functions =
+    dependencies && !schedulerConfiguration
+      ? [
+          ...(carbonRuntime
+            ? [
+                createCarbonChangeFunction(carbonRuntime),
+                createCarbonReconciliationFunction(carbonRuntime)
+              ]
+            : []),
+          createOutboxDeliveryFunction({
+            pool: dependencies.ingestPool,
+            companies: workerCompanies,
+            workerId: environment.K_REVISION ?? `portal-worker-${process.pid}`,
+            sourceId: dependencies.manualSource.sourceId,
+            embeddingProfile: "manual-v1",
+            observeBacklog: createBacklogObserver({
+              telemetry: createTelemetry("worker"),
+              backlog: (principal) =>
+                outboxBacklog(dependencies.ingestPool, principal)
+            }),
+            process: (principal, event) =>
+              processPortalOutbox(
+                {
+                  pool: dependencies.ingestPool,
+                  bucket: dependencies.bucket,
+                  automationUserId: dependencies.automationUserId,
+                  manualSourceId: dependencies.manualSource.sourceId,
+                  parseDocument: (reference, mimeType, name) =>
+                    invokeCloudRunParserJob(reference, mimeType, {
+                      project: parserProject!,
+                      location: parserLocation!,
+                      job: parserJob!,
+                      outputBucket: parserOutputBucket!,
+                      ...(name ? { name } : {})
+                    }),
+                  ...(driveSources.length
+                    ? {
+                        loadDriveDocument: async (
+                          sourceId,
+                          fileId,
+                          mimeType
+                        ) => {
+                          const token =
+                            await dependencies.connectorAccessToken(sourceId);
+                          if (!token)
+                            throw new Error(
+                              "Drive connector credential is unavailable"
+                            );
+                          return downloadDriveDocument(token, fileId, mimeType);
+                        }
+                      }
+                    : {})
+                },
+                principal,
+                event
+              )
+          }),
+          createOutboxInvalidationFunction({
+            pool: dependencies.ingestPool,
+            companies: workerCompanies,
+            workerId: environment.K_REVISION ?? `portal-worker-${process.pid}`,
+            sourceId: dependencies.manualSource.sourceId
+          }),
+          ...(driveSources.length
+            ? [
+                createDriveSyncFunction({
+                  pool: dependencies.ingestPool,
+                  sources: driveSources,
+                  automationUserId: dependencies.automationUserId,
+                  workerId:
+                    environment.K_REVISION ?? `portal-worker-${process.pid}`,
+                  connectorAccessToken: dependencies.connectorAccessToken,
+                  createClient: (accessToken) =>
+                    createDriveApiClient(accessToken)
+                })
+              ]
+            : [])
+        ]
+      : [];
+  const inngestHandler = serve({
+    client: portalInngest,
+    functions,
+    ...(signingKey ? { signingKey } : {})
+  });
+  const schedulerHandler =
+    schedulerConfiguration && dependencies
+      ? createCloudSchedulerHandler(schedulerConfiguration, {
           pool: dependencies.ingestPool,
           companies: workerCompanies,
-          workerId: environment.K_REVISION ?? `portal-worker-${process.pid}`,
           sourceId: dependencies.manualSource.sourceId,
-          embeddingProfile: "manual-v1",
+          observeDatabase: createDatabaseConnectionObserver({
+            pool: dependencies.ingestPool,
+            project: parserProject!,
+            metricType: environment.PORTAL_DATABASE_METRIC_TYPE ?? ""
+          }),
           observeBacklog: createBacklogObserver({
             telemetry: createTelemetry("worker"),
             backlog: (principal) =>
               outboxBacklog(dependencies.ingestPool, principal)
           }),
-          process: (principal, event) =>
+          process: (principal, event, signal) =>
             processPortalOutbox(
               {
                 pool: dependencies.ingestPool,
@@ -159,58 +246,22 @@ export function startServer(
                     location: parserLocation!,
                     job: parserJob!,
                     outputBucket: parserOutputBucket!,
+                    signal,
                     ...(name ? { name } : {})
-                  }),
-                ...(driveSources.length
-                  ? {
-                      loadDriveDocument: async (sourceId, fileId, mimeType) => {
-                        const token =
-                          await dependencies.connectorAccessToken(sourceId);
-                        if (!token)
-                          throw new Error(
-                            "Drive connector credential is unavailable"
-                          );
-                        return downloadDriveDocument(token, fileId, mimeType);
-                      }
-                    }
-                  : {})
+                  })
               },
               principal,
-              event
+              event,
+              signal
             )
-        }),
-        createOutboxInvalidationFunction({
-          pool: dependencies.ingestPool,
-          companies: workerCompanies,
-          workerId: environment.K_REVISION ?? `portal-worker-${process.pid}`,
-          sourceId: dependencies.manualSource.sourceId
-        }),
-        ...(driveSources.length
-          ? [
-              createDriveSyncFunction({
-                pool: dependencies.ingestPool,
-                sources: driveSources,
-                automationUserId: dependencies.automationUserId,
-                workerId:
-                  environment.K_REVISION ?? `portal-worker-${process.pid}`,
-                connectorAccessToken: dependencies.connectorAccessToken,
-                createClient: (accessToken) => createDriveApiClient(accessToken)
-              })
-            ]
-          : [])
-      ]
-    : [];
-  const inngestHandler = serve({
-    client: portalInngest,
-    functions,
-    ...(signingKey ? { signingKey } : {})
-  });
+        })
+      : null;
   const server = createServer(async (incoming, outgoing) => {
     const pathname = new URL(
       incoming.url ?? "/",
       `http://${incoming.headers.host ?? "worker.internal"}`
     ).pathname;
-    if (pathname === "/api/inngest" && dependencies)
+    if (pathname === "/api/inngest" && dependencies && !schedulerConfiguration)
       return inngestHandler(incoming, outgoing);
     outgoing.setHeader("content-type", "application/json; charset=utf-8");
     outgoing.setHeader("cache-control", "no-store");
@@ -256,7 +307,10 @@ export function startServer(
           ...(size ? { body: Buffer.concat(chunks) } : {})
         }
       );
-      const response = await handler(request);
+      const response =
+        pathname.startsWith("/internal/outbox/") && schedulerHandler
+          ? await schedulerHandler(request)
+          : await handler(request);
       response.headers.forEach((value, key) => {
         outgoing.setHeader(key, value);
       });

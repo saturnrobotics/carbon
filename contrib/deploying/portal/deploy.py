@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import copy
+from datetime import datetime, timedelta, timezone
 import fcntl
 import importlib.util
 import json
@@ -14,6 +15,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 from uuid import uuid4
 
 import release
@@ -55,6 +57,8 @@ def prepare_plan(config: dict, source: str, foundation: dict, migrations: list[s
     for name, spec in services.items():
         spec["kind"] = release.UNITS[name]
         spec["implementation_ready"] = True
+        if name == "portal-query" and config.get("redis_ca_secret"):
+            spec["redis_ca_secret"] = config["redis_ca_secret"]
         # Filled with a registry receipt before any mutation. These placeholders
         # let the existing strict validator check all runtime inputs pre-build.
         spec["image"] = "example.invalid/validation@sha256:" + "0" * 64
@@ -141,7 +145,7 @@ def validate_config(config: dict) -> None:
     if "<" in json.dumps(config) or "REPLACE_ME" in json.dumps(config):
         raise ValueError("Replace every placeholder in the private deploy.json before deploying")
     expected = {"schema_version", "project", "region", "source_repo_url", "image_repository", "pg_service", "database_ca_secret", "services"}
-    if not isinstance(config, dict) or set(config) != expected or config["schema_version"] != 1:
+    if not isinstance(config, dict) or set(config) - {"redis_ca_secret"} != expected or config["schema_version"] != 1:
         raise ValueError("deploy.json must use the exact fields in deploy.example.json")
     patterns = {"project": r"[a-z][a-z0-9-]{4,28}[a-z0-9]", "region": r"[a-z]+-[a-z]+[0-9]",
                 "pg_service": r"[A-Za-z0-9_-]+", "source_repo_url": r"https://github\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+"}
@@ -150,6 +154,8 @@ def validate_config(config: dict) -> None:
             raise ValueError(f"Invalid {key} in private deployment configuration")
     if not isinstance(config["database_ca_secret"], str) or not release.PINNED_SECRET.fullmatch(config["database_ca_secret"]) or not config["database_ca_secret"].startswith(f"projects/{config['project']}/secrets/"):
         raise ValueError("database_ca_secret must be a pinned Secret Manager reference in the selected project")
+    if "redis_ca_secret" in config and (not isinstance(config["redis_ca_secret"], str) or not release.PINNED_SECRET.fullmatch(config["redis_ca_secret"]) or not config["redis_ca_secret"].startswith(f"projects/{config['project']}/secrets/")):
+        raise ValueError("Redis CA must be a pinned Secret Manager reference in the selected project")
     prefix = f"{config['region']}-docker.pkg.dev/{config['project']}/"
     if not isinstance(config["image_repository"], str) or not config["image_repository"].startswith(prefix) or not re.fullmatch(r"[a-z0-9][a-z0-9_-]*", config["image_repository"][len(prefix):]):
         raise ValueError("image_repository must belong to the selected project and region")
@@ -222,7 +228,13 @@ def live_ledger(config: dict, adapter) -> dict:
 
 
 def require_public_schema(config: dict, adapter) -> None:
-    marker = "SELECT to_regprocedure('public.portal_resolve_workforce_identity(text,text,text)') IS NOT NULL"
+    # Catalog observation needs no application-schema USAGE or function EXECUTE.
+    # The bootstrap observer holds only migration-ledger read access.
+    # Built-in pg_catalog.text has the stable type OID 25.
+    marker = ("SELECT EXISTS (SELECT 1 FROM pg_catalog.pg_proc AS p "
+              "JOIN pg_catalog.pg_namespace AS n ON n.oid = p.pronamespace "
+              "WHERE n.nspname = 'public' AND p.proname = 'portal_resolve_workforce_identity' "
+              "AND p.pronargs = 3 AND p.proargtypes = '25 25 25'::pg_catalog.oidvector AND p.prokind = 'f')")
     present = adapter.call(["psql", "-X", "--no-password", "--set", "ON_ERROR_STOP=1", "--tuples-only", "--no-align",
                             "service=" + config["pg_service"], "--command", marker], capture=True).strip()
     if present != "t":
@@ -281,6 +293,195 @@ def observe_units(config: dict, current: dict, adapter) -> None:
             release.foundation_service_annotations(name, document)
 
 
+def scheduler_command(action: str, job: str) -> list[str]:
+    parts = job.split("/")
+    if len(parts) != 6 or parts[0] != "projects" or parts[2] != "locations" or parts[4] != "jobs":
+        raise ValueError("Invalid Portal scheduler job resource")
+    return ["gcloud", "scheduler", "jobs", action, job, "--project", parts[1], "--location", parts[3], "--format=json"]
+
+
+def read_scheduler(job: str, adapter) -> dict:
+    observed = json.loads(adapter.call(scheduler_command("describe", job), capture=True))
+    if not isinstance(observed, dict) or observed.get("name") != job or observed.get("state") not in {"PAUSED", "ENABLED"}:
+        raise ValueError("Portal scheduler job is missing or has an unusable state")
+    return observed
+
+
+def scheduler_retries_disabled(observed: dict) -> bool:
+    """Both API-default zero limits are required to disable Scheduler retries."""
+    retry = observed.get("retryConfig", {})
+    if not isinstance(retry, dict):
+        return False
+    count = retry.get("retryCount", 0)
+    duration = retry.get("maxRetryDuration", "0s")
+    return isinstance(count, int) and not isinstance(count, bool) and count == 0 and isinstance(duration, str) and re.fullmatch(r"0(?:\.0{1,9})?s", duration) is not None
+
+
+def observe_scheduler(config: dict, candidate: dict, foundation: dict, adapter) -> dict | None:
+    """Read the actual identity and target policy before any image or cloud write."""
+    environment = candidate["services"]["portal-ingest"]["environment"]
+    if environment.get("PORTAL_SCHEDULER_MODE") != "cloud-scheduler":
+        return None
+    scheduler = release.foundation_scheduler(foundation)
+    expected_account = f"portal-scheduler@{config['project']}.iam.gserviceaccount.com"
+    if scheduler["service_account"] != expected_account:
+        raise ValueError("Portal scheduler identity differs from the selected project")
+    account = json.loads(adapter.call(["gcloud", "iam", "service-accounts", "describe", expected_account,
+                                       "--project", config["project"], "--format=json"], capture=True))
+    if account.get("uniqueId") != scheduler["subject"] or account.get("email") != expected_account or account.get("disabled", False):
+        raise ValueError("Portal scheduler identity has drifted or is disabled")
+    for kind in ("drain", "check"):
+        job = f"projects/{config['project']}/locations/{config['region']}/jobs/portal-outbox-{kind}"
+        if scheduler[kind + "_job"] != job:
+            raise ValueError("Portal scheduler job differs from the selected project or region")
+        observed = read_scheduler(job, adapter)
+        target = observed.get("httpTarget", {})
+        expected_token = {"serviceAccountEmail": expected_account, "audience": scheduler["audience"]}
+        if target.get("uri") != scheduler["audience"] + "/internal/outbox/" + kind or target.get("httpMethod") != "POST" or target.get("oidcToken") != expected_token or "oauthToken" in target or target.get("body", ""):
+            raise ValueError("Portal scheduler target or authentication drift must be reconciled before deployment")
+        if observed.get("schedule") != "* * * * *" or observed.get("timeZone") not in {"Etc/UTC", "UTC"} or observed.get("attemptDeadline") != "450s" or not scheduler_retries_disabled(observed):
+            raise ValueError("Portal scheduler timing drift must be reconciled before deployment")
+        if kind == "check" and observed["state"] != "PAUSED":
+            raise ValueError("Portal scheduler check job must remain paused")
+    # Fail an operator without execution-log access before lengthy image builds.
+    adapter.call(["gcloud", "logging", "read", 'resource.type="cloud_scheduler_job"', "--project", config["project"],
+                  "--limit=1", "--format=json"], capture=True)
+    return scheduler
+
+
+def scheduler_timestamp(value: str) -> datetime:
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except (ValueError, TypeError, AttributeError) as error:
+        raise ValueError("Portal scheduler returned an invalid attempt timestamp") from error
+    if parsed.tzinfo is None:
+        raise ValueError("Portal scheduler returned an attempt timestamp without its timezone")
+    return parsed
+
+
+def wait_scheduler_attempt(scheduler: dict, kind: str, adapter, *, after: datetime, previous_attempt: str | None = None,
+                           expected_attempt: str | None = None, require_success: bool = True, maximum_polls: int = 120, wait=time.sleep) -> dict:
+    """Correlate one started/finished log pair with the observed attempt, fail closed.
+
+    lastAttemptTime marks dispatch, not completion; its status can still describe
+    the prior attempt. A new completed HTTP execution log is required as well.
+    The job is paused and retries are disabled, so multiple starts are ambiguous.
+    """
+    job = scheduler[kind + "_job"]
+    uri = scheduler["audience"] + "/internal/outbox/" + kind
+    log_name = f"projects/{job.split('/')[1]}/logs/cloudscheduler.googleapis.com%2Fexecutions"
+    log_filter = f'resource.type="cloud_scheduler_job" AND logName={json.dumps(log_name)} AND jsonPayload.jobName={json.dumps(job)} AND timestamp>={json.dumps(after.isoformat())}'
+    deadline = time.monotonic() + maximum_polls * 5
+    for poll in range(maximum_polls):
+        if time.monotonic() >= deadline:
+            break
+        observed = read_scheduler(job, adapter)
+        if observed["state"] != "PAUSED":
+            raise ValueError("Portal scheduler was enabled during its release check")
+        attempt = observed.get("lastAttemptTime")
+        if attempt and attempt != previous_attempt and scheduler_timestamp(attempt) >= after:
+            if expected_attempt is not None and attempt != expected_attempt:
+                raise ValueError("Concurrent Portal scheduler attempts make readiness ambiguous")
+            expected_attempt = attempt
+            entries = json.loads(adapter.call(["gcloud", "logging", "read", log_filter, "--project", job.split("/")[1],
+                                               "--format=json", "--limit=30", "--order=asc"], capture=True))
+            if not isinstance(entries, list):
+                raise ValueError("Portal scheduler completion logs could not be observed")
+            phases = {"Started": {}, "Finished": {}}
+            for entry in entries:
+                payload = entry.get("jsonPayload", {})
+                if payload.get("jobName") != job or payload.get("url") != uri or payload.get("targetType") != "HTTP":
+                    continue
+                stamp = scheduler_timestamp(entry.get("timestamp"))
+                if stamp < after:
+                    continue
+                for phase in phases:
+                    if payload.get("@type") == "type.googleapis.com/google.cloud.scheduler.logging.Attempt" + phase:
+                        insert_id = entry.get("insertId")
+                        if not isinstance(insert_id, str) or not insert_id:
+                            raise ValueError("Portal scheduler completion log lacks its unique ID")
+                        phases[phase][insert_id] = entry
+            if any(len(entries_by_id) > 1 for entries_by_id in phases.values()):
+                raise ValueError("Concurrent Portal scheduler logs make readiness ambiguous")
+            if phases["Started"] and phases["Finished"]:
+                started = next(iter(phases["Started"].values()))
+                finished = next(iter(phases["Finished"].values()))
+                start_time, finish_time = scheduler_timestamp(started["timestamp"]), scheduler_timestamp(finished["timestamp"])
+                attempt_time = scheduler_timestamp(attempt)
+                if finish_time < start_time or finish_time < attempt_time or abs((start_time - attempt_time).total_seconds()) > 30:
+                    raise ValueError("Portal scheduler logs do not match the observed attempt")
+                status = finished.get("httpRequest", {}).get("status")
+                last_status = observed.get("status")
+                if require_success and (not isinstance(status, int) or not 200 <= status < 300 or finished["jsonPayload"].get("status", "OK") != "OK" or not isinstance(last_status, dict) or last_status.get("code", 0) != 0):
+                    raise ValueError("Portal scheduler authenticated readiness check failed; drain remains paused")
+                return {"last_attempt_time": attempt, "completion_log_id": finished["insertId"]}
+        if poll and poll % 12 == 0:
+            print("Portal: still waiting for the Scheduler attempt and its completion logs", flush=True)
+        if poll + 1 < maximum_polls:
+            wait(min(5, max(0, deadline - time.monotonic())))
+    raise ValueError("Portal scheduler completion was not proven before timeout; drain remains paused. The operator needs Cloud Logging read access; allow for execution-log delivery latency and retry deployment.")
+
+
+def settle_scheduler(scheduler: dict, kind: str, adapter, *, maximum_polls=120, wait=time.sleep, now=lambda: datetime.now(timezone.utc)) -> None:
+    observed = read_scheduler(scheduler[kind + "_job"], adapter)
+    if observed.get("attemptDeadline") != "450s" or not scheduler_retries_disabled(observed):
+        raise ValueError("Portal scheduler timing drift prevents safe release quiescence")
+    if observed.get("lastAttemptTime"):
+        attempt = observed["lastAttemptTime"]
+        # The request (450s), Cloud Run handler (420s), and runtime (390s) have
+        # already stopped beyond this horizon. Old logs may have expired, so do
+        # not require permanent historical logging retention to deploy again.
+        if (now() - scheduler_timestamp(attempt)).total_seconds() > 480:
+            return
+        wait_scheduler_attempt(scheduler, kind, adapter, after=scheduler_timestamp(attempt) - timedelta(seconds=1),
+                               expected_attempt=attempt, require_success=False, maximum_polls=maximum_polls, wait=wait)
+
+
+def pause_scheduler(scheduler: dict, adapter, *, maximum_polls=120, wait=time.sleep, now=lambda: datetime.now(timezone.utc)) -> None:
+    job = scheduler["drain_job"]
+    if read_scheduler(job, adapter)["state"] == "ENABLED":
+        print("Portal: pausing scheduled ingestion and waiting for its active attempt to finish", flush=True)
+        adapter.call(scheduler_command("pause", job))
+    if read_scheduler(job, adapter)["state"] != "PAUSED":
+        raise ValueError("Portal scheduler drain could not be paused before release")
+    settle_scheduler(scheduler, "drain", adapter, maximum_polls=maximum_polls, wait=wait, now=now)
+
+
+def require_scheduler_revision(candidate: dict, manifest: Path, config: dict, adapter) -> None:
+    """Attest actual ingest traffic, which can drift independently of its template."""
+    name = "portal-ingest"
+    expected = json.loads(manifest.read_text()).get("services", {}).get(name, {})
+    revision = expected.get("deployed_revision")
+    digest = release.revision_digest(candidate["services"][name])
+    observed = json.loads(adapter.call(release.describe_command(config["project"], config["region"], name), capture=True))
+    status = observed.get("status", {})
+    allocations = [(entry.get("revisionName"), entry.get("percent")) for entry in status.get("traffic", []) if entry.get("percent", 0) > 0]
+    ready = any(condition.get("type") == "Ready" and condition.get("status") == "True" for condition in status.get("conditions", []))
+    if not revision or expected.get("revision_digest") != digest or release.observed_digest(name, observed) != digest or allocations != [(revision, 100)] or not ready or status.get("latestReadyRevisionName") != revision or status.get("latestCreatedRevisionName") != revision:
+        raise ValueError("Portal scheduler requires 100% traffic on the reviewed ingest revision; reconcile release drift")
+
+
+def activate_scheduler(scheduler: dict, adapter, *, verify_revision, maximum_polls=120, wait=time.sleep, now=lambda: datetime.now(timezone.utc)) -> dict:
+    job = scheduler["check_job"]
+    if read_scheduler(job, adapter)["state"] != "PAUSED":
+        raise ValueError("Portal scheduler check job must remain paused")
+    if read_scheduler(scheduler["drain_job"], adapter)["state"] != "PAUSED":
+        raise ValueError("Portal scheduler drain must remain paused until its readiness check passes")
+    settle_scheduler(scheduler, "check", adapter, maximum_polls=maximum_polls, wait=wait, now=now)
+    verify_revision()
+    previous = read_scheduler(job, adapter).get("lastAttemptTime")
+    after = now()
+    print("Portal: checking the authenticated Scheduler path; waiting for Cloud Logging completion evidence", flush=True)
+    adapter.call(scheduler_command("run", job))
+    receipt = wait_scheduler_attempt(scheduler, "check", adapter, after=after, previous_attempt=previous,
+                                     maximum_polls=maximum_polls, wait=wait)
+    verify_revision()
+    adapter.call(scheduler_command("resume", scheduler["drain_job"]))
+    if read_scheduler(scheduler["drain_job"], adapter)["state"] != "ENABLED":
+        raise ValueError("Portal scheduler drain did not become enabled")
+    return receipt
+
+
 def orchestrate(config: dict, state: Path, *, apply: bool, adapter) -> None:
     print("Portal: checking source, configuration and live release state", flush=True)
     source = source_revision(config, adapter)
@@ -298,6 +499,7 @@ def orchestrate(config: dict, state: Path, *, apply: bool, adapter) -> None:
     if not migrations:
         raise ValueError("No portal migrations found in this revision")
     candidate = prepare_plan(config, source, foundation, migrations)
+    scheduler = observe_scheduler(config, candidate, foundation, adapter)
     manifest = state / "release-manifest.json"
     current = json.loads(manifest.read_text()) if manifest.exists() else {"generation": 0, "services": {}}
     observe_units(config, current, adapter)
@@ -318,8 +520,14 @@ def orchestrate(config: dict, state: Path, *, apply: bool, adapter) -> None:
         archive_source(ROOT, source, archive)
         build_images(candidate, config["image_repository"], state, archive, adapter)
     save_json(state / "release-plan.json", candidate)
+    if scheduler:
+        pause_scheduler(scheduler, adapter)
     release_units(candidate, manifest, project=config["project"], region=config["region"], adapter=adapter,
                   read_ledger=lambda: live_ledger(config, adapter), migration_names=migrations)
+    if scheduler:
+        receipt = activate_scheduler(scheduler, adapter, verify_revision=lambda: require_scheduler_revision(candidate, manifest, config, adapter))
+        save_json(state / "scheduler-readiness.json", {**receipt, "source_commit": source,
+                  "ingest_revision_digest": release.revision_digest(candidate["services"]["portal-ingest"])})
     print("Portal deployment completed. Open the configured PORTAL_WEB_ORIGIN to run the pilot checks.")
 
 

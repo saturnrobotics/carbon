@@ -55,7 +55,7 @@ existing ledger before the rename and the Portal ledger afterward; two ledgers
 are rejected as ambiguous. If any old runtime is running against that database,
 stop its services, ingestion, schedules and jobs before applying the rename.
 Mixed old/new runtimes cannot share the renamed schema. Apply the Carbon public
-migration before the Portal schema job, then release all Portal workloads and
+migration before the privileged Portal bootstrap described below, then release all Portal workloads and
 verify authorization, upload, retrieval, original download and revocation.
 Preflight refuses a missing public migration or any legacy platform workload in
 the selected project before building images or changing cloud resources.
@@ -84,7 +84,7 @@ refuses every other kind.
 Terraform creates the workload identities, private buckets, managed Redis,
 Direct VPC egress, Secret Manager containers, immutable Artifact Registry, the
 IAP-protected `portal-web` service shell, the exact service-to-service invoker
-grants and the private path to Carbon's PostgreSQL listener. It does not migrate
+grants, paused outbox scheduler jobs and the private path to Carbon's PostgreSQL listener. It does not migrate
 a database, write a secret value, download a service-account key or deploy an
 application revision. `terraform apply` is an operator action after review of
 private `terraform.tfvars`. Keep endpoints, certificates, secret values, IAP
@@ -109,6 +109,12 @@ revision before it can be promoted. Existing services keep their prior traffic
 allocation during staging; a brand-new service has no prior revision and can
 receive traffic once its first revision passes the startup probe.
 
+With the template's `PORTAL_SCHEDULER_MODE=cloud-scheduler`, the command pauses
+scheduled ingestion before applying schema or service changes and waits for an
+active attempt to finish. After releasing services, it runs the authenticated
+no-work scheduler check, proves that the reviewed ingestion revision serves all
+traffic, and enables the minute-by-minute drain job only after the check succeeds.
+
 Run `make deploy-portal-check` for the same setup/source/live-state preflight
 without building, publishing, migrating or replacing workloads. It performs
 read-only provider calls and writes a private local log. Neither target provisions
@@ -119,23 +125,42 @@ Terraform resources, creates secret values, enrolls users or changes IAM grants.
 
 1. Complete the cloud foundation, private PostgreSQL/TLS connection, runtime
    secret versions, source/library configuration and identity enrollment in the
-   sections below. Apply Carbon's public migrations first. Run Terraform from
+   sections below. Apply Carbon's public migrations first, then perform the
+   [one-time private schema bootstrap](#initial-private-schema-bootstrap).
+   Run Terraform from
    this checkout using its selected private backend; the command reads live
    `terraform output -json` and checks its project/region against the target.
-2. Install Git, Docker with Buildx, Python 3.10+, Terraform, PostgreSQL's `psql`,
+2. Install Git, Docker with Buildx, Python 3.10+, Terraform, PostgreSQL 16+ `psql`,
    Google Cloud CLI, GitHub CLI (`gh`) and curl. Authenticate `gh` and `gcloud` as
    the operator. Configure Docker's credential helper once:
    `gcloud auth configure-docker <region>-docker.pkg.dev`.
    The operator needs image publication, service/job list/read/replace/update,
    workload service-account attachment and schema-job execution permissions.
+   Cloud Scheduler mode also needs `cloudscheduler.jobs.get`,
+   `cloudscheduler.jobs.run`, `cloudscheduler.jobs.pause` and
+   `cloudscheduler.jobs.resume` on the two outbox jobs, service-account read
+   access to verify the scheduler identity, and `logging.logEntries.list` to
+   read its execution logs. These are deployment-operator permissions; the
+   scheduler identity itself receives only invocation access to ingestion.
    The existing narrow deployment service account alone does not provide all
    those permissions; use the reviewed operator identity.
+   The PostgreSQL client must support IP-address certificate subject alternative
+   names for the private database's `verify-full` connection; older clients can
+   reject a valid IP certificate. On macOS, install the separate client with
+   `brew install libpq`, then run
+   `PATH="$(brew --prefix libpq)/bin:$PATH" make deploy-portal-check` (or
+   `make deploy-portal` with the same PATH). This does not replace an existing
+   PostgreSQL server installation. Confirm the selected `psql --version` first.
 3. Configure a private libpq service named `portal-operator` in your
    `~/.pg_service.conf` (or `PGSERVICEFILE`), with a protected password file and
    `sslmode=verify-full`. It must reach the **same Carbon database** as the
    runtime secrets over your authenticated private connection. This connection
-   only reads `portal_migrations.ledger`; migrations run as the Cloud Run
-   schema job. Keep any required tunnel connected while deploying.
+   is used by deployment only to check the public schema marker and read
+   `portal_migrations.ledger`. Marker discovery reads PostgreSQL catalogs and
+   requires no `USAGE` on the application schema or application-function
+   `EXECUTE` privileges. The initial bootstrap uses the separately reviewed
+   privileged connection; subsequent compatible migrations run as the restricted
+   Cloud Run schema job. Keep any required tunnel connected while deploying.
 4. Copy the synthetic template and replace every `<placeholder>`:
 
    ```bash
@@ -156,19 +181,79 @@ Terraform resources, creates secret values, enrolls users or changes IAM grants.
    settings must identify the same uploaded-document library. Images, build
    receipts and migration windows are generated by the command.
 
-The current foundation still needs its initial IAM integration checked: the web
-runtime needs permission to invoke ingestion, and ingestion needs permission to
-execute the parser **with overrides**. The existing Terraform invoker edge list
-omits web-to-ingestion, and its parser `roles/run.invoker` grant does not include
-`run.jobs.runWithOverrides`. Those grants are first-deployment blockers for the
-upload workflow; the command does not broaden permissions automatically. Do not
-consider the pilot complete until real Google access, upload/parser execution,
-search/download and revocation have passed against the deployed services.
+   Keep `PORTAL_SCHEDULER_MODE=cloud-scheduler` in ingestion for the `manual-v1`
+   deployment. Do not invent scheduler subjects, audiences or metric names:
+   `outbox_scheduler` and `database_connection_utilization_metric_type` from
+   `terraform output -json` supply `PORTAL_SCHEDULER_SUBJECT`,
+   `PORTAL_SCHEDULER_AUDIENCE` and `PORTAL_DATABASE_METRIC_TYPE`. The subject is
+   the dedicated scheduler service account's numeric unique ID, not an employee
+   IAP subject. The controller rejects conflicting manually supplied values.
+   This mode does not use or accept an `INNGEST_SIGNING_KEY` runtime secret.
+
+The foundation grants web-to-ingestion invocation and gives ingestion a custom
+role containing only `run.jobs.run` and `run.jobs.runWithOverrides`, conditioned
+on the parser job. Verify these grants against the actual deployment before
+calling the upload workflow ready. Cloud Scheduler drives the persisted outbox
+directly for `manual-v1`; an Inngest account, registration or callback is not
+needed in this mode. The compatibility mode (omitted scheduler mode or explicit
+`inngest`) still requires its signing key and a working Inngest integration.
+Upload acceptance proves an outbox row was committed, not that parsing ran.
+Do not consider the pilot complete until
+real Google access, upload/parser execution, search/download and revocation pass.
+
+For the Terraform-managed Redis instance, download all current server CA
+certificates and concatenate them into a private PEM bundle. Store it in
+`portal-redis-ca` and set `redis_ca_secret` to its numbered Secret Manager version.
+The controller mounts it only in query at
+`/var/run/secrets/portal-redis-ca/ca.pem` and supplies
+`PORTAL_REDIS_TLS_CA_FILE`. The query process trusts that bundle for Redis only
+and retains certificate identity verification. Rotating the pinned CA version
+changes the release digest; verify a real Redis connection after each rotation.
 
 For another configured target, use an isolated private directory and set
 `PORTAL_DEPLOY_CONFIG=/path/to/private/deploy.json make deploy-portal`.
 Only one operator should deploy a target at a time. The command holds a local
 configuration lock; it does not coordinate independent laptops.
+
+### Scheduler readiness and activation
+
+Terraform creates `portal-outbox-drain` and `portal-outbox-check` paused. Both
+send an empty `POST` with an OIDC token for the dedicated `portal-scheduler`
+identity to ingestion; their audience is the ingestion service origin. The
+runtime verifies the Google signature, exact audience and numeric subject.
+The scheduler has no database credentials or employee capabilities.
+
+The check endpoint, `/internal/outbox/check`, validates the configured library,
+database/outbox access and database metric publication without claiming work or
+starting a parser. `/internal/outbox/drain` handles bounded pending delivery and
+invalidation work. Its runtime deadline is 390 seconds, below Cloud Run's
+420-second request timeout and Scheduler's 450-second attempt deadline; an
+outbox lease lasts 600 seconds. Scheduler retries are disabled; the next minute
+tick can reclaim unfinished work after its lease expires.
+
+`make deploy-portal-check` reads the real scheduler jobs, service-account ID and
+log-access permission as part of preflight. It does **not** force either job,
+process the outbox or enable schedules. A successful preflight therefore does
+not establish that the deployed authenticated handler works.
+
+During `make deploy-portal`, the controller keeps drain paused, manually runs
+the paused check job, and waits for a fresh `AttemptStarted` / `AttemptFinished`
+execution-log pair matching that job, URI and observed attempt time, with a
+successful HTTP response. Dispatch alone, an old success status, or `/health`
+returning 200 is insufficient. Before and after that check, the actual ingestion
+template and 100% traffic allocation must match the reviewed revision recorded
+in the release manifest. Only drain is then resumed; check remains paused for
+the next deployment. Terraform preserves the controller-owned pause state on
+later applies.
+
+The completion wait polls every five seconds, reports continued waiting, and
+allows up to ten minutes for the attempt and Cloud Logging delivery. Missing,
+failed, stale or ambiguous evidence prevents activation. Historical settlement
+does not depend on keeping logs forever: attempts older than the validated
+450-second deadline plus a 30-second margin cannot remain active. Every new
+activation still requires fresh positive completion evidence. See Google's
+[execution-log guidance](https://docs.cloud.google.com/scheduler/docs/viewing-logs)
+and [job execution semantics](https://docs.cloud.google.com/scheduler/docs/reference/rest/v1/projects.locations.jobs/run).
 
 ### Repeated releases and recovery
 
@@ -195,6 +280,15 @@ Back up this private state, and follow [recovery.md](recovery.md) for database
 and object recovery. There is no transaction across all services and the schema. The inherited drift
 guard compares recorded digest labels; it does not reconstruct every live
 configuration field, so edits retaining those labels are outside that check.
+Scheduler activation additionally checks actual ingestion traffic as described
+above. If a release or its scheduler check fails after drain was paused, leave it
+paused, inspect the private provider log, correct the cause, and rerun
+`make deploy-portal`. Successful image receipts and unit releases are reused;
+`deploy-state/scheduler-readiness.json` records the successful check when drain
+is enabled. A missing completion log can mean delivery latency or insufficient
+operator log permissions; it is not permission to resume drain manually or
+weaken authentication. A traffic mismatch requires reconciling the reviewed
+ingestion revision before retrying.
 
 
 ## Cloud foundation
@@ -275,21 +369,26 @@ foundation and a release.
 
 Cloud Run IAM is the entrance check for every internal hop; the receiver still
 verifies the service token and the forwarded IAP assertion. Grants are exactly
-the platform plan's §1.4 forwarding table plus the two job triggers. Each is a
-`roles/run.invoker` member bound by an exact `resource.name` condition — the
-receivers are controller-created, so a service-level binding cannot exist before
-the first release — and `test_infrastructure.py` fails on any grant outside this
-table, on any unconditioned `run.invoker`, and on `allUsers` or
-`allAuthenticatedUsers` anywhere.
+the following forwarding table plus the two job triggers. Runtime invoker grants
+are bound by exact `resource.name` conditions because their receivers are
+controller-created and may not exist at the first foundation apply.
+`test_infrastructure.py` rejects grants outside this table, unconditioned
+`run.invoker`, and public access grants.
 
 | Caller identity | Receiver |
 |---|---|
 | `portal-web` | `services/portal-query` |
+| `portal-web` | `services/portal-ingest` |
 | `portal-web` | `services/portal-actions` |
 | `portal-ingest` | `services/portal-query` |
 | `portal-ingest` | `jobs/portal-parser` |
+| `portal-scheduler` | `services/portal-ingest` |
 | `portal-maintenance` (Cloud Scheduler) | `jobs/portal-retention` |
 | IAP service agent | `services/portal-web`, `services/portal-probe` (service-level) |
+
+The parser edge uses the custom execution role described above so ingestion can
+provide per-execution overrides. Other invoker edges use `roles/run.invoker`.
+Parser operation polling retains a separate `run.operations.get` permission.
 
 ### Private source path
 
@@ -323,13 +422,72 @@ the controller mounts that pinned secret at
 
 ## Database and library enrollment
 
-Apply the public Carbon migrations first, followed by every private migration in
-`packages/portal/migrations` through the schema job. Use separate login roles
+Apply the public Carbon migrations first, then bootstrap the private schema
+through the privileged operator connection below. Use separate runtime login roles
 whose only memberships are the matching NOLOGIN runtime roles:
 `portal_read`, `portal_ingest`, `portal_review` and
 `portal_maintenance`. The schema login is used only by the finite schema job
 and by the enrollment command below. Do not give the web or parser service a
 database credential.
+
+### Initial private schema bootstrap
+
+The first installation must apply the canonical private migration sequence
+through a trusted database operator, not by giving administrator privileges to
+the Cloud Run schema login. The current sequence contains 39 files in
+`packages/portal/migrations`, ending with
+`20260913192023_portal-private-identifiers.sql`. The forward rename preserves
+existing object identities but must also rewrite an administrator-owned public
+identity resolver and temporarily assume its owners' roles. A restricted
+`portal_migrate` login cannot perform that initial administrative transition.
+
+Take and verify the recovery snapshot first, keep Portal workloads and schedules
+stopped, and apply Carbon's public Portal migration before this sequence. Load
+the privileged connection URL into `PORTAL_BOOTSTRAP_DATABASE_URL` from private
+operator tooling, with the authenticated private transport and `verify-full`
+TLS configuration. Run the canonical migration runner from the reviewed source:
+
+```bash
+(
+  export PORTAL_MIGRATION_DATABASE_URL="$PORTAL_BOOTSTRAP_DATABASE_URL"
+  pnpm --filter @carbon/portal exec tsx scripts/migrate.ts
+)
+```
+
+The runner holds an advisory lock, checks the immutable SQL checksums, records
+each migration and verifies required extension versions. Never apply only a
+hand-selected subset, alter historical SQL, or manufacture ledger rows. Compare
+the resulting ledger with every migration in the reviewed revision and retain
+the evidence privately. Keep the bootstrap credential out of Cloud Run and
+Secret Manager runtime URL secrets.
+
+After bootstrap, provision the finite schema job's separate login with these
+attributes and only the `portal_migrate` membership. This SQL uses synthetic
+identifiers; credential creation and actual database names belong in private
+operator tooling:
+
+```sql
+CREATE ROLE portal_schema_login LOGIN INHERIT
+  NOSUPERUSER NOBYPASSRLS NOCREATEROLE NOCREATEDB NOREPLICATION;
+GRANT portal_migrate TO portal_schema_login;
+REVOKE ADMIN OPTION FOR portal_migrate FROM portal_schema_login;
+GRANT CONNECT, CREATE ON DATABASE example_database TO portal_schema_login;
+```
+
+Database `CREATE` is needed by the canonical runner's schema setup and ownership
+checks; it does not grant `CREATE` on the `public` schema. Do not grant that
+schema privilege, administrator role memberships or an admin option to the
+schema login. Audit effective privileges, including inherited or `PUBLIC`
+grants, rather than checking only the direct grants. Set the login password
+privately and store only this restricted login's TLS-verifying URL in the
+version-pinned `portal-migration-db-url` secret.
+
+Rerun the canonical runner with the restricted login and confirm no migrations
+are applied, extension verification passes, the ledger remains unchanged, and
+all role restrictions hold. This is the credential used by later schema jobs
+and enrollment tooling. A future migration requiring a new administrative
+operation needs a separately reviewed operator step; do not escalate the
+long-lived schema credential to make it pass.
 
 Before traffic, a human administrator must review and apply an enrollment change
 through the privileged source database administration path. Runtime roles cannot
@@ -747,8 +905,11 @@ so the query service can perform the live check.
 deferred provider fields, mutable image tags, `latest` secret versions, stale
 manifest generations and observed configuration drift. Web and parser receive no
 secrets. Query receives only the read database and Redis secrets. Ingestion
-receives separate read, review and ingest database secrets plus the Inngest
-signing key. Retention receives its maintenance database secret.
+receives separate read, review and ingest database secrets. Cloud Scheduler
+mode requires its foundation-derived identity and metric settings; compatibility
+Inngest mode additionally requires the signing key. Retention receives its
+maintenance database secret. Query's optional Redis CA and every database
+workload's CA are mounted from numbered secret versions.
 
 The ingestion identity can create and read immutable objects. The parser can read
 captured generations and create extraction outputs, and has no database or Secret
@@ -821,8 +982,7 @@ explicit maintenance release that narrows `minimum`.
 
 ## Release validation: local first
 
-The active implementation goal ends after local validation. Production steps
-below describe later operations and are not authorized work for this goal.
+Local validation precedes deployment and complements the connected checks below.
 
 A separate cloud staging environment is not required. Finish the local Docker
 integration gate before deploying: use disposable PostgreSQL and Redis, emulated

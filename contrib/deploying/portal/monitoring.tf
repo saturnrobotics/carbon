@@ -1,35 +1,42 @@
 locals {
   portal_log_alerts = {
     auth-denials = {
-      filter    = "resource.type=\"cloud_run_revision\" AND jsonPayload.stage=\"authentication\" AND jsonPayload.outcome=\"deny\""
-      threshold = 10
+      resource_type = "cloud_run_revision"
+      filter        = "jsonPayload.stage=\"authentication\" AND jsonPayload.outcome=\"deny\""
+      threshold     = 10
     }
     source-errors = {
-      filter    = "resource.type=\"cloud_run_revision\" AND jsonPayload.stage=\"source\" AND jsonPayload.outcome=\"error\""
-      threshold = 0
+      resource_type = "cloud_run_revision"
+      filter        = "jsonPayload.stage=\"source\" AND jsonPayload.outcome=\"error\""
+      threshold     = 0
     }
     model-errors = {
-      filter    = "resource.type=\"cloud_run_revision\" AND jsonPayload.stage=\"model\" AND jsonPayload.outcome=\"error\""
-      threshold = 0
+      resource_type = "cloud_run_revision"
+      filter        = "jsonPayload.stage=\"model\" AND jsonPayload.outcome=\"error\""
+      threshold     = 0
     }
     cache-policy-errors = {
-      filter    = "resource.type=\"cloud_run_revision\" AND jsonPayload.stage=\"cache\" AND jsonPayload.outcome=\"error\""
-      threshold = 0
+      resource_type = "cloud_run_revision"
+      filter        = "jsonPayload.stage=\"cache\" AND jsonPayload.outcome=\"error\""
+      threshold     = 0
     }
     indexing-errors = {
-      filter    = "resource.type=\"cloud_run_revision\" AND jsonPayload.stage=\"indexing\" AND jsonPayload.outcome=~\"error|timeout\""
-      threshold = 0
+      resource_type = "cloud_run_revision"
+      filter        = "jsonPayload.stage=\"indexing\" AND jsonPayload.outcome=~\"error|timeout\""
+      threshold     = 0
     }
     retention-errors = {
-      filter    = "resource.type=\"cloud_run_job\" AND jsonPayload.stage=\"retention\" AND jsonPayload.outcome=\"error\""
-      threshold = 0
+      resource_type = "cloud_run_job"
+      filter        = "jsonPayload.stage=\"retention\" AND jsonPayload.outcome=\"error\""
+      threshold     = 0
     }
     # The query service's periodic cache-isolation self-test reports a leak as a
     # `security` error; an unreachable store is a `cache` error (above), so an
     # outage never fires this policy.
     cache-leakage = {
-      filter    = "resource.type=\"cloud_run_revision\" AND jsonPayload.stage=\"security\" AND jsonPayload.outcome=\"error\""
-      threshold = 0
+      resource_type = "cloud_run_revision"
+      filter        = "jsonPayload.stage=\"security\" AND jsonPayload.outcome=\"error\""
+      threshold     = 0
     }
   }
   # Numeric backlog ages the ingestion worker emits after every delivery pass
@@ -52,7 +59,7 @@ resource "google_logging_metric" "portal_alert" {
   for_each = local.portal_log_alerts
   project  = var.project_id
   name     = "portal/${each.key}"
-  filter   = each.value.filter
+  filter   = "resource.type=\"${each.value.resource_type}\" AND ${each.value.filter}"
   metric_descriptor {
     metric_kind = "DELTA"
     value_type  = "INT64"
@@ -68,7 +75,7 @@ resource "google_monitoring_alert_policy" "portal_log_alert" {
   conditions {
     display_name = each.key
     condition_threshold {
-      filter          = "metric.type=\"logging.googleapis.com/user/${google_logging_metric.portal_alert[each.key].name}\""
+      filter          = "metric.type=\"logging.googleapis.com/user/${google_logging_metric.portal_alert[each.key].name}\" AND resource.type=\"${each.value.resource_type}\""
       comparison      = "COMPARISON_GT"
       threshold_value = each.value.threshold
       duration        = "300s"
@@ -112,7 +119,7 @@ resource "google_monitoring_alert_policy" "portal_backlog" {
   conditions {
     display_name = each.value.description
     condition_threshold {
-      filter          = "metric.type=\"logging.googleapis.com/user/${google_logging_metric.portal_backlog[each.key].name}\""
+      filter          = "metric.type=\"logging.googleapis.com/user/${google_logging_metric.portal_backlog[each.key].name}\" AND resource.type=\"cloud_run_revision\""
       comparison      = "COMPARISON_GT"
       threshold_value = each.value.threshold
       duration        = "300s"
@@ -155,7 +162,7 @@ resource "google_monitoring_alert_policy" "portal_request_latency" {
   conditions {
     display_name = "p99 latency above ten seconds"
     condition_threshold {
-      filter          = "metric.type=\"logging.googleapis.com/user/${google_logging_metric.portal_request_latency.name}\""
+      filter          = "metric.type=\"logging.googleapis.com/user/${google_logging_metric.portal_request_latency.name}\" AND resource.type=\"cloud_run_revision\""
       comparison      = "COMPARISON_GT"
       threshold_value = 10000
       duration        = "300s"
@@ -167,6 +174,20 @@ resource "google_monitoring_alert_policy" "portal_request_latency" {
   }
 }
 
+# The authenticated scheduler check proves the worker can write a sample before
+# processing is enabled. Each drain observes aggregate PostgreSQL connections;
+# no query text, user names or company identifiers are attached to this metric.
+resource "google_monitoring_metric_descriptor" "portal_database_connections" {
+  project      = var.project_id
+  type         = var.database_connection_utilization_metric_type
+  metric_kind  = "GAUGE"
+  value_type   = "DOUBLE"
+  unit         = "1"
+  display_name = "Portal source database connection utilization"
+  description  = "Connected PostgreSQL backends divided by max_connections"
+  depends_on   = [google_project_service.apis]
+}
+
 resource "google_monitoring_alert_policy" "portal_database_saturation" {
   project               = var.project_id
   display_name          = "Portal database connection saturation"
@@ -175,7 +196,7 @@ resource "google_monitoring_alert_policy" "portal_database_saturation" {
   conditions {
     display_name = "connection utilization above 85 percent"
     condition_threshold {
-      filter          = "metric.type=\"${var.database_connection_utilization_metric_type}\""
+      filter          = "metric.type=\"${google_monitoring_metric_descriptor.portal_database_connections.type}\" AND resource.type=\"global\""
       comparison      = "COMPARISON_GT"
       threshold_value = 0.85
       duration        = "300s"
