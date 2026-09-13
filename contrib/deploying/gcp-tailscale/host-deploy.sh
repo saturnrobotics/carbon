@@ -210,7 +210,9 @@ check_stack() {
   # Force a real signed SDK registration after ERP starts; Inngest's boot-time
   # attempt may race the build or migrations on the first deployment.
   compose exec -T erp /usr/local/bin/carbon-secrets-entrypoint.sh node --input-type=module -e '
-    const response = await fetch("http://erp:3000/api/inngest", {method: "PUT"});
+    const response = await fetch(new URL("/api/inngest", process.env.ERP_URL), {
+      method: "PUT", redirect: "error", signal: AbortSignal.timeout(10000)
+    });
     if (!response.ok) throw new Error("Inngest app registration failed: " + response.status);
   '
   # Prove database-triggered jobs can reach the local event server.
