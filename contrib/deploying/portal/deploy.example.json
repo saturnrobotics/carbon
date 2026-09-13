@@ -130,5 +130,6 @@
       "egress": "all-traffic"
     }
   },
-  "database_ca_secret": "projects/<project-id>/secrets/portal-source-database-ca/versions/<version-number>"
+  "database_ca_secret": "projects/<project-id>/secrets/portal-source-database-ca/versions/<version-number>",
+  "redis_ca_secret": "projects/<project-id>/secrets/portal-redis-ca/versions/<version-number>"
 }

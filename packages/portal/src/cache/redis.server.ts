@@ -1,3 +1,5 @@
+import { X509Certificate } from "node:crypto";
+import { readFileSync } from "node:fs";
 import Redis from "ioredis";
 import type { CacheStore } from "./cache.server";
 
@@ -27,7 +29,26 @@ export function createRedisCache(
   ) {
     throw new Error("Remote cache requires TLS");
   }
+  const caFile = process.env.PORTAL_REDIS_TLS_CA_FILE;
+  let ca: string[] | undefined;
+  if (caFile !== undefined) {
+    if (parsed.protocol !== "rediss:")
+      throw new Error("Redis TLS CA file requires a TLS URL");
+    try {
+      const pem = readFileSync(caFile, "utf8");
+      const certificate =
+        /-----BEGIN CERTIFICATE-----[\s\S]*?-----END CERTIFICATE-----/g;
+      ca = pem.match(certificate) ?? undefined;
+      if (!ca?.length || pem.replace(certificate, "").trim())
+        throw new Error("Invalid certificate bundle");
+      for (const entry of ca) new X509Certificate(entry);
+    } catch {
+      // Filesystem and certificate diagnostics can reveal private deployment inputs.
+      throw new Error("Invalid Redis TLS CA file");
+    }
+  }
   const redis = new Redis(url, {
+    ...(ca ? { tls: { ca, rejectUnauthorized: true } } : {}),
     lazyConnect: true,
     maxRetriesPerRequest: 1,
     connectTimeout: 500,

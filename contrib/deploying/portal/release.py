@@ -178,6 +178,11 @@ def validate_plan(plan: dict[str, Any]) -> None:
         for version in spec["secrets"].values():
             if not PINNED_SECRET.fullmatch(version):
                 raise ValueError(f"{name} requires a pinned secret version, never latest")
+        if "redis_ca_secret" in spec:
+            if name != "portal-query":
+                raise ValueError(f"{name} cannot receive a Redis CA")
+            if not isinstance(spec["redis_ca_secret"], str) or not PINNED_SECRET.fullmatch(spec["redis_ca_secret"]):
+                raise ValueError(f"{name} requires a pinned Redis CA secret version, never latest")
         if "database_ca_secret" in spec:
             if name not in DATABASE_UNITS:
                 raise ValueError(f"{name} cannot receive a database CA")
@@ -266,6 +271,8 @@ def revision_digest(spec: dict[str, Any]) -> str:
     values = {key: spec[key] for key in ("image", "service_account", "environment", "secrets", "resources", "max_instances", "concurrency", "network", "subnetwork", "egress")}
     if "database_ca_secret" in spec:
         values["database_ca_secret"] = spec["database_ca_secret"]
+    if "redis_ca_secret" in spec:
+        values["redis_ca_secret"] = spec["redis_ca_secret"]
     return canonical_digest(values)
 
 
@@ -371,6 +378,12 @@ def revision_document(name: str, spec: dict[str, Any], digest: str, observed: di
         secret, version = secret_reference(spec["database_ca_secret"])
         template["spec"]["volumes"] = [{"name": "database-ca", "secret": {"secretName": secret, "items": [{"key": version, "path": "ca.crt"}]}}]
         template["spec"]["containers"][0]["volumeMounts"] = [{"name": "database-ca", "mountPath": "/var/run/secrets/portal-source-database"}]
+    if "redis_ca_secret" in spec:
+        secret, version = secret_reference(spec["redis_ca_secret"])
+        template["spec"].setdefault("volumes", []).append({"name": "redis-ca", "secret": {"secretName": secret, "items": [{"key": version, "path": "ca.pem"}]}})
+        container = template["spec"]["containers"][0]
+        container.setdefault("volumeMounts", []).append({"name": "redis-ca", "mountPath": "/var/run/secrets/portal-redis-ca"})
+        container["env"].append({"name": "PORTAL_REDIS_TLS_CA_FILE", "value": "/var/run/secrets/portal-redis-ca/ca.pem"})
     if spec["kind"] == "job":
         template["spec"].update(maxRetries=0, timeoutSeconds="3600")
         return {"apiVersion": "run.googleapis.com/v1", "kind": "Job", "metadata": {"name": name}, "spec": {"template": {"metadata": template["metadata"], "spec": {"taskCount": 1, "parallelism": 1, "template": {"spec": template["spec"]}}}}}

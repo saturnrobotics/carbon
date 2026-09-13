@@ -55,6 +55,8 @@ def prepare_plan(config: dict, source: str, foundation: dict, migrations: list[s
     for name, spec in services.items():
         spec["kind"] = release.UNITS[name]
         spec["implementation_ready"] = True
+        if name == "portal-query" and config.get("redis_ca_secret"):
+            spec["redis_ca_secret"] = config["redis_ca_secret"]
         # Filled with a registry receipt before any mutation. These placeholders
         # let the existing strict validator check all runtime inputs pre-build.
         spec["image"] = "example.invalid/validation@sha256:" + "0" * 64
@@ -141,7 +143,7 @@ def validate_config(config: dict) -> None:
     if "<" in json.dumps(config) or "REPLACE_ME" in json.dumps(config):
         raise ValueError("Replace every placeholder in the private deploy.json before deploying")
     expected = {"schema_version", "project", "region", "source_repo_url", "image_repository", "pg_service", "database_ca_secret", "services"}
-    if not isinstance(config, dict) or set(config) != expected or config["schema_version"] != 1:
+    if not isinstance(config, dict) or set(config) - {"redis_ca_secret"} != expected or config["schema_version"] != 1:
         raise ValueError("deploy.json must use the exact fields in deploy.example.json")
     patterns = {"project": r"[a-z][a-z0-9-]{4,28}[a-z0-9]", "region": r"[a-z]+-[a-z]+[0-9]",
                 "pg_service": r"[A-Za-z0-9_-]+", "source_repo_url": r"https://github\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+"}
@@ -150,6 +152,8 @@ def validate_config(config: dict) -> None:
             raise ValueError(f"Invalid {key} in private deployment configuration")
     if not isinstance(config["database_ca_secret"], str) or not release.PINNED_SECRET.fullmatch(config["database_ca_secret"]) or not config["database_ca_secret"].startswith(f"projects/{config['project']}/secrets/"):
         raise ValueError("database_ca_secret must be a pinned Secret Manager reference in the selected project")
+    if "redis_ca_secret" in config and (not isinstance(config["redis_ca_secret"], str) or not release.PINNED_SECRET.fullmatch(config["redis_ca_secret"]) or not config["redis_ca_secret"].startswith(f"projects/{config['project']}/secrets/")):
+        raise ValueError("Redis CA must be a pinned Secret Manager reference in the selected project")
     prefix = f"{config['region']}-docker.pkg.dev/{config['project']}/"
     if not isinstance(config["image_repository"], str) or not config["image_repository"].startswith(prefix) or not re.fullmatch(r"[a-z0-9][a-z0-9_-]*", config["image_repository"][len(prefix):]):
         raise ValueError("image_repository must belong to the selected project and region")

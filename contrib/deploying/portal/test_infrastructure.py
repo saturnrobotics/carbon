@@ -280,8 +280,8 @@ class FoundationTests(unittest.TestCase):
     EXPECTED_INVOKER_EDGES = {
         ("web", "services/portal-query"),
         ("web", "services/portal-actions"),
+        ("web", "services/portal-ingest"),
         ("ingest", "services/portal-query"),
-        ("ingest", "jobs/portal-parser"),
         ("maintenance", "jobs/portal-retention"),
     }
 
@@ -410,6 +410,21 @@ class FoundationTests(unittest.TestCase):
         self.assertNotIn("portal-parser-key", self.text)
         self.assertNotIn("versions/latest", self.text)
 
+    def test_only_query_can_read_the_redis_ca_secret(self):
+        locals_ = self.config.locals()
+        secret_names = set(list_items(re.search(r"toset\((\[.*?\])\)", locals_["secret_names"], re.S).group(1)))
+        self.assertIn("portal-redis-ca", secret_names)
+        access = {identity: list_items(f"[{items}]") for identity, items in ACCESS.findall(locals_["secret_access"])}
+        self.assertEqual({identity for identity, secrets in access.items() if "portal-redis-ca" in secrets}, {"query"})
+        container = self.config.resources("google_secret_manager_secret")["runtime"]
+        self.assertEqual(container.attrs["for_each"], "local.secret_names")
+        self.assertEqual(container.child("lifecycle").attrs["prevent_destroy"], "true")
+        grant = self.config.resources("google_secret_manager_secret_iam_member")["runtime"]
+        self.assertEqual(grant.attrs["for_each"], "local.secret_grants")
+        self.assertEqual(unquote(grant.attrs["role"]), "roles/secretmanager.secretAccessor")
+        self.assertEqual(grant.attrs["secret_id"], "google_secret_manager_secret.runtime[each.value.secret].secret_id")
+        self.assertEqual(unquote(grant.attrs["member"]), 'serviceAccount:${google_service_account.runtime[each.value.identity].email}')
+
     def test_private_storage_and_networking_have_no_public_data_path(self):
         bucket = self.config.resources("google_storage_bucket")["portal"]
         self.assertEqual(unquote(bucket.attrs["public_access_prevention"]), "enforced")
@@ -429,6 +444,25 @@ class FoundationTests(unittest.TestCase):
         self.assertNotIn("query", {identity for _, identity in grants.values()})
         reader = self.config.resources("google_project_iam_custom_role")["parser_operation_reader"]
         self.assertEqual(list_items(reader.attrs["permissions"]), ["run.operations.get"])
+
+    def test_ingest_can_run_parser_with_overrides_but_cannot_manage_jobs(self):
+        roles = self.config.resources("google_project_iam_custom_role")
+        self.assertIn("parser_job_executor", roles)
+        executor = roles["parser_job_executor"]
+        self.assertEqual(set(list_items(executor.attrs["permissions"])), {"run.jobs.run", "run.jobs.runWithOverrides"})
+        members = self.config.resources("google_project_iam_member")
+        grants = [block for block in members.values() if block.attrs["role"] == "google_project_iam_custom_role.parser_job_executor.name"]
+        self.assertEqual(len(grants), 1)
+        grant = grants[0]
+        self.assertEqual(grant.attrs["project"], "var.project_id")
+        self.assertEqual(unquote(grant.attrs["member"]), 'serviceAccount:${google_service_account.runtime["ingest"].email}')
+        condition = grant.child("condition")
+        self.assertIsNotNone(condition)
+        self.assertEqual(unquote(condition.attrs["expression"]), "resource.name == 'projects/${var.project_id}/locations/${var.region}/jobs/portal-parser'")
+        reader = members["ingest_parser_operation_reader"]
+        self.assertEqual(reader.attrs["role"], "google_project_iam_custom_role.parser_operation_reader.name")
+        self.assertEqual(reader.attrs["member"], grant.attrs["member"])
+        self.assertIsNone(reader.child("condition"), "operation names do not carry the parser job name")
 
     def test_maintenance_alone_can_delete_retained_objects(self):
         deleter = self.config.resources("google_project_iam_custom_role")["retention_object_deleter"]
