@@ -11,6 +11,10 @@ import {
   writeWebResponse
 } from "@carbon/knowledge/query/request-boundary.server";
 import { readManualSourceConfiguration } from "@carbon/knowledge/release-profile";
+import {
+  type SourceRegistryConfiguration,
+  sourceRegistryConfigurationSchema
+} from "@carbon/knowledge/sources/registry.server";
 import { Pool } from "pg";
 import { startCacheIsolationProbe } from "./cache-probe";
 import {
@@ -33,6 +37,31 @@ const REQUIRED_QUERY_CONFIGURATION = [
   "KNOWLEDGE_MANUAL_SOURCE_JSON"
 ] as const;
 
+/**
+ * The live-source registry, read the way this service already reads its two
+ * other registries: one JSON environment value, parsed at start-up by the same
+ * runtime schema every consumer validates against.
+ *
+ * Absent means the deployment registers no live source, which is the released
+ * manual profile's own shape and stays supported. PRESENT AND MALFORMED throws,
+ * so the service refuses to become ready rather than starting with no sources:
+ * a query that reached no source would answer "no item source is configured for
+ * this library", which reads as an empty corpus rather than as a broken
+ * release, and nobody would go looking for the typo.
+ *
+ * HTTPS-only origins with no embedded credentials are the schema's own rule
+ * (`registry.server.ts`), the same policy the transport applies to an acquired
+ * URL, so the configuration input cannot be a way around it. Pinned by
+ * `configuration.test.ts` rather than restated here.
+ */
+export function readSourceRegistryConfiguration(
+  environment: NodeJS.ProcessEnv
+): SourceRegistryConfiguration | undefined {
+  const raw = environment.KNOWLEDGE_SOURCES_JSON?.trim();
+  if (!raw) return undefined;
+  return sourceRegistryConfigurationSchema.parse(JSON.parse(raw));
+}
+
 export function isQueryReady(environment: NodeJS.ProcessEnv): boolean {
   try {
     readManualSourceConfiguration(environment);
@@ -41,6 +70,7 @@ export function isQueryReady(environment: NodeJS.ProcessEnv): boolean {
     parseTrustedCallerConfiguration(
       environment.KNOWLEDGE_TRUSTED_CALLERS_JSON!
     );
+    readSourceRegistryConfiguration(environment);
     return true;
   } catch {
     return false;
@@ -57,6 +87,7 @@ export function createHandler(
   const configuration = parseTrustedCallerConfiguration(
     environment.KNOWLEDGE_TRUSTED_CALLERS_JSON!
   );
+  const sources = readSourceRegistryConfiguration(environment);
   const pool = new Pool({
     connectionString: environment.KNOWLEDGE_READ_DATABASE_URL,
     max: 10,
@@ -86,15 +117,17 @@ export function createHandler(
     cacheStore,
     origin: environment.KNOWLEDGE_PORTAL_ORIGIN!,
     businessTimezone: environment.KNOWLEDGE_BUSINESS_TIMEZONE!,
-    conversationStore
+    conversationStore,
+    ...(sources ? { sources } : {})
   });
-  // The manual release registers no Carbon item source; the handler answers
-  // `unavailable` so intake review can still publish a generic document.
+  // A deployment that registers no item source still answers `unavailable`
+  // rather than empty, so intake review can publish a generic document.
   const itemHandler = createItemSearchHandler({
     configuration,
     identityStore,
     tokenVerifier,
-    pool
+    pool,
+    ...(sources ? { sources } : {})
   });
   // Optional transport over the read handler mounted below; off by default.
   const mcpHandler = createQueryMcpHandler({
