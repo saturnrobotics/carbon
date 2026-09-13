@@ -2,11 +2,15 @@ import {
   itemSearchRequestSchema,
   itemSearchResultSchema
 } from "@carbon/knowledge";
-import type { VerifiedIapBrowserRequest } from "@carbon/knowledge/identity.server";
+import {
+  UnauthorizedRequestError,
+  type VerifiedIapBrowserRequest
+} from "@carbon/knowledge/identity.server";
 import {
   forwardVerifiedWorkforceRequest,
   verifyKnowledgeBrowserRequest
 } from "./identity.server";
+import { refusalCode } from "./query-gateway.server";
 
 type ItemGatewayDependencies = {
   queryUrl: string;
@@ -74,8 +78,12 @@ export async function forwardItemSearch(
       { method: "POST", headers, body: JSON.stringify(payload) }
     );
     if (!response.ok)
+      // The status was always preserved; the body was rewritten to
+      // `items_unavailable`, so the service's refusal arrived at the reviewer
+      // labelled as an outage. Only the CLASS crosses — never the upstream's
+      // own code — so a refusal still says nothing about what exists.
       return Response.json(
-        { error: "items_unavailable" },
+        { error: refusalCode(response.status, "items_unavailable") },
         { status: response.status, headers: { "cache-control": "no-store" } }
       );
     const result = itemSearchResultSchema.parse(await response.json());
@@ -85,7 +93,16 @@ export async function forwardItemSearch(
         "x-content-type-options": "nosniff"
       }
     });
-  } catch {
+  } catch (error) {
+    // Verifying the browser and minting the forwarding credential both throw
+    // this one error, and this catch turned each into a 503 — the same answer a
+    // dead upstream gives. A denial is not an outage, and 503 invites a retry
+    // that cannot succeed.
+    if (error instanceof UnauthorizedRequestError)
+      return Response.json(
+        { error: "forbidden" },
+        { status: 403, headers: { "cache-control": "no-store" } }
+      );
     return Response.json(
       { error: "items_unavailable" },
       { status: 503, headers: { "cache-control": "no-store" } }

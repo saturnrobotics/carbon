@@ -24,11 +24,15 @@ import {
  * The class an upstream status belongs to, for a response the browser will read.
  * Anything that is not a refusal stays unavailability, which is what a reader
  * can act on by trying again.
+ *
+ * Exported because the item gateway forwards to the same service and must not
+ * disagree with this one about which statuses are refusals; only the code a
+ * non-refusal carries differs between them, which is why it is an argument.
  */
-function refusalCode(status: number): string {
+export function refusalCode(status: number, unavailable: string): string {
   if (status === 401) return "unauthorized";
   if (status === 403) return "forbidden";
-  return "query_unavailable";
+  return unavailable;
 }
 
 /** Only a 403 from the query service is read for the step-up code; any other body is ignored. */
@@ -156,7 +160,7 @@ export async function forwardKnowledgeQuery(
       // the upstream's own code never does, so a refusal still says nothing
       // about which document, source or grant it was about.
       return Response.json(
-        { error: refusalCode(response.status) },
+        { error: refusalCode(response.status, "query_unavailable") },
         { status: response.status, headers: { "cache-control": "no-store" } }
       );
     }

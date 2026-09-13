@@ -5,7 +5,10 @@ import {
 } from "@carbon/knowledge";
 import { admitReadRequest } from "@carbon/knowledge/budgets.server";
 import { withKnowledgeTransaction } from "@carbon/knowledge/database.server";
-import { verifyWorkforceRequest } from "@carbon/knowledge/identity.server";
+import {
+  UnauthorizedRequestError,
+  verifyWorkforceRequest
+} from "@carbon/knowledge/identity.server";
 import type { SourceRequestContext } from "@carbon/knowledge/sources/http.server";
 import {
   createSourceRegistry,
@@ -107,7 +110,20 @@ export function createItemSearchHandler(
       return Response.json(itemSearchResultSchema.parse(result), {
         headers: { "cache-control": "no-store" }
       });
-    } catch {
+    } catch (error) {
+      // An identity this service will not act for is a refusal, not an outage.
+      // The blanket catch below reported both as `items_unavailable`, so a
+      // reviewer whose access had been revoked was told to come back later,
+      // when the answer was never going to change. The CLASS is all that
+      // surfaces: `forbidden` is already this handler's answer for a principal
+      // without `knowledge.read`, and it is now the same answer for an unknown
+      // caller, a revoked binding and another company's request, so the refusal
+      // still says nothing about which library, source or item it concerned.
+      if (error instanceof UnauthorizedRequestError)
+        return Response.json(
+          { error: "forbidden" },
+          { status: 403, headers: { "cache-control": "no-store" } }
+        );
       return Response.json(
         { error: "items_unavailable" },
         { status: 503, headers: { "cache-control": "no-store" } }

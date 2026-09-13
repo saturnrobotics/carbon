@@ -5,7 +5,13 @@ const mocks = vi.hoisted(() => ({
   admit: vi.fn(),
   read: vi.fn()
 }));
-vi.mock("@carbon/knowledge/identity.server", () => ({
+// The real module, with the verifier replaced: `UnauthorizedRequestError` is
+// what production throws, so the handler's denial branch must be tested against
+// that class rather than a stand-in a mock invented.
+vi.mock("@carbon/knowledge/identity.server", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("@carbon/knowledge/identity.server")
+  >()),
   verifyWorkforceRequest: mocks.verify
 }));
 vi.mock("@carbon/knowledge/budgets.server", () => ({
@@ -20,6 +26,7 @@ vi.mock("@carbon/knowledge/database.server", () => ({
   ) => operation({ query: mocks.read })
 }));
 
+import { UnauthorizedRequestError } from "@carbon/knowledge/identity.server";
 import { createItemSearchHandler } from "./items.server";
 
 const identity = {
@@ -159,4 +166,56 @@ it("denies a principal without the read capability and a rate-limited one", asyn
   expect((await handler(request({ search: "motor" }))).status).toBe(403);
   mocks.admit.mockResolvedValueOnce(false);
   expect((await handler(request({ search: "motor" }))).status).toBe(429);
+});
+
+it.each([
+  "an unknown caller",
+  "a revoked binding",
+  "another company's request"
+])("refuses %s with the same opaque forbidden, not an outage", async (_case) => {
+  // `unauthorized()` is the one helper behind every denial in the verifier and
+  // carries no reason, so all three arrive here as the same class and must
+  // leave as the same answer.
+  mocks.verify.mockRejectedValueOnce(new UnauthorizedRequestError());
+  const response = await createItemSearchHandler({ ...baseOptions, sources })(
+    request({ search: "motor" })
+  );
+  expect(response.status).toBe(403);
+  expect(await response.json()).toEqual({ error: "forbidden" });
+  expect(mocks.read).not.toHaveBeenCalled();
+});
+
+it("keeps 503 for a genuine failure behind the identity check", async () => {
+  mocks.read.mockRejectedValueOnce(new Error("ECONNREFUSED 10.0.0.1"));
+  const response = await createItemSearchHandler({ ...baseOptions, sources })(
+    request({ search: "motor" })
+  );
+  expect(response.status).toBe(503);
+  expect(await response.json()).toEqual({ error: "items_unavailable" });
+  // The message never reaches the caller.
+  expect(response.headers.get("cache-control")).toBe("no-store");
+});
+
+it("keeps the source's own denial and step-up on the unavailable answer", async () => {
+  for (const upstream of [
+    () => Response.json({ error: "step_up_required" }, { status: 403 }),
+    () => Response.json({ error: "forbidden" }, { status: 403 }),
+    () => new Response("down", { status: 503 })
+  ]) {
+    const handler = createItemSearchHandler({
+      ...baseOptions,
+      sources,
+      registryContext: () => ({
+        fetch: upstream as unknown as typeof fetch,
+        headers: async () => new Headers()
+      })
+    });
+    const response = await handler(request({ search: "motor" }));
+    // Unchanged by this fix: only an identity THIS service will not act for
+    // becomes a client error. What a source said about its own caller is not
+    // this reader's authorization, and step-up on the item path has no portal
+    // affordance to redirect to.
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ error: "items_unavailable" });
+  }
 });
