@@ -1,0 +1,85 @@
+import {
+  forwardVerifiedWorkforceRequest,
+  verifyPortalBrowserRequest
+} from "../../services/identity.server";
+
+function configured(environment: NodeJS.ProcessEnv) {
+  const workerUrl = environment.PORTAL_WORKER_URL;
+  const workerAudience = environment.PORTAL_WORKER_AUDIENCE;
+  if (!workerUrl || !workerAudience)
+    throw new Error("Portal intake is not configured");
+  return { workerUrl: workerUrl.replace(/\/$/, ""), workerAudience };
+}
+
+export function assertSameOrigin(
+  request: Request,
+  environment: NodeJS.ProcessEnv = process.env
+): void {
+  const origin = request.headers.get("origin");
+  const expected = environment.PORTAL_WEB_ORIGIN ?? new URL(request.url).origin;
+  if (origin !== expected)
+    throw new Error("Cross-origin portal mutation rejected");
+}
+
+/** The worker's short error code, so the page can name the failure without
+ * echoing any upstream detail. Unknown or unreadable bodies read as unavailable. */
+export async function workerErrorCode(response: Response): Promise<string> {
+  try {
+    const body = (await response.clone().json()) as { error?: unknown };
+    return typeof body.error === "string" && /^[a-z_]{1,64}$/.test(body.error)
+      ? body.error
+      : "service_unavailable";
+  } catch {
+    return "service_unavailable";
+  }
+}
+
+export async function forwardIntakeRequest(options: {
+  request: Request;
+  companyId: string;
+  workerPath: string;
+  body?: BodyInit | null;
+  contentType?: string | null;
+  method?: string;
+  environment?: NodeJS.ProcessEnv;
+  fetchImpl?: typeof fetch;
+}): Promise<Response> {
+  const environment = options.environment ?? process.env;
+  if (!options.companyId.trim())
+    throw new Error("Portal company selection is not configured");
+  const method = options.method ?? options.request.method;
+  if (method !== "GET" && method !== "HEAD")
+    assertSameOrigin(options.request, environment);
+  const { workerUrl, workerAudience } = configured(environment);
+  const verified = await verifyPortalBrowserRequest(
+    options.request,
+    environment
+  );
+  const headers = await forwardVerifiedWorkforceRequest({
+    request: options.request,
+    targetAudience: workerAudience,
+    companyId: options.companyId,
+    verified
+  });
+  if (options.contentType) headers.set("content-type", options.contentType);
+  const response = await (options.fetchImpl ?? fetch)(
+    `${workerUrl}${options.workerPath}`,
+    {
+      method,
+      headers,
+      body: options.body
+    }
+  );
+  const returnedHeaders = new Headers({
+    "cache-control": "private, no-store",
+    "x-content-type-options": "nosniff"
+  });
+  const contentType = response.headers.get("content-type");
+  const disposition = response.headers.get("content-disposition");
+  if (contentType) returnedHeaders.set("content-type", contentType);
+  if (disposition) returnedHeaders.set("content-disposition", disposition);
+  return new Response(response.body, {
+    status: response.status,
+    headers: returnedHeaders
+  });
+}

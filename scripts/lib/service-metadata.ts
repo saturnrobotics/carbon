@@ -40,7 +40,7 @@ export const MODULE_LIST = [
   "documents",
   "inventory",
   "invoicing",
-  "knowledge",
+  "portal",
   "items",
   "people",
   "production",
@@ -83,7 +83,7 @@ const DESCRIPTION_OVERRIDES: Record<string, string> = {
 };
 
 const CLASSIFICATION_OVERRIDES: Record<string, Classification> = {
-  knowledge_resolveItems: "READ"
+  portal_resolveItems: "READ"
 };
 
 // Per-tool overrides of the auto-computed injectAuth set. The default rule
@@ -101,9 +101,9 @@ const CLASSIFICATION_OVERRIDES: Record<string, Classification> = {
 // notificationPreference, which (like userModulePreference) carries no
 // createdBy/updatedBy columns at all — injecting them breaks the write.
 const INJECT_AUTH_OVERRIDES: Record<string, AuthField[]> = {
-  // The knowledge procurement command has a strict payload and stamps actor,
+  // The portal procurement command has a strict payload and stamps actor,
   // company, source and audit state inside its server-only execution boundary.
-  knowledge_createProcurementDraft: [],
+  portal_createProcurementDraft: [],
   inventory_insertManualInventoryAdjustment: ["companyId", "createdBy"],
   accounting_upsertFixedAssetUsageLog: ["companyId", "createdBy"],
   account_upsertNotificationPreference: ["companyId"],
@@ -127,23 +127,23 @@ const PERMISSION_MODULE_MAP: Record<string, string | null> = {
 // module than their service module (spot-checked against the real routes). Keep
 // this hand-curated list small and grounded — each entry needs a verified route.
 const PERMISSION_OVERRIDES: Record<string, ToolPermission> = {
-  knowledge_resolveItems: { module: "parts", actions: ["view"] },
-  knowledge_getItemIdentity: { module: "parts", actions: ["view"] },
-  knowledge_getDocumentReferences: { module: "parts", actions: ["view"] },
-  knowledge_getRecentReceipts: { module: "inventory", actions: ["view"] },
-  knowledge_getRecentReceiptItems: { module: "inventory", actions: ["view"] },
-  knowledge_getPurchaseStatus: { module: "purchasing", actions: ["view"] },
-  // The one knowledge read that discloses money: it gates on purchasing view
+  portal_resolveItems: { module: "parts", actions: ["view"] },
+  portal_getItemIdentity: { module: "parts", actions: ["view"] },
+  portal_getDocumentReferences: { module: "parts", actions: ["view"] },
+  portal_getRecentReceipts: { module: "inventory", actions: ["view"] },
+  portal_getRecentReceiptItems: { module: "inventory", actions: ["view"] },
+  portal_getPurchaseStatus: { module: "purchasing", actions: ["view"] },
+  // The one portal read that discloses money: it gates on purchasing view
   // (the supplierPart/supplier RLS permission) and carries its own workforce
-  // capability, `knowledge.read.pricing`, in KNOWLEDGE_OPERATIONS.
-  knowledge_getItemSupplierPricing: {
+  // capability, `portal.read.pricing`, in PORTAL_OPERATIONS.
+  portal_getItemSupplierPricing: {
     module: "purchasing",
     actions: ["view"]
   },
   // This server-only command is deliberately excluded from the browser-facing
-  // knowledge.service barrel. It is still a canonical API operation, parsed
-  // from knowledge.mcp.server.ts below.
-  knowledge_createProcurementDraft: {
+  // portal.service barrel. It is still a canonical API operation, parsed
+  // from portal.mcp.server.ts below.
+  portal_createProcurementDraft: {
     module: "purchasing",
     actions: ["create"]
   },

@@ -116,7 +116,7 @@ describe("findDanglingReferences", () => {
 
   it("resolves a NOT-NULL FK against target substrate ids (a global row the backup omits)", () => {
     // A company's materialDimension points at a globally-seeded materialForm
-    // (companyId IS NULL) that the backup deliberately omits. With no knowledge
+    // (companyId IS NULL) that the backup deliberately omits. With no portal
     // of the target it reads as a gap; once the target is known to hold that
     // global row (substrate), it resolves. No allow-list, no nullable-column
     // heuristic — driven by the actual ids present in the target.
@@ -133,7 +133,7 @@ describe("findDanglingReferences", () => {
         { id: "md1", materialFormId: "round-bar", companyId: "c1" }
       ]
     };
-    // Without target knowledge the omitted global ref looks like a gap…
+    // Without target portal the omitted global ref looks like a gap…
     expect(findDanglingReferences(cat, data)).toHaveLength(1);
     // …but when the target is known to hold that global row, it resolves.
     const substrate = new Map([

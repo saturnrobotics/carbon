@@ -10,7 +10,7 @@ const mocks = vi.hoisted(() => ({
   environment: { controlled: false }
 }));
 
-vi.mock("@carbon/knowledge/identity.server", () => ({
+vi.mock("@carbon/portal/identity.server", () => ({
   verifyWorkforceRequest: mocks.verifyWorkforceRequest
 }));
 vi.mock("@carbon/env", () => ({
@@ -33,13 +33,13 @@ const identity = {
     kind: "human",
     actorId: "usr_existing",
     companyId: "cmp_alpha",
-    callerId: "knowledge-query",
+    callerId: "portal-query",
     sourceIdentity: { issuer: "iap", subject: "immutable-subject" },
     policyVersion: "identity-3:permissions-5",
     capabilities: ["source.entity.read"]
   },
   companyGroupId: "grp_alpha",
-  allowedOperations: ["knowledge_getItemIdentity"],
+  allowedOperations: ["portal_getItemIdentity"],
   accessLevels: ["managed-device"],
   assurance: { mode: "carbon-mfa" }
 };
@@ -84,7 +84,7 @@ async function authorize(options: {
   const { authorizeWorkforceRequest } = await import("./workforce.server");
   const result = await authorizeWorkforceRequest({
     request: new Request("https://api.example.com"),
-    operation: "knowledge_getItemIdentity",
+    operation: "portal_getItemIdentity",
     configuration: {} as never,
     identityStore: {} as never
   });
@@ -186,7 +186,7 @@ describe("authorizeWorkforceRequest", () => {
     await expect(
       authorizeWorkforceRequest({
         request: new Request("https://api.example.com"),
-        operation: "knowledge_getItemIdentity",
+        operation: "portal_getItemIdentity",
         configuration: {} as never,
         identityStore: {} as never
       })

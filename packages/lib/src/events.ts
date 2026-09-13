@@ -12,9 +12,9 @@ type ApprovalDocumentType = Database["public"]["Enums"]["approvalDocumentType"];
  * Each event has a name and a typed data payload.
  */
 export type Events = {
-  // Durable knowledge procurement scheduler. The event carries only a source
+  // Durable portal procurement scheduler. The event carries only a source
   // schedule id; the worker reloads the command and current actor state.
-  "knowledge/procurement.schedule.execute": {
+  "portal/procurement.schedule.execute": {
     data: { scheduleId: string };
   };
 

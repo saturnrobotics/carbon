@@ -1,11 +1,11 @@
 {
   "kind": "carbon-company-backup",
   "version": 1,
-  "schemaVersion": "20260913060708",
+  "schemaVersion": "20260913192022",
   "sourceCompanyId": "schema-baseline",
   "sourceCompanyGroupId": null,
   "sourceCompanyName": null,
-  "exportedAt": "2026-09-13T06:20:54.426Z",
+  "exportedAt": "2026-09-13T19:47:40.497Z",
   "exportedBy": "schema-baseline",
   "label": "schema baseline",
   "includeStorage": "none",
@@ -1105,30 +1105,6 @@
       ]
     },
     {
-      "name": "knowledgeSourceOutbox",
-      "rows": 0,
-      "columns": [
-        "payload",
-        "availableAt",
-        "claimedAt",
-        "leaseExpiresAt",
-        "attempts",
-        "deliveredAt",
-        "createdAt",
-        "updatedAt",
-        "id",
-        "companyId",
-        "source",
-        "entityType",
-        "entityId",
-        "sourceVersion",
-        "eventType",
-        "leaseOwner",
-        "updatedBy",
-        "createdBy"
-      ]
-    },
-    {
       "name": "location",
       "rows": 0,
       "columns": [
@@ -1805,6 +1781,30 @@
       ]
     },
     {
+      "name": "portalSourceOutbox",
+      "rows": 0,
+      "columns": [
+        "updatedAt",
+        "payload",
+        "availableAt",
+        "claimedAt",
+        "leaseExpiresAt",
+        "attempts",
+        "deliveredAt",
+        "createdAt",
+        "source",
+        "entityType",
+        "entityId",
+        "sourceVersion",
+        "eventType",
+        "createdBy",
+        "updatedBy",
+        "leaseOwner",
+        "id",
+        "companyId"
+      ]
+    },
+    {
       "name": "pricingRule",
       "rows": 0,
       "columns": [
@@ -2028,12 +2028,12 @@
         "visibility",
         "createdAt",
         "updatedAt",
-        "updatedBy",
         "id",
         "companyId",
         "reportKey",
         "name",
-        "createdBy"
+        "createdBy",
+        "updatedBy"
       ]
     },
     {
@@ -5172,47 +5172,6 @@
       ]
     },
     {
-      "name": "knowledgeCommandReceipt",
-      "rows": 0,
-      "columns": [
-        "createdAt",
-        "version",
-        "id",
-        "companyId",
-        "actorId",
-        "action",
-        "idempotencyKey",
-        "payloadHash",
-        "purchaseOrderId"
-      ]
-    },
-    {
-      "name": "knowledgeProcurementSchedule",
-      "rows": 0,
-      "columns": [
-        "version",
-        "payload",
-        "executeAt",
-        "claimedAt",
-        "revocationCheckedAt",
-        "createdAt",
-        "updatedAt",
-        "id",
-        "companyId",
-        "companyGroupId",
-        "actorId",
-        "action",
-        "payloadHash",
-        "idempotencyKey",
-        "status",
-        "revocationVersion",
-        "purchaseOrderId",
-        "failureCode",
-        "createdBy",
-        "updatedBy"
-      ]
-    },
-    {
       "name": "mercuryRecipientMapping",
       "rows": 0,
       "columns": [
@@ -5499,6 +5458,47 @@
         "postedBy",
         "voidedBy",
         "companyId",
+        "createdBy",
+        "updatedBy"
+      ]
+    },
+    {
+      "name": "portalCommandReceipt",
+      "rows": 0,
+      "columns": [
+        "createdAt",
+        "version",
+        "id",
+        "companyId",
+        "actorId",
+        "action",
+        "idempotencyKey",
+        "payloadHash",
+        "purchaseOrderId"
+      ]
+    },
+    {
+      "name": "portalProcurementSchedule",
+      "rows": 0,
+      "columns": [
+        "version",
+        "payload",
+        "executeAt",
+        "claimedAt",
+        "revocationCheckedAt",
+        "createdAt",
+        "updatedAt",
+        "id",
+        "companyId",
+        "companyGroupId",
+        "actorId",
+        "action",
+        "payloadHash",
+        "idempotencyKey",
+        "status",
+        "revocationVersion",
+        "purchaseOrderId",
+        "failureCode",
         "createdBy",
         "updatedBy"
       ]
@@ -6373,8 +6373,6 @@
         "provenance",
         "createdAt",
         "updatedAt",
-        "createdBy",
-        "updatedBy",
         "id",
         "companyId",
         "intakeId",
@@ -6383,9 +6381,11 @@
         "sourceKey",
         "storageBucket",
         "storagePath",
-        "fileName",
         "sha256",
-        "mediaType"
+        "mediaType",
+        "fileName",
+        "createdBy",
+        "updatedBy"
       ]
     },
     {
@@ -6481,14 +6481,6 @@
         "review",
         "createdAt",
         "updatedAt",
-        "id",
-        "companyId",
-        "intakeId",
-        "lineKey",
-        "description",
-        "supplierSku",
-        "manufacturerPartNumber",
-        "itemId",
         "purchaseOrderLineId",
         "accountId",
         "assetId",
@@ -6500,7 +6492,15 @@
         "purchaseUnit",
         "stockUnit",
         "createdBy",
-        "updatedBy"
+        "updatedBy",
+        "id",
+        "companyId",
+        "intakeId",
+        "lineKey",
+        "description",
+        "supplierSku",
+        "manufacturerPartNumber",
+        "itemId"
       ]
     },
     {

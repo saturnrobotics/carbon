@@ -292,7 +292,7 @@ def evaluate_disposable() -> dict[str, Any]:
         results.append(result("missing_pkce", "pass" if missing_pkce.get("status") in (302, 400) and not parse_qs(urlparse(missing_pkce.get("location", "")).query).get("code") else "fail", str(missing_pkce.get("status")), "reject or redirect with error", missing_pkce))
         unknown = request(auth, "/oauth/authorize?" + urlencode({"response_type": "code", "client_id": "00000000-0000-0000-0000-000000000000", "redirect_uri": CLIENT_REDIRECT, "scope": "openid", "state": "unknown"}))
         results.append(result("unknown_client", "pass" if unknown.get("status") == 400 else "fail", str(unknown.get("status")), "400", unknown))
-        unsupported = request(auth, "/oauth/authorize?" + urlencode({"response_type": "code", "client_id": client_id, "redirect_uri": CLIENT_REDIRECT, "scope": "openid knowledge:read", "state": "unsupported", "code_challenge": challenge, "code_challenge_method": "S256"}))
+        unsupported = request(auth, "/oauth/authorize?" + urlencode({"response_type": "code", "client_id": client_id, "redirect_uri": CLIENT_REDIRECT, "scope": "openid portal:read", "state": "unsupported", "code_challenge": challenge, "code_challenge_method": "S256"}))
         unsupported_query = parse_qs(urlparse(unsupported.get("location", "")).query)
         results.append(result("unsupported_scope", "pass" if unsupported.get("status") in (302, 400) and unsupported_query.get("error") else "fail", str(unsupported.get("status")), "error response", unsupported))
         wrong_aud = dict(claims); wrong_aud["aud"] = "wrong-audience"

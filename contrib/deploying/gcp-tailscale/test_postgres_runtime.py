@@ -14,7 +14,7 @@ class PostgresRuntimeTests(unittest.TestCase):
         for relative in (
             "packages/dev/docker/docker-compose.dev.yml",
             "contrib/deploying/simple-docker-caddy/docker-compose.prod.yml",
-            "contrib/deploying/knowledge/compose.local.yaml",
+            "contrib/deploying/portal/compose.local.yaml",
             "contrib/deploying/gcp-tailscale/auth/oauth-evaluation/compose.yml",
         ):
             with self.subTest(stack=relative):
@@ -24,13 +24,13 @@ class PostgresRuntimeTests(unittest.TestCase):
                 self.assertFalse(any("preload_libraries=" in argument for argument in command))
 
     def test_ci_exercises_the_same_permission_denial_configuration(self):
-        workflow = yaml.safe_load((REPO / ".github/workflows/knowledge-check.yml").read_text())
+        workflow = yaml.safe_load((REPO / ".github/workflows/portal-check.yml").read_text())
         steps = workflow["jobs"]["runtime"]["steps"]
         start = next(step["run"] for step in steps if step.get("name") == "Start isolated synthetic PostgreSQL and Redis")
         self.assertIn("-c supautils.hint_roles=", start)
         self.assertNotIn("preload_libraries=", start)
         tests = next(step["run"] for step in steps if step.get("name") == "Runtime unit and integration tests")
-        self.assertIn("python3 packages/knowledge/scripts/test_sql_runner.py", tests)
+        self.assertIn("python3 packages/portal/scripts/test_sql_runner.py", tests)
 
 
 if __name__ == "__main__":

@@ -1,12 +1,12 @@
 # Typed intake proposals with calibrated confidence
 
-Context: knowledge intake stored parser output as an untyped `fields` record with
+Context: portal intake stored parser output as an untyped `fields` record with
 no confidence, no units, and no explicit manufacturer/MPN/revision proposal
-(company knowledge platform plan, Task 13 step 3).
+(company portal platform plan, Task 13 step 3).
 
 Decision:
 
-- Extraction contract version 2 adds `proposed` (`packages/knowledge/src/intake/contracts.ts`):
+- Extraction contract version 2 adds `proposed` (`packages/portal/src/intake/contracts.ts`):
   `title`, `manufacturer`, `mpn`, `revision`, `documentType` as
   `{ value, confidence, evidence: [{ page, region? }] }`, plus `measurements`
   whose entries carry a typed `unit` enum. Identity fields reject a unit.

@@ -73,7 +73,7 @@ export const router: Record<
  * The router the public OpenAPI document is generated from: the same procedure
  * objects, minus the operations `isDisclosedOperation` withholds. The HTTP
  * handler and server-side `call()` keep using the full `router`, so a workforce
- * caller still reaches a knowledge operation; only the document stops promising
+ * caller still reaches a portal operation; only the document stops promising
  * it to API-key clients that would get 404.
  */
 export const disclosedRouter: typeof router = (() => {

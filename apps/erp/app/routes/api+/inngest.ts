@@ -46,7 +46,7 @@ function wireWorkflowDispatch() {
   );
   setProcurementScheduleDispatch(async (context, payload) =>
     callOperation(
-      "knowledge_createProcurementDraft",
+      "portal_createProcurementDraft",
       {
         ...context,
         client: await getUserScopedClient(context.userId),

@@ -81,7 +81,7 @@ test("Inngest wires each dispatcher once and preserves the current operation con
   assert.equal(
     JSON.stringify(calls[1]),
     JSON.stringify([
-      "knowledge_createProcurementDraft",
+      "portal_createProcurementDraft",
       { ...context, client: "scoped-client", authKind: "session", scopes: {} },
       { fixture: true }
     ])

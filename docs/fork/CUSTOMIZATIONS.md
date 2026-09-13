@@ -20,20 +20,20 @@ changes shape.
 
 | Area | Files | What it is |
 | --- | --- | --- |
-| `packages/knowledge/`, `apps/knowledge/`, `apps/knowledge-worker/`, `apps/knowledge-query/`, `apps/knowledge-actions/` | 261 | Company knowledge platform: ingestion, parser, query service, worker, actions, its own schema and `database.types.ts` (generated from its own migration set, fork-only, so not a `regen` file) |
+| `packages/portal/`, `apps/portal/`, `apps/portal-worker/`, `apps/portal-query/`, `apps/portal-actions/` | 261 | Company portal platform: ingestion, parser, query service, worker, actions, its own schema and `database.types.ts` (generated from its own migration set, fork-only, so not a `regen` file) |
 | `contrib/deploying/gcp-tailscale/` | ~90 | Self-hosted GCP + Tailscale deployment: `deploy.py`/`deploy.sh`, host rollout, release planning, private Postgres, backups runner, Google-domain auth hook, invoice/payment operator tools, operator docs (`README.md`, `WORKFLOW.md`, `INVOICE-*.md`, `PAYMENT-SYNC.md`) and their tests |
-| `contrib/deploying/knowledge/` | ~25 | Terraform + Cloud Build + local stack for the knowledge platform |
+| `contrib/deploying/portal/` | ~25 | Terraform + Cloud Build + local stack for the portal platform |
 | `apps/erp/app/modules/invoicing/` (25 added) + `packages/jobs/src/invoice-intake/` (22) | 47 | Reviewed invoice intake and recognition: document review UI, intake worker, integration tests |
 | `packages/jobs/src/payment-sync/` (8) + `packages/database/src/mercury.ts` | 9 | Mercury payment import with Gmail invoice matching |
-| `apps/erp/app/modules/knowledge/` (10) + `packages/jobs/src/procurement-schedule/` (5) | 15 | ERP-side knowledge module and procurement schedule jobs |
-| `packages/database/supabase/migrations/` | 8 | Fork migrations: `20260906203248_mercury-payment-import`, `20260907030842_invoice-intake`, `…031408_invoice-intake-company-selections`, `…035112_invoice-intake-document-access`, `20260908004744_knowledge-command-receipts`, `…005300_knowledge-workforce-identity-resolver`, `…012959_knowledge-function-execution-boundary`, `…014030_knowledge-procurement-schedule` |
+| `apps/erp/app/modules/portal/` (10) + `packages/jobs/src/procurement-schedule/` (5) | 15 | ERP-side portal module and procurement schedule jobs |
+| `packages/database/supabase/migrations/` | 8 | Fork migrations: `20260906203248_mercury-payment-import`, `20260907030842_invoice-intake`, `…031408_invoice-intake-company-selections`, `…035112_invoice-intake-document-access`, `20260908004744_knowledge-command-receipts`, `…005300_portal-workforce-identity-resolver`, `…012959_portal-function-execution-boundary`, `…014030_portal-procurement-schedule` |
 | `packages/database/supabase/tests/` | 3 | pgTAP-style tests for the fork's RLS boundaries |
 | `packages/auth/src/services/` | 3 | Google-domain / session helpers used by the deployment's auth hook |
-| `apps/erp/app/routes/api+/`, `apps/erp/app/routes/x+/` | 7 | Routes for invoice intake and knowledge |
+| `apps/erp/app/routes/api+/`, `apps/erp/app/routes/x+/` | 7 | Routes for invoice intake and portal |
 | `apps/erp/test/` | 8 | Login integration, localization rendering/checks, invoice browser tests |
 | `scripts/lib/` | 7 | Hardened generators: `generate-db-types.ts` (atomic replace, local-URL guard), `swagger-schema.ts` + partner-alias SQL proof, `local-script-config.ts`, tests |
 | `scripts/fork/`, `.github/workflows/{generated-files-drift,upstream-sync,resolve-sync-conflicts}.yml`, `docs/fork/` | 8 + 3 + 5 | The sync mechanism (this document's siblings) |
-| `.github/workflows/saturn-invoice-check.yml`, `knowledge-check.yml` | 2 | CI for the fork's invoice and knowledge code |
+| `.github/workflows/saturn-invoice-check.yml`, `portal-check.yml` | 2 | CI for the fork's invoice and portal code |
 | `.fork/` | ~60 | Agent records policy, fork lessons/plans/specs/decisions, `check-locales.ts` and two tests |
 | `.claude/rules/public-fork-workflow.md`, `docs/public-fork.md`, `Makefile` | 3 | Public-fork conventions, privacy policy, `make deploy` entry point |
 | `contrib/building/`, `apps/assembler/.dockerignore` | 3 | Build-context privacy overlays |
@@ -74,5 +74,5 @@ changes shape.
 | `pnpm-lock.yaml` | `pnpm install` | `merge=regen` |
 | `Cargo.lock` | `cargo update --workspace` | `merge=regen` |
 | `packages/locale/locales/**/*.po` | `pnpm lingui:extract && pnpm lingui:clean` (authored msgstr, extracted msgid) | upstream's `merge=union` + post-merge hook |
-| `packages/knowledge/src/database.types.ts` | knowledge platform's own generator (fork-only inputs) | ordinary file; upstream never has it |
+| `packages/portal/src/database.types.ts` | portal platform's own generator (fork-only inputs) | ordinary file; upstream never has it |
 | `.gitattributes`, `package.json` `prepare`, `.github/workflows/check.yml` triggers | hand-maintained | the fork's three configuration hooks for this process |

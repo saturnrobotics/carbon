@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "receiver": {
+    "id": "portal-query",
+    "audience": "https://portal-query.example.com"
+  },
+  "callers": [
+    {
+      "callerId": "portal-web",
+      "serviceAccountSubject": "100000000000000000001",
+      "sourceIapAudience": "/projects/123456789012/locations/us-central1/services/portal-web",
+      "operations": ["portal.identity", "portal.query"],
+      "capabilities": ["portal.read"],
+      "requiredAccessLevels": [
+        "accessPolicies/123456789012/accessLevels/managed_device"
+      ],
+      "assurance": {
+        "mode": "workspace-equivalent",
+        "accessLevel": "accessPolicies/123456789012/accessLevels/workspace_2sv"
+      }
+    },
+    {
+      "callerId": "portal-ingest",
+      "serviceAccountSubject": "100000000000000000002",
+      "sourceIapAudience": "/projects/123456789012/locations/us-central1/services/portal-web",
+      "operations": ["portal.identity"],
+      "capabilities": [
+        "portal.read",
+        "portal.intake.capture",
+        "portal.intake.review",
+        "portal.intake.publish",
+        "portal.document.delete",
+        "portal.document.download"
+      ],
+      "requiredAccessLevels": [
+        "accessPolicies/123456789012/accessLevels/managed_device"
+      ],
+      "assurance": { "mode": "carbon-mfa" }
+    }
+  ]
+}

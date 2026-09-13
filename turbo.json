@@ -114,16 +114,16 @@
     "erp#build": {
       "dependsOn": ["^build", "//#lingui:compile", "//#generate:mcp"]
     },
-    "knowledge#build": {
+    "portal#build": {
       "dependsOn": ["^build"]
     },
-    "knowledge-query#build": {
+    "portal-query#build": {
       "dependsOn": ["^build"]
     },
-    "knowledge-worker#build": {
+    "portal-worker#build": {
       "dependsOn": ["^build"]
     },
-    "knowledge-actions#build": {
+    "portal-actions#build": {
       "dependsOn": ["^build"]
     }
   }

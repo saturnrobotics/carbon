@@ -52,7 +52,7 @@
   "sideEffects": false,
   "version": "0.0.0",
   "dependencies": {
-    "@carbon/knowledge": "workspace:*",
+    "@carbon/portal": "workspace:*",
     "@carbon/documents": "workspace:*",
     "@carbon/env": "workspace:*",
     "@carbon/kv": "workspace:*",

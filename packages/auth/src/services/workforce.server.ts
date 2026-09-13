@@ -8,9 +8,9 @@ import {
   type VerifiedWorkforceIdentity,
   verifyWorkforceRequest,
   type WorkforceIdentityStore
-} from "@carbon/knowledge/identity.server";
+} from "@carbon/portal/identity.server";
 
-export { PORTAL_USER_EVIDENCE_HEADER } from "@carbon/knowledge/identity.server";
+export { PORTAL_USER_EVIDENCE_HEADER } from "@carbon/portal/identity.server";
 
 import type { Database } from "@carbon/database";
 import { CONTROLLED_ENVIRONMENT } from "@carbon/env";
@@ -150,7 +150,7 @@ export function createCarbonWorkforceIdentityStore(): WorkforceIdentityStore {
   return {
     async resolveHuman(identity) {
       const { data, error } = await serviceRole.rpc(
-        "knowledge_resolve_workforce_identity",
+        "portal_resolve_workforce_identity",
         {
           requested_issuer: identity.issuer,
           requested_subject: identity.subject,
@@ -181,7 +181,7 @@ export function authorizeCarbonWorkforceRequest(options: {
   configurationJson?: string;
 }) {
   const configurationJson =
-    options.configurationJson ?? process.env.KNOWLEDGE_TRUSTED_CALLERS_JSON;
+    options.configurationJson ?? process.env.PORTAL_TRUSTED_CALLERS_JSON;
   if (!configurationJson) throw new WorkforceNotConfiguredError();
   return authorizeWorkforceRequest({
     request: options.request,

@@ -1,6 +1,6 @@
 [
-  "module-shape::knowledge::missing:types.ts",
-  "module-shape::knowledge::missing:ui",
+  "module-shape::portal::missing:types.ts",
+  "module-shape::portal::missing:ui",
   "module-shape::settings::extra-service:backups.service.ts",
   "module-shape::shared::extra-models:imports.models.ts",
   "module-shape::shared::missing:ui",

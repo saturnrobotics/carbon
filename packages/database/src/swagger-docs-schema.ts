@@ -597,177 +597,6 @@ export default {
         tags: ["noQuoteReason"]
       }
     },
-    "/knowledgeCommandReceipt": {
-      get: {
-        parameters: [
-          {
-            $ref: "#/parameters/rowFilter.knowledgeCommandReceipt.id"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeCommandReceipt.companyId"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeCommandReceipt.actorId"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeCommandReceipt.action"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeCommandReceipt.idempotencyKey"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeCommandReceipt.payloadHash"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeCommandReceipt.purchaseOrderId"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeCommandReceipt.createdAt"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeCommandReceipt.version"
-          },
-          {
-            $ref: "#/parameters/select"
-          },
-          {
-            $ref: "#/parameters/order"
-          },
-          {
-            $ref: "#/parameters/range"
-          },
-          {
-            $ref: "#/parameters/rangeUnit"
-          },
-          {
-            $ref: "#/parameters/offset"
-          },
-          {
-            $ref: "#/parameters/limit"
-          },
-          {
-            $ref: "#/parameters/preferCount"
-          }
-        ],
-        responses: {
-          "200": {
-            description: "OK",
-            schema: {
-              items: {
-                $ref: "#/definitions/knowledgeCommandReceipt"
-              },
-              type: "array"
-            }
-          },
-          "206": {
-            description: "Partial Content"
-          }
-        },
-        tags: ["knowledgeCommandReceipt"]
-      },
-      post: {
-        parameters: [
-          {
-            $ref: "#/parameters/body.knowledgeCommandReceipt"
-          },
-          {
-            $ref: "#/parameters/select"
-          },
-          {
-            $ref: "#/parameters/preferPost"
-          }
-        ],
-        responses: {
-          "201": {
-            description: "Created"
-          }
-        },
-        tags: ["knowledgeCommandReceipt"]
-      },
-      delete: {
-        parameters: [
-          {
-            $ref: "#/parameters/rowFilter.knowledgeCommandReceipt.id"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeCommandReceipt.companyId"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeCommandReceipt.actorId"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeCommandReceipt.action"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeCommandReceipt.idempotencyKey"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeCommandReceipt.payloadHash"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeCommandReceipt.purchaseOrderId"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeCommandReceipt.createdAt"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeCommandReceipt.version"
-          },
-          {
-            $ref: "#/parameters/preferReturn"
-          }
-        ],
-        responses: {
-          "204": {
-            description: "No Content"
-          }
-        },
-        tags: ["knowledgeCommandReceipt"]
-      },
-      patch: {
-        parameters: [
-          {
-            $ref: "#/parameters/rowFilter.knowledgeCommandReceipt.id"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeCommandReceipt.companyId"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeCommandReceipt.actorId"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeCommandReceipt.action"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeCommandReceipt.idempotencyKey"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeCommandReceipt.payloadHash"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeCommandReceipt.purchaseOrderId"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeCommandReceipt.createdAt"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeCommandReceipt.version"
-          },
-          {
-            $ref: "#/parameters/body.knowledgeCommandReceipt"
-          },
-          {
-            $ref: "#/parameters/preferReturn"
-          }
-        ],
-        responses: {
-          "204": {
-            description: "No Content"
-          }
-        },
-        tags: ["knowledgeCommandReceipt"]
-      }
-    },
     "/accountingSyncOperation": {
       get: {
         parameters: [
@@ -8248,258 +8077,6 @@ export default {
           }
         },
         tags: ["workflowLastRun"]
-      }
-    },
-    "/knowledgeSourceOutbox": {
-      get: {
-        parameters: [
-          {
-            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.id"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.companyId"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.source"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.entityType"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.entityId"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.sourceVersion"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.eventType"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.payload"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.availableAt"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.claimedAt"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.leaseOwner"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.leaseExpiresAt"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.attempts"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.deliveredAt"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.createdBy"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.createdAt"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.updatedBy"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.updatedAt"
-          },
-          {
-            $ref: "#/parameters/select"
-          },
-          {
-            $ref: "#/parameters/order"
-          },
-          {
-            $ref: "#/parameters/range"
-          },
-          {
-            $ref: "#/parameters/rangeUnit"
-          },
-          {
-            $ref: "#/parameters/offset"
-          },
-          {
-            $ref: "#/parameters/limit"
-          },
-          {
-            $ref: "#/parameters/preferCount"
-          }
-        ],
-        responses: {
-          "200": {
-            description: "OK",
-            schema: {
-              items: {
-                $ref: "#/definitions/knowledgeSourceOutbox"
-              },
-              type: "array"
-            }
-          },
-          "206": {
-            description: "Partial Content"
-          }
-        },
-        tags: ["knowledgeSourceOutbox"]
-      },
-      post: {
-        parameters: [
-          {
-            $ref: "#/parameters/body.knowledgeSourceOutbox"
-          },
-          {
-            $ref: "#/parameters/select"
-          },
-          {
-            $ref: "#/parameters/preferPost"
-          }
-        ],
-        responses: {
-          "201": {
-            description: "Created"
-          }
-        },
-        tags: ["knowledgeSourceOutbox"]
-      },
-      delete: {
-        parameters: [
-          {
-            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.id"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.companyId"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.source"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.entityType"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.entityId"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.sourceVersion"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.eventType"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.payload"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.availableAt"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.claimedAt"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.leaseOwner"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.leaseExpiresAt"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.attempts"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.deliveredAt"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.createdBy"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.createdAt"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.updatedBy"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.updatedAt"
-          },
-          {
-            $ref: "#/parameters/preferReturn"
-          }
-        ],
-        responses: {
-          "204": {
-            description: "No Content"
-          }
-        },
-        tags: ["knowledgeSourceOutbox"]
-      },
-      patch: {
-        parameters: [
-          {
-            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.id"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.companyId"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.source"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.entityType"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.entityId"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.sourceVersion"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.eventType"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.payload"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.availableAt"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.claimedAt"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.leaseOwner"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.leaseExpiresAt"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.attempts"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.deliveredAt"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.createdBy"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.createdAt"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.updatedBy"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeSourceOutbox.updatedAt"
-          },
-          {
-            $ref: "#/parameters/body.knowledgeSourceOutbox"
-          },
-          {
-            $ref: "#/parameters/preferReturn"
-          }
-        ],
-        responses: {
-          "204": {
-            description: "No Content"
-          }
-        },
-        tags: ["knowledgeSourceOutbox"]
       }
     },
     "/dimension": {
@@ -29166,6 +28743,177 @@ export default {
         tags: ["demandActual"]
       }
     },
+    "/portalCommandReceipt": {
+      get: {
+        parameters: [
+          {
+            $ref: "#/parameters/rowFilter.portalCommandReceipt.id"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalCommandReceipt.companyId"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalCommandReceipt.actorId"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalCommandReceipt.action"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalCommandReceipt.idempotencyKey"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalCommandReceipt.payloadHash"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalCommandReceipt.purchaseOrderId"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalCommandReceipt.createdAt"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalCommandReceipt.version"
+          },
+          {
+            $ref: "#/parameters/select"
+          },
+          {
+            $ref: "#/parameters/order"
+          },
+          {
+            $ref: "#/parameters/range"
+          },
+          {
+            $ref: "#/parameters/rangeUnit"
+          },
+          {
+            $ref: "#/parameters/offset"
+          },
+          {
+            $ref: "#/parameters/limit"
+          },
+          {
+            $ref: "#/parameters/preferCount"
+          }
+        ],
+        responses: {
+          "200": {
+            description: "OK",
+            schema: {
+              items: {
+                $ref: "#/definitions/portalCommandReceipt"
+              },
+              type: "array"
+            }
+          },
+          "206": {
+            description: "Partial Content"
+          }
+        },
+        tags: ["portalCommandReceipt"]
+      },
+      post: {
+        parameters: [
+          {
+            $ref: "#/parameters/body.portalCommandReceipt"
+          },
+          {
+            $ref: "#/parameters/select"
+          },
+          {
+            $ref: "#/parameters/preferPost"
+          }
+        ],
+        responses: {
+          "201": {
+            description: "Created"
+          }
+        },
+        tags: ["portalCommandReceipt"]
+      },
+      delete: {
+        parameters: [
+          {
+            $ref: "#/parameters/rowFilter.portalCommandReceipt.id"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalCommandReceipt.companyId"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalCommandReceipt.actorId"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalCommandReceipt.action"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalCommandReceipt.idempotencyKey"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalCommandReceipt.payloadHash"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalCommandReceipt.purchaseOrderId"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalCommandReceipt.createdAt"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalCommandReceipt.version"
+          },
+          {
+            $ref: "#/parameters/preferReturn"
+          }
+        ],
+        responses: {
+          "204": {
+            description: "No Content"
+          }
+        },
+        tags: ["portalCommandReceipt"]
+      },
+      patch: {
+        parameters: [
+          {
+            $ref: "#/parameters/rowFilter.portalCommandReceipt.id"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalCommandReceipt.companyId"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalCommandReceipt.actorId"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalCommandReceipt.action"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalCommandReceipt.idempotencyKey"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalCommandReceipt.payloadHash"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalCommandReceipt.purchaseOrderId"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalCommandReceipt.createdAt"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalCommandReceipt.version"
+          },
+          {
+            $ref: "#/parameters/body.portalCommandReceipt"
+          },
+          {
+            $ref: "#/parameters/preferReturn"
+          }
+        ],
+        responses: {
+          "204": {
+            description: "No Content"
+          }
+        },
+        tags: ["portalCommandReceipt"]
+      }
+    },
     "/qualityDocumentStep": {
       get: {
         parameters: [
@@ -37338,276 +37086,6 @@ export default {
         tags: ["assemblyInstruction"]
       }
     },
-    "/knowledgeProcurementSchedule": {
-      get: {
-        parameters: [
-          {
-            $ref: "#/parameters/rowFilter.knowledgeProcurementSchedule.id"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeProcurementSchedule.companyId"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeProcurementSchedule.companyGroupId"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeProcurementSchedule.actorId"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeProcurementSchedule.action"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeProcurementSchedule.version"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeProcurementSchedule.payload"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeProcurementSchedule.payloadHash"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeProcurementSchedule.idempotencyKey"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeProcurementSchedule.executeAt"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeProcurementSchedule.claimedAt"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeProcurementSchedule.status"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeProcurementSchedule.revocationCheckedAt"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeProcurementSchedule.revocationVersion"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeProcurementSchedule.purchaseOrderId"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeProcurementSchedule.failureCode"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeProcurementSchedule.createdBy"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeProcurementSchedule.createdAt"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeProcurementSchedule.updatedBy"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeProcurementSchedule.updatedAt"
-          },
-          {
-            $ref: "#/parameters/select"
-          },
-          {
-            $ref: "#/parameters/order"
-          },
-          {
-            $ref: "#/parameters/range"
-          },
-          {
-            $ref: "#/parameters/rangeUnit"
-          },
-          {
-            $ref: "#/parameters/offset"
-          },
-          {
-            $ref: "#/parameters/limit"
-          },
-          {
-            $ref: "#/parameters/preferCount"
-          }
-        ],
-        responses: {
-          "200": {
-            description: "OK",
-            schema: {
-              items: {
-                $ref: "#/definitions/knowledgeProcurementSchedule"
-              },
-              type: "array"
-            }
-          },
-          "206": {
-            description: "Partial Content"
-          }
-        },
-        tags: ["knowledgeProcurementSchedule"]
-      },
-      post: {
-        parameters: [
-          {
-            $ref: "#/parameters/body.knowledgeProcurementSchedule"
-          },
-          {
-            $ref: "#/parameters/select"
-          },
-          {
-            $ref: "#/parameters/preferPost"
-          }
-        ],
-        responses: {
-          "201": {
-            description: "Created"
-          }
-        },
-        tags: ["knowledgeProcurementSchedule"]
-      },
-      delete: {
-        parameters: [
-          {
-            $ref: "#/parameters/rowFilter.knowledgeProcurementSchedule.id"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeProcurementSchedule.companyId"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeProcurementSchedule.companyGroupId"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeProcurementSchedule.actorId"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeProcurementSchedule.action"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeProcurementSchedule.version"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeProcurementSchedule.payload"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeProcurementSchedule.payloadHash"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeProcurementSchedule.idempotencyKey"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeProcurementSchedule.executeAt"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeProcurementSchedule.claimedAt"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeProcurementSchedule.status"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeProcurementSchedule.revocationCheckedAt"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeProcurementSchedule.revocationVersion"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeProcurementSchedule.purchaseOrderId"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeProcurementSchedule.failureCode"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeProcurementSchedule.createdBy"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeProcurementSchedule.createdAt"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeProcurementSchedule.updatedBy"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeProcurementSchedule.updatedAt"
-          },
-          {
-            $ref: "#/parameters/preferReturn"
-          }
-        ],
-        responses: {
-          "204": {
-            description: "No Content"
-          }
-        },
-        tags: ["knowledgeProcurementSchedule"]
-      },
-      patch: {
-        parameters: [
-          {
-            $ref: "#/parameters/rowFilter.knowledgeProcurementSchedule.id"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeProcurementSchedule.companyId"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeProcurementSchedule.companyGroupId"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeProcurementSchedule.actorId"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeProcurementSchedule.action"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeProcurementSchedule.version"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeProcurementSchedule.payload"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeProcurementSchedule.payloadHash"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeProcurementSchedule.idempotencyKey"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeProcurementSchedule.executeAt"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeProcurementSchedule.claimedAt"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeProcurementSchedule.status"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeProcurementSchedule.revocationCheckedAt"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeProcurementSchedule.revocationVersion"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeProcurementSchedule.purchaseOrderId"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeProcurementSchedule.failureCode"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeProcurementSchedule.createdBy"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeProcurementSchedule.createdAt"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeProcurementSchedule.updatedBy"
-          },
-          {
-            $ref: "#/parameters/rowFilter.knowledgeProcurementSchedule.updatedAt"
-          },
-          {
-            $ref: "#/parameters/body.knowledgeProcurementSchedule"
-          },
-          {
-            $ref: "#/parameters/preferReturn"
-          }
-        ],
-        responses: {
-          "204": {
-            description: "No Content"
-          }
-        },
-        tags: ["knowledgeProcurementSchedule"]
-      }
-    },
     "/workflowStepRun": {
       get: {
         parameters: [
@@ -45283,6 +44761,258 @@ export default {
           }
         },
         tags: ["searchIndexRegistry"]
+      }
+    },
+    "/portalSourceOutbox": {
+      get: {
+        parameters: [
+          {
+            $ref: "#/parameters/rowFilter.portalSourceOutbox.id"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalSourceOutbox.companyId"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalSourceOutbox.source"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalSourceOutbox.entityType"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalSourceOutbox.entityId"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalSourceOutbox.sourceVersion"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalSourceOutbox.eventType"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalSourceOutbox.payload"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalSourceOutbox.availableAt"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalSourceOutbox.claimedAt"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalSourceOutbox.leaseOwner"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalSourceOutbox.leaseExpiresAt"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalSourceOutbox.attempts"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalSourceOutbox.deliveredAt"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalSourceOutbox.createdBy"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalSourceOutbox.createdAt"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalSourceOutbox.updatedBy"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalSourceOutbox.updatedAt"
+          },
+          {
+            $ref: "#/parameters/select"
+          },
+          {
+            $ref: "#/parameters/order"
+          },
+          {
+            $ref: "#/parameters/range"
+          },
+          {
+            $ref: "#/parameters/rangeUnit"
+          },
+          {
+            $ref: "#/parameters/offset"
+          },
+          {
+            $ref: "#/parameters/limit"
+          },
+          {
+            $ref: "#/parameters/preferCount"
+          }
+        ],
+        responses: {
+          "200": {
+            description: "OK",
+            schema: {
+              items: {
+                $ref: "#/definitions/portalSourceOutbox"
+              },
+              type: "array"
+            }
+          },
+          "206": {
+            description: "Partial Content"
+          }
+        },
+        tags: ["portalSourceOutbox"]
+      },
+      post: {
+        parameters: [
+          {
+            $ref: "#/parameters/body.portalSourceOutbox"
+          },
+          {
+            $ref: "#/parameters/select"
+          },
+          {
+            $ref: "#/parameters/preferPost"
+          }
+        ],
+        responses: {
+          "201": {
+            description: "Created"
+          }
+        },
+        tags: ["portalSourceOutbox"]
+      },
+      delete: {
+        parameters: [
+          {
+            $ref: "#/parameters/rowFilter.portalSourceOutbox.id"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalSourceOutbox.companyId"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalSourceOutbox.source"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalSourceOutbox.entityType"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalSourceOutbox.entityId"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalSourceOutbox.sourceVersion"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalSourceOutbox.eventType"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalSourceOutbox.payload"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalSourceOutbox.availableAt"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalSourceOutbox.claimedAt"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalSourceOutbox.leaseOwner"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalSourceOutbox.leaseExpiresAt"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalSourceOutbox.attempts"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalSourceOutbox.deliveredAt"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalSourceOutbox.createdBy"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalSourceOutbox.createdAt"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalSourceOutbox.updatedBy"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalSourceOutbox.updatedAt"
+          },
+          {
+            $ref: "#/parameters/preferReturn"
+          }
+        ],
+        responses: {
+          "204": {
+            description: "No Content"
+          }
+        },
+        tags: ["portalSourceOutbox"]
+      },
+      patch: {
+        parameters: [
+          {
+            $ref: "#/parameters/rowFilter.portalSourceOutbox.id"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalSourceOutbox.companyId"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalSourceOutbox.source"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalSourceOutbox.entityType"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalSourceOutbox.entityId"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalSourceOutbox.sourceVersion"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalSourceOutbox.eventType"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalSourceOutbox.payload"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalSourceOutbox.availableAt"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalSourceOutbox.claimedAt"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalSourceOutbox.leaseOwner"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalSourceOutbox.leaseExpiresAt"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalSourceOutbox.attempts"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalSourceOutbox.deliveredAt"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalSourceOutbox.createdBy"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalSourceOutbox.createdAt"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalSourceOutbox.updatedBy"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalSourceOutbox.updatedAt"
+          },
+          {
+            $ref: "#/parameters/body.portalSourceOutbox"
+          },
+          {
+            $ref: "#/parameters/preferReturn"
+          }
+        ],
+        responses: {
+          "204": {
+            description: "No Content"
+          }
+        },
+        tags: ["portalSourceOutbox"]
       }
     },
     "/suppliers": {
@@ -58336,6 +58066,276 @@ export default {
           }
         },
         tags: ["purchaseInvoiceStatusHistory"]
+      }
+    },
+    "/portalProcurementSchedule": {
+      get: {
+        parameters: [
+          {
+            $ref: "#/parameters/rowFilter.portalProcurementSchedule.id"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalProcurementSchedule.companyId"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalProcurementSchedule.companyGroupId"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalProcurementSchedule.actorId"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalProcurementSchedule.action"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalProcurementSchedule.version"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalProcurementSchedule.payload"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalProcurementSchedule.payloadHash"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalProcurementSchedule.idempotencyKey"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalProcurementSchedule.executeAt"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalProcurementSchedule.claimedAt"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalProcurementSchedule.status"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalProcurementSchedule.revocationCheckedAt"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalProcurementSchedule.revocationVersion"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalProcurementSchedule.purchaseOrderId"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalProcurementSchedule.failureCode"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalProcurementSchedule.createdBy"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalProcurementSchedule.createdAt"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalProcurementSchedule.updatedBy"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalProcurementSchedule.updatedAt"
+          },
+          {
+            $ref: "#/parameters/select"
+          },
+          {
+            $ref: "#/parameters/order"
+          },
+          {
+            $ref: "#/parameters/range"
+          },
+          {
+            $ref: "#/parameters/rangeUnit"
+          },
+          {
+            $ref: "#/parameters/offset"
+          },
+          {
+            $ref: "#/parameters/limit"
+          },
+          {
+            $ref: "#/parameters/preferCount"
+          }
+        ],
+        responses: {
+          "200": {
+            description: "OK",
+            schema: {
+              items: {
+                $ref: "#/definitions/portalProcurementSchedule"
+              },
+              type: "array"
+            }
+          },
+          "206": {
+            description: "Partial Content"
+          }
+        },
+        tags: ["portalProcurementSchedule"]
+      },
+      post: {
+        parameters: [
+          {
+            $ref: "#/parameters/body.portalProcurementSchedule"
+          },
+          {
+            $ref: "#/parameters/select"
+          },
+          {
+            $ref: "#/parameters/preferPost"
+          }
+        ],
+        responses: {
+          "201": {
+            description: "Created"
+          }
+        },
+        tags: ["portalProcurementSchedule"]
+      },
+      delete: {
+        parameters: [
+          {
+            $ref: "#/parameters/rowFilter.portalProcurementSchedule.id"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalProcurementSchedule.companyId"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalProcurementSchedule.companyGroupId"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalProcurementSchedule.actorId"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalProcurementSchedule.action"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalProcurementSchedule.version"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalProcurementSchedule.payload"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalProcurementSchedule.payloadHash"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalProcurementSchedule.idempotencyKey"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalProcurementSchedule.executeAt"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalProcurementSchedule.claimedAt"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalProcurementSchedule.status"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalProcurementSchedule.revocationCheckedAt"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalProcurementSchedule.revocationVersion"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalProcurementSchedule.purchaseOrderId"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalProcurementSchedule.failureCode"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalProcurementSchedule.createdBy"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalProcurementSchedule.createdAt"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalProcurementSchedule.updatedBy"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalProcurementSchedule.updatedAt"
+          },
+          {
+            $ref: "#/parameters/preferReturn"
+          }
+        ],
+        responses: {
+          "204": {
+            description: "No Content"
+          }
+        },
+        tags: ["portalProcurementSchedule"]
+      },
+      patch: {
+        parameters: [
+          {
+            $ref: "#/parameters/rowFilter.portalProcurementSchedule.id"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalProcurementSchedule.companyId"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalProcurementSchedule.companyGroupId"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalProcurementSchedule.actorId"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalProcurementSchedule.action"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalProcurementSchedule.version"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalProcurementSchedule.payload"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalProcurementSchedule.payloadHash"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalProcurementSchedule.idempotencyKey"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalProcurementSchedule.executeAt"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalProcurementSchedule.claimedAt"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalProcurementSchedule.status"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalProcurementSchedule.revocationCheckedAt"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalProcurementSchedule.revocationVersion"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalProcurementSchedule.purchaseOrderId"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalProcurementSchedule.failureCode"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalProcurementSchedule.createdBy"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalProcurementSchedule.createdAt"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalProcurementSchedule.updatedBy"
+          },
+          {
+            $ref: "#/parameters/rowFilter.portalProcurementSchedule.updatedAt"
+          },
+          {
+            $ref: "#/parameters/body.portalProcurementSchedule"
+          },
+          {
+            $ref: "#/parameters/preferReturn"
+          }
+        ],
+        responses: {
+          "204": {
+            description: "No Content"
+          }
+        },
+        tags: ["portalProcurementSchedule"]
       }
     },
     "/accountingPeriod": {
@@ -107081,68 +107081,6 @@ export default {
       },
       type: "object"
     },
-    knowledgeCommandReceipt: {
-      required: [
-        "id",
-        "companyId",
-        "actorId",
-        "action",
-        "idempotencyKey",
-        "payloadHash",
-        "purchaseOrderId",
-        "createdAt",
-        "version"
-      ],
-      properties: {
-        id: {
-          default: "public.id('kcmd'::text)",
-          description: "Note:\nThis is a Primary Key.<pk/>",
-          format: "text",
-          type: "string"
-        },
-        companyId: {
-          description:
-            "Note:\nThis is a Primary Key.<pk/>\nThis is a Foreign Key to `company.id`.<fk table='company' column='id'/>",
-          format: "text",
-          type: "string"
-        },
-        actorId: {
-          description:
-            "Note:\nThis is a Foreign Key to `user.id`.<fk table='user' column='id'/>",
-          format: "text",
-          type: "string"
-        },
-        action: {
-          format: "text",
-          type: "string"
-        },
-        idempotencyKey: {
-          format: "text",
-          type: "string"
-        },
-        payloadHash: {
-          format: "text",
-          type: "string"
-        },
-        purchaseOrderId: {
-          description:
-            "Note:\nThis is a Foreign Key to `purchaseOrder.id`.<fk table='purchaseOrder' column='id'/>",
-          format: "text",
-          type: "string"
-        },
-        createdAt: {
-          default: "now()",
-          format: "timestamp with time zone",
-          type: "string"
-        },
-        version: {
-          default: 1,
-          format: "bigint",
-          type: "integer"
-        }
-      },
-      type: "object"
-    },
     accountingSyncOperation: {
       required: [
         "id",
@@ -110457,108 +110395,6 @@ export default {
         durationMs: {
           format: "integer",
           type: "integer"
-        }
-      },
-      type: "object"
-    },
-    knowledgeSourceOutbox: {
-      required: [
-        "id",
-        "companyId",
-        "source",
-        "entityType",
-        "entityId",
-        "sourceVersion",
-        "eventType",
-        "payload",
-        "availableAt",
-        "attempts",
-        "createdBy",
-        "createdAt"
-      ],
-      properties: {
-        id: {
-          default: "public.id('kso'::text)",
-          description: "Note:\nThis is a Primary Key.<pk/>",
-          format: "text",
-          type: "string"
-        },
-        companyId: {
-          description:
-            "Note:\nThis is a Primary Key.<pk/>\nThis is a Foreign Key to `company.id`.<fk table='company' column='id'/>",
-          format: "text",
-          type: "string"
-        },
-        source: {
-          default: "carbon",
-          format: "text",
-          type: "string"
-        },
-        entityType: {
-          format: "text",
-          type: "string"
-        },
-        entityId: {
-          format: "text",
-          type: "string"
-        },
-        sourceVersion: {
-          format: "text",
-          type: "string"
-        },
-        eventType: {
-          format: "text",
-          type: "string"
-        },
-        payload: {
-          format: "jsonb"
-        },
-        availableAt: {
-          default: "now()",
-          format: "timestamp with time zone",
-          type: "string"
-        },
-        claimedAt: {
-          format: "timestamp with time zone",
-          type: "string"
-        },
-        leaseOwner: {
-          format: "text",
-          type: "string"
-        },
-        leaseExpiresAt: {
-          format: "timestamp with time zone",
-          type: "string"
-        },
-        attempts: {
-          default: 0,
-          format: "integer",
-          type: "integer"
-        },
-        deliveredAt: {
-          format: "timestamp with time zone",
-          type: "string"
-        },
-        createdBy: {
-          description:
-            "Note:\nThis is a Foreign Key to `user.id`.<fk table='user' column='id'/>",
-          format: "text",
-          type: "string"
-        },
-        createdAt: {
-          default: "now()",
-          format: "timestamp with time zone",
-          type: "string"
-        },
-        updatedBy: {
-          description:
-            "Note:\nThis is a Foreign Key to `user.id`.<fk table='user' column='id'/>",
-          format: "text",
-          type: "string"
-        },
-        updatedAt: {
-          format: "timestamp with time zone",
-          type: "string"
         }
       },
       type: "object"
@@ -120500,6 +120336,68 @@ export default {
       },
       type: "object"
     },
+    portalCommandReceipt: {
+      required: [
+        "id",
+        "companyId",
+        "actorId",
+        "action",
+        "idempotencyKey",
+        "payloadHash",
+        "purchaseOrderId",
+        "createdAt",
+        "version"
+      ],
+      properties: {
+        id: {
+          default: "public.id('kcmd'::text)",
+          description: "Note:\nThis is a Primary Key.<pk/>",
+          format: "text",
+          type: "string"
+        },
+        companyId: {
+          description:
+            "Note:\nThis is a Primary Key.<pk/>\nThis is a Foreign Key to `company.id`.<fk table='company' column='id'/>",
+          format: "text",
+          type: "string"
+        },
+        actorId: {
+          description:
+            "Note:\nThis is a Foreign Key to `user.id`.<fk table='user' column='id'/>",
+          format: "text",
+          type: "string"
+        },
+        action: {
+          format: "text",
+          type: "string"
+        },
+        idempotencyKey: {
+          format: "text",
+          type: "string"
+        },
+        payloadHash: {
+          format: "text",
+          type: "string"
+        },
+        purchaseOrderId: {
+          description:
+            "Note:\nThis is a Foreign Key to `purchaseOrder.id`.<fk table='purchaseOrder' column='id'/>",
+          format: "text",
+          type: "string"
+        },
+        createdAt: {
+          default: "now()",
+          format: "timestamp with time zone",
+          type: "string"
+        },
+        version: {
+          default: 1,
+          format: "bigint",
+          type: "integer"
+        }
+      },
+      type: "object"
+    },
     qualityDocumentStep: {
       required: [
         "id",
@@ -124338,119 +124236,6 @@ export default {
       },
       type: "object"
     },
-    knowledgeProcurementSchedule: {
-      required: [
-        "id",
-        "companyId",
-        "companyGroupId",
-        "actorId",
-        "action",
-        "version",
-        "payload",
-        "payloadHash",
-        "idempotencyKey",
-        "executeAt",
-        "status",
-        "createdBy",
-        "createdAt"
-      ],
-      properties: {
-        id: {
-          default: "public.id('kps'::text)",
-          description: "Note:\nThis is a Primary Key.<pk/>",
-          format: "text",
-          type: "string"
-        },
-        companyId: {
-          description:
-            "Note:\nThis is a Primary Key.<pk/>\nThis is a Foreign Key to `company.id`.<fk table='company' column='id'/>",
-          format: "text",
-          type: "string"
-        },
-        companyGroupId: {
-          format: "text",
-          type: "string"
-        },
-        actorId: {
-          description:
-            "Note:\nThis is a Foreign Key to `user.id`.<fk table='user' column='id'/>",
-          format: "text",
-          type: "string"
-        },
-        action: {
-          format: "text",
-          type: "string"
-        },
-        version: {
-          format: "bigint",
-          type: "integer"
-        },
-        payload: {
-          format: "jsonb"
-        },
-        payloadHash: {
-          format: "text",
-          type: "string"
-        },
-        idempotencyKey: {
-          format: "text",
-          type: "string"
-        },
-        executeAt: {
-          format: "timestamp with time zone",
-          type: "string"
-        },
-        claimedAt: {
-          format: "timestamp with time zone",
-          type: "string"
-        },
-        status: {
-          default: "scheduled",
-          format: "text",
-          type: "string"
-        },
-        revocationCheckedAt: {
-          format: "timestamp with time zone",
-          type: "string"
-        },
-        revocationVersion: {
-          format: "text",
-          type: "string"
-        },
-        purchaseOrderId: {
-          description:
-            "Note:\nThis is a Foreign Key to `purchaseOrder.id`.<fk table='purchaseOrder' column='id'/>",
-          format: "text",
-          type: "string"
-        },
-        failureCode: {
-          format: "text",
-          type: "string"
-        },
-        createdBy: {
-          description:
-            "Note:\nThis is a Foreign Key to `user.id`.<fk table='user' column='id'/>",
-          format: "text",
-          type: "string"
-        },
-        createdAt: {
-          default: "now()",
-          format: "timestamp with time zone",
-          type: "string"
-        },
-        updatedBy: {
-          description:
-            "Note:\nThis is a Foreign Key to `user.id`.<fk table='user' column='id'/>",
-          format: "text",
-          type: "string"
-        },
-        updatedAt: {
-          format: "timestamp with time zone",
-          type: "string"
-        }
-      },
-      type: "object"
-    },
     workflowStepRun: {
       required: [
         "id",
@@ -128118,6 +127903,108 @@ export default {
           type: "string"
         },
         lastRebuiltAt: {
+          format: "timestamp with time zone",
+          type: "string"
+        }
+      },
+      type: "object"
+    },
+    portalSourceOutbox: {
+      required: [
+        "id",
+        "companyId",
+        "source",
+        "entityType",
+        "entityId",
+        "sourceVersion",
+        "eventType",
+        "payload",
+        "availableAt",
+        "attempts",
+        "createdBy",
+        "createdAt"
+      ],
+      properties: {
+        id: {
+          default: "public.id('kso'::text)",
+          description: "Note:\nThis is a Primary Key.<pk/>",
+          format: "text",
+          type: "string"
+        },
+        companyId: {
+          description:
+            "Note:\nThis is a Primary Key.<pk/>\nThis is a Foreign Key to `company.id`.<fk table='company' column='id'/>",
+          format: "text",
+          type: "string"
+        },
+        source: {
+          default: "carbon",
+          format: "text",
+          type: "string"
+        },
+        entityType: {
+          format: "text",
+          type: "string"
+        },
+        entityId: {
+          format: "text",
+          type: "string"
+        },
+        sourceVersion: {
+          format: "text",
+          type: "string"
+        },
+        eventType: {
+          format: "text",
+          type: "string"
+        },
+        payload: {
+          format: "jsonb"
+        },
+        availableAt: {
+          default: "now()",
+          format: "timestamp with time zone",
+          type: "string"
+        },
+        claimedAt: {
+          format: "timestamp with time zone",
+          type: "string"
+        },
+        leaseOwner: {
+          format: "text",
+          type: "string"
+        },
+        leaseExpiresAt: {
+          format: "timestamp with time zone",
+          type: "string"
+        },
+        attempts: {
+          default: 0,
+          format: "integer",
+          type: "integer"
+        },
+        deliveredAt: {
+          format: "timestamp with time zone",
+          type: "string"
+        },
+        createdBy: {
+          description:
+            "Note:\nThis is a Foreign Key to `user.id`.<fk table='user' column='id'/>",
+          format: "text",
+          type: "string"
+        },
+        createdAt: {
+          default: "now()",
+          format: "timestamp with time zone",
+          type: "string"
+        },
+        updatedBy: {
+          description:
+            "Note:\nThis is a Foreign Key to `user.id`.<fk table='user' column='id'/>",
+          format: "text",
+          type: "string"
+        },
+        updatedAt: {
           format: "timestamp with time zone",
           type: "string"
         }
@@ -133906,6 +133793,119 @@ export default {
         },
         companyId: {
           format: "text",
+          type: "string"
+        }
+      },
+      type: "object"
+    },
+    portalProcurementSchedule: {
+      required: [
+        "id",
+        "companyId",
+        "companyGroupId",
+        "actorId",
+        "action",
+        "version",
+        "payload",
+        "payloadHash",
+        "idempotencyKey",
+        "executeAt",
+        "status",
+        "createdBy",
+        "createdAt"
+      ],
+      properties: {
+        id: {
+          default: "public.id('kps'::text)",
+          description: "Note:\nThis is a Primary Key.<pk/>",
+          format: "text",
+          type: "string"
+        },
+        companyId: {
+          description:
+            "Note:\nThis is a Primary Key.<pk/>\nThis is a Foreign Key to `company.id`.<fk table='company' column='id'/>",
+          format: "text",
+          type: "string"
+        },
+        companyGroupId: {
+          format: "text",
+          type: "string"
+        },
+        actorId: {
+          description:
+            "Note:\nThis is a Foreign Key to `user.id`.<fk table='user' column='id'/>",
+          format: "text",
+          type: "string"
+        },
+        action: {
+          format: "text",
+          type: "string"
+        },
+        version: {
+          format: "bigint",
+          type: "integer"
+        },
+        payload: {
+          format: "jsonb"
+        },
+        payloadHash: {
+          format: "text",
+          type: "string"
+        },
+        idempotencyKey: {
+          format: "text",
+          type: "string"
+        },
+        executeAt: {
+          format: "timestamp with time zone",
+          type: "string"
+        },
+        claimedAt: {
+          format: "timestamp with time zone",
+          type: "string"
+        },
+        status: {
+          default: "scheduled",
+          format: "text",
+          type: "string"
+        },
+        revocationCheckedAt: {
+          format: "timestamp with time zone",
+          type: "string"
+        },
+        revocationVersion: {
+          format: "text",
+          type: "string"
+        },
+        purchaseOrderId: {
+          description:
+            "Note:\nThis is a Foreign Key to `purchaseOrder.id`.<fk table='purchaseOrder' column='id'/>",
+          format: "text",
+          type: "string"
+        },
+        failureCode: {
+          format: "text",
+          type: "string"
+        },
+        createdBy: {
+          description:
+            "Note:\nThis is a Foreign Key to `user.id`.<fk table='user' column='id'/>",
+          format: "text",
+          type: "string"
+        },
+        createdAt: {
+          default: "now()",
+          format: "timestamp with time zone",
+          type: "string"
+        },
+        updatedBy: {
+          description:
+            "Note:\nThis is a Foreign Key to `user.id`.<fk table='user' column='id'/>",
+          format: "text",
+          type: "string"
+        },
+        updatedAt: {
+          format: "timestamp with time zone",
           type: "string"
         }
       },
@@ -151970,69 +151970,6 @@ export default {
       in: "query",
       type: "string"
     },
-    "body.knowledgeCommandReceipt": {
-      name: "knowledgeCommandReceipt",
-      description: "knowledgeCommandReceipt",
-      required: false,
-      in: "body",
-      schema: {
-        $ref: "#/definitions/knowledgeCommandReceipt"
-      }
-    },
-    "rowFilter.knowledgeCommandReceipt.id": {
-      name: "id",
-      required: false,
-      in: "query",
-      type: "string"
-    },
-    "rowFilter.knowledgeCommandReceipt.companyId": {
-      name: "companyId",
-      required: false,
-      in: "query",
-      type: "string"
-    },
-    "rowFilter.knowledgeCommandReceipt.actorId": {
-      name: "actorId",
-      required: false,
-      in: "query",
-      type: "string"
-    },
-    "rowFilter.knowledgeCommandReceipt.action": {
-      name: "action",
-      required: false,
-      in: "query",
-      type: "string"
-    },
-    "rowFilter.knowledgeCommandReceipt.idempotencyKey": {
-      name: "idempotencyKey",
-      required: false,
-      in: "query",
-      type: "string"
-    },
-    "rowFilter.knowledgeCommandReceipt.payloadHash": {
-      name: "payloadHash",
-      required: false,
-      in: "query",
-      type: "string"
-    },
-    "rowFilter.knowledgeCommandReceipt.purchaseOrderId": {
-      name: "purchaseOrderId",
-      required: false,
-      in: "query",
-      type: "string"
-    },
-    "rowFilter.knowledgeCommandReceipt.createdAt": {
-      name: "createdAt",
-      required: false,
-      in: "query",
-      type: "string"
-    },
-    "rowFilter.knowledgeCommandReceipt.version": {
-      name: "version",
-      required: false,
-      in: "query",
-      type: "string"
-    },
     "body.accountingSyncOperation": {
       name: "accountingSyncOperation",
       description: "accountingSyncOperation",
@@ -155812,123 +155749,6 @@ export default {
     },
     "rowFilter.workflowLastRun.durationMs": {
       name: "durationMs",
-      required: false,
-      in: "query",
-      type: "string"
-    },
-    "body.knowledgeSourceOutbox": {
-      name: "knowledgeSourceOutbox",
-      description: "knowledgeSourceOutbox",
-      required: false,
-      in: "body",
-      schema: {
-        $ref: "#/definitions/knowledgeSourceOutbox"
-      }
-    },
-    "rowFilter.knowledgeSourceOutbox.id": {
-      name: "id",
-      required: false,
-      in: "query",
-      type: "string"
-    },
-    "rowFilter.knowledgeSourceOutbox.companyId": {
-      name: "companyId",
-      required: false,
-      in: "query",
-      type: "string"
-    },
-    "rowFilter.knowledgeSourceOutbox.source": {
-      name: "source",
-      required: false,
-      in: "query",
-      type: "string"
-    },
-    "rowFilter.knowledgeSourceOutbox.entityType": {
-      name: "entityType",
-      required: false,
-      in: "query",
-      type: "string"
-    },
-    "rowFilter.knowledgeSourceOutbox.entityId": {
-      name: "entityId",
-      required: false,
-      in: "query",
-      type: "string"
-    },
-    "rowFilter.knowledgeSourceOutbox.sourceVersion": {
-      name: "sourceVersion",
-      required: false,
-      in: "query",
-      type: "string"
-    },
-    "rowFilter.knowledgeSourceOutbox.eventType": {
-      name: "eventType",
-      required: false,
-      in: "query",
-      type: "string"
-    },
-    "rowFilter.knowledgeSourceOutbox.payload": {
-      name: "payload",
-      required: false,
-      in: "query",
-      type: "string"
-    },
-    "rowFilter.knowledgeSourceOutbox.availableAt": {
-      name: "availableAt",
-      required: false,
-      in: "query",
-      type: "string"
-    },
-    "rowFilter.knowledgeSourceOutbox.claimedAt": {
-      name: "claimedAt",
-      required: false,
-      in: "query",
-      type: "string"
-    },
-    "rowFilter.knowledgeSourceOutbox.leaseOwner": {
-      name: "leaseOwner",
-      required: false,
-      in: "query",
-      type: "string"
-    },
-    "rowFilter.knowledgeSourceOutbox.leaseExpiresAt": {
-      name: "leaseExpiresAt",
-      required: false,
-      in: "query",
-      type: "string"
-    },
-    "rowFilter.knowledgeSourceOutbox.attempts": {
-      name: "attempts",
-      required: false,
-      in: "query",
-      type: "string"
-    },
-    "rowFilter.knowledgeSourceOutbox.deliveredAt": {
-      name: "deliveredAt",
-      required: false,
-      in: "query",
-      type: "string"
-    },
-    "rowFilter.knowledgeSourceOutbox.createdBy": {
-      name: "createdBy",
-      required: false,
-      in: "query",
-      type: "string"
-    },
-    "rowFilter.knowledgeSourceOutbox.createdAt": {
-      name: "createdAt",
-      required: false,
-      in: "query",
-      type: "string"
-    },
-    "rowFilter.knowledgeSourceOutbox.updatedBy": {
-      name: "updatedBy",
-      required: false,
-      in: "query",
-      type: "string"
-    },
-    "rowFilter.knowledgeSourceOutbox.updatedAt": {
-      name: "updatedAt",
       required: false,
       in: "query",
       type: "string"
@@ -167125,6 +166945,69 @@ export default {
       in: "query",
       type: "string"
     },
+    "body.portalCommandReceipt": {
+      name: "portalCommandReceipt",
+      description: "portalCommandReceipt",
+      required: false,
+      in: "body",
+      schema: {
+        $ref: "#/definitions/portalCommandReceipt"
+      }
+    },
+    "rowFilter.portalCommandReceipt.id": {
+      name: "id",
+      required: false,
+      in: "query",
+      type: "string"
+    },
+    "rowFilter.portalCommandReceipt.companyId": {
+      name: "companyId",
+      required: false,
+      in: "query",
+      type: "string"
+    },
+    "rowFilter.portalCommandReceipt.actorId": {
+      name: "actorId",
+      required: false,
+      in: "query",
+      type: "string"
+    },
+    "rowFilter.portalCommandReceipt.action": {
+      name: "action",
+      required: false,
+      in: "query",
+      type: "string"
+    },
+    "rowFilter.portalCommandReceipt.idempotencyKey": {
+      name: "idempotencyKey",
+      required: false,
+      in: "query",
+      type: "string"
+    },
+    "rowFilter.portalCommandReceipt.payloadHash": {
+      name: "payloadHash",
+      required: false,
+      in: "query",
+      type: "string"
+    },
+    "rowFilter.portalCommandReceipt.purchaseOrderId": {
+      name: "purchaseOrderId",
+      required: false,
+      in: "query",
+      type: "string"
+    },
+    "rowFilter.portalCommandReceipt.createdAt": {
+      name: "createdAt",
+      required: false,
+      in: "query",
+      type: "string"
+    },
+    "rowFilter.portalCommandReceipt.version": {
+      name: "version",
+      required: false,
+      in: "query",
+      type: "string"
+    },
     "body.qualityDocumentStep": {
       name: "qualityDocumentStep",
       description: "qualityDocumentStep",
@@ -171395,135 +171278,6 @@ export default {
       in: "query",
       type: "string"
     },
-    "body.knowledgeProcurementSchedule": {
-      name: "knowledgeProcurementSchedule",
-      description: "knowledgeProcurementSchedule",
-      required: false,
-      in: "body",
-      schema: {
-        $ref: "#/definitions/knowledgeProcurementSchedule"
-      }
-    },
-    "rowFilter.knowledgeProcurementSchedule.id": {
-      name: "id",
-      required: false,
-      in: "query",
-      type: "string"
-    },
-    "rowFilter.knowledgeProcurementSchedule.companyId": {
-      name: "companyId",
-      required: false,
-      in: "query",
-      type: "string"
-    },
-    "rowFilter.knowledgeProcurementSchedule.companyGroupId": {
-      name: "companyGroupId",
-      required: false,
-      in: "query",
-      type: "string"
-    },
-    "rowFilter.knowledgeProcurementSchedule.actorId": {
-      name: "actorId",
-      required: false,
-      in: "query",
-      type: "string"
-    },
-    "rowFilter.knowledgeProcurementSchedule.action": {
-      name: "action",
-      required: false,
-      in: "query",
-      type: "string"
-    },
-    "rowFilter.knowledgeProcurementSchedule.version": {
-      name: "version",
-      required: false,
-      in: "query",
-      type: "string"
-    },
-    "rowFilter.knowledgeProcurementSchedule.payload": {
-      name: "payload",
-      required: false,
-      in: "query",
-      type: "string"
-    },
-    "rowFilter.knowledgeProcurementSchedule.payloadHash": {
-      name: "payloadHash",
-      required: false,
-      in: "query",
-      type: "string"
-    },
-    "rowFilter.knowledgeProcurementSchedule.idempotencyKey": {
-      name: "idempotencyKey",
-      required: false,
-      in: "query",
-      type: "string"
-    },
-    "rowFilter.knowledgeProcurementSchedule.executeAt": {
-      name: "executeAt",
-      required: false,
-      in: "query",
-      type: "string"
-    },
-    "rowFilter.knowledgeProcurementSchedule.claimedAt": {
-      name: "claimedAt",
-      required: false,
-      in: "query",
-      type: "string"
-    },
-    "rowFilter.knowledgeProcurementSchedule.status": {
-      name: "status",
-      required: false,
-      in: "query",
-      type: "string"
-    },
-    "rowFilter.knowledgeProcurementSchedule.revocationCheckedAt": {
-      name: "revocationCheckedAt",
-      required: false,
-      in: "query",
-      type: "string"
-    },
-    "rowFilter.knowledgeProcurementSchedule.revocationVersion": {
-      name: "revocationVersion",
-      required: false,
-      in: "query",
-      type: "string"
-    },
-    "rowFilter.knowledgeProcurementSchedule.purchaseOrderId": {
-      name: "purchaseOrderId",
-      required: false,
-      in: "query",
-      type: "string"
-    },
-    "rowFilter.knowledgeProcurementSchedule.failureCode": {
-      name: "failureCode",
-      required: false,
-      in: "query",
-      type: "string"
-    },
-    "rowFilter.knowledgeProcurementSchedule.createdBy": {
-      name: "createdBy",
-      required: false,
-      in: "query",
-      type: "string"
-    },
-    "rowFilter.knowledgeProcurementSchedule.createdAt": {
-      name: "createdAt",
-      required: false,
-      in: "query",
-      type: "string"
-    },
-    "rowFilter.knowledgeProcurementSchedule.updatedBy": {
-      name: "updatedBy",
-      required: false,
-      in: "query",
-      type: "string"
-    },
-    "rowFilter.knowledgeProcurementSchedule.updatedAt": {
-      name: "updatedAt",
-      required: false,
-      in: "query",
-      type: "string"
-    },
     "body.workflowStepRun": {
       name: "workflowStepRun",
       description: "workflowStepRun",
@@ -175459,6 +175213,123 @@ export default {
     },
     "rowFilter.searchIndexRegistry.lastRebuiltAt": {
       name: "lastRebuiltAt",
+      required: false,
+      in: "query",
+      type: "string"
+    },
+    "body.portalSourceOutbox": {
+      name: "portalSourceOutbox",
+      description: "portalSourceOutbox",
+      required: false,
+      in: "body",
+      schema: {
+        $ref: "#/definitions/portalSourceOutbox"
+      }
+    },
+    "rowFilter.portalSourceOutbox.id": {
+      name: "id",
+      required: false,
+      in: "query",
+      type: "string"
+    },
+    "rowFilter.portalSourceOutbox.companyId": {
+      name: "companyId",
+      required: false,
+      in: "query",
+      type: "string"
+    },
+    "rowFilter.portalSourceOutbox.source": {
+      name: "source",
+      required: false,
+      in: "query",
+      type: "string"
+    },
+    "rowFilter.portalSourceOutbox.entityType": {
+      name: "entityType",
+      required: false,
+      in: "query",
+      type: "string"
+    },
+    "rowFilter.portalSourceOutbox.entityId": {
+      name: "entityId",
+      required: false,
+      in: "query",
+      type: "string"
+    },
+    "rowFilter.portalSourceOutbox.sourceVersion": {
+      name: "sourceVersion",
+      required: false,
+      in: "query",
+      type: "string"
+    },
+    "rowFilter.portalSourceOutbox.eventType": {
+      name: "eventType",
+      required: false,
+      in: "query",
+      type: "string"
+    },
+    "rowFilter.portalSourceOutbox.payload": {
+      name: "payload",
+      required: false,
+      in: "query",
+      type: "string"
+    },
+    "rowFilter.portalSourceOutbox.availableAt": {
+      name: "availableAt",
+      required: false,
+      in: "query",
+      type: "string"
+    },
+    "rowFilter.portalSourceOutbox.claimedAt": {
+      name: "claimedAt",
+      required: false,
+      in: "query",
+      type: "string"
+    },
+    "rowFilter.portalSourceOutbox.leaseOwner": {
+      name: "leaseOwner",
+      required: false,
+      in: "query",
+      type: "string"
+    },
+    "rowFilter.portalSourceOutbox.leaseExpiresAt": {
+      name: "leaseExpiresAt",
+      required: false,
+      in: "query",
+      type: "string"
+    },
+    "rowFilter.portalSourceOutbox.attempts": {
+      name: "attempts",
+      required: false,
+      in: "query",
+      type: "string"
+    },
+    "rowFilter.portalSourceOutbox.deliveredAt": {
+      name: "deliveredAt",
+      required: false,
+      in: "query",
+      type: "string"
+    },
+    "rowFilter.portalSourceOutbox.createdBy": {
+      name: "createdBy",
+      required: false,
+      in: "query",
+      type: "string"
+    },
+    "rowFilter.portalSourceOutbox.createdAt": {
+      name: "createdAt",
+      required: false,
+      in: "query",
+      type: "string"
+    },
+    "rowFilter.portalSourceOutbox.updatedBy": {
+      name: "updatedBy",
+      required: false,
+      in: "query",
+      type: "string"
+    },
+    "rowFilter.portalSourceOutbox.updatedAt": {
+      name: "updatedAt",
       required: false,
       in: "query",
       type: "string"
@@ -181977,6 +181848,135 @@ export default {
     },
     "rowFilter.purchaseInvoiceStatusHistory.companyId": {
       name: "companyId",
+      required: false,
+      in: "query",
+      type: "string"
+    },
+    "body.portalProcurementSchedule": {
+      name: "portalProcurementSchedule",
+      description: "portalProcurementSchedule",
+      required: false,
+      in: "body",
+      schema: {
+        $ref: "#/definitions/portalProcurementSchedule"
+      }
+    },
+    "rowFilter.portalProcurementSchedule.id": {
+      name: "id",
+      required: false,
+      in: "query",
+      type: "string"
+    },
+    "rowFilter.portalProcurementSchedule.companyId": {
+      name: "companyId",
+      required: false,
+      in: "query",
+      type: "string"
+    },
+    "rowFilter.portalProcurementSchedule.companyGroupId": {
+      name: "companyGroupId",
+      required: false,
+      in: "query",
+      type: "string"
+    },
+    "rowFilter.portalProcurementSchedule.actorId": {
+      name: "actorId",
+      required: false,
+      in: "query",
+      type: "string"
+    },
+    "rowFilter.portalProcurementSchedule.action": {
+      name: "action",
+      required: false,
+      in: "query",
+      type: "string"
+    },
+    "rowFilter.portalProcurementSchedule.version": {
+      name: "version",
+      required: false,
+      in: "query",
+      type: "string"
+    },
+    "rowFilter.portalProcurementSchedule.payload": {
+      name: "payload",
+      required: false,
+      in: "query",
+      type: "string"
+    },
+    "rowFilter.portalProcurementSchedule.payloadHash": {
+      name: "payloadHash",
+      required: false,
+      in: "query",
+      type: "string"
+    },
+    "rowFilter.portalProcurementSchedule.idempotencyKey": {
+      name: "idempotencyKey",
+      required: false,
+      in: "query",
+      type: "string"
+    },
+    "rowFilter.portalProcurementSchedule.executeAt": {
+      name: "executeAt",
+      required: false,
+      in: "query",
+      type: "string"
+    },
+    "rowFilter.portalProcurementSchedule.claimedAt": {
+      name: "claimedAt",
+      required: false,
+      in: "query",
+      type: "string"
+    },
+    "rowFilter.portalProcurementSchedule.status": {
+      name: "status",
+      required: false,
+      in: "query",
+      type: "string"
+    },
+    "rowFilter.portalProcurementSchedule.revocationCheckedAt": {
+      name: "revocationCheckedAt",
+      required: false,
+      in: "query",
+      type: "string"
+    },
+    "rowFilter.portalProcurementSchedule.revocationVersion": {
+      name: "revocationVersion",
+      required: false,
+      in: "query",
+      type: "string"
+    },
+    "rowFilter.portalProcurementSchedule.purchaseOrderId": {
+      name: "purchaseOrderId",
+      required: false,
+      in: "query",
+      type: "string"
+    },
+    "rowFilter.portalProcurementSchedule.failureCode": {
+      name: "failureCode",
+      required: false,
+      in: "query",
+      type: "string"
+    },
+    "rowFilter.portalProcurementSchedule.createdBy": {
+      name: "createdBy",
+      required: false,
+      in: "query",
+      type: "string"
+    },
+    "rowFilter.portalProcurementSchedule.createdAt": {
+      name: "createdAt",
+      required: false,
+      in: "query",
+      type: "string"
+    },
+    "rowFilter.portalProcurementSchedule.updatedBy": {
+      name: "updatedBy",
+      required: false,
+      in: "query",
+      type: "string"
+    },
+    "rowFilter.portalProcurementSchedule.updatedAt": {
+      name: "updatedAt",
       required: false,
       in: "query",
       type: "string"

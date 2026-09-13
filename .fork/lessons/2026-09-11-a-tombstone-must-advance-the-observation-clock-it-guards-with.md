@@ -1,7 +1,7 @@
 # A tombstone must advance the observation clock it guards with
 
-**Context:** The Carbon → knowledge projection (`persistCarbonChangePage`,
-`packages/knowledge/src/sources/carbon.server.ts`) guards every entity write
+**Context:** The Carbon → portal projection (`persistCarbonChangePage`,
+`packages/portal/src/sources/carbon.server.ts`) guards every entity write
 with `entity."observedAt" <= EXCLUDED."observedAt"` so an older observation of
 a row can never overwrite a newer one under at-least-once, out-of-order
 delivery. The first tombstone statement set `deletedAt` but left `observedAt`
@@ -22,6 +22,6 @@ that delivers `delete@T2` then `upsert@T1` and asserts the row stays deleted,
 then `upsert@T3` and asserts it comes back.
 
 **Applies to:** `persistCarbonChangePage` and `reconcileCarbonRange` in
-`packages/knowledge/src/sources/carbon.server.ts`; any future source
-projection into `knowledge.entity` or `knowledge.document` that dedupes by
+`packages/portal/src/sources/carbon.server.ts`; any future source
+projection into `portal.entity` or `portal.document` that dedupes by
 observation time (Kanban tickets, generic engineering/CRM entities).

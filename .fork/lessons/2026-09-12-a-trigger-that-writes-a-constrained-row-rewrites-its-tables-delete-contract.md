@@ -1,7 +1,7 @@
 ## A trigger that writes a constrained row rewrites its table's delete contract
 
 **Context:** A new `AFTER INSERT OR UPDATE OR DELETE` trigger on `receipt`,
-`receiptLine`, `item` and `purchaseOrder` recorded a knowledge event into a new
+`receiptLine`, `item` and `purchaseOrder` recorded a portal event into a new
 table whose `companyId` references `company` with `ON DELETE CASCADE`.
 
 **Problem:** Deleting a company cascades to those source tables, so the trigger

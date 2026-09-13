@@ -361,11 +361,11 @@ class ReleasePlannerTests(unittest.TestCase):
         self.assertEqual(set(result["build"]), {"erp"})
 
     def test_actual_turbo_closure_has_pruned_lock_and_per_app_generators(self):
-        web = release_plan.turbo_workspace_closure(REPO, "knowledge")
-        query = release_plan.turbo_workspace_closure(REPO, "knowledge-query")
+        web = release_plan.turbo_workspace_closure(REPO, "portal")
+        query = release_plan.turbo_workspace_closure(REPO, "portal-query")
         erp = release_plan.turbo_workspace_closure(REPO, "erp")
 
-        self.assertIn("@carbon/knowledge", web["packages"])
+        self.assertIn("@carbon/portal", web["packages"])
         self.assertNotIn("@carbon/utils", web["packages"])
         self.assertIn("@carbon/utils", query["packages"])
         self.assertNotEqual(web["lockfile"], query["lockfile"])
@@ -383,39 +383,39 @@ class ReleasePlannerTests(unittest.TestCase):
         release = copy.deepcopy(desired())
         service = release["services"]["erp"]
         service.pop("owned_paths", None)
-        service["workspace"] = "knowledge"
+        service["workspace"] = "portal"
         service["build_paths"] = [
-            "contrib/deploying/knowledge/Dockerfile.web",
+            "contrib/deploying/portal/Dockerfile.web",
             "turbo.json",
         ]
-        release["services"] = {"knowledge-web": service}
+        release["services"] = {"portal-web": service}
         materialized = release_plan.materialize_repository_inputs(release, REPO)
-        inputs = materialized["services"]["knowledge-web"]["inputs"]
-        self.assertIn("@carbon/knowledge#build", inputs["workspaces"])
+        inputs = materialized["services"]["portal-web"]["inputs"]
+        self.assertIn("@carbon/portal#build", inputs["workspaces"])
         self.assertRegex(inputs["lockfile"], r"^sha256:[a-f0-9]{64}$")
         self.assertNotIn("@carbon/utils#build", inputs["workspaces"])
 
     def test_materialized_lockfile_change_is_owned_by_each_workspace_service(self):
         release = copy.deepcopy(desired())
         service = release["services"]["erp"]
-        service["workspace"] = "knowledge"
-        service["build_paths"] = ["contrib/deploying/knowledge/Dockerfile.web"]
-        release["services"] = {"knowledge-web": service}
+        service["workspace"] = "portal"
+        service["build_paths"] = ["contrib/deploying/portal/Dockerfile.web"]
+        release["services"] = {"portal-web": service}
         release["changed_inputs"] = ["pnpm-lock.yaml"]
 
         materialized = release_plan.materialize_repository_inputs(release, REPO)
 
         self.assertEqual(
-            materialized["input_owners"]["pnpm-lock.yaml"], ["knowledge-web"]
+            materialized["input_owners"]["pnpm-lock.yaml"], ["portal-web"]
         )
         release_plan.plan(materialized, {"generation": 7, "services": {}})
 
     def test_materialization_preserves_reviewed_non_workspace_ownership(self):
         release = copy.deepcopy(desired())
         service = release["services"]["erp"]
-        service["workspace"] = "knowledge"
-        service["build_paths"] = ["contrib/deploying/knowledge/Dockerfile.web"]
-        release["services"] = {"knowledge-web": service}
+        service["workspace"] = "portal"
+        service["build_paths"] = ["contrib/deploying/portal/Dockerfile.web"]
+        release["services"] = {"portal-web": service}
         release["input_owners"] = {"docs": []}
         release["changed_inputs"] = ["docs/guide.md"]
 

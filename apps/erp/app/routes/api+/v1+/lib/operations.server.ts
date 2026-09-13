@@ -6,7 +6,7 @@
 // to Docs Phase 2; see the plan. For now the committed manifest is the source.)
 
 import type { ManifestEntry } from "@carbon/api";
-import { isKnowledgeOperation } from "~/modules/knowledge/knowledge.server";
+import { isPortalOperation } from "~/modules/portal/portal.server";
 import raw from "../../mcp+/lib/tool-metadata.json";
 
 export const OPERATIONS = (raw as { tools: ManifestEntry[] }).tools;
@@ -19,14 +19,14 @@ export const operationsByName = new Map<string, ManifestEntry>(
 /**
  * Whether an operation may be disclosed by MCP discovery (`search_tools`,
  * `describe_tool`, the well-known manifest, the connect-time instructions) and
- * by the public OpenAPI document. Knowledge operations are served only to
+ * by the public OpenAPI document. Portal operations are served only to
  * delegated workforce callers — the gate answers NOT_FOUND to everyone else —
  * so listing them where an API key or a connector reads is a promise that
  * cannot be kept. They stay in `OPERATIONS`, and so in the router and the
  * committed manifest digest, so the permission pin still covers them.
  */
 export function isDisclosedOperation(op: ManifestEntry): boolean {
-  return !isKnowledgeOperation(op);
+  return !isPortalOperation(op);
 }
 
 export const DISCLOSED_OPERATIONS = OPERATIONS.filter(isDisclosedOperation);

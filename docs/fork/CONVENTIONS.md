@@ -13,10 +13,10 @@ Put new fork-only code where upstream never writes, so it can never conflict:
 | ERP features (routes, services, models, UI) | `apps/erp/app/modules/saturn/` — one module, following the standard `{module}.models.ts` / `{module}.service.ts` / `ui/` layout | mirrors the existing module layout; a `saturn` module is unmistakably ours |
 | ERP routes for that module | `apps/erp/app/routes/x+/saturn+/` (flat routes, like every other module) | keeps the route tree disjoint from upstream's |
 | Shared packages | `packages/saturn-<name>/` (workspace `@carbon/saturn-<name>`) | the `packages/*` workspace glob picks it up with no `pnpm-workspace.yaml` edit |
-| Standalone apps and workers | `apps/saturn-<name>/` (`apps/knowledge*` predate this rule and stay where they are) | same reason as packages |
+| Standalone apps and workers | `apps/saturn-<name>/` (`apps/portal*` predate this rule and stay where they are) | same reason as packages |
 | Database migrations | `packages/database/supabase/migrations/<timestamp>_saturn-<slug>.sql` | the `saturn-` slug makes fork migrations visible in `check-migrations.sh` output and in merges |
 | Edge functions | `packages/database/supabase/functions/saturn-<name>/` | upstream never creates a `saturn-*` function |
-| Deployment and operations | `contrib/deploying/gcp-tailscale/`, `contrib/deploying/knowledge/` | already fork-owned; private inputs stay in their ignored `.local/` |
+| Deployment and operations | `contrib/deploying/gcp-tailscale/`, `contrib/deploying/portal/` | already fork-owned; private inputs stay in their ignored `.local/` |
 | Sync tooling | `scripts/fork/`, `.github/workflows/{generated-files-drift,upstream-sync,resolve-sync-conflicts}.yml`, `docs/fork/` | the one sync mechanism |
 | Agent records (plans, specs, lessons, decisions) | `.fork/` per `.fork/agent-policy.md` | upstream's `.ai/` churns on every sync |
 

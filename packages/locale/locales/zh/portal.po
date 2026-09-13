@@ -1,0 +1,427 @@
+msgid ""
+msgstr ""
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: @lingui/cli\n"
+"Language: zh\n"
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"PO-Revision-Date: \n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Plural-Forms: \n"
+
+msgid "A follow-up question keeps the evidence shown here in context."
+msgstr "追问问题在此保持所显示证据的上下文。"
+
+msgid "Access to this document was revoked."
+msgstr "对该文件的访问权限已被撤销。"
+
+msgid "Acknowledge the changed evidence before publishing."
+msgstr "在发布前确认已更改的证据。"
+
+msgid "Add a document"
+msgstr "添加文件"
+
+msgid "Additional proposed fields"
+msgstr "其他建议字段"
+
+msgid "Also proposed"
+msgstr "同样建议"
+
+msgid "Answer"
+msgstr "回答"
+
+msgid "Back to manual search"
+msgstr "返回手动搜索"
+
+msgid "Back to Portal"
+msgstr "返回 Portal"
+
+msgid "Captured"
+msgstr "已捕获"
+
+msgid "Captured document"
+msgstr "已捕获的文件"
+
+msgid "Check freshness"
+msgstr "检查新鲜度"
+
+msgid "Choices"
+msgstr "选项"
+
+msgid "Choose either a file or a URL, not both."
+msgstr "选择文件或URL，不能同时选择两个。"
+
+msgid "Choose one PDF, image, photo, or HTTPS address."
+msgstr "选择一个PDF、图像、照片或HTTPS地址。"
+
+#. placeholder {0}: evidence.length
+msgid "Composing an answer from {0} evidence blocks…"
+msgstr "正在从 {0} 个证据块组合回答…"
+
+msgid "Confirm removal"
+msgstr "确认删除"
+
+msgid "Confirm this field against the source evidence."
+msgstr "根据源证据确认此字段。"
+
+msgid "Corrections are saved. The document can be published."
+msgstr "更正已保存。文件可以发布。"
+
+msgid "Current version"
+msgstr "当前版本"
+
+msgid "Document"
+msgstr "文件"
+
+msgid "Download original"
+msgstr "下载原件"
+
+msgid "Download original · page {page}"
+msgstr "下载原件 · 第 {page} 页"
+
+msgid "Drag and drop a PDF or image here, or choose a file."
+msgstr "将PDF或图像拖放到此处，或选择文件。"
+
+msgid "Drive sources are enrolled by an administrator with a read-only connector credential held in Secret Manager. Signing into this portal does not authorize Drive access: a document is delivered only after a live check with your own Drive permissions."
+msgstr "Drive源由管理员使用存储在Secret Manager中的只读连接器凭证进行注册。登录此门户不会授权Drive访问——仅在对您自己的Drive权限进行实时检查后,文件才会被交付。"
+
+msgid "Existing item"
+msgstr "现有物料"
+
+msgid "Extracted text anchored to page numbers. Page images are not available for this document; download the original to see the layout."
+msgstr "提取的文本锚定到页码。此文件的页面图像不可用；下载原件以查看布局。"
+
+msgid "Extracting"
+msgstr "提取中"
+
+msgid "Extraction failed"
+msgstr "提取失败"
+
+msgid "Fetched from"
+msgstr "从以下来源获取"
+
+msgid "Find the right manual."
+msgstr "找到正确的手册。"
+
+msgid "Google Drive sources"
+msgstr "Google Drive源"
+
+msgid "I reviewed this evidence"
+msgstr "我已审查此证据"
+
+msgid "Intake review"
+msgstr "入库评审"
+
+msgid "Item association"
+msgstr "物料关联"
+
+msgid "Item lookup is not available for this library. The document can still be published as a generic document."
+msgstr "此库不提供物料查询。文件仍可作为通用文件发布。"
+
+msgid "Item lookup is unavailable right now."
+msgstr "物料查询目前不可用。"
+
+msgid "Library"
+msgstr "库"
+
+msgid "Library and access"
+msgstr "库和访问权限"
+
+msgid "Link this document to one existing item, or keep it as a generic document. Linking never creates or changes items."
+msgstr "将此文件链接到现有物料，或将其作为通用文件保存。链接不会创建或更改物料。"
+
+msgid "Live record"
+msgstr "实时记录"
+
+msgid "Machine"
+msgstr "机器"
+
+msgid "Manual file"
+msgstr "手册文件"
+
+msgid "Manual search is unavailable."
+msgstr "手动搜索不可用。"
+
+msgid "Manufacturer"
+msgstr "制造商"
+
+msgid "Manufacturer, part number, revision, machine, or keyword"
+msgstr "制造商、零件号、修订版、机器或关键字"
+
+msgid "Needs review"
+msgstr "需要评审"
+
+msgid "No evidence on any page"
+msgstr "没有任何页面的证据"
+
+msgid "No item association (generic document)"
+msgstr "未关联物料（通用文件）"
+
+msgid "No matching items."
+msgstr "没有匹配的物料。"
+
+msgid "No matching manuals found."
+msgstr "未找到匹配的手册。"
+
+msgid "No text has been extracted yet."
+msgstr "尚未提取文本。"
+
+msgid "Not set"
+msgstr "未设置"
+
+msgid "Not yet decided. Saving the review records your choice."
+msgstr "尚未决定。保存评审记录您的选择。"
+
+#. placeholder {0}: entity.observedAt
+msgid "Observed {0}"
+msgstr "观察到 {0}"
+
+msgid "Only public HTTPS addresses are fetched, through the server's fetch policy, and the fetched copy is stored immutably."
+msgstr "仅通过服务器的获取政策获取公共 HTTPS 地址，获取的副本以不可变方式存储。"
+
+msgid "Only the first candidates are shown; narrow the search."
+msgstr "仅显示前几个候选项；缩小搜索范围。"
+
+msgid "Open record"
+msgstr "打开记录"
+
+#. placeholder {0}: selected?.classification ?? ""
+msgid "Owner: {actorId}. Access: {0}. Readers of this library can find the document once it is reviewed and published."
+msgstr "负责人：{actorId}。访问权限：{0}。此库的读者在文件被评审和已发布后可以找到该文件。"
+
+#. placeholder {0}: source.page
+msgid "page {0}"
+msgstr "第 {0} 页"
+
+msgid "Page {page}"
+msgstr "第 {page} 页"
+
+msgid "Page not found."
+msgstr "未找到页面。"
+
+msgid "Part number"
+msgstr "零件编号"
+
+msgid "Part number, MPN, or name"
+msgstr "零件编号、MPN 或名称"
+
+msgid "Partial source answer"
+msgstr "部分来源答案"
+
+msgid "PDF and image files are captured with their immutable object version before extraction."
+msgstr "PDF 和图像文件在提取前已使用其不可变对象版本捕获。"
+
+msgid "Portal"
+msgstr "Portal"
+
+msgid "Portal could not complete this request."
+msgstr "Portal 无法完成此请求。"
+
+msgid "Proposed fields"
+msgstr "拟议的字段"
+
+msgid "Proposed fields are ready. Confirm or correct them, then save."
+msgstr "拟议的字段已准备好。确认或更正它们，然后保存。"
+
+#. placeholder {0}: model.proposed[field]
+msgid "Proposed: {0}"
+msgstr "拟议：{0}"
+
+msgid "Publish manual"
+msgstr "发布手册"
+
+msgid "Published"
+msgstr "已发布"
+
+msgid "Remove manual"
+msgstr "移除手册"
+
+msgid "Remove this manual?"
+msgstr "移除此手册吗？"
+
+msgid "Request unavailable"
+msgstr "请求不可用"
+
+msgid "Review document"
+msgstr "评审文件"
+
+msgid "Reviewed"
+msgstr "已评审"
+
+msgid "Revision"
+msgstr "修订版"
+
+msgid "Save review"
+msgstr "保存评审"
+
+msgid "Save the review before publishing."
+msgstr "在发布前保存评审。"
+
+msgid "Saved correction"
+msgstr "已保存的更正"
+
+msgid "Search items"
+msgstr "搜索物料"
+
+msgid "Search manuals"
+msgstr "搜索手册"
+
+msgid "Search published company manuals by manufacturer, part number, revision, machine, or keyword. Open the exact original version from every result."
+msgstr "按制造商、零件编号、修订版、机器或关键字搜索已发布的公司手册。从每个结果中打开精确的原始版本。"
+
+msgid "Searching authorized sources…"
+msgstr "搜索授权来源…"
+
+msgid "Searching…"
+msgstr "搜索中…"
+
+msgid "see evidence"
+msgstr "查看证据"
+
+msgid "Selected: {fileName}"
+msgstr "已选择：{fileName}"
+
+msgid "Show evidence ({evidenceCount})"
+msgstr "显示证据（{evidenceCount}）"
+
+msgid "Some authorized manuals were unavailable."
+msgstr "某些授权手册不可用。"
+
+msgid "Some sources did not answer; results may be partial."
+msgstr "某些来源未回答；结果可能是部分的。"
+
+msgid "Source details"
+msgstr "源详情"
+
+msgid "Source evidence"
+msgstr "源证据"
+
+msgid "Source pages"
+msgstr "源页面"
+
+#. placeholder {0}: entity.sourceRevision
+msgid "Source revision: {0}"
+msgstr "源修订版: {0}"
+
+msgid "Source unavailable"
+msgstr "来源不可用"
+
+msgid "Source URL"
+msgstr "源URL"
+
+msgid "Sources"
+msgstr "来源"
+
+msgid "Start a new question"
+msgstr "开始新的提问"
+
+msgid "State:"
+msgstr "状态:"
+
+msgid "Status {status}"
+msgstr "状态 {status}"
+
+msgid "Take a photo of a nameplate or label"
+msgstr "拍摄铭牌或标签的照片"
+
+msgid "Text is being extracted from the document."
+msgstr "正在从文档中提取文本。"
+
+msgid "The company is not configured for Portal."
+msgstr "该公司尚未配置 Portal。"
+
+msgid "The document could not be fetched from that address."
+msgstr "无法从该地址获取文档。"
+
+msgid "The document could not be fetched from that address. Check that it is a public HTTPS link to a PDF or image, or upload the file instead."
+msgstr "无法从该地址获取文档。请检查它是否是指向PDF或图像的公开HTTPS链接，或者改为上传文件。"
+
+msgid "The document is queued for extraction."
+msgstr "文档已排队等待提取。"
+
+msgid "The document is stored and waiting for extraction."
+msgstr "文档已存储，等待提取。"
+
+msgid "The document was captured, but text could not be extracted. Review cannot start until extraction succeeds."
+msgstr "文档已捕获，但无法提取文本。在提取成功前，评审无法开始。"
+
+msgid "The request did not complete within its time budget."
+msgstr "请求未在时间预算内完成。"
+
+msgid "The request was not valid."
+msgstr "请求无效。"
+
+msgid "The review could not be saved. Check the fields and unresolved evidence."
+msgstr "评审无法保存。请检查字段和未解决的证据。"
+
+msgid "The review service is unavailable. Nothing was changed."
+msgstr "评审服务不可用。未做任何更改。"
+
+msgid "The upload could not be captured."
+msgstr "无法捕获上传内容。"
+
+msgid "The upload service is unavailable. The document was not captured."
+msgstr "上传服务不可用。文档未被捕获。"
+
+msgid "This action is not configured for the library."
+msgstr "此操作未在库中配置。"
+
+msgid "This document changed since you opened it, or the same content was already reviewed. Reload and check before saving again."
+msgstr "自您打开文档以来，此文档已更改，或相同内容已被评审。请重新加载并检查后再保存。"
+
+msgid "This document changed while you were working. Reload it and try again."
+msgstr "您工作时文档已更改。请重新加载并重试。"
+
+msgid "This document is not available for review."
+msgstr "此文档无法进行评审。"
+
+msgid "This document version is not available."
+msgstr "此文档版本不可用。"
+
+msgid "This removes the manual from {sourceDisplayName} search and blocks its original version from download."
+msgstr "这会从{sourceDisplayName}搜索中移除手册，并阻止其原始版本下载。"
+
+msgid "This review was published; it is now read-only."
+msgstr "此评审已发布；已变为只读。"
+
+msgid "Title"
+msgstr "标题"
+
+msgid "Upload a manual"
+msgstr "上传手册"
+
+msgid "Upload a manual, photograph a nameplate, or point at a public address. Access follows the library you choose."
+msgstr "上传手册、拍摄铭牌照片或指向公开地址。访问权限遵循您选择的库。"
+
+msgid "Upload manual"
+msgstr "上传手册"
+
+msgid "Valid review fields are required."
+msgstr "需要有效的评审字段。"
+
+msgid "You are not allowed to add documents to the selected library."
+msgstr "您无权向所选库添加文档。"
+
+msgid "You are not allowed to add documents to this library."
+msgstr "您无权向此库添加文档。"
+
+msgid "You are not allowed to publish in this library. The review was kept."
+msgstr "您无权在此库中发布。评审已保留。"
+
+msgid "You are not allowed to review documents in this library."
+msgstr "您无权评审此库中的文档。"
+
+msgid "You are not signed in to this library, or your access was revoked."
+msgstr "您未登录此库，或您的访问权限已被撤销。"
+
+msgid "You cannot add documents to any library. Ask an administrator for a library grant."
+msgstr "您无法向任何库添加文档。请向管理员申请库权限。"
+
+msgid "You do not have permission for this action in this library."
+msgstr "您没有在此库中执行此操作的权限。"
+
+msgid "Your access changed while this request ran. Search again."
+msgstr "此请求运行期间您的访问权限已更改。请再次搜索。"

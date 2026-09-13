@@ -1,6 +1,6 @@
 ## Do not change shared disposable-database credentials to run a test
 
-**Context:** Parallel agents used one explicitly disposable knowledge-schema database with a documented synthetic migrator login.
+**Context:** Parallel agents used one explicitly disposable portal-schema database with a documented synthetic migrator login.
 
 **Problem:** Changing the shared test role's password locally let one integration run proceed but interrupted another agent's migration run.
 

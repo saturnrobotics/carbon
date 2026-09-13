@@ -1,6 +1,6 @@
 # Recovery must select the same database and storage owner
 
-**Context:** Local knowledge stacks support independent Compose project names,
+**Context:** Local portal stacks support independent Compose project names,
 image tags and ports so verification can coexist with development.
 
 **Problem:** The recovery command selected containers through configurable
@@ -14,7 +14,7 @@ foreign or bind mount. Start validated existing containers instead of recreating
 them from configuration. Test with another valid stack present, and verify
 cleanup separately from the recovery script's success output.
 
-**Applies to:** `contrib/deploying/knowledge/verify-local-recovery.py` and other
+**Applies to:** `contrib/deploying/portal/verify-local-recovery.py` and other
 disposable backup/restore or lifecycle tools with separately selected resources.
 
 The browser suite also needs a final-state assertion: a later test's unconditional

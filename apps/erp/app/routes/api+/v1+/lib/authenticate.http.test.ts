@@ -25,7 +25,7 @@ vi.mock("~/modules/documents/documents.service", () => ({}));
 vi.mock("~/modules/inventory/inventory.service", () => ({}));
 vi.mock("~/modules/invoicing/invoicing.service", () => ({}));
 vi.mock("~/modules/items/items.service", () => ({}));
-vi.mock("~/modules/knowledge/knowledge.service", () => ({
+vi.mock("~/modules/portal/portal.service", () => ({
   resolveItems: mocks.resolveItems
 }));
 vi.mock("~/modules/people/people.service", () => ({}));
@@ -60,9 +60,9 @@ vi.mock("@carbon/auth/users.server", () => ({
 vi.mock("@carbon/auth/mfa.server", () => ({
   userHasVerifiedTotpFactor: mocks.userHasVerifiedTotpFactor
 }));
-vi.mock("@carbon/knowledge/identity.server", async (importOriginal) => {
+vi.mock("@carbon/portal/identity.server", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("@carbon/knowledge/identity.server")>();
+    await importOriginal<typeof import("@carbon/portal/identity.server")>();
   return {
     ...actual,
     verifyWorkforceRequest: (
@@ -80,17 +80,17 @@ vi.mock("@carbon/knowledge/identity.server", async (importOriginal) => {
 
 import { action } from "../$";
 
-const URL = "https://erp.example.com/api/v1/knowledge/resolveItems";
+const URL = "https://erp.example.com/api/v1/portal/resolveItems";
 const REGISTRY = JSON.stringify({
   version: 1,
   receiver: { id: "carbon-erp", audience: "https://erp.example.com" },
   callers: [
     {
-      callerId: "knowledge-query",
+      callerId: "portal-query",
       serviceAccountSubject: "synthetic-service-account-subject",
       sourceIapAudience: "/projects/0/global/backendServices/0",
-      operations: ["knowledge_resolveItems"],
-      capabilities: ["knowledge.read"],
+      operations: ["portal_resolveItems"],
+      capabilities: ["portal.read"],
       requiredAccessLevels: []
     }
   ]
@@ -134,7 +134,7 @@ describe("v1 authentication error semantics", () => {
 
   describe("workforce branch", () => {
     it("answers 503 without a trusted-caller registry and never verifies anything", async () => {
-      vi.stubEnv("KNOWLEDGE_TRUSTED_CALLERS_JSON", undefined);
+      vi.stubEnv("PORTAL_TRUSTED_CALLERS_JSON", undefined);
 
       const response = await thrown(post(workforceHeaders));
 
@@ -148,7 +148,7 @@ describe("v1 authentication error semantics", () => {
     });
 
     it("answers a generic 401 for a forged token once a registry is configured", async () => {
-      vi.stubEnv("KNOWLEDGE_TRUSTED_CALLERS_JSON", REGISTRY);
+      vi.stubEnv("PORTAL_TRUSTED_CALLERS_JSON", REGISTRY);
 
       const response = await thrown(post(workforceHeaders));
 
@@ -164,7 +164,7 @@ describe("v1 authentication error semantics", () => {
     });
 
     it("answers the same 401 for a spoofed identity header, before any verification", async () => {
-      vi.stubEnv("KNOWLEDGE_TRUSTED_CALLERS_JSON", REGISTRY);
+      vi.stubEnv("PORTAL_TRUSTED_CALLERS_JSON", REGISTRY);
 
       const response = await thrown(
         post({ ...workforceHeaders, "x-portal-actor-id": "usr_victim" })
@@ -176,7 +176,7 @@ describe("v1 authentication error semantics", () => {
     });
 
     it("is the branch taken by any non-API-key bearer, even without portal evidence", async () => {
-      vi.stubEnv("KNOWLEDGE_TRUSTED_CALLERS_JSON", undefined);
+      vi.stubEnv("PORTAL_TRUSTED_CALLERS_JSON", undefined);
 
       const response = await thrown(
         post({ authorization: "Bearer not-an-api-key" })
@@ -219,7 +219,7 @@ describe("v1 authentication error semantics", () => {
         expect.any(Request),
         {}
       );
-      // Knowledge operations stay invisible to API keys: the gate answers 404.
+      // Portal operations stay invisible to API keys: the gate answers 404.
       expect(response.status).toBe(404);
       expect(mocks.resolveItems).not.toHaveBeenCalled();
     });

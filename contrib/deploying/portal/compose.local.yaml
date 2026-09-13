@@ -1,0 +1,268 @@
+# Disposable local browser-harness stack.
+#
+# Every project name, image reference and published port is parameterised with
+# its historical value as the default, so an unparameterised `local-stack.sh up`
+# is unchanged while a second harness can run beside it on its own ports without
+# stopping, reusing or retagging anything the first one owns. Container-internal
+# ports are fixed; only the loopback host side moves.
+name: ${PORTAL_LOCAL_STACK:-portal-manual-local}
+
+services:
+  postgres:
+    image: supabase/postgres:15.14.1.112@sha256:241b86a756cb940f8a6c285c13b2f088a2590e2cfd1e024b4ba554dfc23e4393
+    # Preserve the image configuration and extensions, disabling only the
+    # crashing permission hints: https://github.com/supabase/supautils/issues/214
+    command: [postgres, -D, /etc/postgresql, -c, "supautils.hint_roles="]
+    environment:
+      POSTGRES_DB: portal_test
+      POSTGRES_PASSWORD: synthetic-test-only
+      POSTGRES_USER: supabase_admin
+    labels:
+      portal.disposable: "true"
+      portal.stack: manual-local
+    ports:
+      - "127.0.0.1:${PORTAL_LOCAL_DATABASE_PORT:-59910}:5432"
+    volumes:
+      - portal_postgres:/var/lib/postgresql/data
+    networks: [portal_internal]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U supabase_admin -d portal_test"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+
+  bootstrap:
+    image: postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777
+    profiles: [setup]
+    environment: &database_environment
+      PORTAL_E2E_DATABASE_URL: postgresql://supabase_admin:synthetic-test-only@postgres:5432/portal_test
+    volumes:
+      - ../../..:/repo:ro
+    command: ["/repo/contrib/deploying/portal/local-stack-bootstrap.sh", "bootstrap"]
+    networks: [portal_internal]
+
+  schema:
+    image: ${PORTAL_LOCAL_STACK:-portal-manual-local}-schema:${PORTAL_LOCAL_TAG:-manual-v1}
+    profiles: [setup]
+    environment:
+      PORTAL_MIGRATION_DATABASE_URL: postgresql://supabase_admin:synthetic-test-only@postgres:5432/portal_test
+    networks: [portal_internal]
+
+  fixture:
+    image: postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777
+    profiles: [setup]
+    environment: *database_environment
+    volumes:
+      - ../../..:/repo:ro
+    command: ["/repo/contrib/deploying/portal/local-stack-bootstrap.sh", "fixture"]
+    networks: [portal_internal]
+
+  storage:
+    image: fsouza/fake-gcs-server@sha256:797ce226d62f947c009dc40246b30cfb456b8473d8241407f9d6f2c04e4d69ef
+    entrypoint: ["/bin/fake-gcs-server"]
+    command:
+      - -scheme
+      - http
+      - -host
+      - 0.0.0.0
+      - -port
+      - "4443"
+      - -public-host
+      - storage:4443
+      - -filesystem-root
+      - /data
+    labels:
+      portal.disposable: "true"
+      portal.stack: manual-local
+    ports:
+      - "127.0.0.1:${PORTAL_LOCAL_STORAGE_PORT:-59912}:4443"
+    volumes:
+      - portal_storage:/data
+    networks: [portal_internal]
+
+  redis:
+    image: redis:7-alpine@sha256:6ab0b6e7381779332f97b8ca76193e45b0756f38d4c0dcda72dbb3c32061ab99
+    command: ["redis-server", "--appendonly", "yes"]
+    labels:
+      portal.disposable: "true"
+      portal.stack: manual-local
+    ports:
+      - "127.0.0.1:${PORTAL_LOCAL_REDIS_PORT:-59911}:6379"
+      # The query fixture shares this network namespace, so its published port
+      # is declared here.
+      - "127.0.0.1:${PORTAL_LOCAL_QUERY_PORT:-4302}:4302"
+    volumes:
+      - portal_redis:/data
+    networks: [portal_internal]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+
+  parser:
+    image: ${PORTAL_LOCAL_STACK:-portal-manual-local}-parser-e2e:${PORTAL_LOCAL_TAG:-manual-v1}
+    environment:
+      STORAGE_EMULATOR_HOST: http://storage-api:8081
+    depends_on:
+      storage-api:
+        condition: service_started
+    networks: [parser_internal]
+
+  storage-api:
+    image: ${PORTAL_LOCAL_STACK:-portal-manual-local}-parser-e2e:${PORTAL_LOCAL_TAG:-manual-v1}
+    command: ["node", "/usr/local/bin/images-storage-emulator-proxy.mjs"]
+    environment:
+      PORTAL_STORAGE_EMULATOR_TARGET: http://storage:4443
+      PORT: "8081"
+    depends_on:
+      storage:
+        condition: service_started
+    networks: [portal_internal, parser_internal]
+
+  ingest:
+    image: ${PORTAL_LOCAL_STACK:-portal-manual-local}-ingest-e2e:${PORTAL_LOCAL_TAG:-manual-v1}
+    command: ["node", "e2e-dist/local-ingest.js"]
+    restart: unless-stopped
+    environment:
+      INNGEST_BASE_URL: http://inngest:8288/
+      INNGEST_DEV: "1"
+      PORTAL_E2E_DATABASE_URL: postgresql://supabase_admin:synthetic-test-only@postgres:5432/portal_test
+      # The manual-workflow fixture serves no Drive route: its caller
+      # configuration admits the portal's manual operations only. The Drive
+      # fixture beside it owns that surface, so this gateway forwards
+      # `/v1/drive/*` there and the portal keeps one worker URL.
+      PORTAL_E2E_DRIVE_FIXTURE_URL: http://drive:4301
+      PORTAL_E2E_PARSER_URL: http://parser:8080
+      PORTAL_E2E_SYNTHETIC_FIXTURES: "1"
+      PORT: "4301"
+      STORAGE_EMULATOR_HOST: http://storage-api:8081
+    depends_on:
+      postgres:
+        condition: service_healthy
+      parser:
+        condition: service_started
+    labels:
+      portal.disposable: "true"
+      portal.stack: manual-local
+    ports:
+      - "127.0.0.1:${PORTAL_LOCAL_GATEWAY_PORT:-4301}:4301"
+    networks: [portal_internal, parser_internal]
+
+  inngest:
+    image: inngest/inngest:v1.19.4@sha256:d53a2edc9f1d5d9185fdb3a36f840a81533c19ba67109aed3a1b852f2db838d6
+    command:
+      - inngest
+      - dev
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8288"
+      - --persist
+      - --retry-interval
+      - "1"
+      - --no-discovery
+      - --sdk-url
+      - http://ingest:4301/api/inngest
+    depends_on:
+      - ingest
+    labels:
+      portal.disposable: "true"
+      portal.stack: manual-local
+    ports:
+      - "127.0.0.1:${PORTAL_LOCAL_INNGEST_PORT:-59914}:8288"
+    volumes:
+      - portal_inngest:/data
+    working_dir: /data
+    networks: [portal_internal]
+
+  query:
+    image: ${PORTAL_LOCAL_STACK:-portal-manual-local}-ingest-e2e:${PORTAL_LOCAL_TAG:-manual-v1}
+    command: ["node", "e2e-dist/local-query.js"]
+    restart: unless-stopped
+    environment:
+      PORTAL_E2E_DATABASE_URL: postgresql://supabase_admin:synthetic-test-only@postgres:5432/portal_test
+      # The evidence `sourceUri` this fixture builds must carry the portal's own
+      # origin, which moves with the published portal port.
+      PORTAL_E2E_PORTAL_PORT: ${PORTAL_LOCAL_WEB_PORT:-4200}
+      PORTAL_E2E_SYNTHETIC_FIXTURES: "1"
+      PORTAL_REDIS_URL: redis://localhost:6379
+      PORTAL_WEB_ORIGIN: https://localhost:${PORTAL_LOCAL_WEB_PORT:-4200}
+      PORT: "4302"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    labels:
+      portal.disposable: "true"
+      portal.stack: manual-local
+    network_mode: service:redis
+
+  # The Drive connector fixture: the production worker, the production Drive
+  # sync engine and a query handler with the reader-delegated live check, all
+  # against an in-memory Drive. It is a separate service because the manual
+  # library's query fixture is pinned to the upload source and can never return
+  # Drive evidence, and because its worker deliberately admits no Drive caller.
+  drive:
+    image: ${PORTAL_LOCAL_STACK:-portal-manual-local}-ingest-e2e:${PORTAL_LOCAL_TAG:-manual-v1}
+    command: ["node", "e2e-dist/local-drive.js"]
+    restart: unless-stopped
+    environment:
+      PORTAL_E2E_DATABASE_URL: postgresql://supabase_admin:synthetic-test-only@postgres:5432/portal_test
+      PORTAL_E2E_SYNTHETIC_FIXTURES: "1"
+      PORTAL_WEB_ORIGIN: https://localhost:${PORTAL_LOCAL_WEB_PORT:-4200}
+      PORT: "4301"
+      PORTAL_E2E_QUERY_PORT: "4302"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    labels:
+      portal.disposable: "true"
+      portal.stack: manual-local
+    ports:
+      - "127.0.0.1:${PORTAL_LOCAL_DRIVE_GATEWAY_PORT:-4303}:4301"
+      - "127.0.0.1:${PORTAL_LOCAL_DRIVE_QUERY_PORT:-4304}:4302"
+    networks: [portal_internal]
+
+  portal:
+    image: ${PORTAL_LOCAL_STACK:-portal-manual-local}-web-e2e:${PORTAL_LOCAL_TAG:-manual-v1}
+    environment:
+      PORTAL_COMPANY_ID: company-b
+      # `drive-source.spec.ts` exercises a surface manual-v1 defers. The route
+      # is in this image because `Dockerfile.web`'s `e2e` stage was BUILT with
+      # `--build-arg PORTAL_DRIVE_ENABLED=true`; this runtime value is what
+      # the harness dev server re-reads. The released web image is built from
+      # `builder`, which never receives the argument, and `release.py` refuses
+      # the variable on a revision.
+      PORTAL_DRIVE_ENABLED: "true"
+      PORTAL_E2E_DOCKER: "1"
+      PORTAL_E2E_PORTAL_PORT: "${PORTAL_LOCAL_WEB_PORT:-4200}"
+      PORTAL_E2E_SYNTHETIC_FIXTURES: "1"
+      PORTAL_MANUAL_SOURCE_JSON: '{"sourceId":"source-b","displayName":"Operations manuals"}'
+      PORTAL_QUERY_AUDIENCE: e2e-query
+      PORTAL_QUERY_URL: http://redis:4302
+      PORTAL_WEB_ORIGIN: https://localhost:${PORTAL_LOCAL_WEB_PORT:-4200}
+      PORTAL_WORKER_AUDIENCE: e2e-worker
+      PORTAL_WORKER_URL: http://ingest:4301
+    depends_on:
+      - ingest
+      - query
+      - drive
+    labels:
+      portal.disposable: "true"
+      portal.stack: manual-local
+    ports:
+      - "127.0.0.1:${PORTAL_LOCAL_WEB_PORT:-4200}:${PORTAL_LOCAL_WEB_PORT:-4200}"
+    networks: [portal_internal]
+
+networks:
+  portal_internal:
+  parser_internal:
+    internal: true
+
+volumes:
+  portal_inngest:
+  portal_postgres:
+  portal_redis:
+  portal_storage:

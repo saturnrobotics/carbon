@@ -1,0 +1,54 @@
+# Reviewed multi-platform digest. base-images.json is the record;
+# test_base_image_pins.py keeps every portal Dockerfile equal to it.
+ARG NODE_IMAGE=node:22-alpine@sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32
+FROM ${NODE_IMAGE} AS pruner
+WORKDIR /repo
+RUN corepack enable
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc turbo.json ./
+COPY apps ./apps
+COPY packages ./packages
+COPY patches ./patches
+RUN corepack pnpm dlx turbo@2.9.6 prune portal-worker --docker
+
+FROM ${NODE_IMAGE} AS builder
+WORKDIR /repo
+RUN corepack enable
+COPY --from=pruner /repo/out/json/ ./
+RUN pnpm install --frozen-lockfile --ignore-scripts
+COPY --from=pruner /repo/out/full/ ./
+COPY LICENSE ./LICENSE
+RUN pnpm --filter portal-worker build
+RUN pnpm --filter portal-worker deploy --prod --legacy --ignore-scripts /runtime
+
+FROM pruner AS e2e-pruner
+RUN corepack pnpm dlx turbo@2.9.6 prune portal-worker portal-query --docker --out-dir out-e2e
+
+FROM ${NODE_IMAGE} AS e2e-builder
+WORKDIR /repo
+RUN corepack enable
+COPY --from=e2e-pruner /repo/out-e2e/json/ ./
+RUN pnpm install --frozen-lockfile --ignore-scripts
+COPY --from=e2e-pruner /repo/out-e2e/full/ ./
+COPY LICENSE ./LICENSE
+RUN pnpm --filter portal-worker exec tsup \
+  src/test/local-ingest.ts src/test/local-query.ts src/test/local-drive.ts \
+  --format esm --no-splitting --out-dir e2e-dist
+
+FROM ${NODE_IMAGE} AS runtime-base
+WORKDIR /app
+ENV NODE_ENV=production
+ENV PORTAL_RELEASE_PROFILE=manual-v1
+ENV PORT=8080
+COPY --from=builder /runtime ./
+COPY LICENSE ./LICENSE
+
+FROM e2e-builder AS e2e
+WORKDIR /repo/apps/portal-worker
+ENV NODE_ENV=test
+ENV PORTAL_RELEASE_PROFILE=manual-v1
+ENV PORTAL_E2E_SYNTHETIC_FIXTURES=1
+CMD ["node", "e2e-dist/local-ingest.js"]
+
+FROM runtime-base AS runtime
+EXPOSE 8080
+CMD ["node", "dist/index.js"]

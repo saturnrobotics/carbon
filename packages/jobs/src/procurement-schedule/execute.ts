@@ -55,7 +55,7 @@ async function claim(
   // again, but the source receipt's SQL uniqueness makes that a replay, not a
   // second PO.
   const result = await sql<Schedule>`
-    UPDATE public."knowledgeProcurementSchedule"
+    UPDATE public."portalProcurementSchedule"
     SET status = 'running', "claimedAt" = clock_timestamp(), "updatedAt" = clock_timestamp()
     WHERE id = ${scheduleId}
       AND "executeAt" <= clock_timestamp()
@@ -91,7 +91,7 @@ export async function executeProcurementSchedule(
     dispatch,
     async (outcome) => {
       await sql`
-      UPDATE public."knowledgeProcurementSchedule"
+      UPDATE public."portalProcurementSchedule"
       SET status = ${outcome.state}, "revocationCheckedAt" = clock_timestamp(),
           "revocationVersion" = ${outcome.revision},
           "failureCode" = ${outcome.failureCode ?? null},
@@ -104,7 +104,7 @@ export async function executeProcurementSchedule(
 
 export async function dueProcurementSchedules(db: JobDatabase, limit = 100) {
   const result = await sql<{ id: string }>`
-    SELECT id FROM public."knowledgeProcurementSchedule"
+    SELECT id FROM public."portalProcurementSchedule"
     WHERE status = 'scheduled' AND "executeAt" <= clock_timestamp()
     ORDER BY "executeAt", id
     LIMIT ${limit}

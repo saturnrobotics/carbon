@@ -1,6 +1,6 @@
 # Biome does not process `scripts/`, `ci/`, `.fork/` or package-root TypeScript
 
-**Context:** Adding `packages/knowledge/scripts/validate-callers.ts` and running
+**Context:** Adding `packages/portal/scripts/validate-callers.ts` and running
 the required `pnpm exec biome check --error-on-warnings` on it.
 
 **Problem:** Biome printed `Checked 0 files` and, with `--verbose`, "These paths

@@ -84,8 +84,8 @@ docs
 contrib
 !contrib/
 !contrib/deploying/
-!contrib/deploying/knowledge/
-!contrib/deploying/knowledge/**
+!contrib/deploying/portal/
+!contrib/deploying/portal/**
 llm
 
 # OS / logs
@@ -95,7 +95,7 @@ llm
 **/__pycache__/
 **/*.pyc
 
-# Keep private inputs excluded after the knowledge tooling allow-list above.
+# Keep private inputs excluded after the portal tooling allow-list above.
 # Docker uses the last matching rule, including directory re-inclusions.
 **/.local
 **/.env*

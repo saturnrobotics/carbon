@@ -1,0 +1,134 @@
+{
+  "schema_version": 1,
+  "project": "<project-id>",
+  "region": "<region>",
+  "source_repo_url": "https://github.com/<owner>/<repository>",
+  "image_repository": "<region>-docker.pkg.dev/<project-id>/portal",
+  "pg_service": "portal-operator",
+  "services": {
+    "portal-schema": {
+      "service_account": "portal-migration@<project-id>.iam.gserviceaccount.com",
+      "environment": {},
+      "secrets": {
+        "PORTAL_MIGRATION_DATABASE_URL": "projects/<project-id>/secrets/portal-migration-db-url/versions/<version-number>"
+      },
+      "resources": {
+        "cpu": "1",
+        "memory": "512Mi"
+      },
+      "max_instances": 2,
+      "concurrency": 1,
+      "network": "portal-private",
+      "subnetwork": "portal-runtime",
+      "egress": "all-traffic"
+    },
+    "portal-parser": {
+      "service_account": "portal-parser@<project-id>.iam.gserviceaccount.com",
+      "environment": {},
+      "secrets": {},
+      "resources": {
+        "cpu": "1",
+        "memory": "1Gi"
+      },
+      "max_instances": 2,
+      "concurrency": 1,
+      "network": "portal-private",
+      "subnetwork": "portal-runtime",
+      "egress": "all-traffic"
+    },
+    "portal-query": {
+      "service_account": "portal-query@<project-id>.iam.gserviceaccount.com",
+      "environment": {
+        "PORTAL_BUSINESS_TIMEZONE": "Etc/UTC",
+        "PORTAL_MANUAL_SOURCE_JSON": "{\"sourceId\":\"<manual-source-id>\",\"displayName\":\"Manual library\"}",
+        "PORTAL_ORIGIN": "<portal-portal-origin>",
+        "PORTAL_RELEASE_PROFILE": "manual-v1",
+        "PORTAL_TRUSTED_CALLERS_JSON": "<portal-trusted-callers-json>"
+      },
+      "secrets": {
+        "PORTAL_READ_DATABASE_URL": "projects/<project-id>/secrets/portal-read-db-url/versions/<version-number>",
+        "PORTAL_REDIS_URL": "projects/<project-id>/secrets/portal-redis-url/versions/<version-number>"
+      },
+      "resources": {
+        "cpu": "1",
+        "memory": "512Mi"
+      },
+      "max_instances": 2,
+      "concurrency": 20,
+      "network": "portal-private",
+      "subnetwork": "portal-runtime",
+      "egress": "all-traffic"
+    },
+    "portal-ingest": {
+      "service_account": "portal-ingest@<project-id>.iam.gserviceaccount.com",
+      "environment": {
+        "PORTAL_AUTOMATION_USER_ID": "<portal-automation-user-id>",
+        "PORTAL_IDENTITY_URL": "<portal-identity-url>",
+        "PORTAL_MACHINE_CALLERS_JSON": "<portal-machine-callers-json>",
+        "PORTAL_MANUAL_SOURCE_JSON": "{\"sourceId\":\"<manual-source-id>\",\"displayName\":\"Manual library\"}",
+        "PORTAL_OBJECT_BUCKET": "<portal-object-bucket>",
+        "PORTAL_PARSER_JOB": "<portal-parser-job>",
+        "PORTAL_PARSER_LOCATION": "<portal-parser-location>",
+        "PORTAL_PARSER_OUTPUT_BUCKET": "<portal-parser-output-bucket>",
+        "PORTAL_PARSER_PROJECT": "<portal-parser-project>",
+        "PORTAL_RELEASE_PROFILE": "manual-v1",
+        "PORTAL_TRUSTED_CALLERS_JSON": "<portal-trusted-callers-json>"
+      },
+      "secrets": {
+        "INNGEST_SIGNING_KEY": "projects/<project-id>/secrets/portal-inngest-signing-key/versions/<version-number>",
+        "PORTAL_INGEST_DATABASE_URL": "projects/<project-id>/secrets/portal-ingest-db-url/versions/<version-number>",
+        "PORTAL_READ_DATABASE_URL": "projects/<project-id>/secrets/portal-read-db-url/versions/<version-number>",
+        "PORTAL_REVIEW_DATABASE_URL": "projects/<project-id>/secrets/portal-review-db-url/versions/<version-number>"
+      },
+      "resources": {
+        "cpu": "1",
+        "memory": "512Mi"
+      },
+      "max_instances": 2,
+      "concurrency": 20,
+      "network": "portal-private",
+      "subnetwork": "portal-runtime",
+      "egress": "all-traffic"
+    },
+    "portal-retention": {
+      "service_account": "portal-maintenance@<project-id>.iam.gserviceaccount.com",
+      "environment": {
+        "PORTAL_OBJECT_BUCKET": "<portal-object-bucket>"
+      },
+      "secrets": {
+        "PORTAL_MAINTENANCE_DATABASE_URL": "projects/<project-id>/secrets/portal-maintenance-db-url/versions/<version-number>"
+      },
+      "resources": {
+        "cpu": "1",
+        "memory": "512Mi"
+      },
+      "max_instances": 2,
+      "concurrency": 1,
+      "network": "portal-private",
+      "subnetwork": "portal-runtime",
+      "egress": "all-traffic"
+    },
+    "portal-web": {
+      "service_account": "portal-web@<project-id>.iam.gserviceaccount.com",
+      "environment": {
+        "PORTAL_COMPANY_ID": "<portal-company-id>",
+        "PORTAL_MANUAL_SOURCE_JSON": "{\"sourceId\":\"<manual-source-id>\",\"displayName\":\"Manual library\"}",
+        "PORTAL_QUERY_URL": "<portal-query-url>",
+        "PORTAL_RELEASE_PROFILE": "manual-v1",
+        "PORTAL_WEB_ORIGIN": "<portal-web-origin>",
+        "PORTAL_WORKER_URL": "<portal-worker-url>"
+      },
+      "secrets": {},
+      "resources": {
+        "cpu": "1",
+        "memory": "512Mi"
+      },
+      "max_instances": 2,
+      "concurrency": 20,
+      "network": "portal-private",
+      "subnetwork": "portal-runtime",
+      "egress": "all-traffic"
+    }
+  },
+  "database_ca_secret": "projects/<project-id>/secrets/portal-source-database-ca/versions/<version-number>"
+}
