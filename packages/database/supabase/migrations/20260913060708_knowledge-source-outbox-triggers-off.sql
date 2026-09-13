@@ -1,0 +1,71 @@
+-- Knowledge source outbox: detach the source-table triggers.
+--
+-- 20260911205347_knowledge-source-outbox.sql attached four AFTER ROW triggers
+-- to "receipt", "receiptLine", "item" and "purchaseOrder", and
+-- 20260912194512_knowledge-source-outbox-company-teardown.sql replaced the
+-- function they call. Those four tables are hot ERP write paths: every receipt
+-- post, every receipt line edit, every item save and every purchase order
+-- transition runs this function in the SAME transaction as the business write.
+--
+-- The knowledge platform is being deployed as a READ-ONLY pilot. It does not
+-- consume this outbox, so change propagation from Carbon into the search index
+-- is not needed, and nothing downstream notices that the queue stays empty.
+-- What the triggers do still carry is risk that lands on ordinary ERP work
+-- rather than on the pilot: a trigger on these tables is the one part of this
+-- program that can fail a write a customer is making. That is not theoretical
+-- — deleting a company already failed on
+-- "knowledgeSourceOutbox_companyId_fkey" because the company CASCADE ran the
+-- trigger after the "company" row was gone, and the teardown migration above
+-- exists only to fix it. Until the consumer is live, the triggers are all
+-- exposure and no benefit, so they come off.
+--
+-- This is DELIBERATE and REVERSIBLE, and it is a schema state the operator
+-- chooses — not a feature flag, and nothing in the application reads it.
+-- Everything else the outbox needs is left exactly as it is:
+--
+--   * the "knowledgeSourceOutbox" table, its dedupe constraint, its four
+--     indexes and its SELECT policy — the table is referenced by the generated
+--     database types, the swagger schema, the change-feed service and route,
+--     and the procurement tests, so dropping it would break the build; and
+--   * the knowledge_source_outbox_enqueue() function, unchanged, so
+--     re-enabling is four CREATE TRIGGER statements and no rewrite.
+--
+-- All four triggers are identical in shape: AFTER INSERT OR UPDATE OR DELETE,
+-- FOR EACH ROW, no WHEN clause on any of them (the per-table gates live inside
+-- knowledge_source_outbox_enqueue(), not in the trigger definitions). Verified
+-- against the live schema with pg_get_triggerdef() before this migration was
+-- written, so the statements below are the originals, not a reconstruction.
+--
+-- TO RE-ENABLE, copied verbatim from
+-- 20260911205347_knowledge-source-outbox.sql:
+--
+--   CREATE TRIGGER "knowledge_source_outbox_receipt_trigger"
+--     AFTER INSERT OR UPDATE OR DELETE ON "receipt"
+--     FOR EACH ROW EXECUTE FUNCTION knowledge_source_outbox_enqueue();
+--
+--   CREATE TRIGGER "knowledge_source_outbox_receipt_line_trigger"
+--     AFTER INSERT OR UPDATE OR DELETE ON "receiptLine"
+--     FOR EACH ROW EXECUTE FUNCTION knowledge_source_outbox_enqueue();
+--
+--   CREATE TRIGGER "knowledge_source_outbox_item_trigger"
+--     AFTER INSERT OR UPDATE OR DELETE ON "item"
+--     FOR EACH ROW EXECUTE FUNCTION knowledge_source_outbox_enqueue();
+--
+--   CREATE TRIGGER "knowledge_source_outbox_purchase_order_trigger"
+--     AFTER INSERT OR UPDATE OR DELETE ON "purchaseOrder"
+--     FOR EACH ROW EXECUTE FUNCTION knowledge_source_outbox_enqueue();
+--
+-- Whoever re-enables them is turning the queue back on for changes made from
+-- that moment: an outbox records what changed while it was armed, so the
+-- entities that changed during the pilot are reconciled by the consumer's
+-- periodic sweep — the same sweep that already covers a dataset apply and a
+-- backup restore — not replayed out of this table.
+--
+-- IF EXISTS so this is a no-op on a database that never had them (a fresh
+-- install of a branch where the pilot ships trigger-free still runs both
+-- earlier migrations, then this one).
+
+DROP TRIGGER IF EXISTS "knowledge_source_outbox_receipt_trigger" ON "receipt";
+DROP TRIGGER IF EXISTS "knowledge_source_outbox_receipt_line_trigger" ON "receiptLine";
+DROP TRIGGER IF EXISTS "knowledge_source_outbox_item_trigger" ON "item";
+DROP TRIGGER IF EXISTS "knowledge_source_outbox_purchase_order_trigger" ON "purchaseOrder";

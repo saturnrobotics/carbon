@@ -1,11 +1,11 @@
 {
   "kind": "carbon-company-backup",
   "version": 1,
-  "schemaVersion": "20260912194512",
+  "schemaVersion": "20260913060708",
   "sourceCompanyId": "schema-baseline",
   "sourceCompanyGroupId": null,
   "sourceCompanyName": null,
-  "exportedAt": "2026-09-12T23:26:00.149Z",
+  "exportedAt": "2026-09-13T06:20:54.426Z",
   "exportedBy": "schema-baseline",
   "label": "schema baseline",
   "includeStorage": "none",
@@ -1116,8 +1116,6 @@
         "deliveredAt",
         "createdAt",
         "updatedAt",
-        "createdBy",
-        "updatedBy",
         "id",
         "companyId",
         "source",
@@ -1125,7 +1123,9 @@
         "entityId",
         "sourceVersion",
         "eventType",
-        "leaseOwner"
+        "leaseOwner",
+        "updatedBy",
+        "createdBy"
       ]
     },
     {
@@ -1294,7 +1294,7 @@
     {
       "name": "materialDimension",
       "rows": 0,
-      "columns": ["isMetric", "materialFormId", "name", "companyId", "id"]
+      "columns": ["isMetric", "id", "materialFormId", "name", "companyId"]
     },
     {
       "name": "materialSubstance",
@@ -1326,12 +1326,12 @@
       "name": "materialType",
       "rows": 0,
       "columns": [
-        "companyId",
-        "materialFormId",
         "id",
         "name",
         "code",
-        "materialSubstanceId"
+        "materialSubstanceId",
+        "materialFormId",
+        "companyId"
       ]
     },
     {
@@ -2028,12 +2028,12 @@
         "visibility",
         "createdAt",
         "updatedAt",
+        "updatedBy",
         "id",
         "companyId",
         "reportKey",
         "name",
-        "createdBy",
-        "updatedBy"
+        "createdBy"
       ]
     },
     {
@@ -5414,14 +5414,14 @@
         "quantity",
         "createdAt",
         "updatedAt",
+        "companyId",
+        "createdBy",
+        "updatedBy",
         "id",
         "nonConformanceId",
         "purchaseReturnOrderLineId",
         "purchaseReturnOrderId",
-        "purchaseReturnOrderReadableId",
-        "companyId",
-        "createdBy",
-        "updatedBy"
+        "purchaseReturnOrderReadableId"
       ]
     },
     {
@@ -6373,6 +6373,8 @@
         "provenance",
         "createdAt",
         "updatedAt",
+        "createdBy",
+        "updatedBy",
         "id",
         "companyId",
         "intakeId",
@@ -6381,11 +6383,9 @@
         "sourceKey",
         "storageBucket",
         "storagePath",
-        "sha256",
-        "mediaType",
         "fileName",
-        "createdBy",
-        "updatedBy"
+        "sha256",
+        "mediaType"
       ]
     },
     {
@@ -6548,20 +6548,20 @@
         "createdAt",
         "updatedAt",
         "customFields",
-        "purchaseOrderId",
-        "replacementPurchaseOrderId",
-        "currencyCode",
-        "assignee",
-        "companyId",
-        "createdBy",
-        "updatedBy",
         "id",
         "purchaseReturnOrderId",
         "supplierId",
         "supplierLocationId",
         "supplierContactId",
         "supplierReference",
-        "locationId"
+        "locationId",
+        "purchaseOrderId",
+        "replacementPurchaseOrderId",
+        "currencyCode",
+        "assignee",
+        "companyId",
+        "createdBy",
+        "updatedBy"
       ]
     },
     {
@@ -6698,10 +6698,6 @@
         "version",
         "createdAt",
         "updatedAt",
-        "supersedesId",
-        "intakeId",
-        "createdBy",
-        "updatedBy",
         "id",
         "companyId",
         "kind",
@@ -6711,7 +6707,11 @@
         "itemId",
         "supplierPartId",
         "purchaseUnit",
-        "stockUnit"
+        "stockUnit",
+        "supersedesId",
+        "intakeId",
+        "createdBy",
+        "updatedBy"
       ]
     },
     {
