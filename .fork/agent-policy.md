@@ -55,6 +55,19 @@ bypass hooks, remove a required check, weaken a fixture, or add skip flags to ge
 change through; if a required check cannot run, keep the change unpromoted and
 report the missing evidence.
 
+## Explicit operator deployment override
+
+The operator may explicitly invoke `make deploy FORCE=1` or
+`make deploy-portal FORCE=1` (also `make deploy -- --force` and
+`make deploy-portal -- --force`) to skip required GitHub CI-status evidence for
+that invocation. This is the authorized exception to the deployment CI gate
+above. It does not change GitHub checks, hooks, source validation, build inputs,
+TLS, migrations, health checks, recovery, or rollout safeguards, and must never
+be represented as passing verification. Agents must not select force merely to
+work around a failing check; use it only when the user explicitly requests a
+forced deployment. The request to implement this option does not authorize a
+forced production deployment during implementation.
+
 ## Verify deployment boundaries before release
 
 For changes to deployed behavior or deployment machinery, use this order:

@@ -321,7 +321,7 @@ def publish_source(config, rev):
             raise ValueError("Could not reach GitHub to verify public source; check your connection and retry") from None
 
 
-def deploy(config, desired_release=None, *, maintenance=False, prepared_release=None):
+def deploy(config, desired_release=None, *, maintenance=False, prepared_release=None, force=False):
     rev = revision()
     if desired_release is None:
         desired_release, prepared_release = prepare_release.prepare(
@@ -343,7 +343,13 @@ def deploy(config, desired_release=None, *, maintenance=False, prepared_release=
     if not planned_release["build"] and not planned_release["configure"] and not planned_release["migrate"] and not maintenance:
         print("Release plan is a no-op; no source publication or cloud mutations were issued.")
         return
-    verify_source.require_verified(config["SOURCE_REPO_URL"], rev)
+    if force:
+        print(
+            "Force: skipping all required GitHub CI-status checks for this deployment; source and rollout safeguards remain active.",
+            flush=True,
+        )
+    else:
+        verify_source.require_verified(config["SOURCE_REPO_URL"], rev)
     publish_source(config, rev)
     config = {**config, "DEPLOY_REVISION": rev, "SOURCE_CODE_URL": config["SOURCE_REPO_URL"] + "/tree/" + rev}
     cf = Cloudflare(config["CLOUDFLARE_API_TOKEN"])
@@ -439,7 +445,12 @@ def main():
     action.add_argument("--plan", action="store_true", help="prepare a private release preview using read-only cloud queries")
     parser.add_argument("--release-plan", type=Path, help="explicit custom desired-input manifest; normally generated automatically")
     parser.add_argument("--maintenance", action="store_true", help="force coordinated maintenance; normally selected automatically")
+    parser.add_argument(
+        "--force", action="store_true", help="skip required GitHub CI-status checks for this deployment only"
+    )
     args = parser.parse_args()
+    if args.force and not args.apply:
+        parser.error("--force requires --apply")
     config = validate(private_json(args.config), private_json(args.secrets))
     inference_path = args.config.with_name("invoice-inference.json")
     if inference_path.exists():
@@ -466,7 +477,7 @@ def main():
         prepare_release.print_summary(planned)
         if args.plan:
             return
-        deploy(config, desired_release, maintenance=args.maintenance, prepared_release=planned)
+        deploy(config, desired_release, maintenance=args.maintenance, prepared_release=planned, force=args.force)
         if backup_settings is not None:
             Provisioner(backup_config, backup_path.resolve().parent).provision(backup_settings.get("alert_email", ""))
     else:

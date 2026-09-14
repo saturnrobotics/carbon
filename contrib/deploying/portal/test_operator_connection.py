@@ -169,7 +169,7 @@ print('t')
         for mode in ("--check", "--apply"):
             with self.subTest(mode=mode):
 
-                def orchestrate(config, state, *, apply, adapter):
+                def orchestrate(config, state, *, apply, adapter, force=False):
                     self.assertEqual(apply, mode == "--apply")
                     self.assertEqual(adapter.psql, str(self.root / "psql"))
                     self.query(adapter)
@@ -212,7 +212,7 @@ print('t')
         config_path = self.root / "deploy.json"
         config_path.write_text(json.dumps(self.config))
 
-        def orchestrate(config, state, *, apply, adapter):
+        def orchestrate(config, state, *, apply, adapter, force=False):
             self.query(adapter)
             os.kill(os.getpid(), signal.SIGTERM)
 
@@ -242,7 +242,7 @@ print('t')
         config_path = self.root / "deploy.json"
         config_path.write_text(json.dumps(self.config))
 
-        def orchestrate(config, state, *, apply, adapter):
+        def orchestrate(config, state, *, apply, adapter, force=False):
             self.query(adapter)
 
         def interrupt():

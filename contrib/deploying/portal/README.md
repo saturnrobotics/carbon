@@ -128,6 +128,24 @@ opens and closes its own private operator tunnel. Neither target provisions
 Terraform resources, creates secret values, enrolls users or changes IAM grants.
 `make deploy` continues to deploy the ERP/MES stack separately.
 
+### Explicit CI-status override
+
+```bash
+make deploy-portal FORCE=1
+# Equivalent flag spelling (the first -- belongs to Make):
+make deploy-portal -- --force
+```
+
+The underlying command accepts `deploy.py --apply --force`. This skips all
+required GitHub workflow/job verification, including generated-file checks and
+Portal's foundation/runtime CI results. It prints the override and records the
+request in the private deployment log; no successful CI receipt is fabricated.
+A clean integration branch matching published source, public source download,
+configuration/TLS, live-state checks, schema compatibility, Scheduler readiness,
+health checks and recovery remain required. Normal invocations still require CI.
+Do not persist `FORCE=1` in your shell or configuration. `--force` is accepted
+only with `--apply`; it does not alter `make deploy-portal-check`.
+
 ### One-time setup
 
 1. Complete the cloud foundation, private PostgreSQL/TLS connection, runtime
