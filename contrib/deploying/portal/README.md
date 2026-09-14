@@ -153,11 +153,15 @@ Terraform resources, creates secret values, enrolls users or changes IAM grants.
    those permissions; use the reviewed operator identity.
    The PostgreSQL client must support IP-address certificate subject alternative
    names for the private database's `verify-full` connection; older clients can
-   reject a valid IP certificate. On macOS, install the separate client with
-   `brew install libpq`, then run
-   `PATH="$(brew --prefix libpq)/bin:$PATH" make deploy-portal-check` (or
-   `make deploy-portal` with the same PATH). This does not replace an existing
-   PostgreSQL server installation. Confirm the selected `psql --version` first.
+   reject a valid IP certificate. Both Portal commands require PostgreSQL 16+
+   and check the client version before provider calls. They use a supported
+   `psql` on PATH, or automatically select the installed Homebrew `libpq` client
+   when PATH contains an older client or no client. On macOS, run
+   `brew install libpq` once if needed, then use `make deploy-portal-check` and
+   `make deploy-portal` normally. No PATH override or server replacement is
+   needed. On other installations, place a supported `psql` on PATH. If no
+   supported client is available, the command stops with installation guidance;
+   it never relaxes TLS verification.
 3. Configure a private libpq service named `portal-operator` in your
    `~/.pg_service.conf` (or `PGSERVICEFILE`), with a protected password file and
    `sslmode=verify-full`. It must reach the **same Carbon database** as the

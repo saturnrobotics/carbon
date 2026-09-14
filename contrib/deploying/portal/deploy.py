@@ -120,9 +120,55 @@ def release_units(candidate: dict, manifest: Path, *, project: str, region: str,
                 raise ValueError("Schema job finished but the live ledger is not current; application promotion stopped")
 
 
+def select_psql() -> str:
+    """Require the documented operator client; prefer PATH, then installed libpq."""
+
+    def compatible(path):
+        if not path:
+            return False
+        try:
+            result = subprocess.run(
+                [path, "--version"], capture_output=True, text=True, timeout=5
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            return False
+        version = re.fullmatch(
+            r"psql \(PostgreSQL\) (\d+)\.\d+(?:\.\d+)?(?: \([^\n]*\))?\s*",
+            result.stdout.strip(),
+        )
+        return result.returncode == 0 and version is not None and int(version[1]) >= 16
+
+    selected = shutil.which("psql")
+    if compatible(selected):
+        return selected
+    brew = shutil.which("brew")
+    if brew:
+        try:
+            result = subprocess.run(
+                [brew, "--prefix", "libpq"], capture_output=True, text=True, timeout=10
+            )
+            prefix = Path(result.stdout.strip())
+            candidate = str(prefix / "bin/psql")
+            if (
+                result.returncode == 0
+                and prefix.is_absolute()
+                and compatible(candidate)
+            ):
+                print(
+                    "Portal: using the installed Homebrew libpq client (PATH client is missing or unsupported)",
+                    flush=True,
+                )
+                return candidate
+        except (OSError, subprocess.TimeoutExpired):
+            pass
+    raise ValueError(
+        "Portal requires PostgreSQL 16+ psql for verified IP certificates. Install it with brew install libpq on macOS, or put a supported psql on PATH."
+    )
+
 class Commands:
     """Keep provider output and command arguments out of the public terminal."""
-    def __init__(self, log: Path, *, config=None, state=None):
+    def __init__(self, log: Path, *, config=None, state=None, psql="psql"):
+        self.psql = psql
         self.connection = OperatorConnection(config or {}, state or log.parent, log, cwd=ROOT)
         self.log = log
         log.touch(mode=0o600)
@@ -141,7 +187,8 @@ class Commands:
             log.flush()
             stream = input_path.open("rb") if input_path else None
             try:
-                result = subprocess.run(args, check=False, text=True, stdin=stream,
+                command = [self.psql, *args[1:]] if args[0] == "psql" else args
+                result = subprocess.run(command, check=False, text=True, stdin=stream,
                                         stdout=subprocess.PIPE if capture else log, stderr=log, cwd=ROOT, env=environment)
             finally:
                 if stream:
@@ -595,7 +642,7 @@ def main() -> None:
     try:
         config = read_config(args.config)
         validate_config(config)
-        for command in ("git", "docker", "gcloud", "terraform", "psql", "gh", "curl"):
+        for command in ("git", "docker", "gcloud", "terraform", "gh", "curl"):
             if not shutil.which(command):
                 raise ValueError(f"Required command is missing: {command}; see the portal deployment README")
         state = private_state(args.config)
@@ -610,7 +657,7 @@ def main() -> None:
                 raise KeyboardInterrupt
             previous = signal.signal(signal.SIGTERM, interrupted)
             try:
-                with Commands(log, config=config, state=state) as adapter:
+                with Commands(log, config=config, state=state, psql=select_psql()) as adapter:
                     orchestrate(config, state, apply=args.apply, adapter=adapter)
             finally:
                 signal.signal(signal.SIGTERM, previous)

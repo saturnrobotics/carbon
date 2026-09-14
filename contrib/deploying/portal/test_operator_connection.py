@@ -171,11 +171,14 @@ print('t')
 
                 def orchestrate(config, state, *, apply, adapter):
                     self.assertEqual(apply, mode == "--apply")
+                    self.assertEqual(adapter.psql, str(self.root / "psql"))
                     self.query(adapter)
 
                 with patch.object(sys, "argv", ["deploy.py", "--config", str(config_path), mode]), patch.object(
                     self.deploy, "orchestrate", side_effect=orchestrate
-                ), patch.object(self.deploy.shutil, "which", return_value="/synthetic/tool"):
+                ), patch.object(self.deploy.shutil, "which", return_value="/synthetic/tool"), patch.object(
+                    self.deploy, "select_psql", return_value=str(self.root / "psql")
+                ):
                     self.deploy.main()
                 self.assert_closed()
 
@@ -216,7 +219,9 @@ print('t')
         previous = signal.getsignal(signal.SIGTERM)
         with patch.object(sys, "argv", ["deploy.py", "--config", str(config_path), "--check"]), patch.object(
             self.deploy, "orchestrate", side_effect=orchestrate
-        ), patch.object(self.deploy.shutil, "which", return_value="/synthetic/tool"):
+        ), patch.object(self.deploy.shutil, "which", return_value="/synthetic/tool"), patch.object(
+            self.deploy, "select_psql", return_value=str(self.root / "psql")
+        ):
             with self.assertRaises(SystemExit) as failure:
                 self.deploy.main()
         self.assertEqual(failure.exception.code, 130)
@@ -251,7 +256,9 @@ print('t')
         try:
             with patch.object(sys, "argv", ["deploy.py", "--config", str(config_path), "--check"]), patch.object(
                 self.deploy, "orchestrate", side_effect=orchestrate
-            ), patch.object(self.deploy.shutil, "which", return_value="/synthetic/tool"):
+            ), patch.object(self.deploy.shutil, "which", return_value="/synthetic/tool"), patch.object(
+                self.deploy, "select_psql", return_value=str(self.root / "psql")
+            ):
                 worker.start()
                 with self.assertRaises(SystemExit):
                     self.deploy.main()
