@@ -440,9 +440,12 @@ foundation and a release.
 
 Cloud Run IAM is the entrance check for every internal hop; the receiver still
 verifies the service token and the forwarded IAP assertion. Grants are exactly
-the following forwarding table plus the two job triggers. Runtime invoker grants
-are bound by exact `resource.name` conditions because their receivers are
-controller-created and may not exist at the first foundation apply.
+the following forwarding table plus the two job triggers. HTTP service invoker grants
+use exact `request.host` conditions derived from the foundation service URLs.
+Cloud Run does not support `resource.name` for HTTP invocation; see the
+[Google IAM attribute reference](https://cloud.google.com/iam/docs/conditions-attribute-reference#request.host).
+The project-level grant permits foundation setup before the receiver exists.
+Job execution grants retain their separate resource conditions.
 `test_infrastructure.py` rejects grants outside this table, unconditioned
 `run.invoker`, and public access grants.
 
