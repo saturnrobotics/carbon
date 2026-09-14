@@ -123,7 +123,8 @@ traffic, and enables the minute-by-minute drain job only after the check succeed
 
 Run `make deploy-portal-check` for the same setup/source/live-state preflight
 without building, publishing, migrating or replacing workloads. It performs
-read-only provider calls and writes a private local log. Neither target provisions
+read-only provider calls and writes a private local log. When configured, it also
+opens and closes its own private operator tunnel. Neither target provisions
 Terraform resources, creates secret values, enrolls users or changes IAM grants.
 `make deploy` continues to deploy the ERP/MES stack separately.
 
@@ -166,7 +167,45 @@ Terraform resources, creates secret values, enrolls users or changes IAM grants.
    requires no `USAGE` on the application schema or application-function
    `EXECUTE` privileges. The initial bootstrap uses the separately reviewed
    privileged connection; subsequent compatible migrations run as the restricted
-   Cloud Run schema job. Keep any required tunnel connected while deploying.
+   Cloud Run schema job.
+
+   For the existing IAP/SSH private database route, create an ignored
+   `operator-tunnel.json` beside your private `deploy.json` once:
+
+   ```json
+   {
+     "project": "example-project",
+     "zone": "us-east1-b",
+     "instance": "example-bastion",
+     "remote_port": 5432
+   }
+   ```
+
+   Use the bastion VM's project and zone, which may differ from Portal's project.
+   The same object can instead be supplied as `operator_tunnel` in `deploy.json`;
+   an explicit object takes precedence over the adjacent file. These are data
+   fields, not a shell command. Omit both for a directly reachable database.
+
+   Keep the libpq service's `host` set to the **remote database certificate
+   identity**, with explicit `sslmode=verify-full`, database/user, CA and protected
+   password file (`chmod 600`). Use absolute credential/certificate paths. Its
+   old forwarded port can remain: the command selects its own loopback port and
+   privately adjusts exact-port password entries for that invocation, preserving
+   wildcard entries. It never rewrites your original service or password files.
+
+   Both Portal commands start the tunnel on their first database read, wait up
+   to 45 seconds for the owned listener, and verify the database through the
+   normal authenticated, TLS-verified preflight queries. They retain the tunnel
+   through deployment and close its process group and temporary credentials on
+   success, failure, Ctrl-C or SIGTERM. An abrupt SIGKILL cannot run cleanup.
+   Existing tunnels are neither reused nor stopped. No separate terminal or
+   `start-tunnel.py --hold` is needed. SSH host checking stays strict; the operator
+   must already have authorized IAP/SSH access and a usable local SSH key.
+
+   If the tunnel dies mid-command, database reads fail explicitly; provider
+   rollback and Scheduler cleanup can still run. Retry the same make command
+   after resolving the private-log error. This does not refresh expired Google
+   login/ADC sessions or provision network access.
 4. Copy the synthetic template and replace every `<placeholder>`:
 
    ```bash
