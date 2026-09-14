@@ -449,7 +449,27 @@ def revision_document(name: str, spec: dict[str, Any], digest: str, observed: di
         # `services replace` has no --no-traffic flag. Explicitly pin all
         # existing allocations while the new revision passes its startup probe.
         service_spec["traffic"] = [{key: entry[key] for key in ("revisionName", "percent", "tag") if key in entry} for entry in prior]
+        # An unreferenced zero-traffic revision can retire before its startup
+        # probe runs. A protected tag activates it without shifting user traffic.
+        tag = f"portal-stage-{uuid4().hex[:16]}"
+        if any(entry.get("tag") == tag for entry in prior):
+            raise ValueError("Portal staging tag collision; retry with a fresh plan")
+        service_spec["traffic"].append({"revisionName": template["metadata"]["name"], "percent": 0, "tag": tag})
     return {"apiVersion": "serving.knative.dev/v1", "kind": "Service", "metadata": metadata, "spec": service_spec}
+
+
+def remove_staging_tag(adapter: Gcloud, project: str, region: str, name: str, tag: str, revision: str) -> None:
+    """Remove only this attempt's tag, including after a concurrent deployment."""
+    document = json.loads(adapter.call(describe_command(project, region, name), capture=True))
+    targets = [entry for entry in document.get("spec", {}).get("traffic", []) if entry.get("tag") == tag]
+    if not targets:
+        return
+    if any(entry.get("revisionName") != revision or entry.get("percent", 0) != 0 for entry in targets):
+        raise ValueError(f"{name} staging tag ownership changed; reconcile it before retrying")
+    adapter.call(["gcloud", "run", "services", "update-traffic", name, f"--remove-tags={tag}", "--project", project, "--region", region])
+    document = json.loads(adapter.call(describe_command(project, region, name), capture=True))
+    if any(entry.get("tag") == tag for entry in document.get("spec", {}).get("traffic", [])):
+        raise ValueError(f"{name} staging tag cleanup did not complete; reconcile it before retrying")
 
 
 def save_manifest(path: Path, plan: dict[str, Any], current: dict[str, Any], mutations: list[dict[str, Any]]) -> None:
@@ -490,6 +510,9 @@ def promote(plan: dict[str, Any], current: dict[str, Any], *, project: str, regi
         name = mutation["name"]
         document = documents[name]
         restore_previous = True
+        revision = document["spec"]["template"]["metadata"]["name"] if mutation["kind"] == "service" else ""
+        stage_tag = next((entry["tag"] for entry in document["spec"].get("traffic", []) if entry.get("revisionName") == revision and entry.get("tag")), None)
+        tag_cleanup_complete = False
         with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as stream:
             json.dump(document, stream)
             rendered = Path(stream.name)
@@ -499,11 +522,20 @@ def promote(plan: dict[str, Any], current: dict[str, Any], *, project: str, regi
             if mutation["kind"] == "service":
                 ready = json.loads(adapter.call(describe_command(project, region, name), capture=True))
                 status = ready.get("status", {})
-                revision = document["spec"]["template"]["metadata"]["name"]
                 restore_previous = status.get("latestCreatedRevisionName") == revision
                 if status.get("latestCreatedRevisionName") != revision or status.get("latestReadyRevisionName") != revision or not any(condition.get("type") == "Ready" and condition.get("status") == "True" for condition in status.get("conditions", [])):
                     raise ValueError(f"{name} staged revision did not become Ready with its HTTP startup probe")
-                adapter.call(["gcloud", "run", "services", "update-traffic", name, f"--to-revisions={revision}=100", "--project", project, "--region", region])
+                candidate = json.loads(adapter.call(["gcloud", "run", "revisions", "describe", revision, "--project", project, "--region", region, "--format=json"], capture=True))
+                conditions = candidate.get("status", {}).get("conditions", [])
+                if candidate.get("metadata", {}).get("name") != revision or not all(any(condition.get("type") == kind and condition.get("status") == "True" and condition.get("reason") != "Retired" for condition in conditions) for kind in ("Ready", "ContainerHealthy")):
+                    raise ValueError(f"{name} staged revision did not prove a successful HTTP startup probe")
+                promote_command = ["gcloud", "run", "services", "update-traffic", name, f"--to-revisions={revision}=100", "--project", project, "--region", region]
+                if stage_tag:
+                    promote_command.append(f"--remove-tags={stage_tag}")
+                adapter.call(promote_command)
+                if stage_tag:
+                    remove_staging_tag(adapter, project, region, name, stage_tag, revision)
+                tag_cleanup_complete = True
                 mutation["deployed_revision"] = revision
             else:
                 replaced = json.loads(adapter.call(["gcloud", "run", "jobs", "describe", name, "--project", project, "--region", region, "--format=json"], capture=True))
@@ -538,7 +570,11 @@ def promote(plan: dict[str, Any], current: dict[str, Any], *, project: str, regi
                     raise ValueError(f"{name} failed and its prior service configuration could not be restored; reconcile it before retrying") from restore_error
             raise
         finally:
-            rendered.unlink(missing_ok=True)
+            try:
+                if stage_tag and not tag_cleanup_complete:
+                    remove_staging_tag(adapter, project, region, name, stage_tag, revision)
+            finally:
+                rendered.unlink(missing_ok=True)
     save_manifest(manifest, plan, current, promoted)
     return promoted
 

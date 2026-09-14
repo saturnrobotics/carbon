@@ -281,13 +281,19 @@ class ReleaseControllerTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             manifest = Path(directory) / "manifest.json"
             release.promote(plan(), current, project="example", region="us-east1", manifest=manifest, adapter=adapter)
-            staged = adapter.documents["portal-web"]
+            staged = adapter.replacements[0]
             self.assertIn("name", staged["spec"]["template"]["metadata"], "Stage an explicitly named revision")
             revision = staged["spec"]["template"]["metadata"]["name"]
             probe = staged["spec"]["template"]["spec"]["containers"][0]["startupProbe"]
             self.assertEqual(probe["httpGet"], {"path": "/health", "port": 8080})
             self.assertLessEqual(probe["failureThreshold"] * probe["periodSeconds"], 240)
-            self.assertEqual(staged["spec"]["traffic"], [{"revisionName": "portal-web-old", "percent": 100}])
+            self.assertEqual(staged["spec"]["traffic"][:-1], [{"revisionName": "portal-web-old", "percent": 100}])
+            target = staged["spec"]["traffic"][-1]
+            self.assertEqual(target["revisionName"], revision)
+            self.assertEqual(target["percent"], 0)
+            self.assertTrue(target["tag"].startswith("portal-stage-"))
+            self.assertTrue(any(f"--remove-tags={target['tag']}" in call and f"--to-revisions={revision}=100" in call for call in adapter.calls))
+            self.assertTrue(any(call[2:5] == ["revisions", "describe", revision] for call in adapter.calls))
             self.assertFalse(any("--no-traffic" in call or "--file" in call for call in adapter.calls))
             self.assertTrue(any(f"--to-revisions={revision}=100" in call for call in adapter.calls))
             self.assertFalse(any("--to-latest" in call or call[0] == "curl" or "print-identity-token" in call for call in adapter.calls))
@@ -296,7 +302,7 @@ class ReleaseControllerTests(unittest.TestCase):
             self.assertEqual(saved["services"]["portal-web"]["deployed_revision"], revision)
 
     def test_old_ready_revision_cannot_pass_the_staged_health_gate(self):
-        for failure in ("not-ready", "old-ready", "newer-created"):
+        for failure in ("not-ready", "old-ready", "newer-created", "retired", "missing-health", "unhealthy", "wrong-revision"):
             with self.subTest(failure=failure), tempfile.TemporaryDirectory() as directory:
                 adapter = CloudProtocol(failure=failure)
                 manifest = Path(directory) / "manifest.json"
@@ -306,7 +312,7 @@ class ReleaseControllerTests(unittest.TestCase):
                 if failure == "newer-created":
                     self.assertEqual(len([call for call in adapter.calls if "replace" in call]), 1, "Never restore over a concurrent writer")
                 traffic_calls = [call for call in adapter.calls if "update-traffic" in call]
-                self.assertTrue(all("--to-revisions=portal-web-old=100" in call for call in traffic_calls))
+                self.assertTrue(all("--to-revisions=portal-web-old=100" in call or any(argument.startswith("--remove-tags=") for argument in call) for call in traffic_calls))
 
     def test_failed_stage_restores_prior_template_so_the_same_plan_can_retry(self):
         adapter = CloudProtocol(failure="not-ready")
@@ -320,6 +326,105 @@ class ReleaseControllerTests(unittest.TestCase):
             adapter.failure = None
             release.promote(plan(), current, project="example", region="us-east1", manifest=manifest, adapter=adapter)
             self.assertTrue(manifest.exists())
+
+    def test_stage_and_promotion_preserve_unrelated_tags(self):
+        adapter = CloudProtocol()
+        previous = observed_web_shell()
+        previous["status"]["traffic"].append({"revisionName": "portal-web-old", "percent": 0, "tag": "prior-preview"})
+        previous["spec"]["traffic"] = previous["status"]["traffic"]
+        adapter.documents["portal-web"] = previous
+        current = {"generation": 3, "services": {"portal-web": {"revision_digest": "old"}}}
+        with tempfile.TemporaryDirectory() as directory:
+            release.promote(plan(), current, project="example", region="us-east1", manifest=Path(directory) / "manifest.json", adapter=adapter)
+        staged = adapter.replacements[0]
+        self.assertEqual(staged["spec"]["traffic"][:-1], previous["status"]["traffic"])
+        final = adapter.documents["portal-web"]["spec"]["traffic"]
+        self.assertEqual([target["tag"] for target in final if target.get("tag")], ["prior-preview"])
+        self.assertEqual(sum(target.get("percent", 0) for target in final), 100)
+
+    def test_first_service_creation_requires_exact_revision_health_without_a_tag(self):
+        adapter = CloudProtocol()
+        candidate = database_plan()
+        with tempfile.TemporaryDirectory() as directory:
+            release.promote(candidate, {"generation": 3, "services": {}}, project="example", region="us-east1", manifest=Path(directory) / "manifest.json", adapter=adapter, ledger=ledger(LAST))
+        self.assertNotIn("traffic", adapter.replacements[0]["spec"])
+        self.assertTrue(any(call[2] == "revisions" for call in adapter.calls))
+        self.assertFalse(any(arg.startswith("--remove-tags=") for call in adapter.calls for arg in call))
+
+    def test_promotion_failure_removes_staging_tag_and_restores_prior_configuration(self):
+        adapter = CloudProtocol(failure="promotion")
+        with tempfile.TemporaryDirectory() as directory:
+            manifest = Path(directory) / "manifest.json"
+            with self.assertRaises(release.subprocess.CalledProcessError):
+                release.promote(plan(), {"generation": 3, "services": {"portal-web": {"revision_digest": "old"}}}, project="example", region="us-east1", manifest=manifest, adapter=adapter)
+            self.assertFalse(manifest.exists())
+        self.assertEqual(adapter.documents["portal-web"]["spec"], observed_web_shell()["spec"] | {"traffic": [{"revisionName": "portal-web-old", "percent": 100}]})
+
+    def test_staging_tags_fit_deterministic_cloud_run_hostnames(self):
+        for name, kind in release.UNITS.items():
+            if kind != "service":
+                continue
+            with self.subTest(name=name):
+                spec = plan()["services"]["portal-web"] if name == "portal-web" else database_plan(name)["services"][name]
+                document = release.revision_document(name, spec, "digest", observed_web_shell())
+                target = document["spec"]["traffic"][-1]
+                self.assertLessEqual(len(f"{target['tag']}---{name}-123456789012"), 63)
+                self.assertRegex(target["tag"], r"^portal-stage-[a-f0-9]{16}$")
+
+    def test_staging_tag_collision_refuses_before_any_cloud_write(self):
+        nonce = release.uuid4()
+        previous = observed_web_shell()
+        previous["status"]["traffic"].append({"revisionName": "portal-web-old", "percent": 0, "tag": f"portal-stage-{nonce.hex[:16]}"})
+        previous["spec"]["traffic"] = previous["status"]["traffic"]
+        adapter = CloudProtocol()
+        adapter.documents["portal-web"] = previous
+        with tempfile.TemporaryDirectory() as directory, patch.object(release, "uuid4", return_value=nonce):
+            with self.assertRaisesRegex(ValueError, "tag collision"):
+                release.promote(plan(), {"generation": 3, "services": {"portal-web": {"revision_digest": "old"}}}, project="example", region="us-east1", manifest=Path(directory) / "manifest.json", adapter=adapter)
+        self.assertFalse(any("replace" in call or "update-traffic" in call for call in adapter.calls))
+
+    def test_concurrent_revision_keeps_its_template_and_only_our_tag_is_removed(self):
+        adapter = CloudProtocol(failure="newer-created")
+        with tempfile.TemporaryDirectory() as directory:
+            with self.assertRaisesRegex(ValueError, "staged revision"):
+                release.promote(plan(), {"generation": 3, "services": {"portal-web": {"revision_digest": "old"}}}, project="example", region="us-east1", manifest=Path(directory) / "manifest.json", adapter=adapter)
+        self.assertEqual(len(adapter.replacements), 1)
+        traffic_calls = [call for call in adapter.calls if "update-traffic" in call]
+        self.assertEqual(len(traffic_calls), 1)
+        self.assertTrue(any(argument.startswith("--remove-tags=portal-stage-") for argument in traffic_calls[0]))
+        self.assertFalse(any(argument.startswith("--to-") for argument in traffic_calls[0]))
+        self.assertFalse(any(target.get("tag", "").startswith("portal-stage-") for target in adapter.documents["portal-web"]["spec"]["traffic"]))
+
+    def test_incomplete_tag_cleanup_cannot_advance_manifest(self):
+        adapter = CloudProtocol(failure="ignore-cleanup")
+        with tempfile.TemporaryDirectory() as directory:
+            manifest = Path(directory) / "manifest.json"
+            with self.assertRaisesRegex(ValueError, "cleanup did not complete"):
+                release.promote(plan(), {"generation": 3, "services": {"portal-web": {"revision_digest": "old"}}}, project="example", region="us-east1", manifest=manifest, adapter=adapter)
+            self.assertFalse(manifest.exists())
+        self.assertEqual(adapter.documents["portal-web"]["spec"]["template"], observed_web_shell()["spec"]["template"])
+        self.assertFalse(any(target.get("tag", "").startswith("portal-stage-") for target in adapter.documents["portal-web"]["spec"]["traffic"]))
+
+    def test_failed_concurrent_cleanup_preserves_evidence_without_restoring_over_writer(self):
+        adapter = CloudProtocol(failure="concurrent-cleanup-failure")
+        with tempfile.TemporaryDirectory() as directory:
+            manifest = Path(directory) / "manifest.json"
+            with self.assertRaises(release.subprocess.CalledProcessError):
+                release.promote(plan(), {"generation": 3, "services": {"portal-web": {"revision_digest": "old"}}}, project="example", region="us-east1", manifest=manifest, adapter=adapter)
+            self.assertFalse(manifest.exists())
+        self.assertEqual(len(adapter.replacements), 1)
+        self.assertTrue(any(target.get("tag", "").startswith("portal-stage-") for target in adapter.documents["portal-web"]["spec"]["traffic"]))
+
+    def test_tag_cleanup_refuses_changed_ownership_or_positive_traffic(self):
+        for target in ({"revisionName": "another-revision", "percent": 0, "tag": "owned-stage"}, {"revisionName": "candidate", "percent": 100, "tag": "owned-stage"}):
+            with self.subTest(target=target):
+                adapter = CloudProtocol()
+                previous = observed_web_shell()
+                previous["spec"]["traffic"] = [target]
+                adapter.documents["portal-web"] = previous
+                with self.assertRaisesRegex(ValueError, "ownership changed"):
+                    release.remove_staging_tag(adapter, "example", "us-east1", "portal-web", "owned-stage", "candidate")
+                self.assertFalse(any("update-traffic" in call for call in adapter.calls))
 
     def test_existing_unrecorded_runtime_cannot_be_silently_adopted(self):
         for labeled in (True, False):
@@ -391,6 +496,8 @@ class CloudProtocol:
     def __init__(self, *, failure=None):
         self.calls = []
         self.documents = {}
+        self.replacements = []
+        self.revisions = {}
         self.failure = failure
 
     def call(self, args, *, capture=False):
@@ -401,6 +508,37 @@ class CloudProtocol:
             document = json.loads(Path(args[4]).read_text())
             name = document["metadata"]["name"]
             self.documents[name] = document
+            self.replacements.append(json.loads(json.dumps(document)))
+            if document["kind"] == "Service":
+                revision = document["spec"]["template"]["metadata"].get("name", "missing-name")
+                self.revisions[revision] = document["spec"]["template"]
+            return ""
+        if args[2:4] == ["revisions", "describe"]:
+            revision = args[4]
+            conditions = [{"type": "Ready", "status": "True"}]
+            if self.failure == "retired":
+                conditions[0]["reason"] = "Retired"
+            elif self.failure != "missing-health":
+                conditions.append({"type": "ContainerHealthy", "status": "False" if self.failure == "unhealthy" else "True"})
+            return json.dumps({"metadata": {"name": "other-revision" if self.failure == "wrong-revision" else revision}, "status": {"conditions": conditions}})
+        if "update-traffic" in args:
+            name = args[4]
+            document = self.documents[name]
+            removed = next((arg.split("=", 1)[1] for arg in args if arg.startswith("--remove-tags=")), None)
+            allocation = next((arg.split("=", 1)[1] for arg in args if arg.startswith("--to-revisions=")), None)
+            if self.failure == "concurrent-cleanup-failure" and removed:
+                raise release.subprocess.CalledProcessError(1, args)
+            if self.failure == "ignore-cleanup":
+                removed = None
+            if self.failure == "promotion" and allocation and "portal-web-old" not in allocation:
+                raise release.subprocess.CalledProcessError(1, args)
+            traffic = document["spec"].get("traffic", [])
+            if allocation:
+                traffic = [{"revisionName": item["revisionName"], "tag": item["tag"], "percent": 0} for item in traffic if item.get("tag")]
+                for item in allocation.split(","):
+                    revision, percent = item.rsplit("=", 1)
+                    traffic.append({"revisionName": revision, "percent": int(percent)})
+            document["spec"]["traffic"] = [item for item in traffic if not removed or item.get("tag") != removed]
             return ""
         if "describe" in args:
             name = args[4]
@@ -416,9 +554,9 @@ class CloudProtocol:
             document["status"] = {
                 "url": "https://portal-web.example",
                 "latestReadyRevisionName": "portal-web-old" if self.failure == "old-ready" else revision,
-                "latestCreatedRevisionName": "portal-web-concurrent" if self.failure == "newer-created" else revision,
+                "latestCreatedRevisionName": "portal-web-concurrent" if self.failure in {"newer-created", "concurrent-cleanup-failure"} else revision,
                 "conditions": [{"type": "Ready", "status": "False" if self.failure == "not-ready" else "True"}],
-                "traffic": [{"revisionName": "portal-web-old", "percent": 100}],
+                "traffic": document["spec"].get("traffic", []),
             }
             return json.dumps(document)
         return ""

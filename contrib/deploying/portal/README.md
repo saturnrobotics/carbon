@@ -106,8 +106,14 @@ and executes the schema job when migrations are pending, rereads the **live**
 migration ledger, and releases parser, query, ingestion, retention and web in
 that order. Services must pass an HTTP `/health` startup probe on their new
 revision before it can be promoted. Existing services keep their prior traffic
-allocation during staging; a brand-new service has no prior revision and can
-receive traffic once its first revision passes the startup probe.
+allocation and existing tags during staging. The controller adds a unique temporary
+zero-percent tag so Cloud Run starts the candidate instead of retiring an
+unreferenced revision. It verifies `Ready=True` and `ContainerHealthy=True` on
+that exact revision; `Ready=True` with reason `Retired` is not startup proof.
+Promotion removes only the temporary tag before recording success. The tag uses
+the service's existing IAP/IAM protection; no browser or operator request is made
+to its URL. A brand-new service has no prior revision and can receive traffic
+once its first revision passes the startup probe.
 
 With the template's `PORTAL_SCHEDULER_MODE=cloud-scheduler`, the command pauses
 scheduled ingestion before applying schema or service changes and waits for an
@@ -924,9 +930,15 @@ Build each selected image, record its actual OCI digest and matching source comm
 in the private release plan, then dry-run the controller. With `--apply`, the
 controller preserves existing service traffic while staging, uses the new
 revision's configuration-aware HTTP `/health` startup probe, promotes that exact
-ready revision, and atomically records successful per-unit progress. Failed
-staging restores the prior service template and traffic where one exists. A
-first service creation becomes routable after its startup probe succeeds. The
+ready revision while removing its temporary staging tag, and atomically records
+successful per-unit progress after tag cleanup. Failed staging restores the prior
+service template and traffic where one exists. If the controller observes that
+another deployment created a newer revision, it preserves it and removes only its own tag after
+verifying that the tag still targets its candidate with zero traffic. Failed
+cleanup or changed tag ownership blocks success and requires reconciliation; it
+does not authorize deleting unrelated tags or overwriting concurrent changes.
+Run one deployment controller per service: provider reads and updates are not an
+atomic transaction across controllers. A first service creation becomes routable after its startup probe succeeds. The
 low-level controller replaces jobs without execution; `make deploy-portal`
 additionally executes pending schema migrations and rechecks the live ledger.
 
