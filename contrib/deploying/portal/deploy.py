@@ -454,7 +454,11 @@ def wait_scheduler_attempt(scheduler: dict, kind: str, adapter, *, after: dateti
         observed = read_scheduler(job, adapter)
         if observed["state"] != expected_state:
             raise ValueError("Portal scheduler state changed during its release check")
+        # PauseJob can clear lastAttemptTime/status. A captured dispatch may
+        # prove quiescence from logs, but never substitute for a fresh success.
         attempt = observed.get("lastAttemptTime")
+        if not attempt and not require_success and expected_state == "PAUSED":
+            attempt = expected_attempt
         if attempt and attempt != previous_attempt and scheduler_timestamp(attempt) >= after:
             if expected_attempt is not None and attempt != expected_attempt:
                 raise ValueError("Concurrent Portal scheduler attempts make readiness ambiguous")
@@ -484,7 +488,17 @@ def wait_scheduler_attempt(scheduler: dict, kind: str, adapter, *, after: dateti
                 finished = next(iter(phases["Finished"].values()))
                 start_time, finish_time = scheduler_timestamp(started["timestamp"]), scheduler_timestamp(finished["timestamp"])
                 attempt_time = scheduler_timestamp(attempt)
-                if finish_time < start_time or finish_time < attempt_time or abs((start_time - attempt_time).total_seconds()) > 30:
+                # scheduledTime identifies dispatch. Distributed log timestamps
+                # need not order Started before Finished, even for one attempt.
+                scheduled_time = scheduler_timestamp(started["jsonPayload"].get("scheduledTime"))
+                # Manual RunJob dispatch is exact; a cron tick can precede its
+                # actual dispatch. Retain bounded matching for quiescence only.
+                schedule_matches = (
+                    scheduled_time == attempt_time
+                    if require_success
+                    else abs((scheduled_time - attempt_time).total_seconds()) <= 30
+                )
+                if not schedule_matches or finish_time < attempt_time or abs((start_time - attempt_time).total_seconds()) > 30:
                     raise ValueError("Portal scheduler logs do not match the observed attempt")
                 status = finished.get("httpRequest", {}).get("status")
                 last_status = observed.get("status")
@@ -498,12 +512,12 @@ def wait_scheduler_attempt(scheduler: dict, kind: str, adapter, *, after: dateti
     raise ValueError("Portal scheduler completion was not proven before timeout; drain remains paused. The operator needs Cloud Logging read access; allow for execution-log delivery latency and retry deployment.")
 
 
-def settle_scheduler(scheduler: dict, kind: str, adapter, *, maximum_polls=120, wait=time.sleep, now=lambda: datetime.now(timezone.utc)) -> None:
+def settle_scheduler(scheduler: dict, kind: str, adapter, *, previous_attempt: str | None = None, maximum_polls=120, wait=time.sleep, now=lambda: datetime.now(timezone.utc)) -> None:
     observed = read_scheduler(scheduler[kind + "_job"], adapter)
     if observed.get("attemptDeadline") != "450s" or not scheduler_retries_disabled(observed):
         raise ValueError("Portal scheduler timing drift prevents safe release quiescence")
-    if observed.get("lastAttemptTime"):
-        attempt = observed["lastAttemptTime"]
+    attempt = observed.get("lastAttemptTime") or previous_attempt
+    if attempt:
         # The request (450s), Cloud Run handler (420s), and runtime (390s) have
         # already stopped beyond this horizon. Old logs may have expired, so do
         # not require permanent historical logging retention to deploy again.
@@ -515,12 +529,21 @@ def settle_scheduler(scheduler: dict, kind: str, adapter, *, maximum_polls=120, 
 
 def pause_scheduler(scheduler: dict, adapter, *, maximum_polls=120, wait=time.sleep, now=lambda: datetime.now(timezone.utc)) -> None:
     job = scheduler["drain_job"]
-    if read_scheduler(job, adapter)["state"] == "ENABLED":
+    before_pause = read_scheduler(job, adapter)
+    if before_pause["state"] == "ENABLED":
         print("Portal: pausing scheduled ingestion and waiting for its active attempt to finish", flush=True)
         adapter.call(scheduler_command("pause", job))
     if read_scheduler(job, adapter)["state"] != "PAUSED":
         raise ValueError("Portal scheduler drain could not be paused before release")
-    settle_scheduler(scheduler, "drain", adapter, maximum_polls=maximum_polls, wait=wait, now=now)
+    settle_scheduler(
+        scheduler,
+        "drain",
+        adapter,
+        previous_attempt=before_pause.get("lastAttemptTime"),
+        maximum_polls=maximum_polls,
+        wait=wait,
+        now=now,
+    )
 
 
 def require_scheduler_revision(candidate: dict, manifest: Path, config: dict, adapter) -> None:
@@ -559,11 +582,17 @@ def activate_scheduler(scheduler: dict, adapter, *, verify_revision, maximum_pol
                                          maximum_polls=maximum_polls, wait=wait, expected_state="ENABLED")
     finally:
         # Also clean up if the resume/run response is lost after taking effect.
-        if read_scheduler(job, adapter)["state"] == "ENABLED":
+        before_pause = read_scheduler(job, adapter)
+        if before_pause["state"] == "ENABLED":
             adapter.call(scheduler_command("pause", job))
         if read_scheduler(job, adapter)["state"] != "PAUSED":
             raise ValueError("Portal scheduler check could not be paused; reconcile it before retrying")
-    if read_scheduler(job, adapter).get("lastAttemptTime") != receipt["last_attempt_time"]:
+    # Capture identity before PauseJob clears attempt metadata. If the provider
+    # retains it, also reject a changed dispatch observed after pausing.
+    after_pause_attempt = read_scheduler(job, adapter).get("lastAttemptTime")
+    if before_pause.get("lastAttemptTime") != receipt["last_attempt_time"] or (
+        after_pause_attempt is not None and after_pause_attempt != receipt["last_attempt_time"]
+    ):
         raise ValueError("Concurrent Portal scheduler attempts make readiness ambiguous")
     verify_revision()
     adapter.call(scheduler_command("resume", scheduler["drain_job"]))

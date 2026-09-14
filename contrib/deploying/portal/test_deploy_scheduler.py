@@ -17,6 +17,8 @@ ATTEMPT = "2026-09-13T12:00:01Z"
 def execution_log(job, phase, *, timestamp=ATTEMPT, status=200, suffix=""):
     payload = {"@type": "type.googleapis.com/google.cloud.scheduler.logging.Attempt" + phase,
                "jobName": job, "url": scheduler_outputs()["outbox_scheduler"]["value"]["audience"] + "/internal/outbox/" + job.rsplit("-", 1)[-1], "targetType": "HTTP"}
+    if phase == "Started":
+        payload["scheduledTime"] = ATTEMPT
     return {"insertId": phase + suffix, "timestamp": timestamp, "jsonPayload": payload,
             "httpRequest": {"status": status} if phase == "Finished" else {}}
 
@@ -146,6 +148,113 @@ class SchedulerActivationTests(unittest.TestCase):
         self.assertEqual(receipt["last_attempt_time"], ATTEMPT)
         self.assertEqual(adapter.jobs[job]["state"], "PAUSED")
 
+    def test_completion_timestamp_can_precede_start_log_when_dispatch_matches(self):
+        job = self.scheduler["check_job"]
+        adapter = SchedulerAdapter(
+            logs=[
+                [
+                    execution_log(job, "Started", timestamp="2026-09-13T12:00:02.489292960Z"),
+                    execution_log(job, "Finished", timestamp="2026-09-13T12:00:02.482745176Z"),
+                ]
+            ]
+        )
+        receipt = self.activate(adapter)
+        self.assertEqual(receipt["last_attempt_time"], ATTEMPT)
+        self.assertEqual(adapter.jobs[self.scheduler["drain_job"]]["state"], "ENABLED")
+
+    def test_out_of_order_denied_completion_reports_authentication_failure(self):
+        job = self.scheduler["check_job"]
+        adapter = SchedulerAdapter(
+            logs=[
+                [
+                    execution_log(job, "Started", timestamp="2026-09-13T12:00:02.489292960Z"),
+                    execution_log(job, "Finished", timestamp="2026-09-13T12:00:02.482745176Z", status=403),
+                ]
+            ]
+        )
+        with self.assertRaisesRegex(ValueError, "authenticated readiness check failed"):
+            self.activate(adapter)
+        self.assertEqual(adapter.jobs[job]["state"], "PAUSED")
+        self.assertEqual(adapter.jobs[self.scheduler["drain_job"]]["state"], "PAUSED")
+
+    def test_started_log_must_identify_the_observed_dispatch(self):
+        job = self.scheduler["check_job"]
+        for scheduled_time in (None, "2026-09-13T12:00:00Z"):
+            with self.subTest(scheduled_time=scheduled_time):
+                started = execution_log(job, "Started")
+                started["jsonPayload"]["scheduledTime"] = scheduled_time
+                adapter = SchedulerAdapter(logs=[[started, execution_log(job, "Finished")]])
+                with self.assertRaises(ValueError):
+                    self.activate(adapter)
+                self.assertEqual(adapter.jobs[self.scheduler["drain_job"]]["state"], "PAUSED")
+
+    def test_pause_can_clear_attempt_metadata_after_proven_completion(self):
+        class ClearsAttemptOnPause(SchedulerAdapter):
+            def call(inner, args, *, capture=False):
+                result = super().call(args, capture=capture)
+                if args[:4] == ["gcloud", "scheduler", "jobs", "pause"]:
+                    inner.jobs[args[4]].pop("lastAttemptTime", None)
+                    inner.jobs[args[4]]["status"] = {"code": -1}
+                    return json.dumps(inner.jobs[args[4]])
+                return result
+
+        adapter = ClearsAttemptOnPause()
+        receipt = self.activate(adapter)
+        self.assertEqual(receipt["last_attempt_time"], ATTEMPT)
+        self.assertEqual(adapter.jobs[self.scheduler["check_job"]]["state"], "PAUSED")
+        self.assertEqual(adapter.jobs[self.scheduler["drain_job"]]["state"], "ENABLED")
+
+    def test_another_dispatch_before_or_after_pause_keeps_drain_paused(self):
+        for stage in ("before", "after"):
+            with self.subTest(stage=stage):
+
+                class ConcurrentAttempt(SchedulerAdapter):
+                    def call(inner, args, *, capture=False):
+                        result = super().call(args, capture=capture)
+                        if (stage == "before" and args[:3] == ["gcloud", "logging", "read"]) or (
+                            stage == "after" and args[:4] == ["gcloud", "scheduler", "jobs", "pause"]
+                        ):
+                            inner.jobs[self.scheduler["check_job"]]["lastAttemptTime"] = "2026-09-13T12:00:03Z"
+                        return result
+
+                adapter = ConcurrentAttempt()
+                with self.assertRaisesRegex(ValueError, "Concurrent Portal scheduler attempts"):
+                    self.activate(adapter)
+                self.assertEqual(adapter.jobs[self.scheduler["check_job"]]["state"], "PAUSED")
+                self.assertEqual(adapter.jobs[self.scheduler["drain_job"]]["state"], "PAUSED")
+
+    def test_drain_pause_retains_attempt_for_quiescence_when_provider_clears_it(self):
+        class ClearsAttemptOnPause(SchedulerAdapter):
+            def call(inner, args, *, capture=False):
+                result = super().call(args, capture=capture)
+                if args[:4] == ["gcloud", "scheduler", "jobs", "pause"]:
+                    inner.jobs[args[4]].pop("lastAttemptTime", None)
+                    inner.jobs[args[4]]["status"] = {"code": -1}
+                    return json.dumps(inner.jobs[args[4]])
+                return result
+
+        job = self.scheduler["drain_job"]
+        for has_completion in (True, False):
+            with self.subTest(has_completion=has_completion):
+                logs = [execution_log(job, "Started")]
+                if has_completion:
+                    logs.append(execution_log(job, "Finished", timestamp="2026-09-13T12:00:02Z"))
+                adapter = ClearsAttemptOnPause(logs=[logs], drain_state="ENABLED")
+                adapter.jobs[job]["lastAttemptTime"] = ATTEMPT
+
+                def pause():
+                    self.deploy.pause_scheduler(
+                        self.scheduler, adapter, maximum_polls=3, wait=lambda _: None, now=lambda: NOW
+                    )
+
+                if has_completion:
+                    pause()
+                    self.assertTrue(any(args[:3] == ["gcloud", "logging", "read"] for args in adapter.calls))
+                else:
+                    with self.assertRaisesRegex(ValueError, "completion was not proven"):
+                        pause()
+                self.assertEqual(adapter.jobs[job]["state"], "PAUSED")
+
     def test_failed_absent_stale_or_ambiguous_completion_never_resumes_drain(self):
         job = self.scheduler["check_job"]
         started = execution_log(job, "Started")
@@ -219,6 +328,27 @@ class SchedulerActivationTests(unittest.TestCase):
         self.deploy.pause_scheduler(self.scheduler, adapter, maximum_polls=3, wait=lambda _: None, now=lambda: NOW)
         self.assertEqual(adapter.jobs[job]["state"], "PAUSED")
         self.assertEqual(len([args for args in adapter.calls if args[:3] == ["gcloud", "logging", "read"]]), 2)
+
+    def test_cron_quiescence_allows_bounded_schedule_to_dispatch_delay(self):
+        job = self.scheduler["drain_job"]
+        for scheduled_time, allowed in (("2026-09-13T12:00:00Z", True), ("2026-09-13T11:59:00Z", False)):
+            with self.subTest(scheduled_time=scheduled_time):
+                started = execution_log(job, "Started")
+                started["jsonPayload"]["scheduledTime"] = scheduled_time
+                adapter = SchedulerAdapter(logs=[[started, execution_log(job, "Finished")]], drain_state="ENABLED")
+                adapter.jobs[job]["lastAttemptTime"] = ATTEMPT
+
+                def pause():
+                    self.deploy.pause_scheduler(
+                        self.scheduler, adapter, maximum_polls=3, wait=lambda _: None, now=lambda: NOW
+                    )
+
+                if allowed:
+                    pause()
+                else:
+                    with self.assertRaisesRegex(ValueError, "logs do not match"):
+                        pause()
+                self.assertEqual(adapter.jobs[job]["state"], "PAUSED")
 
     def test_missing_prior_completion_blocks_another_forced_check(self):
         adapter = SchedulerAdapter(logs=[[]])

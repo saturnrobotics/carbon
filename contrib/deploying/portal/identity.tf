@@ -86,8 +86,10 @@ resource "google_secret_manager_secret_iam_member" "runtime" {
 # Employee forwarding edges (platform plan §1.4). Each caller may invoke exactly
 # one named receiver; the receiver still verifies the service token and the
 # forwarded IAP assertion itself. Receivers are controller-created, so the grant
-# is a project member bound by an exact resource.name condition rather than a
-# service-level binding that cannot exist before the first release.
+# is a project member bound to the exact deterministic service host. Cloud Run
+# HTTP invocation supports request.host, not resource.name.
+# https://cloud.google.com/iam/docs/conditions-attribute-reference#request.host
+# A service-level binding cannot exist before the first release.
 locals {
   invoker_edges = {
     "web-query"        = { caller = "web", receiver = "portal-query" }
@@ -105,7 +107,7 @@ resource "google_project_iam_member" "service_invoker" {
   member   = "serviceAccount:${google_service_account.runtime[each.value.caller].email}"
   condition {
     title      = "portal_${replace(each.key, "-", "_")}_only"
-    expression = "resource.name == 'projects/${var.project_id}/locations/${var.region}/services/${each.value.receiver}'"
+    expression = "request.host == '${trimprefix(local.service_urls[each.value.receiver], "https://")}'"
   }
 }
 

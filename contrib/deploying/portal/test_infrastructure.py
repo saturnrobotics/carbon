@@ -21,7 +21,7 @@ spec.loader.exec_module(release)
 IDENTIFIER = re.compile(r"[A-Za-z_][A-Za-z0-9_-]*")
 IAP_SERVICE_AGENT = 'serviceAccount:service-${data.google_project.current.number}@gcp-sa-iap.iam.gserviceaccount.com'
 RUNTIME_MEMBER = re.compile(r'google_service_account\.runtime\["([a-z]+)"\]')
-EXACT_RESOURCE = re.compile(r"^resource\.name == 'projects/\$\{var\.project_id\}/locations/\$\{var\.region\}/(services|jobs)/([^'/]+)'$")
+EXACT_RESOURCE = re.compile(r"^resource\.name == 'projects/\$\{var\.project_id\}/locations/\$\{var\.region\}/(jobs)/([^'/]+)'$")
 EDGE = re.compile(r'"([a-z-]+)"\s*=\s*\{\s*caller\s*=\s*"([a-z]+)"\s*,\s*receiver\s*=\s*"([a-z-]+)"\s*\}')
 ACCESS = re.compile(r"(\w+)\s*=\s*\[([^\]]*)\]")
 
@@ -233,14 +233,21 @@ def invoker_edges(config: Configuration) -> set[tuple[str, str]]:
         condition = block.child("condition")
         if condition is None:
             raise AssertionError(f"{name} grants run.invoker project-wide without an exact resource condition")
-        match = EXACT_RESOURCE.match(unquote(condition.attrs["expression"]))
-        if match is None:
-            raise AssertionError(f"{name} run.invoker condition is not an exact portal resource name")
-        kind, receiver = match.groups()
-        if receiver == "${each.value.receiver}":
+        expression = unquote(condition.attrs["expression"])
+        if expression == "request.host == '${trimprefix(local.service_urls[each.value.receiver], \"https://\")}'":
+            if (
+                block.attrs.get("for_each") != "local.invoker_edges"
+                or block.attrs.get("member")
+                != '"serviceAccount:${google_service_account.runtime[each.value.caller].email}"'
+            ):
+                raise AssertionError(f"{name} host grant is not bound to the declared caller map")
             for _, caller, target in EDGE.findall(config.locals()["invoker_edges"]):
-                edges.add((caller, f"{kind}/{target}"))
+                edges.add((caller, f"services/{target}"))
         else:
+            match = EXACT_RESOURCE.match(expression)
+            if match is None:
+                raise AssertionError(f"{name} run.invoker condition is not an exact supported portal target")
+            kind, receiver = match.groups()
             caller = RUNTIME_MEMBER.search(block.attrs["member"])
             if caller is None:
                 raise AssertionError(f"{name} grants run.invoker to something other than a runtime identity")
@@ -272,8 +279,8 @@ class ParserTests(unittest.TestCase):
         with self.assertRaisesRegex(AssertionError, "project-wide"):
             invoker_edges(unconditioned)
         partial = Fake('resource "google_project_iam_member" "x" {\n role = "roles/run.invoker"\n member = "serviceAccount:${google_service_account.runtime["web"].email}"\n condition {\n title = "t"\n expression = "resource.name == \'projects/${var.project_id}/locations/${var.region}/services/portal-query\'"\n }\n}')
-        self.assertEqual(invoker_edges(partial), {("web", "services/portal-query")})
-        self.assertNotEqual(invoker_edges(partial), FoundationTests.EXPECTED_INVOKER_EDGES)
+        with self.assertRaisesRegex(AssertionError, "supported portal target"):
+            invoker_edges(partial)
 
 
 class FoundationTests(unittest.TestCase):
@@ -306,6 +313,17 @@ class FoundationTests(unittest.TestCase):
             with self.subTest(variable=name):
                 elsewhere = [block.raw for block in self.config.root.blocks if block is not declaration]
                 self.assertTrue(any(re.search(rf"\bvar\.{name}\b", raw) for raw in elsewhere), f"var.{name} is declared but unused")
+
+    def test_http_invoker_uses_supported_exact_request_host(self):
+        grant = self.config.resources("google_project_iam_member")["service_invoker"]
+        self.assertEqual(
+            unquote(grant.child("condition").attrs["expression"]),
+            "request.host == '${trimprefix(local.service_urls[each.value.receiver], \"https://\")}'",
+        )
+        self.assertEqual(
+            self.config.locals()["service_urls"],
+            '{ for name in local.receiver_services : name => "https://${name}-${data.google_project.current.number}.${var.region}.run.app" }',
+        )
 
     def test_invoker_grants_are_exactly_the_forwarding_edges_and_nothing_is_public(self):
         self.assertEqual(invoker_edges(self.config), self.EXPECTED_INVOKER_EDGES)
