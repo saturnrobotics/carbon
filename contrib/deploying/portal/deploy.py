@@ -306,7 +306,7 @@ def require_public_schema(config: dict, adapter) -> None:
         raise ValueError("Apply the Carbon Portal public-identifiers migration before deploying Portal")
 
 
-def source_revision(config: dict, adapter) -> str:
+def source_revision(config: dict, adapter, *, force=False) -> str:
     git = ["git", "-C", str(ROOT)]
     if adapter.call([*git, "branch", "--show-current"], capture=True).strip() != "saturn/main":
         raise ValueError("Run deployment from reviewed saturn/main after merging the feature PR")
@@ -328,8 +328,17 @@ def source_revision(config: dict, adapter) -> str:
     verify.github_json = lambda path: json.loads(adapter.call(["gh", "api", "--hostname", "github.com", path], capture=True))
     adapter.call(["curl", "-q", "--fail", "--silent", "--show-error", "--location", "--max-time", "60",
                   "--output", os.devnull, config["source_repo_url"] + "/archive/" + revision + ".tar.gz"])
-    verify.require_verified(config["source_repo_url"], revision, required=(*verify.REQUIRED_CHECKS,
-                            (".github/workflows/portal-check.yml", ("foundation", "runtime"))))
+    if force:
+        print(
+            "Force: skipping all required GitHub CI-status checks, including Portal foundation/runtime; source and rollout safeguards remain active.",
+            flush=True,
+        )
+    else:
+        verify.require_verified(
+            config["source_repo_url"],
+            revision,
+            required=(*verify.REQUIRED_CHECKS, (".github/workflows/portal-check.yml", ("foundation", "runtime"))),
+        )
     return revision
 
 
@@ -563,9 +572,9 @@ def activate_scheduler(scheduler: dict, adapter, *, verify_revision, maximum_pol
     return receipt
 
 
-def orchestrate(config: dict, state: Path, *, apply: bool, adapter) -> None:
+def orchestrate(config: dict, state: Path, *, apply: bool, adapter, force=False) -> None:
     print("Portal: checking source, configuration and live release state", flush=True)
-    source = source_revision(config, adapter)
+    source = source_revision(config, adapter, force=force)
     target = {key: config[key] for key in ("project", "region", "image_repository", "source_repo_url", "pg_service")}
     target_path = state / "target.json"
     if target_path.exists() and json.loads(target_path.read_text()) != target:
@@ -637,7 +646,12 @@ def main() -> None:
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--apply", action="store_true")
     mode.add_argument("--check", action="store_true")
+    parser.add_argument(
+        "--force", action="store_true", help="skip required GitHub CI-status checks for this deployment only"
+    )
     args = parser.parse_args()
+    if args.force and not args.apply:
+        parser.error("--force requires --apply")
     os.umask(0o077)
     try:
         config = read_config(args.config)
@@ -653,12 +667,15 @@ def main() -> None:
                 raise ValueError("Another portal deployment is running for this private configuration") from None
             log = state / ("deploy-" + uuid4().hex + ".log")
             print(f"Portal: private log {log}", flush=True)
+            if args.force:
+                log.write_text("Operator requested --force: required GitHub CI-status checks will be skipped.\n")
+
             def interrupted(signum, frame):
                 raise KeyboardInterrupt
             previous = signal.signal(signal.SIGTERM, interrupted)
             try:
                 with Commands(log, config=config, state=state, psql=select_psql()) as adapter:
-                    orchestrate(config, state, apply=args.apply, adapter=adapter)
+                    orchestrate(config, state, apply=args.apply, adapter=adapter, force=args.force)
             finally:
                 signal.signal(signal.SIGTERM, previous)
     except KeyboardInterrupt:

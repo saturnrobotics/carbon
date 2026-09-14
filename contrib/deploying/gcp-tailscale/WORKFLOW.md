@@ -21,9 +21,26 @@ make deploy
 
 `make deploy` requires a clean checkout of `saturn/main` and successful CI for its
 exact revision before publication or cloud mutations. The verifier uses GitHub's
-public API; unavailable or incomplete evidence blocks deployment, with no bypass
-flag. A no-op release still returns without publication, verification-network
-calls, or cloud mutations.
+public API; unavailable or incomplete evidence blocks deployment by default.
+For an explicit operator override of GitHub CI-status checks, use:
+
+```bash
+make deploy FORCE=1
+# Equivalent flag spelling (the first -- belongs to Make):
+make deploy -- --force
+```
+
+The underlying script accepts `deploy.sh --apply --force`. This skips all required
+GitHub workflow/job status checks, including missing, pending or failed results;
+it does not report them as successful. Source branch/cleanliness, ordinary source
+publication and public-download checks, dependency/build checks, snapshots,
+migrations and rollout health/recovery checks remain active. The override is
+printed when used and is not stored in deployment configuration. Do not put
+`FORCE=1` in your shell environment or Make defaults.
+
+A no-op release still returns without publication, verification-network calls,
+or cloud mutations. Force applies only to the two deployment targets, not
+`deploy-check`, `deploy-plan` or other Make targets.
 
 For a changed release, the command
 publishes the exact deployment commit to `origin/saturn/main` using an ordinary

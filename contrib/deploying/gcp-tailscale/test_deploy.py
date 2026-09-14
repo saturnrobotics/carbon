@@ -36,13 +36,35 @@ class ValidationTests(unittest.TestCase):
             publish.assert_not_called()
             cloud.assert_not_called()
 
+    def test_force_skips_only_ci_and_retains_source_publication(self):
+        planned = {
+            "expected_generation": 2,
+            "build": {"erp": []},
+            "configure": {},
+            "migrate": {},
+            "deploy": {"erp": []},
+        }
+        with patch.object(deploy, "revision", return_value="a" * 40), patch.object(
+            deploy.verify_source, "require_verified", side_effect=ValueError("CI unavailable")
+        ) as verify, patch.object(
+            deploy, "publish_source", side_effect=ValueError("source publication failed")
+        ) as publish, patch.object(deploy, "Cloud") as cloud:
+            with self.assertRaisesRegex(ValueError, "source publication failed"):
+                deploy.deploy(fixture(), {}, prepared_release=planned, force=True)
+            verify.assert_not_called()
+            publish.assert_called_once()
+            cloud.assert_not_called()
+
     def test_commit_change_during_preparation_stops_before_publication(self):
-        desired = {"prepared_source_commit": "a" * 40}
-        planned = {"expected_generation": 2, "build": {}, "configure": {}, "migrate": {}, "deploy": {}}
-        with patch.object(deploy, "revision", return_value="b" * 40), patch.object(deploy, "publish_source") as publish:
-            with self.assertRaisesRegex(ValueError, "Source changed"):
-                deploy.deploy(fixture(), desired, prepared_release=planned)
-            publish.assert_not_called()
+        for force in (False, True):
+            desired = {"prepared_source_commit": "a" * 40}
+            planned = {"expected_generation": 2, "build": {}, "configure": {}, "migrate": {}, "deploy": {}}
+            with patch.object(deploy, "revision", return_value="b" * 40), patch.object(
+                deploy, "publish_source"
+            ) as publish:
+                with self.assertRaisesRegex(ValueError, "Source changed"):
+                    deploy.deploy(fixture(), desired, prepared_release=planned, force=force)
+                publish.assert_not_called()
 
     def test_plan_prepares_automatically_without_deploying(self):
         with patch.object(deploy.sys, "argv", ["deploy.py", "--plan"]), \
@@ -56,18 +78,31 @@ class ValidationTests(unittest.TestCase):
             rollout.assert_not_called()
 
     def test_apply_generates_inputs_without_reading_a_manual_manifest(self):
-        desired = {"prepared_source_commit": "a" * 40}
-        planned = {"build": {"erp": []}, "configure": {}, "deploy": {"erp": []}, "unchanged": {"mes": []}}
-        with patch.object(deploy.sys, "argv", ["deploy.py", "--apply"]), \
-             patch.object(deploy, "private_json", side_effect=[fixture(), SECRETS]) as read, \
-             patch.object(deploy.Path, "exists", return_value=False), \
-             patch.object(deploy, "revision", return_value="a" * 40), \
-             patch("prepare_release.prepare", return_value=(desired, planned)) as prepare, \
-             patch.object(deploy, "deploy") as rollout:
-            deploy.main()
-            self.assertEqual(read.call_count, 2)
-            prepare.assert_called_once()
-            self.assertEqual(rollout.call_args.kwargs["prepared_release"], planned)
+        for flags in ([], ["--force"]):
+            desired = {"prepared_source_commit": "a" * 40}
+            planned = {"build": {"erp": []}, "configure": {}, "deploy": {"erp": []}, "unchanged": {"mes": []}}
+            with patch.object(deploy.sys, "argv", ["deploy.py", "--apply", *flags]), patch.object(
+                deploy, "private_json", side_effect=[fixture(), SECRETS]
+            ) as read, patch.object(deploy.Path, "exists", return_value=False), patch.object(
+                deploy, "revision", return_value="a" * 40
+            ), patch("prepare_release.prepare", return_value=(desired, planned)) as prepare, patch.object(
+                deploy, "deploy"
+            ) as rollout:
+                deploy.main()
+                self.assertEqual(read.call_count, 2)
+                prepare.assert_called_once()
+                self.assertEqual(rollout.call_args.kwargs["prepared_release"], planned)
+
+            self.assertEqual(rollout.call_args.kwargs["force"], bool(flags))
+
+    def test_force_requires_apply_before_reading_private_inputs(self):
+        with patch.object(deploy.sys, "argv", ["deploy.py", "--plan", "--force"]), patch.object(
+            deploy, "private_json"
+        ) as read:
+            with self.assertRaises(SystemExit) as failure:
+                deploy.main()
+            self.assertEqual(failure.exception.code, 2)
+            read.assert_not_called()
 
     def test_noop_stops_before_publication_or_cloud_changes(self):
         planned = {"expected_generation": 2, "build": {}, "configure": {}, "migrate": {}, "deploy": {}}
