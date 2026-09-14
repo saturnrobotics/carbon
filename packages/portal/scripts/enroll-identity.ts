@@ -17,6 +17,7 @@ import { resolve } from "node:path";
 import { createInterface } from "node:readline/promises";
 import { pathToFileURL } from "node:url";
 import pg from "pg";
+import { portalPoolConfig } from "../src/database.server";
 import {
   type EnrollmentQueryable,
   enrollWorkforceIdentity,
@@ -241,11 +242,13 @@ export async function promptConfirmation(
 export async function createConnection(
   databaseUrl: string
 ): Promise<EnrollmentConnection> {
-  const pool = new pg.Pool({
-    connectionString: databaseUrl,
-    max: 1,
-    connectionTimeoutMillis: 5_000
-  });
+  const pool = new pg.Pool(
+    portalPoolConfig({
+      connectionString: databaseUrl,
+      max: 1,
+      connectionTimeoutMillis: 5_000
+    })
+  );
   return {
     query: (text, values) => pool.query(text, values ? [...values] : undefined),
     end: () => pool.end()

@@ -1,6 +1,7 @@
 import { createServer } from "node:http";
 import { pathToFileURL } from "node:url";
 import { createRedisCache } from "@carbon/portal/cache/redis.server";
+import { portalPoolConfig } from "@carbon/portal/database.server";
 import {
   GoogleWorkforceTokenVerifier,
   parseTrustedCallerConfiguration
@@ -86,13 +87,15 @@ export function createHandler(
     environment.PORTAL_TRUSTED_CALLERS_JSON!
   );
   const sources = readSourceRegistryConfiguration(environment);
-  const pool = new Pool({
-    connectionString: environment.PORTAL_READ_DATABASE_URL,
-    max: 10,
-    connectionTimeoutMillis: 1000,
-    idleTimeoutMillis: 30000,
-    statement_timeout: 2000
-  });
+  const pool = new Pool(
+    portalPoolConfig({
+      connectionString: environment.PORTAL_READ_DATABASE_URL,
+      max: 10,
+      connectionTimeoutMillis: 1000,
+      idleTimeoutMillis: 30000,
+      statement_timeout: 2000
+    })
+  );
   pool.on("error", () => {
     /* Request boundaries report redacted failures. */
   });

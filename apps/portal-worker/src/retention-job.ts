@@ -1,4 +1,5 @@
 import { pathToFileURL } from "node:url";
+import { portalPoolConfig } from "@carbon/portal/database.server";
 import {
   finalizeRetention,
   retentionCandidates
@@ -19,7 +20,9 @@ export async function runRetentionJob(
 ): Promise<void> {
   const databaseUrl = required(environment, "PORTAL_MAINTENANCE_DATABASE_URL");
   const bucketName = required(environment, "PORTAL_OBJECT_BUCKET");
-  const pool = new Pool({ connectionString: databaseUrl, max: 1 });
+  const pool = new Pool(
+    portalPoolConfig({ connectionString: databaseUrl, max: 1 })
+  );
   const storage = new Storage();
   const telemetry = createTelemetry("worker");
   const started = performance.now();
