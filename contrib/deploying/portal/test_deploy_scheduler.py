@@ -45,6 +45,8 @@ class SchedulerAdapter:
         if args[:3] == ["gcloud", "scheduler", "jobs"]:
             action, name = args[3:5]
             if action == "run":
+                if self.jobs[name]["state"] != "ENABLED":
+                    raise ValueError("Job.state must be ENABLED for RunJob")
                 self.jobs[name]["lastAttemptTime"] = ATTEMPT
                 self.jobs[name]["status"] = {}
             if action in {"resume", "pause"}:
@@ -157,7 +159,34 @@ class SchedulerActivationTests(unittest.TestCase):
                 adapter = SchedulerAdapter(logs=[logs])
                 with self.assertRaises(ValueError):
                     self.activate(adapter)
-                self.assertFalse(any(args[:4] == ["gcloud", "scheduler", "jobs", "resume"] for args in adapter.calls))
+                self.assertFalse(any(args[:5] == ["gcloud", "scheduler", "jobs", "resume", self.scheduler["drain_job"]] for args in adapter.calls))
+
+    def test_check_is_paused_after_resume_dispatch_or_poll_failure(self):
+        for failure in ("resume", "run", "poll"):
+            with self.subTest(failure=failure):
+                class FailingAdapter(SchedulerAdapter):
+                    def call(inner, args, *, capture=False):
+                        result = super().call(args, capture=capture)
+                        if (args[:4] == ["gcloud", "scheduler", "jobs", failure]
+                                or failure == "poll" and args[:3] == ["gcloud", "logging", "read"]):
+                            raise ValueError("synthetic provider failure")
+                        return result
+                adapter = FailingAdapter()
+                with self.assertRaisesRegex(ValueError, "synthetic provider failure"):
+                    self.activate(adapter)
+                self.assertEqual(adapter.jobs[self.scheduler["check_job"]]["state"], "PAUSED")
+                self.assertEqual(adapter.jobs[self.scheduler["drain_job"]]["state"], "PAUSED")
+
+    def test_check_cleanup_failure_never_enables_drain(self):
+        class FailedPause(SchedulerAdapter):
+            def call(inner, args, *, capture=False):
+                if args[:4] == ["gcloud", "scheduler", "jobs", "pause"]:
+                    return json.dumps(inner.jobs[args[4]])
+                return super().call(args, capture=capture)
+        adapter = FailedPause()
+        with self.assertRaisesRegex(ValueError, "check.*paused"):
+            self.activate(adapter)
+        self.assertEqual(adapter.jobs[self.scheduler["drain_job"]]["state"], "PAUSED")
 
     def test_enabled_check_job_is_refused_instead_of_running_concurrently(self):
         adapter = SchedulerAdapter()
@@ -238,7 +267,7 @@ class SchedulerActivationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "reviewed ingest revision"):
             self.deploy.activate_scheduler(self.scheduler, adapter, verify_revision=verify,
                                           maximum_polls=3, wait=lambda _: None, now=lambda: NOW)
-        self.assertFalse(any(args[:4] == ["gcloud", "scheduler", "jobs", "resume"] for args in adapter.calls))
+        self.assertFalse(any(args[:5] == ["gcloud", "scheduler", "jobs", "resume", self.scheduler["drain_job"]] for args in adapter.calls))
 
 
     def test_api_omitted_and_normalized_zero_retry_defaults_are_accepted(self):

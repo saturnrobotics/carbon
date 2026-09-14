@@ -242,14 +242,18 @@ log-access permission as part of preflight. It does **not** force either job,
 process the outbox or enable schedules. A successful preflight therefore does
 not establish that the deployed authenticated handler works.
 
-During `make deploy-portal`, the controller keeps drain paused, manually runs
-the paused check job, and waits for a fresh `AttemptStarted` / `AttemptFinished`
+During `make deploy-portal`, the controller keeps drain paused, temporarily
+enables the no-work check job (required by the Scheduler RunJob API), manually
+runs it, and waits for a fresh `AttemptStarted` / `AttemptFinished`
 execution-log pair matching that job, URI and observed attempt time, with a
 successful HTTP response. Dispatch alone, an old success status, or `/health`
 returning 200 is insufficient. Before and after that check, the actual ingestion
 template and 100% traffic allocation must match the reviewed revision recorded
-in the release manifest. Only drain is then resumed; check remains paused for
-the next deployment. Terraform preserves the controller-owned pause state on
+in the release manifest. A `finally` cleanup pauses the check job on success
+or failure; cleanup must be verified before drain can resume. A concurrent cron
+attempt makes readiness ambiguous and fails closed. If cleanup cannot be verified,
+reconcile the check job before retrying. Only drain is then resumed; check remains
+paused for the next deployment. Terraform preserves the controller-owned pause state on
 later applies.
 
 The completion wait polls every five seconds, reports continued waiting, and
