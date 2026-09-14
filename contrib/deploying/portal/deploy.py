@@ -360,12 +360,14 @@ def scheduler_timestamp(value: str) -> datetime:
 
 
 def wait_scheduler_attempt(scheduler: dict, kind: str, adapter, *, after: datetime, previous_attempt: str | None = None,
-                           expected_attempt: str | None = None, require_success: bool = True, maximum_polls: int = 120, wait=time.sleep) -> dict:
+                           expected_attempt: str | None = None, require_success: bool = True, maximum_polls: int = 120, wait=time.sleep,
+                           expected_state: str = "PAUSED") -> dict:
     """Correlate one started/finished log pair with the observed attempt, fail closed.
 
     lastAttemptTime marks dispatch, not completion; its status can still describe
     the prior attempt. A new completed HTTP execution log is required as well.
-    The job is paused and retries are disabled, so multiple starts are ambiguous.
+    Retries are disabled. Multiple starts, including cron ticks during the
+    temporarily enabled readiness check, are ambiguous and fail closed.
     """
     job = scheduler[kind + "_job"]
     uri = scheduler["audience"] + "/internal/outbox/" + kind
@@ -376,8 +378,8 @@ def wait_scheduler_attempt(scheduler: dict, kind: str, adapter, *, after: dateti
         if time.monotonic() >= deadline:
             break
         observed = read_scheduler(job, adapter)
-        if observed["state"] != "PAUSED":
-            raise ValueError("Portal scheduler was enabled during its release check")
+        if observed["state"] != expected_state:
+            raise ValueError("Portal scheduler state changed during its release check")
         attempt = observed.get("lastAttemptTime")
         if attempt and attempt != previous_attempt and scheduler_timestamp(attempt) >= after:
             if expected_attempt is not None and attempt != expected_attempt:
@@ -472,9 +474,23 @@ def activate_scheduler(scheduler: dict, adapter, *, verify_revision, maximum_pol
     previous = read_scheduler(job, adapter).get("lastAttemptTime")
     after = now()
     print("Portal: checking the authenticated Scheduler path; waiting for Cloud Logging completion evidence", flush=True)
-    adapter.call(scheduler_command("run", job))
-    receipt = wait_scheduler_attempt(scheduler, "check", adapter, after=after, previous_attempt=previous,
-                                     maximum_polls=maximum_polls, wait=wait)
+    # RunJob requires ENABLED. Only the no-work check is enabled here; the
+    # ingestion drain stays paused until completion and cleanup are proven.
+    try:
+        adapter.call(scheduler_command("resume", job))
+        if read_scheduler(job, adapter)["state"] != "ENABLED":
+            raise ValueError("Portal scheduler check did not become enabled")
+        adapter.call(scheduler_command("run", job))
+        receipt = wait_scheduler_attempt(scheduler, "check", adapter, after=after, previous_attempt=previous,
+                                         maximum_polls=maximum_polls, wait=wait, expected_state="ENABLED")
+    finally:
+        # Also clean up if the resume/run response is lost after taking effect.
+        if read_scheduler(job, adapter)["state"] == "ENABLED":
+            adapter.call(scheduler_command("pause", job))
+        if read_scheduler(job, adapter)["state"] != "PAUSED":
+            raise ValueError("Portal scheduler check could not be paused; reconcile it before retrying")
+    if read_scheduler(job, adapter).get("lastAttemptTime") != receipt["last_attempt_time"]:
+        raise ValueError("Concurrent Portal scheduler attempts make readiness ambiguous")
     verify_revision()
     adapter.call(scheduler_command("resume", scheduler["drain_job"]))
     if read_scheduler(scheduler["drain_job"], adapter)["state"] != "ENABLED":

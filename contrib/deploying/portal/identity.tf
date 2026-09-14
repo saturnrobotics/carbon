@@ -195,8 +195,8 @@ resource "google_cloud_scheduler_job" "retention" {
   depends_on = [google_project_service.apis, google_project_iam_member.maintenance_retention_invoker]
 }
 
-# Both jobs start paused. The release controller manually runs the no-work check
-# and verifies its completed authenticated attempt before enabling drain. A later
+# Both jobs start paused. The release controller temporarily enables the no-work
+# check, verifies its authenticated attempt, and pauses it before enabling drain. A later
 # Terraform apply must preserve that release-owned pause state.
 resource "google_cloud_scheduler_job" "outbox" {
   for_each         = toset(["drain", "check"])
