@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { portalPoolConfig } from "@carbon/portal/database.server";
 import {
   getAuthorizedDocumentVersion,
   tombstoneManualDocument
@@ -65,13 +66,15 @@ export type WorkerDependencies = {
 };
 
 function databasePool(connectionString: string): Pool {
-  const pool = new Pool({
-    connectionString,
-    max: 10,
-    connectionTimeoutMillis: 1_000,
-    idleTimeoutMillis: 30_000,
-    statement_timeout: 2_000
-  });
+  const pool = new Pool(
+    portalPoolConfig({
+      connectionString,
+      max: 10,
+      connectionTimeoutMillis: 1_000,
+      idleTimeoutMillis: 30_000,
+      statement_timeout: 2_000
+    })
+  );
   pool.on("error", () => {
     /* Never log database addresses or credentials. */
   });

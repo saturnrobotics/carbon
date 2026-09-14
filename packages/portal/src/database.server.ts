@@ -1,4 +1,56 @@
-import type { Pool, PoolClient } from "pg";
+import { readFileSync } from "node:fs";
+import type { ConnectionOptions } from "node:tls";
+import type { Pool, PoolClient, PoolConfig } from "pg";
+
+export function portalPoolConfig(config: PoolConfig): PoolConfig {
+  if (!config.connectionString) return config;
+  let url: URL;
+  try {
+    url = new URL(config.connectionString);
+  } catch {
+    throw new Error("Invalid Portal database URL");
+  }
+  const sslParameters = [
+    "ssl",
+    "sslmode",
+    "sslrootcert",
+    "sslcert",
+    "sslkey",
+    "uselibpqcompat"
+  ];
+  for (const parameter of sslParameters) {
+    if (url.searchParams.getAll(parameter).length > 1) {
+      throw new Error("Duplicate Portal database TLS parameter");
+    }
+  }
+  if (url.searchParams.get("sslmode") !== "verify-full") return config;
+
+  // pg upgrades an existing socket and omits servername for IPs. Supplying host
+  // makes Node verify the actual IP SAN instead of its default localhost.
+  const hostOverride = url.searchParams.getAll("host").at(-1);
+  let host: string;
+  try {
+    host = hostOverride || decodeURIComponent(url.hostname);
+  } catch {
+    throw new Error("Invalid Portal database host");
+  }
+  if (host.startsWith("[") && host.endsWith("]")) host = host.slice(1, -1);
+  if (!host || host.startsWith("/"))
+    throw new Error("Portal verify-full requires a network host");
+  const ssl: ConnectionOptions = { host, rejectUnauthorized: true };
+  for (const [parameter, option] of [
+    ["sslrootcert", "ca"],
+    ["sslcert", "cert"],
+    ["sslkey", "key"]
+  ] as const) {
+    const path = url.searchParams.get(parameter);
+    if (path) ssl[option] = readFileSync(path, "utf8");
+  }
+  // Otherwise pg's URL parser replaces the explicit TLS options, losing host.
+  for (const parameter of sslParameters) url.searchParams.delete(parameter);
+  url.searchParams.set("host", host);
+  return { ...config, connectionString: url.toString(), ssl };
+}
 
 export type DatabasePrincipal = {
   companyId: string;
