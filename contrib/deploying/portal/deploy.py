@@ -12,6 +12,7 @@ import os
 from pathlib import Path
 import re
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
@@ -19,6 +20,7 @@ import time
 from uuid import uuid4
 
 import release
+from operator_connection import OperatorConnection, validate_tunnel
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[2]
@@ -39,7 +41,11 @@ def read_config(path: Path) -> dict:
             "contrib/deploying/portal/.local/deploy.json and complete the "
             "one-time setup in contrib/deploying/portal/README.md."
         )
-    return json.loads(path.read_text())
+    config = json.loads(path.read_text())
+    tunnel = path.parent / "operator-tunnel.json"
+    if isinstance(config, dict) and "operator_tunnel" not in config and tunnel.is_file():
+        config["operator_tunnel"] = json.loads(tunnel.read_text())
+    return config
 
 
 ORDER = ("portal-schema", "portal-parser", "portal-query", "portal-ingest", "portal-retention", "portal-web")
@@ -116,22 +122,32 @@ def release_units(candidate: dict, manifest: Path, *, project: str, region: str,
 
 class Commands:
     """Keep provider output and command arguments out of the public terminal."""
-    def __init__(self, log: Path):
+    def __init__(self, log: Path, *, config=None, state=None):
+        self.connection = OperatorConnection(config or {}, state or log.parent, log, cwd=ROOT)
         self.log = log
         log.touch(mode=0o600)
         log.chmod(0o600)
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_):
+        self.connection.close()
+
     def call(self, args: list[str], *, capture=False, input_path=None) -> str:
+        environment = self.connection.start() if args[0] == "psql" else None
         with self.log.open("a") as log:
             log.write("Running " + args[0] + "\n")
             log.flush()
             stream = input_path.open("rb") if input_path else None
             try:
                 result = subprocess.run(args, check=False, text=True, stdin=stream,
-                                        stdout=subprocess.PIPE if capture else log, stderr=log, cwd=ROOT)
+                                        stdout=subprocess.PIPE if capture else log, stderr=log, cwd=ROOT, env=environment)
             finally:
                 if stream:
                     stream.close()
+            if args[0] == "psql":
+                self.connection.check()
             if capture:
                 log.write(result.stdout)
             if result.returncode:
@@ -145,8 +161,10 @@ def validate_config(config: dict) -> None:
     if "<" in json.dumps(config) or "REPLACE_ME" in json.dumps(config):
         raise ValueError("Replace every placeholder in the private deploy.json before deploying")
     expected = {"schema_version", "project", "region", "source_repo_url", "image_repository", "pg_service", "database_ca_secret", "services"}
-    if not isinstance(config, dict) or set(config) - {"redis_ca_secret"} != expected or config["schema_version"] != 1:
+    if not isinstance(config, dict) or set(config) - {"redis_ca_secret", "operator_tunnel"} != expected or config["schema_version"] != 1:
         raise ValueError("deploy.json must use the exact fields in deploy.example.json")
+    if "operator_tunnel" in config:
+        validate_tunnel(config["operator_tunnel"])
     patterns = {"project": r"[a-z][a-z0-9-]{4,28}[a-z0-9]", "region": r"[a-z]+-[a-z]+[0-9]",
                 "pg_service": r"[A-Za-z0-9_-]+", "source_repo_url": r"https://github\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+"}
     for key, pattern in patterns.items():
@@ -588,7 +606,17 @@ def main() -> None:
                 raise ValueError("Another portal deployment is running for this private configuration") from None
             log = state / ("deploy-" + uuid4().hex + ".log")
             print(f"Portal: private log {log}", flush=True)
-            orchestrate(config, state, apply=args.apply, adapter=Commands(log))
+            def interrupted(signum, frame):
+                raise KeyboardInterrupt
+            previous = signal.signal(signal.SIGTERM, interrupted)
+            try:
+                with Commands(log, config=config, state=state) as adapter:
+                    orchestrate(config, state, apply=args.apply, adapter=adapter)
+            finally:
+                signal.signal(signal.SIGTERM, previous)
+    except KeyboardInterrupt:
+        print("Error: Portal deployment interrupted; owned operator tunnel closed.", file=sys.stderr)
+        raise SystemExit(130) from None
     except json.JSONDecodeError:
         print("Error: Invalid JSON in private deployment inputs or provider response; check the private log.", file=sys.stderr)
         raise SystemExit(1) from None
