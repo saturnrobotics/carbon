@@ -54,3 +54,61 @@ build, or a mocked test alone does not establish behavioral correctness. Never
 bypass hooks, remove a required check, weaken a fixture, or add skip flags to get a
 change through; if a required check cannot run, keep the change unpromoted and
 report the missing evidence.
+
+## Verify deployment boundaries before release
+
+For changes to deployed behavior or deployment machinery, use this order:
+**local production-image tests → provider validation → focused platform checks
+→ full release → real user workflow verification**. The agent owns these checks;
+the user should not need to repeat this instruction at each turn.
+
+1. **Local proof first.** Use Carbon's existing local development and integration
+   harnesses, then test the affected behavior in the actual production image with
+   its deployed runtime version, architecture, entrypoint, real protocol client,
+   and production-equivalent rendered configuration pointing to isolated synthetic
+   destinations. Preserve other worktrees and running stacks. Cover failure paths,
+   such as rejected certificates, wrong hosts, denied permissions, failed health
+   probes, and state-preserving restart/rollback. A dev server, successful build,
+   mocked response, or another client's successful connection is insufficient
+   evidence for a production-image boundary.
+2. **Validate the provider contract.** Check the exact rendered requests against
+   the configured provider API/version, using its non-persisting validation or
+   dry-run facility where available. Terraform validation/plan and mocked SDK
+   responses do not prove provider acceptance; successful API validation does not
+   prove actual startup. If no such facility exists, record that limitation and
+   the smallest bounded platform check needed; do not claim the contract is
+   verified or use a full release to discover request-shape errors.
+3. **Probe only the remaining platform boundaries.** Exercise behavior that
+   cannot be established locally, such as managed identity/IAP, private networking,
+   and revision lifecycle, with bounded focused checks. Preserve serving traffic,
+   access controls, persistent state, and recovery options. Use isolated resources
+   or an unserved revision when appropriate, and verify cleanup. Real Google OAuth
+   is needed for live identity proof; it is not a prerequisite for unrelated local
+   tests or a reason to skip them. Mocks do not establish managed-platform behavior.
+4. **Release and prove the workflow.** Run the canonical release only after all
+   applicable earlier stages and normal source/CI gates pass. Then verify the
+   affected real user workflow with synthetic data, including relevant denial and
+   cleanup behavior. Health checks alone do not establish workflow correctness.
+
+Keep a concise evidence record in an ignored private location. Identify the exact
+source revision, image digest, runtime, configuration fingerprint/secret versions,
+provider inputs/version, commands, and semantic results without logging secret
+values. Mark each stage verified, blocked, or not applicable with a reason. Reuse
+valid evidence when the complete relevant inputs and assumptions are unchanged
+and canonical source/image provenance requirements permit it; invalidate affected
+evidence when they change. Never relabel an old receipt with a new source revision
+or skip a controller's required build. Do not add unrelated rebuilds or retests
+beyond the applicable canonical requirements.
+
+After a deployment failure, stop full-release retries: establish the root cause,
+reproduce it at the smallest relevant boundary, prove a failing-then-passing
+regression and any affected provider/platform contract, then retry through the
+normal gates. If a boundary cannot be reproduced locally, retain the local proof
+and use the bounded platform check; never substitute an unverified mock or silently
+mark the stage passed. Do not weaken authentication, authorization, TLS, health
+checks, fixtures, or CI to make a release pass.
+
+Continue checks and fixes within the user's existing authorization; this policy
+does not require repeated approval prompts. New destructive actions or changes
+outside that scope still require authorization. These rules make evidence and gaps
+explicit; they do not guarantee that every future deployment defect is prevented.
