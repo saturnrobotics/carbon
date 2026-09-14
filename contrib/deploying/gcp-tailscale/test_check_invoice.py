@@ -26,6 +26,15 @@ class InvoiceCheckTest(unittest.TestCase):
                 self.assertEqual(sequence[-1][1:3], ["--filter", "@carbon/jobs"])
                 self.assertNotIn(build, commands(integration, erp_only=True))
 
+    def test_database_fixture_budget_is_bounded_and_does_not_change_unit_tests(self):
+        for erp_only in (False, True):
+            with self.subTest(erp_only=erp_only):
+                integration = commands(integration=True, erp_only=erp_only)
+                erp = next(command for command in integration if "apps/erp" in command)
+                self.assertIn("--testTimeout=30000", erp)
+                self.assertNotIn("--retry", erp)
+                self.assertTrue(all("--testTimeout=30000" not in command for command in commands(erp_only=erp_only)))
+
     def test_integration_rejects_missing_remote_and_unix_socket_databases(self):
         for value in ("", "postgresql://example.com/invoices", "postgresql:///invoices"):
             with self.subTest(value=value), self.assertRaises(ValueError):

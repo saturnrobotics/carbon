@@ -69,7 +69,9 @@ def commands(integration=False, erp_only=False):
     # only `pnpm install` has no dist/; do not depend on a previous dev build.
     result = [] if erp_only else [["pnpm", "--filter", "@carbon/config", "build"]]
     if integration:
-        result.append(["pnpm", "--dir", "apps/erp", "exec", "vitest", "run", *ERP_DATABASE_TESTS])
+        # Each test includes tenant seeding, real transactions and cascade cleanup.
+        # Give these correctness fixtures the existing training suite's 30s budget.
+        result.append(["pnpm", "--dir", "apps/erp", "exec", "vitest", "run", "--testTimeout=30000", *ERP_DATABASE_TESTS])
         if not erp_only:
             result.append(["pnpm", "--filter", "@carbon/jobs", "exec", "vitest", "run", *JOBS_DATABASE_TESTS])
         return result
