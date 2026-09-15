@@ -93,6 +93,8 @@ jobs:
         run: ruff check contrib/deploying
       - name: Deployment tooling unit tests
         run: python3 -m unittest discover -s contrib/deploying/gcp-tailscale -p 'test_*.py'
+      - name: MES callback redirects in the production auth image
+        run: python3 -m unittest discover -s contrib/deploying/gcp-tailscale/auth -p 'test_callback_redirects.py'
       - name: Docker build contexts exclude private artifacts and keep source
         run: python3 contrib/deploying/portal/verify-build-context.py
 

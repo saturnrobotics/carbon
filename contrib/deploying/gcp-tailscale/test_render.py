@@ -167,6 +167,19 @@ class PrivateStackTests(unittest.TestCase):
         gateway = yaml.safe_load((self.output / "kong.yml").read_text())
         self.assertFalse(any(service["name"] == "meta" for service in gateway["services"]))
 
+    def test_mes_callback_query_is_allowlisted_without_a_host_or_path_wildcard(self):
+        allowed = self.stack["services"]["gotrue"]["environment"]["GOTRUE_URI_ALLOW_LIST"].split(",")
+        self.assertEqual(
+            allowed,
+            [
+                "https://erp.example.com",
+                "https://erp.example.com/callback",
+                "https://mes.example.com",
+                "https://mes.example.com/callback",
+                "https://mes.example.com/callback[?]redirectTo=**",
+            ],
+        )
+
     def test_google_policy_and_bootstrap_isolation(self):
         auth = self.stack["services"]["gotrue"]
         self.assertEqual(auth["environment"]["GOTRUE_HOOK_CUSTOM_ACCESS_TOKEN_ENABLED"], "true")
