@@ -270,7 +270,9 @@ services:
       GOTRUE_DB_DRIVER: postgres
       GOTRUE_DB_DATABASE_URL: postgres://supabase_auth_admin:__POSTGRES_PASSWORD__@postgres:5432/postgres
       GOTRUE_SITE_URL: ${ERP_URL}
-      GOTRUE_URI_ALLOW_LIST: ${ERP_URL},${ERP_URL}/callback,${MES_URL},${MES_URL}/callback
+      # Match only the trusted callback; [?] is a literal query delimiter.
+      # The wildcard is confined to redirectTo values (including encoded paths).
+      GOTRUE_URI_ALLOW_LIST: ${ERP_URL},${ERP_URL}/callback,${MES_URL},${MES_URL}/callback,${MES_URL}/callback[?]redirectTo=**
       GOTRUE_DISABLE_SIGNUP: ${GOTRUE_DISABLE_SIGNUP:-true}
       GOTRUE_JWT_SECRET: __JWT_SECRET__
       GOTRUE_JWT_EXP: "3600"

@@ -125,6 +125,19 @@ it preserves any existing configuration:
    method. Email/password, magic links, phone, anonymous, Azure and SAML logins
    are disabled in this deployment. Google consent and callbacks occur in the
    user's Tailscale-connected browser, so the callback host stays private.
+
+   The stack separately allowlists where Supabase Auth returns the browser after
+   Google sign-in. MES uses `/callback?redirectTo=...`; its allowlist pattern
+   fixes the HTTPS origin and callback path and permits values only after the
+   literal `?redirectTo=` delimiter. Do not replace it with a hostname wildcard
+   or `/callback**`. The production-image callback regression runs in fork CI:
+
+   ```bash
+   python3 -m unittest discover -s contrib/deploying/gcp-tailscale/auth -p 'test_callback_redirects.py'
+   ```
+
+   This test needs Docker and PyYAML. It creates and removes an isolated temporary
+   authentication database and cancels synthetic OAuth flows without Google login.
 5. Fill in both private files, then validate them from the repository root:
 
    ```bash
