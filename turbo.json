@@ -2,7 +2,14 @@
   "$schema": "https://turborepo.org/schema.json",
   "tasks": {
     "build": {
+<<<<<<< HEAD
       "dependsOn": ["^build", "//#lingui:compile"],
+||||||| 85d9006e1
+      "dependsOn": ["^build", "//#lingui:compile", "//#generate:mcp"],
+=======
+      "dependsOn": ["^build", "//#lingui:compile", "//#generate:mcp"],
+      "env": ["ASSETS_URL"],
+>>>>>>> 5ba005208b53584224d846ef8544225fe3781191
       "outputs": [
         "dist/**",
         "build/**",
@@ -18,7 +25,27 @@
       "outputs": ["src/pdf/fonts.data.ts"]
     },
     "//#lingui:compile": {
+<<<<<<< HEAD
       "inputs": ["lingui.config.js", "packages/locale/locales/**/*.po"],
+||||||| 85d9006e1
+      "inputs": [
+        "lingui.config.js",
+        "apps/erp/app/**",
+        "apps/mes/app/**",
+        "packages/react/src/**",
+        "packages/workflows/src/**",
+        "packages/locale/locales/**/*.po"
+      ],
+=======
+      "inputs": [
+        "lingui.config.js",
+        "apps/erp/app/**",
+        "apps/mes/app/**",
+        "packages/react/src/**",
+        "packages/ee/src/workflows/**",
+        "packages/locale/locales/**/*.po"
+      ],
+>>>>>>> 5ba005208b53584224d846ef8544225fe3781191
       "outputs": ["packages/locale/locales/**/*.mjs"]
     },
     "test": {

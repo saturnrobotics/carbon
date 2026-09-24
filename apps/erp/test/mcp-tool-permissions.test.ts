@@ -18,6 +18,7 @@ const allTools = metadata.tools as Tool[];
 
 // PERMISSION_OVERRIDES in scripts/lib/service-metadata.ts — route-verified
 // exceptions that win over the derivation rules. Pinned exactly below and
+<<<<<<< HEAD
 // excluded from the rule-based assertions.
 const EXPECTED_OVERRIDES: Record<string, Tool["permission"]> = {
   settings_getApiKeys: { module: "users", actions: ["update"] },
@@ -38,6 +39,19 @@ const EXPECTED_OVERRIDES: Record<string, Tool["permission"]> = {
     actions: ["create"]
   }
 };
+||||||| 85d9006e1
+// excluded from the rule-based assertions.
+const OVERRIDDEN = new Set([
+  "settings_getApiKeys",
+  "settings_upsertApiKey",
+  "settings_deleteApiKey"
+]);
+=======
+// excluded from the rule-based assertions. The API-key WRITES (upsert/delete)
+// moved to @carbon/ee/api-keys.server behind requireEntitlement, so they are no
+// longer MCP tools — only the read (getApiKeys) remains and keeps the override.
+const OVERRIDDEN = new Set(["settings_getApiKeys"]);
+>>>>>>> 5ba005208b53584224d846ef8544225fe3781191
 
 const tools = allTools.filter(
   (t) => !Object.hasOwn(EXPECTED_OVERRIDES, t.name)

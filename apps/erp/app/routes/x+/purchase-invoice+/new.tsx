@@ -2,6 +2,7 @@ import { assertIsPost, error } from "@carbon/auth";
 import { requirePermissions } from "@carbon/auth/auth.server";
 import { getCarbonServiceRole } from "@carbon/auth/client.server";
 import { flash } from "@carbon/auth/session.server";
+import { storage } from "@carbon/files";
 import { validationError, validator } from "@carbon/form";
 import { msg } from "@lingui/core/macro";
 import type { FunctionsResponse } from "@supabase/functions-js";
@@ -123,6 +124,242 @@ export async function action({ request }: ActionFunctionArgs) {
     );
   }
 
+<<<<<<< HEAD
+||||||| 85d9006e1
+  const extractedLineItemsStr = formData.get("extractedLineItems") as string;
+  let extractedLineItems: any[] = [];
+  if (extractedLineItemsStr) {
+    try {
+      extractedLineItems = JSON.parse(extractedLineItemsStr);
+    } catch {
+      // ignore
+    }
+  }
+
+  const extractedTaxAmountStr = formData.get("extractedTaxAmount") as string;
+  const extractedTaxAmount = Number.parseFloat(extractedTaxAmountStr) || 0;
+
+  const promises: Promise<any>[] = [];
+
+  if (extractedLineItems.length > 0) {
+    let taxApplied = false;
+
+    for (const item of extractedLineItems) {
+      if (!item.description && !item.partNumber) continue;
+
+      const lineTax = !taxApplied ? extractedTaxAmount : 0;
+      taxApplied = true;
+
+      // The whole document's tax lands on the first line, so it can exceed that
+      // one line's own subtotal. The AMOUNT is what the supplier actually
+      // charged and stays authoritative; the rate is the derived half of the
+      // pair, rounded to internal scale and held inside the 0..1 fraction the
+      // validator and TaxFields both require.
+      // No shipping term: this path hardcodes supplierShippingCost to 0 below,
+      // so the base is deliberately unit price x quantity only.
+      const lineSubtotal = taxableBase(
+        item.unitPrice || 0,
+        item.quantity || 1,
+        0
+      );
+      const lineTaxPercent = Math.min(1, deriveRate(lineTax, lineSubtotal));
+
+      // Map the line up front when the extracted text directly matches an
+      // existing record — only lines with no direct match are left as
+      // comments for the review modal.
+      const itemId = await resolveItemIdFromExtractedText(
+        client,
+        companyId,
+        { type: "supplier", id: d.supplierId },
+        [item.partNumber, item.description]
+      );
+
+      promises.push(
+        upsertPurchaseInvoiceLine(client, {
+          invoiceId: result.data.id,
+          invoiceLineType: itemId ? "Part" : "Comment",
+          itemId: itemId ?? undefined,
+          description: item.partNumber || item.description || "Line Item",
+          quantity: item.quantity || 1,
+          supplierUnitPrice: item.unitPrice || 0,
+          supplierShippingCost: 0,
+          supplierTaxAmount: lineTax,
+          taxPercent: lineTaxPercent,
+          locationId: d.locationId,
+          companyId,
+          createdBy: userId,
+          customFields: {}
+        })
+      );
+    }
+  }
+
+  const extractedStoragePath = formData.get("extractedStoragePath") as
+    | string
+    | undefined;
+
+  const resultDataId = result.data.id;
+
+  if (extractedStoragePath) {
+    promises.push(
+      (async () => {
+        const fetchedInvoice = await getPurchaseInvoice(client, resultDataId);
+        const interactionId = fetchedInvoice.data?.supplierInteractionId;
+
+        if (interactionId) {
+          const filenameParts = extractedStoragePath.split("/");
+          const basename =
+            filenameParts[filenameParts.length - 1] || "Extracted_Invoice.pdf";
+          const originalFilename = basename.includes("_")
+            ? basename.split("_").slice(1).join("_")
+            : basename;
+          const safeFilename = stripSpecialCharacters(originalFilename);
+          const newStoragePath = `${companyId}/supplier-interaction/${interactionId}/${safeFilename}`;
+
+          const copyResult = await client.storage
+            .from("private")
+            .copy(extractedStoragePath, newStoragePath);
+
+          if (!copyResult.error) {
+            await upsertDocument(client, {
+              path: newStoragePath,
+              name: originalFilename,
+              size: 0,
+              sourceDocument: "Purchase Invoice",
+              sourceDocumentId: resultDataId,
+              readGroups: [userId],
+              writeGroups: [userId],
+              createdBy: userId,
+              companyId
+            });
+          }
+        }
+      })()
+    );
+  }
+
+  if (promises.length > 0) {
+    await Promise.all(promises);
+  }
+
+=======
+  const extractedLineItemsStr = formData.get("extractedLineItems") as string;
+  let extractedLineItems: any[] = [];
+  if (extractedLineItemsStr) {
+    try {
+      extractedLineItems = JSON.parse(extractedLineItemsStr);
+    } catch {
+      // ignore
+    }
+  }
+
+  const extractedTaxAmountStr = formData.get("extractedTaxAmount") as string;
+  const extractedTaxAmount = Number.parseFloat(extractedTaxAmountStr) || 0;
+
+  const promises: Promise<any>[] = [];
+
+  if (extractedLineItems.length > 0) {
+    let taxApplied = false;
+
+    for (const item of extractedLineItems) {
+      if (!item.description && !item.partNumber) continue;
+
+      const lineTax = !taxApplied ? extractedTaxAmount : 0;
+      taxApplied = true;
+
+      // The whole document's tax lands on the first line, so it can exceed that
+      // one line's own subtotal. The AMOUNT is what the supplier actually
+      // charged and stays authoritative; the rate is the derived half of the
+      // pair, rounded to internal scale and held inside the 0..1 fraction the
+      // validator and TaxFields both require.
+      // No shipping term: this path hardcodes supplierShippingCost to 0 below,
+      // so the base is deliberately unit price x quantity only.
+      const lineSubtotal = taxableBase(
+        item.unitPrice || 0,
+        item.quantity || 1,
+        0
+      );
+      const lineTaxPercent = Math.min(1, deriveRate(lineTax, lineSubtotal));
+
+      // Map the line up front when the extracted text directly matches an
+      // existing record — only lines with no direct match are left as
+      // comments for the review modal.
+      const itemId = await resolveItemIdFromExtractedText(
+        client,
+        companyId,
+        { type: "supplier", id: d.supplierId },
+        [item.partNumber, item.description]
+      );
+
+      promises.push(
+        upsertPurchaseInvoiceLine(client, {
+          invoiceId: result.data.id,
+          invoiceLineType: itemId ? "Part" : "Comment",
+          itemId: itemId ?? undefined,
+          description: item.partNumber || item.description || "Line Item",
+          quantity: item.quantity || 1,
+          supplierUnitPrice: item.unitPrice || 0,
+          supplierShippingCost: 0,
+          supplierTaxAmount: lineTax,
+          taxPercent: lineTaxPercent,
+          locationId: d.locationId,
+          companyId,
+          createdBy: userId,
+          customFields: {}
+        })
+      );
+    }
+  }
+
+  const extractedStoragePath = formData.get("extractedStoragePath") as
+    | string
+    | undefined;
+
+  const resultDataId = result.data.id;
+
+  if (extractedStoragePath) {
+    promises.push(
+      (async () => {
+        const fetchedInvoice = await getPurchaseInvoice(client, resultDataId);
+        const interactionId = fetchedInvoice.data?.supplierInteractionId;
+
+        if (interactionId) {
+          const filenameParts = extractedStoragePath.split("/");
+          const basename =
+            filenameParts[filenameParts.length - 1] || "Extracted_Invoice.pdf";
+          const originalFilename = basename.includes("_")
+            ? basename.split("_").slice(1).join("_")
+            : basename;
+          const safeFilename = stripSpecialCharacters(originalFilename);
+          const newStoragePath = `${companyId}/supplier-interaction/${interactionId}/${safeFilename}`;
+
+          const copyResult = await storage(client)
+            .company(companyId)
+            .copy(extractedStoragePath, newStoragePath);
+
+          if (!copyResult.error) {
+            await upsertDocument(client, {
+              path: newStoragePath,
+              name: originalFilename,
+              size: 0,
+              sourceDocument: "Purchase Invoice",
+              sourceDocumentId: resultDataId,
+              readGroups: [userId],
+              writeGroups: [userId],
+              createdBy: userId,
+              companyId
+            });
+          }
+        }
+      })()
+    );
+  }
+
+  if (promises.length > 0) {
+    await Promise.all(promises);
+  }
+
+>>>>>>> 5ba005208b53584224d846ef8544225fe3781191
   throw redirect(path.to.purchaseInvoice(result.data.id));
 }
 

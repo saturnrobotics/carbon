@@ -22,6 +22,7 @@ import type { PoolClient } from "pg";
 import { getPostgresConnectionPool } from "./client.ts";
 import { loadEnv } from "./datasets/cli.ts";
 import { datasetKeys, getDataset } from "./datasets/index.ts";
+import { validateDataset } from "./datasets/validate.ts";
 import { resolveCheckUserId, verifyDataset } from "./datasets/verify.ts";
 
 loadEnv();
@@ -101,10 +102,44 @@ async function main() {
     }
   }
 
+<<<<<<< HEAD
   // Match the existing unavailable-database policy before pool construction:
   // the shared factory requires a URL and cannot connect without one.
   if (!process.env.SUPABASE_DB_URL?.trim()) {
     skip("SUPABASE_DB_URL is not set (no local database configured)");
+||||||| 85d9006e1
+=======
+  // Pure validation first: it needs no database, so a broken dataset blocks the
+  // commit even when the DB layer below skips.
+  let inconsistent = false;
+  for (const key of selected) {
+    const violations = validateDataset(getDataset(key)!);
+    if (violations.length > 0) {
+      inconsistent = true;
+      console.error(
+        `  ✗ ${key} — ${violations.length} consistency violation(s):`
+      );
+      for (const violation of violations) console.error(`      ${violation}`);
+    }
+  }
+  if (inconsistent) {
+    console.error(
+      `\nThe demo datasets are internally inconsistent. Fix them in packages/database/src/datasets/data/ before committing.`
+    );
+    console.error(
+      `Re-run on its own with: pnpm db:check:datasets\nCommit anyway with:     CARBON_SKIP_DATASET_CHECK=1 git commit ...`
+    );
+    process.exitCode = 1;
+    return;
+  }
+
+  // No connection string configured at all (fresh worktree, no .env.local).
+  // getPostgresConnectionPool dereferences it before any connect() can fail,
+  // so without this the hook blocks the commit on "Cannot read properties of
+  // undefined (reading 'includes')" — the least actionable message there is.
+  if (!process.env.SUPABASE_DB_URL) {
+    skip("SUPABASE_DB_URL is not set (no .env.local in this worktree?)");
+>>>>>>> 5ba005208b53584224d846ef8544225fe3781191
   }
 
   const pool = getPostgresConnectionPool(1);
@@ -131,17 +166,32 @@ async function main() {
     );
     let failed = false;
     for (const key of selected) {
+      // Buffer tier logs and surface them only on failure — they place the
+      // error inside the tier sequence without drowning a green run.
+      const tierLog: string[] = [];
       const result = await verifyDataset(client, {
         dataset: getDataset(key)!,
         key,
-        userId
+        userId,
+        log: (message) => tierLog.push(message)
       });
       const seconds = (result.durationMs / 1000).toFixed(1);
       if (result.ok) {
         process.stdout.write(`  ✓ ${key} (${seconds}s)\n`);
       } else {
         failed = true;
+<<<<<<< HEAD
         process.stderr.write(`  ✗ ${key} (${seconds}s) — ${result.error}\n`);
+||||||| 85d9006e1
+        console.error(`  ✗ ${key} (${seconds}s) — ${result.error}`);
+=======
+        console.error(`  ✗ ${key} (${seconds}s) — ${result.error}`);
+        const tail = tierLog.slice(-12);
+        if (tail.length > 0) {
+          console.error(`    last tier steps:`);
+          for (const line of tail) console.error(`      ${line}`);
+        }
+>>>>>>> 5ba005208b53584224d846ef8544225fe3781191
       }
     }
 
@@ -149,8 +199,16 @@ async function main() {
       const pending = await countPendingMigrations(client);
       process.stderr.write(
         pending > 0
+<<<<<<< HEAD
           ? `\nYour database is ${pending} migration(s) behind, so this may not be dataset drift at all — run pnpm db:migrate and check again before changing anything.\n`
           : `\nThe demo datasets no longer match the schema. Fix them in packages/database/src/datasets/ — onboarding's demo templates and pnpm db:seed:dev both run this code.\n`
+||||||| 85d9006e1
+          ? `\nYour database is ${pending} migration(s) behind, so this may not be dataset drift at all — run pnpm db:migrate and check again before changing anything.`
+          : `\nThe demo datasets no longer match the schema. Fix them in packages/database/src/datasets/ — onboarding's demo templates and pnpm db:seed:dev both run this code.`
+=======
+          ? `\nYour database is ${pending} migration(s) behind, so this may not be dataset drift at all — run pnpm db:migrate and check again before changing anything.`
+          : `\nThe demo datasets no longer match the schema, or a table fell below its row-count floor (datasets/coverage.ts). Fix them in packages/database/src/datasets/ — onboarding's demo templates and pnpm db:seed:dev both run this code.`
+>>>>>>> 5ba005208b53584224d846ef8544225fe3781191
       );
       process.stderr.write(
         `Re-run on its own with: pnpm db:check:datasets\nCommit anyway with:     CARBON_SKIP_DATASET_CHECK=1 git commit ...\n`
