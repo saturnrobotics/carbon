@@ -1,0 +1,39 @@
+name: CI dependencies
+description: Install dependencies without repeating root generators in every check.
+inputs:
+  generated:
+    description: Generate document fonts needed by application types and tests. MCP remains a Turbo task dependency.
+    default: "false"
+  turbo-cache:
+    description: Persist dependency build outputs for the fixed unit-test environment.
+    default: "false"
+runs:
+  using: composite
+  steps:
+    - uses: pnpm/action-setup@v4
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 22
+        cache: pnpm
+    # Dependency lifecycle scripts (including native tools) still run. Only the
+    # root generators opt out; checks invoke the generators they actually need.
+    - name: Install dependencies
+      shell: bash
+      env:
+        CARBON_CI_DEFER_GENERATION: "1"
+      run: pnpm install --frozen-lockfile --prefer-offline
+    - name: Generate document fonts
+      if: inputs.generated == 'true'
+      shell: bash
+      run: pnpm --filter @carbon/documents build
+    # Only Test uses this cache. Other build profiles, secrets, and production
+    # outputs must not share it. Turbo still hashes each task's source inputs;
+    # tests, typechecks, and MCP generation retain cache:false in turbo.json.
+    - name: Restore dependency build cache
+      if: inputs.turbo-cache == 'true'
+      uses: actions/cache@v4
+      with:
+        path: .turbo
+        key: unit-test-builds-v1-${{ runner.os }}-${{ runner.arch }}-node22-${{ hashFiles('pnpm-lock.yaml', 'pnpm-workspace.yaml', 'turbo.json', '.github/actions/ci-setup/action.yml', '.github/workflows/check.yml') }}-${{ github.sha }}
+        restore-keys: |
+          unit-test-builds-v1-${{ runner.os }}-${{ runner.arch }}-node22-${{ hashFiles('pnpm-lock.yaml', 'pnpm-workspace.yaml', 'turbo.json', '.github/actions/ci-setup/action.yml', '.github/workflows/check.yml') }}-

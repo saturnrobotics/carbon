@@ -5,29 +5,13 @@ name: fork-checks
 # coverage, the portal trusted-caller registry validator, the deployment
 # tooling's Python suite, the Docker build-context privacy proof, and lint for
 # the sync scripts and workflows themselves.
-# Path-filtered on pull requests; every push to the trunk runs it all.
+# Select relevant jobs before installing dependencies; trunk pushes run it all.
 
 on:
   push:
     branches: [saturn/main]
   pull_request:
     branches: [saturn/main]
-    paths:
-      - "scripts/**"
-      - ".fork/**"
-      - "packages/locale/**"
-      - "packages/portal/scripts/validate-callers.ts"
-      - "packages/portal/src/trusted-callers.ts"
-      - "packages/portal/src/identity.server.ts"
-      - "lingui.config.js"
-      - "contrib/deploying/**"
-      - "contrib/building/**"
-      - ".dockerignore"
-      - "**/.dockerignore"
-      - "**/Dockerfile*"
-      - ".github/workflows/**"
-      - "package.json"
-      - "pnpm-lock.yaml"
   workflow_dispatch:
 
 permissions:
@@ -38,20 +22,43 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  node:
-    name: generator and fork node tests
+  changes:
+    name: select fork checks
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 5
+    outputs:
+      fork_node: ${{ steps.changes.outputs.fork_node }}
+      fork_python: ${{ steps.changes.outputs.fork_python }}
+      workflow: ${{ steps.changes.outputs.workflow }}
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+          fetch-depth: 0
+      - name: Test check selection
+        run: |
+          python3 -m unittest discover -s scripts/fork -p 'test_ci_changes.py'
+          node --test scripts/fork/postinstall.test.mjs
+      - name: Select checks
+        id: changes
+        run: python3 scripts/fork/ci_changes.py
+
+  node:
+    needs: changes
+    if: always() && !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.fork_node == 'true')
+    name: generator and fork node tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Require successful check selection
+        if: needs.changes.result != 'success'
+        run: exit 1
+      - uses: actions/checkout@v4
         with:
-          node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+          persist-credentials: false
+      - uses: ./.github/actions/ci-setup
+        with:
+          generated: "false"
       - name: Generator helpers and fork node tests
         run: |
           pnpm exec tsx --test scripts/lib/generate-db-types.test.ts scripts/lib/swagger-schema.test.ts scripts/lib/local-script-config.test.ts
@@ -67,12 +74,17 @@ jobs:
           pnpm exec linguito check
 
   python:
+    needs: changes
+    if: always() && !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.fork_python == 'true')
     name: deployment tooling tests
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
       PYTHONDONTWRITEBYTECODE: "1"
     steps:
+      - name: Require successful check selection
+        if: needs.changes.result != 'success'
+        run: exit 1
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
@@ -82,13 +94,10 @@ jobs:
       - run: python3 -m pip install --disable-pip-version-check PyYAML==6.0.2 ruff==0.4.1
       # The release planner proves the workspace closure through the repo's
       # own turbo binary (node_modules/.bin/turbo), so the tests need the
-      # workspace installed. --ignore-scripts skips the postinstall builds.
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      # workspace installed, but does not need generated application outputs.
+      - uses: ./.github/actions/ci-setup
         with:
-          node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile --ignore-scripts
+          generated: "false"
       - name: Lint Python
         run: ruff check contrib/deploying
       - name: Deployment tooling unit tests
@@ -99,10 +108,15 @@ jobs:
         run: python3 contrib/deploying/portal/verify-build-context.py
 
   scripts-and-workflows:
+    needs: changes
+    if: always() && !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.workflow == 'true')
     name: shell and workflow lint
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
+      - name: Require successful check selection
+        if: needs.changes.result != 'success'
+        run: exit 1
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
@@ -113,8 +127,9 @@ jobs:
       - name: actionlint the workflows
         run: |
           bash <(curl -sSL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash) 1.7.7 >/dev/null
-          # Fork-owned workflows only; upstream's carry findings that are upstream's to fix.
+          # Include the main check workflow, which also uses the shared CI setup.
           ./actionlint -color \
             .github/workflows/generated-files-drift.yml .github/workflows/upstream-sync.yml \
             .github/workflows/resolve-sync-conflicts.yml .github/workflows/fork-checks.yml \
-            .github/workflows/saturn-invoice-check.yml .github/workflows/portal-check.yml
+            .github/workflows/saturn-invoice-check.yml .github/workflows/portal-check.yml \
+            .github/workflows/check.yml
