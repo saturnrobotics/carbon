@@ -215,13 +215,30 @@ onto `upstream/main` so the contribution carries none of the fork's merge histor
 
 ## Checks for fork-owned code
 
+The main check and fork-check workflows first run `scripts/fork/ci_changes.py`
+without installing dependencies. On PRs, the selector uses the full merge-base
+diff, including deleted files and both sides of renames. Known sync-workflow and
+prose-only changes avoid unrelated application checks. Application changes keep
+the complete Node suite, including dependent packages; shared or unknown inputs
+run everything. Trunk pushes and manual dispatches always run the full suite.
+Selector failures fail the existing check jobs rather than silently skipping them.
+
+Selected Node jobs use `.github/actions/ci-setup` independently, without an
+initial Install job. The action retains pnpm's download cache and dependency
+lifecycle scripts, while explicitly deferring only the root font/MCP generators.
+Fonts run for typecheck, tests and the catalog; MCP runs through the existing
+Turbo task dependencies or explicitly for the catalog. Ordinary installs are
+unchanged. The Test job persists `.turbo` build outputs in its own fixed CI
+profile; tests, typechecks and MCP generation remain uncached. Production and
+Portal build profiles do not share that cache.
+
 The **`fork-checks`** workflow runs what upstream's CI never sees: the hardened
 generator helpers under `scripts/lib`, the fork's node tests under `.fork/tests`,
 locale source coverage (`.fork/check-locales.ts` + `linguito check`), the
 deployment tooling's Python suite and lint (`ruff`), the Docker build-context
 privacy proof, and `shellcheck` / `actionlint` for the sync scripts and the
-fork-owned workflows. It is path-filtered on pull requests and unfiltered on
-pushes to the trunk. The same commands run locally:
+fork-owned workflows. Its selector chooses relevant jobs on pull requests and
+all jobs on pushes to the trunk. The same commands run locally:
 
 ```bash
 pnpm exec tsx --test scripts/lib/generate-db-types.test.ts scripts/lib/swagger-schema.test.ts scripts/lib/local-script-config.test.ts

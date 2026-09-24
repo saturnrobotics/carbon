@@ -5,176 +5,130 @@ on:
     branches: [main, saturn/main]
   push:
     branches: [main, saturn/main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  install:
-    name: Install
+  changes:
+    name: Select checks
     runs-on: ubuntu-latest
+    outputs:
+      node: ${{ steps.changes.outputs.node }}
+      lingui: ${{ steps.changes.outputs.lingui }}
+      catalog: ${{ steps.changes.outputs.catalog }}
+      edge: ${{ steps.changes.outputs.edge }}
+      audit: ${{ steps.changes.outputs.audit }}
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
         with:
-          node-version: 22
-          cache: pnpm
-
-      - uses: actions/cache@v4
-        id: node-modules-cache
-        with:
-          path: |
-            node_modules
-            apps/*/node_modules
-            docs/node_modules
-            packages/*/node_modules
-          key: node-modules-${{ hashFiles('pnpm-lock.yaml') }}
-
-      # Always install so the postinstall generates the gitignored font data.
-      - run: pnpm install --frozen-lockfile
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Test change detection and install lifecycle
+        run: |
+          python3 -m unittest discover -s scripts/fork -p 'test_ci_changes.py'
+          node --test scripts/fork/postinstall.test.mjs
+      - id: changes
+        run: python3 scripts/fork/ci_changes.py
 
   lint:
     name: Lint
-    needs: install
+    needs: changes
+    if: always() && !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.node == 'true')
     runs-on: ubuntu-latest
     steps:
+      - name: Require successful change detection
+        if: needs.changes.result != 'success'
+        run: exit 1
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
         with:
-          node-version: 22
-          cache: pnpm
-
-      - uses: actions/cache@v4
-        id: node-modules-cache
-        with:
-          path: |
-            node_modules
-            apps/*/node_modules
-            docs/node_modules
-            packages/*/node_modules
-          key: node-modules-${{ hashFiles('pnpm-lock.yaml') }}
-
-      # Always install so the postinstall generates the gitignored font data.
-      - run: pnpm install --frozen-lockfile
-
+          persist-credentials: false
+      - uses: ./.github/actions/ci-setup
       - run: pnpm exec biome check
 
   typecheck:
     name: Typecheck
-    needs: install
+    needs: changes
+    if: always() && !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.node == 'true')
     runs-on: ubuntu-latest
     steps:
+      - name: Require successful change detection
+        if: needs.changes.result != 'success'
+        run: exit 1
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
         with:
-          node-version: 22
-          cache: pnpm
-
-      - uses: actions/cache@v4
-        id: node-modules-cache
+          persist-credentials: false
+      - uses: ./.github/actions/ci-setup
         with:
-          path: |
-            node_modules
-            apps/*/node_modules
-            docs/node_modules
-            packages/*/node_modules
-          key: node-modules-${{ hashFiles('pnpm-lock.yaml') }}
-
-      # Always install so the postinstall generates the gitignored font data.
-      - run: pnpm install --frozen-lockfile
-
+          generated: "true"
       - run: pnpm run typegen
       - run: pnpm run typecheck
 
   lingui:
     name: Lingui
-    needs: install
+    needs: changes
+    if: always() && !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.lingui == 'true')
     runs-on: ubuntu-latest
     steps:
+      - name: Require successful change detection
+        if: needs.changes.result != 'success'
+        run: exit 1
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
         with:
-          node-version: 22
-          cache: pnpm
-
-      - uses: actions/cache@v4
-        id: node-modules-cache
-        with:
-          path: |
-            node_modules
-            apps/*/node_modules
-            docs/node_modules
-            packages/*/node_modules
-          key: node-modules-${{ hashFiles('pnpm-lock.yaml') }}
-
-      # Always install so the postinstall generates the gitignored font data.
-      - run: pnpm install --frozen-lockfile
-
+          persist-credentials: false
+      - uses: ./.github/actions/ci-setup
       - run: pnpm run lingui:check
 
   catalog:
     name: Catalog
-    needs: install
+    needs: changes
+    if: always() && !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.catalog == 'true')
     runs-on: ubuntu-latest
     steps:
+      - name: Require successful change detection
+        if: needs.changes.result != 'success'
+        run: exit 1
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
         with:
-          node-version: 22
-          cache: pnpm
-
-      - uses: actions/cache@v4
-        id: node-modules-cache
+          persist-credentials: false
+      - uses: ./.github/actions/ci-setup
         with:
-          path: |
-            node_modules
-            apps/*/node_modules
-            docs/node_modules
-            packages/*/node_modules
-          key: node-modules-${{ hashFiles('pnpm-lock.yaml') }}
-
-      # Always install so the postinstall generates the gitignored font data.
-      - run: pnpm install --frozen-lockfile
-
+          generated: "true"
+      - run: pnpm run generate:mcp
       - run: pnpm run check:workflow-catalog
 
   test:
     name: Test
-    needs: install
+    needs: changes
+    if: always() && !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.node == 'true')
     runs-on: ubuntu-latest
     steps:
+      - name: Require successful change detection
+        if: needs.changes.result != 'success'
+        run: exit 1
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
         with:
-          node-version: 22
-          cache: pnpm
-
-      - uses: actions/cache@v4
-        id: node-modules-cache
+          persist-credentials: false
+      - uses: ./.github/actions/ci-setup
         with:
-          path: |
-            node_modules
-            apps/*/node_modules
-            docs/node_modules
-            packages/*/node_modules
-          key: node-modules-${{ hashFiles('pnpm-lock.yaml') }}
-
-      # Always install so the postinstall generates the gitignored font data.
-      - run: pnpm install --frozen-lockfile
-
+          generated: "true"
+          turbo-cache: "true"
       - run: pnpm test
 
   edge-functions:
     name: Edge Functions
+    needs: changes
+    if: always() && !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.edge == 'true')
     runs-on: ubuntu-latest
     steps:
+      - name: Require successful change detection
+        if: needs.changes.result != 'success'
+        run: exit 1
       - uses: actions/checkout@v4
         with:
           # This job runs PR-authored code. actions/checkout otherwise leaves
@@ -204,12 +158,18 @@ jobs:
 
   audit:
     name: Audit
+    needs: changes
+    if: always() && !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.audit == 'true')
     runs-on: ubuntu-latest
     steps:
+      - name: Require successful change detection
+        if: needs.changes.result != 'success'
+        run: exit 1
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-
       - run: pnpm audit --audit-level=critical || true
