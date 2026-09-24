@@ -63,6 +63,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
     );
   }
 
+<<<<<<< HEAD
   const [
     supplier,
     interaction,
@@ -97,6 +98,65 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
       .in("status", ["Approved", "Linked"]),
     getPurchaseInvoiceAttachments(client, companyId, invoiceId)
   ]);
+||||||| 85d9006e1
+  const [supplier, interaction, files, orgHasCredits, currency] =
+    await Promise.all([
+      purchaseInvoice.data?.supplierId
+        ? getSupplier(client, purchaseInvoice.data.supplierId)
+        : null,
+      getSupplierInteraction(
+        client,
+        purchaseInvoice.data.supplierInteractionId!
+      ),
+      getSupplierInteractionDocuments(
+        client,
+        companyId,
+        purchaseInvoice.data.supplierInteractionId!
+      ),
+      getCompanyHasOpenCredits(client, companyId, "purchase"),
+      purchaseInvoice.data?.currencyCode
+        ? getCurrencyByCode(
+            client,
+            companyGroupId,
+            purchaseInvoice.data.currencyCode
+          )
+        : null
+    ]);
+=======
+  const [supplier, interaction, files, orgHasCredits, currency, rampMapping] =
+    await Promise.all([
+      purchaseInvoice.data?.supplierId
+        ? getSupplier(client, purchaseInvoice.data.supplierId)
+        : null,
+      getSupplierInteraction(
+        client,
+        purchaseInvoice.data.supplierInteractionId!
+      ),
+      getSupplierInteractionDocuments(
+        client,
+        companyId,
+        purchaseInvoice.data.supplierInteractionId!
+      ),
+      getCompanyHasOpenCredits(client, companyId, "purchase"),
+      purchaseInvoice.data?.currencyCode
+        ? getCurrencyByCode(
+            client,
+            companyGroupId,
+            purchaseInvoice.data.currencyCode
+          )
+        : null,
+      // Ramp origin/sync badge. Read via the user-scoped client — if RLS denies
+      // (or there is no mapping), fall back to null silently.
+      client
+        .from("externalIntegrationMapping")
+        .select("id, externalId, metadata")
+        .eq("companyId", companyId)
+        .eq("integration", "ramp")
+        .eq("entityType", "bill")
+        .eq("entityId", invoiceId)
+        .maybeSingle()
+    ]);
+>>>>>>> 5ba005208b53584224d846ef8544225fe3781191
 
   return {
     purchaseInvoice: purchaseInvoice.data,
@@ -108,7 +168,13 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
     interaction: interaction.data,
     supplier: supplier?.data ?? null,
     orgHasCredits,
+<<<<<<< HEAD
     intakeDocuments: intakeDocuments.data ?? []
+||||||| 85d9006e1
+    orgHasCredits
+=======
+    rampMapping: rampMapping?.data ?? null
+>>>>>>> 5ba005208b53584224d846ef8544225fe3781191
   };
 }
 

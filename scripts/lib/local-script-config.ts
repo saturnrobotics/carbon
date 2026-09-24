@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { parseEnv } from "node:util";
 
+<<<<<<< HEAD
 export function readLocalScriptConfig<const Keys extends readonly string[]>(
   names: Keys,
   environment: Record<string, string | undefined>
@@ -11,6 +12,38 @@ export function readLocalScriptConfig<const Keys extends readonly string[]>(
     : {};
   const values = Object.fromEntries(
     names.map((name) => [name, environment[name] ?? local[name]])
+||||||| 85d9006e1
+=======
+// Values from .env.local override the caller's environment (it is the file
+// `pnpm dev:up` writes); plain .env only fills in what is not already set.
+export function loadDotEnv(): void {
+  for (const file of [".env", ".env.local"]) {
+    if (!existsSync(file)) continue;
+    for (const [key, value] of Object.entries(
+      parseEnv(readFileSync(file, "utf8"))
+    )) {
+      if (file === ".env.local" || process.env[key] === undefined)
+        process.env[key] = value;
+    }
+  }
+}
+
+export function readLocalScriptConfig<const Keys extends readonly string[]>(
+  names: Keys,
+  environment: Record<string, string | undefined>
+): { [Key in Keys[number]]: string } {
+  const local = existsSync(".env")
+    ? parseEnv(readFileSync(".env", "utf8"))
+    : {};
+  const localOverride = existsSync(".env.local")
+    ? parseEnv(readFileSync(".env.local", "utf8"))
+    : {};
+  const values = Object.fromEntries(
+    names.map((name) => [
+      name,
+      localOverride[name] ?? environment[name] ?? local[name]
+    ])
+>>>>>>> 5ba005208b53584224d846ef8544225fe3781191
   );
   const missing = names.filter((name) => !values[name]?.trim());
   if (missing.length) {

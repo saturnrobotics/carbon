@@ -42,6 +42,7 @@ export interface TrackedEntityAttributes {
   Shipment?: string;
   "Split Entity ID"?: string;
   "Split From Entity ID"?: string;
+  "Merged From Entity IDs"?: string[];
   Shelf?: string;
 }
 
