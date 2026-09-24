@@ -169,8 +169,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.FORK_SYNC_TOKEN || github.token }}
         run: |
-          gh label create upstream-sync --color 0E8A16 --description "Merge of crbnos/carbon into the fork" --force
-          gh label create needs-conflict-resolution --color D93F0B --description "Upstream merge stopped on conflicts" --force
+          gh label create upstream-sync --repo "$GITHUB_REPOSITORY" --color 0E8A16 --description "Merge of crbnos/carbon into the fork" --force
+          gh label create needs-conflict-resolution --repo "$GITHUB_REPOSITORY" --color D93F0B --description "Upstream merge stopped on conflicts" --force
       - name: Open the pull request
         if: steps.fetch.outputs.pending != '0'
         env:
@@ -209,4 +209,4 @@ jobs:
           if [ "${{ steps.merge.outputs.clean }}" != "true" ]; then
             args+=(--draft --label needs-conflict-resolution)
           fi
-          gh pr create "${args[@]}"
+          gh pr create --repo "$GITHUB_REPOSITORY" "${args[@]}"
