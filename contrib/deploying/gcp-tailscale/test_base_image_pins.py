@@ -16,9 +16,10 @@ class ReviewedBaseImageTests(unittest.TestCase):
         }
         with tempfile.TemporaryDirectory() as directory:
             repo = Path(directory)
-            (repo / "Dockerfile").write_text(
+            (repo / "Dockerfile.saturn").write_text(
                 "\n".join(f"ARG {key}={value}" for key, value in pins.items())
             )
+            (repo / "Dockerfile").write_text("FROM node:22-slim\n")
             with patch(
                 "prepare_release.subprocess.run",
                 side_effect=AssertionError("Registry access is forbidden"),
@@ -37,7 +38,7 @@ class ReviewedBaseImageTests(unittest.TestCase):
         ):
             with self.subTest(value=value), tempfile.TemporaryDirectory() as directory:
                 repo = Path(directory)
-                (repo / "Dockerfile").write_text(
+                (repo / "Dockerfile.saturn").write_text(
                     f"ARG NODE_IMAGE={value}\nARG NODE_SLIM_IMAGE=node:22-slim@sha256:"
                     + "b" * 64
                 )
@@ -50,7 +51,7 @@ class ReviewedBaseImageTests(unittest.TestCase):
 
     def test_repository_defaults_are_immutable(self):
         repo = Path(__file__).resolve().parents[3]
-        declarations = (repo / "Dockerfile").read_text().splitlines()
+        declarations = (repo / "Dockerfile.saturn").read_text().splitlines()
         for key, tag in prepare_release.BASE_DEFAULTS.items():
             declaration = next(
                 line for line in declarations if line.startswith(f"ARG {key}=")

@@ -10,7 +10,11 @@ Self-host the whole stack (ERP + MES + full Supabase data plane + Redis + Innges
 on **one Linux VPS** as a single-node Docker **Swarm** (`docker stack deploy`),
 behind an auto-HTTPS Caddy proxy. The community/self-host alternative to the
 managed SST/AWS path (see [sst-deployment-infrastructure.md](sst-deployment-infrastructure.md)).
-Both build from the same root `Dockerfile` (`--build-arg APP=erp|mes`).
+In this fork, both explicitly select root `Dockerfile.saturn`
+(`--build-arg APP=erp|mes`). GCP also selects it for the `ops` target. It retains
+reviewed Node image pins, workspace pruning, and fork runtime behavior. Root
+`Dockerfile` is upstream-owned and must not receive fork changes. Portal services
+retain their separate Dockerfiles.
 
 This **replaced** the old `docker-compose.prod.yml` + `deploy/prod/` compose stack
 (deleted) and the root `scripts/gen-supabase-keys.mjs` (moved into the example).

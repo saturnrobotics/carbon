@@ -11,7 +11,15 @@ removes a shared-file modification.
 Legend for §(b): **upstream** = generic, should be contributed with
 `scripts/fork/upstream-pr.sh`; **extension point** = should be reshaped so the
 fork-owned code plugs into a hook instead of editing the file; **inherent** =
-must stay a fork edit. Nothing here has been reshaped yet; this is the map.
+must stay a fork edit. The inventory counts above describe the dated snapshot;
+subsequent ownership changes are recorded below.
+
+On 2026-09-24, container customization moved to root `Dockerfile.saturn`.
+Root `Dockerfile` was restored byte-for-byte from upstream
+`5ba005208b53584224d846ef8544225fe3781191` and stays upstream-owned. GCP app/ops,
+Swarm, and AWS build recipes explicitly select the fork file. See
+[the transition instructions](CONVENTIONS.md#container-build-ownership) for draft
+PR #77.
 
 ## (a) Fork-owned additions — files upstream never touches
 
@@ -21,6 +29,7 @@ changes shape.
 | Area | Files | What it is |
 | --- | --- | --- |
 | `packages/portal/`, `apps/portal/`, `apps/portal-worker/`, `apps/portal-query/`, `apps/portal-actions/` | 261 | Company portal platform: ingestion, parser, query service, worker, actions, its own schema and `database.types.ts` (generated from its own migration set, fork-only, so not a `regen` file) |
+| `Dockerfile.saturn` | 1 | ERP/MES and ops images with reviewed Node pins, pruned app workspace closure, and preserved fork runtime behavior; Portal images retain their separate Dockerfiles |
 | `contrib/deploying/gcp-tailscale/` | ~90 | Self-hosted GCP + Tailscale deployment: `deploy.py`/`deploy.sh`, host rollout, release planning, private Postgres, backups runner, Google-domain auth hook, invoice/payment operator tools, operator docs (`README.md`, `WORKFLOW.md`, `INVOICE-*.md`, `PAYMENT-SYNC.md`) and their tests |
 | `contrib/deploying/portal/` | ~25 | Terraform + Cloud Build + local stack for the portal platform |
 | `apps/erp/app/modules/invoicing/` (25 added) + `packages/jobs/src/invoice-intake/` (22) | 47 | Reviewed invoice intake and recognition: document review UI, intake worker, integration tests |
@@ -54,7 +63,7 @@ changes shape.
 | **Seed data** | `packages/database/supabase/functions/lib/seed.data.ts` (1, 1,363 lines) | **upstream or drop.** Merge resolution debris rather than intent; re-resolve toward upstream on the next sync. |
 | **Docs site** | `docs/components/editorial/architecture-diagrams.tsx`, `docs/app/docs/layout.tsx`, `docs/next.config.mjs`, `docs/scripts/generate-agent-kb.ts` (4) | **upstream or drop.** Mostly merge-resolution residue; the generator change is generic. |
 | **Generator hardening** | `scripts/generate-db-types.ts`, `scripts/generate-swagger-docs.ts`, `scripts/generate-mcp.ts`, `scripts/lib/{service-metadata,manifest-digest,validator-to-json-schema}.ts`, `scripts/{model-upload,sales-invoice-report,sandbox}.ts` (9) | **upstream.** Atomic output replacement, local-DB guard, deterministic swagger alias, explicit env configuration instead of embedded values. All generic. |
-| **Build / CI plumbing** | `turbo.json`, `Dockerfile`, `package.json` (`clean` keeps the lockfile; `prepare` runs `setup-git.sh`), `.github/workflows/check.yml` (runs on `saturn/main`) (4) | **inherent** (trunk name, setup hook) / **upstream** (`clean` not deleting the lockfile). |
+| **Build / CI plumbing** | `turbo.json`, `package.json` (`clean` keeps the lockfile; `prepare` runs `setup-git.sh`), `.github/workflows/check.yml` (runs on `saturn/main`), `.github/workflows/deploy.yml`, `contrib/deploying/simple-docker-caddy/deploy.sh` | **inherent** (trunk name, setup hook, explicit `Dockerfile.saturn` selection) / **upstream** (`clean` not deleting the lockfile). Root `Dockerfile` is upstream-owned. |
 | **Privacy ignore rules** | `.gitignore`, `.dockerignore`, `apps/assembler/Dockerfile.dockerignore`, `packages/database/supabase/functions/thumbnail/index.ts` (4) | **upstream.** Generic protection of `.env*`, Terraform, Docker and secret artifacts, and removal of embedded service values. |
 | **Tests adjusted to upstream changes** | `apps/erp/test/{localized-submodule-ui,i18n-react-macros,mcp-tool-permissions,mcp-tool-metadata,batching-migration-guards,batching-tenant-scope-and-fk-locks}.test.ts`, `routes/x+/job+/$jobId.status.test.ts`, `modules/production/ui/Schedule/Kanban/drag-lifecycle.test.tsx`, `packages/database/src/check-datasets.ts` (9) | **upstream.** Test repairs for upstream refactors; contribute or drop when upstream catches up. |
 | **Agent guidance** | `AGENTS.md`, `.claude/skills/README.md` (2) | **inherent.** Records-policy pointer and the sync-docs router row; kept to a few lines. |

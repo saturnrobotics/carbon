@@ -7,7 +7,9 @@ requests; its history is never rewritten and it is never force-pushed.
 Keep custom deployment code and operator documentation under this directory.
 Avoid changing upstream root files such as `README.md` when a local document or
 wrapper can do the job. The existing root `Makefile` remains a small entry point
-for `make deploy`. Put actual operator settings only in ignored `.local/` files.
+for `make deploy`. Fork ERP/MES and ops builds use root `Dockerfile.saturn`;
+root `Dockerfile` stays unchanged from upstream. Portal builds keep their own
+Dockerfiles. Put actual operator settings only in ignored `.local/` files.
 
 ## Deploy from your laptop
 
@@ -60,7 +62,7 @@ evidence. Keep unchanged services at their recorded image/source identity; never
 force a shared revision onto all services or replace the deployed baseline with
 the current checkout to suppress builds. Merged upstream changes are compared
 through their final content and dependency graph. Base-image updates require a
-reviewed Dockerfile digest change. Preserve the conservative maintenance path for
+reviewed `Dockerfile.saturn` digest change. Preserve the conservative maintenance path for
 database/authentication/platform changes whose rolling compatibility is unproven.
 
 The command archives the committed source on your laptop and uploads it to GCP

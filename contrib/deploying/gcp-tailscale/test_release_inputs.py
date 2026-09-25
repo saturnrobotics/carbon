@@ -47,6 +47,7 @@ class RepositoryInputsTests(unittest.TestCase):
         )
         self.write(".npmrc", "engine-strict=true\n")
         self.write("Dockerfile", "FROM scratch\n")
+        self.write("Dockerfile.saturn", "FROM scratch\n")
         self.write(
             "packages/shared/package.json",
             {"name": "@fixture/shared", "exports": "./index.ts"},
@@ -107,6 +108,14 @@ class RepositoryInputsTests(unittest.TestCase):
 
     def selected(self):
         return set(release_plan.plan(self.materialize(), self.previous)["build"])
+
+    def test_fork_dockerfile_change_rebuilds_both_applications(self):
+        self.write("Dockerfile.saturn", "FROM scratch\nENV FORK_IMAGE=updated\n")
+        self.assertEqual(self.selected(), {"erp", "mes"})
+
+    def test_upstream_dockerfile_change_does_not_rebuild_fork_images(self):
+        self.write("Dockerfile", "FROM scratch\nENV UPSTREAM_IMAGE=updated\n")
+        self.assertEqual(self.selected(), set())
 
     def test_pinned_secret_version_change_reconfigures_only_its_service(self):
         desired = self.materialize()

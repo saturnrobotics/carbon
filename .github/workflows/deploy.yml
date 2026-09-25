@@ -8,6 +8,7 @@ on:
       - "apps/erp/**"
       - "apps/mes/**"
       - "packages/**"
+      - "Dockerfile.saturn"
   workflow_dispatch:
 jobs:
   build:
@@ -44,7 +45,7 @@ jobs:
             APP=${{ matrix.app }}
             NODE_OPTIONS=--max-old-space-size=4096
           context: .
-          file: ./Dockerfile
+          file: ./Dockerfile.saturn
           push: true
           tags: |
             ${{ steps.login-ecr.outputs.registry }}/carbon/${{ matrix.app }}:latest
@@ -83,7 +84,7 @@ jobs:
       - name: Install compatible Pulumi version
         run: |
           curl -fsSL https://get.pulumi.com | sh -s -- --version 3.212.0
-          echo "$HOME/.pulumi/bin" >> $GITHUB_PATH
+          echo "$HOME/.pulumi/bin" >> "$GITHUB_PATH"
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile

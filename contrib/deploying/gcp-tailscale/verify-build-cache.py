@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Prove the real Dockerfile keeps dependency layers across source-only changes.
+"""Prove the real Dockerfile.saturn keeps dependency layers across source-only changes.
 
 Uses only synthetic workspaces and uniquely tagged task-owned images. No existing
 containers, volumes, or build caches are removed.
@@ -63,7 +63,7 @@ def verify():
                 }
             )
         )
-        (context / "Dockerfile").write_text((ROOT / "Dockerfile").read_text())
+        (context / "Dockerfile.saturn").write_text((ROOT / "Dockerfile.saturn").read_text())
         # Git is required by Turbo's workspace discovery; never stage private data.
         run(["git", "init", "--quiet"], context)
         run(
@@ -84,6 +84,8 @@ def verify():
                 [
                     "docker",
                     "build",
+                    "--file",
+                    "Dockerfile.saturn",
                     "--progress=plain",
                     "--target",
                     "deps",
