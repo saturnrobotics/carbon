@@ -273,6 +273,7 @@ function writeSchemaFile(catalog: Catalog): void {
   const manifest = catalogAsManifest(catalog, now("UTC").toAbsoluteString());
   mkdirSync(dirname(SCHEMA_FILE), { recursive: true });
   writeFileSync(SCHEMA_FILE, `${JSON.stringify(manifest, null, 2)}\n`);
+<<<<<<< HEAD
 
   // A Biome that will not run is environmental — and unreachable from the hook,
   // which runs `lint-staged` (Biome) before this. The baseline is still worth
@@ -286,6 +287,17 @@ function writeSchemaFile(catalog: Catalog): void {
         err instanceof Error ? err.message : String(err)
       }\n  Run: pnpm exec biome check --write ${SCHEMA_REPO_PATH}`
     );
+||||||| 85d9006e1
+=======
+  // lint-staged has already run by the time the pre-commit hook stages this file,
+  // so format it here or it never sees Biome at all.
+  try {
+    execFileSync("pnpm", ["exec", "biome", "format", "--write", SCHEMA_FILE], {
+      stdio: "pipe"
+    });
+  } catch {
+    // Cosmetic only — never block a commit on the formatter.
+>>>>>>> 5ba005208b53584224d846ef8544225fe3781191
   }
   try {
     git(["add", SCHEMA_FILE]);

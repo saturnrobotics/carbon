@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import {
   existsSync,
   mkdtempSync,
@@ -12,7 +13,16 @@ import {
   normalizeSwaggerSchema,
   PARTNER_ALIAS_PROOF_SQL
 } from "./lib/swagger-schema";
+||||||| 85d9006e1
+import { writeFileSync } from "node:fs";
+import * as dotenv from "dotenv";
+=======
+import { renameSync, writeFileSync } from "node:fs";
+import { loadDotEnv } from "./lib/local-script-config";
+import { normalizeSwaggerSchema } from "./lib/swagger-schema";
+>>>>>>> 5ba005208b53584224d846ef8544225fe3781191
 
+<<<<<<< HEAD
 async function responseJson(
   response: Response,
   label: string
@@ -69,6 +79,43 @@ async function main(): Promise<void> {
     raw,
     await responseJson(proofResponse, "Schema proof")
   );
+||||||| 85d9006e1
+dotenv.config({ path: ".env" });
+dotenv.config({ path: ".env.local", override: true });
+
+const studioPort = process.env.PORT_STUDIO;
+if (!studioPort) {
+  console.error(
+    "PORT_STUDIO not set (expected in .env.local). Run `pnpm dev:up` first."
+  );
+  process.exit(1);
+}
+
+const url = `http://localhost:${studioPort}/api/platform/projects/default/api/rest`;
+
+(async () => {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
+  }
+
+  const data = await response.json();
+=======
+async function main(): Promise<void> {
+  loadDotEnv();
+  const studioPort = process.env.PORT_STUDIO;
+  if (!studioPort)
+    throw new Error(
+      "PORT_STUDIO not set (expected in .env.local). Run `pnpm dev:up` first."
+    );
+  const response = await fetch(
+    `http://127.0.0.1:${studioPort}/api/platform/projects/default/api/rest`,
+    { signal: AbortSignal.timeout(30_000) }
+  );
+  if (!response.ok)
+    throw new Error(`Swagger request failed (HTTP ${response.status})`);
+  const data = normalizeSwaggerSchema(await response.json());
+>>>>>>> 5ba005208b53584224d846ef8544225fe3781191
 
   // Strip per-tenant `searchIndex_<companyId>` / `auditLog_<companyId>` tables
   // (created at runtime per company) — which ones exist depends on the local
@@ -90,6 +137,7 @@ async function main(): Promise<void> {
   };
 
   const output = "packages/database/src/swagger-docs-schema.ts";
+<<<<<<< HEAD
   const temporary = mkdtempSync(join(dirname(output), ".swagger-generation-"));
   try {
     const candidate = join(temporary, "schema.ts");
@@ -103,12 +151,33 @@ async function main(): Promise<void> {
   }
   process.stdout.write(
     "Swagger schema refreshed with verified partner alias metadata.\n"
+||||||| 85d9006e1
+  writeFileSync(
+    "packages/database/src/swagger-docs-schema.ts",
+    `export default ${JSON.stringify(stripPerTenantKeys(data), null, 2)}`
+=======
+  writeFileSync(
+    `${output}.tmp`,
+    `export default ${JSON.stringify(stripPerTenantKeys(data), null, 2)}`
+>>>>>>> 5ba005208b53584224d846ef8544225fe3781191
   );
+<<<<<<< HEAD
 }
 
 main().catch((error) => {
   process.stderr.write(
     `Swagger generation failed: ${error instanceof Error ? error.message : "verification did not complete"}\n`
+||||||| 85d9006e1
+})();
+=======
+  renameSync(`${output}.tmp`, output);
+  process.stdout.write("Swagger schema refreshed.\n");
+}
+
+main().catch((error) => {
+  process.stderr.write(
+    `Swagger generation failed: ${error instanceof Error ? error.message : String(error)}\n`
+>>>>>>> 5ba005208b53584224d846ef8544225fe3781191
   );
   process.exitCode = 1;
 });

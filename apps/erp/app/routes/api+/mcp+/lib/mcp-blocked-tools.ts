@@ -12,6 +12,7 @@ export const MCP_BLOCKED_TOOL_NAMES: readonly string[] = [
   // deletes the caller's tenant. Its "internal users only" gate lives in the
   // settings ROUTE, which no API/MCP call passes through.
   "settings_deleteSubsidiary",
+<<<<<<< HEAD
   // Its first parameter is a service-role (RLS-bypassing) client. Blocking keeps
   // a privileged client off the public API rather than teaching the dispatcher to
   // hand one out.
@@ -24,6 +25,13 @@ export const MCP_BLOCKED_TOOL_NAMES: readonly string[] = [
   "items_prepareCreatedItemSubtype",
   "items_prepareCreatedMaterial",
   "purchasing_prepareCreatedSupplier",
+||||||| 85d9006e1
+  // Its first parameter is a service-role (RLS-bypassing) client. Blocking keeps
+  // a privileged client off the public API rather than teaching the dispatcher to
+  // hand one out.
+  "purchasing_getSupplierApprovalContext",
+=======
+>>>>>>> 5ba005208b53584224d846ef8544225fe3781191
   // Internal sweep orchestration invoked by job/operation completion flows.
   // Their args require a userId the MCP executor cannot inject (AuthField has
   // no such payload field), so direct calls would only ever fail validation.
@@ -34,6 +42,7 @@ export const MCP_BLOCKED_TOOL_NAMES: readonly string[] = [
   // before calling it). `production_scheduleJob` is the intended MCP entry point —
   // it re-applies that gate — so the raw trigger must not be reachable via MCP.
   "production_triggerJobSchedule",
+<<<<<<< HEAD
   // The procurement-draft transaction and its read-only preflight. Their second
   // parameter is an `authorizedContext` — companyId, actorId and the caller's
   // already-decided `canCreatePurchasing` — so a published operation would let a
@@ -43,6 +52,15 @@ export const MCP_BLOCKED_TOOL_NAMES: readonly string[] = [
   // entry point that applies them (it stamps the context server-side).
   "purchasing_createProcurementDraft",
   "purchasing_resolveProcurementDraft",
+||||||| 85d9006e1
+=======
+  // Bulk sales-order line insert. It has no in-app caller — it is reachable
+  // only through this executor, which exposes every named export of
+  // sales.service.ts. It writes lines without the sales-rule evaluation the
+  // route action performs, and unlike `upsertSalesOrderLine` there is no
+  // single-line path to gate.
+  "sales_insertSalesOrderLines",
+>>>>>>> 5ba005208b53584224d846ef8544225fe3781191
   // Unreachable by construction: these tables carry USER-scoped RLS
   // (`"createdBy"::uuid = auth.uid()`, migration 20260228000000_rls-refactor-3.sql),
   // but an API key authenticates by header rather than a Supabase JWT, so

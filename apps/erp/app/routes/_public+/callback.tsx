@@ -11,6 +11,12 @@ import { getCarbonServiceRole } from "@carbon/auth/client.server";
 import { getCompanyId, setCompanyId } from "@carbon/auth/company.server";
 import { userHasVerifiedTotpFactor } from "@carbon/auth/mfa.server";
 import {
+  isPlatformSignupDisabled,
+  isSelfSignupBlockedForEmail,
+  PLATFORM_SIGNUP_DISABLED_MESSAGE,
+  SELF_SIGNUP_BLOCKED_MESSAGE
+} from "@carbon/auth/self-signup.server";
+import {
   destroyAuthSession,
   expireLegacyAuthCookie,
   flash,
@@ -343,6 +349,57 @@ export async function action({ request }: ActionFunctionArgs) {
   const user = await getUserByEmail(authSession.email);
 
   if (user?.data) {
+    // Self-signup blocklist (Cloud only). The email/password path refuses a
+    // free/disposable domain in login.tsx and verify.tsx BEFORE the account is
+    // created; OAuth (Google/Azure) has no such seam — GoTrue creates the auth
+    // user and the `create_public_user` trigger fires before this action runs —
+    // so the callback is where we refuse it. Only a GENUINE self-signup is
+    // refused: a user who already belongs to a company (`pickable`), or who is
+    // holding a pending invite, is never a self-signup, so an existing gmail
+    // employee or an invited gmail contractor is unaffected. We simply decline
+    // to mint a session and leave the account: with no company it can access
+    // nothing, and a later legitimate invite reuses the same row
+    // (createEmployeeAccount), so there is nothing to tear down.
+    // The platform toggle closes this same OAuth seam: GoTrue exempts
+    // nothing here (the auth user already exists by the time this action
+    // runs), so a no-company, no-invite arrival is a self-signup however
+    // it authenticated.
+    const platformClosed =
+      pickable.length === 0 && (await isPlatformSignupDisabled());
+    if (
+      platformClosed ||
+      (pickable.length === 0 && isSelfSignupBlockedForEmail(authSession.email))
+    ) {
+      // ilike for the case fold only — escape LIKE metacharacters so %/_ in an
+      // address can never act as wildcards and match someone else's invite.
+      const invitePattern = authSession.email.replace(
+        /[\\%_]/g,
+        (match) => `\\${match}`
+      );
+      const pendingInvite = await serviceRole
+        .from("invite")
+        .select("id")
+        .ilike("email", invitePattern)
+        .is("acceptedAt", null)
+        .is("revokedAt", null)
+        .limit(1);
+
+      if (!pendingInvite.data?.length) {
+        return redirect(
+          path.to.root,
+          await flash(
+            request,
+            error(
+              null,
+              platformClosed
+                ? PLATFORM_SIGNUP_DISABLED_MESSAGE
+                : SELF_SIGNUP_BLOCKED_MESSAGE
+            )
+          )
+        );
+      }
+    }
+
     // Require-SSO gate: this is the non-SSO path (magic link, Google/Azure
     // OAuth, magic links minted elsewhere) — a covered + enforced domain may
     // only authenticate via SSO, so refuse before any session state is minted.
