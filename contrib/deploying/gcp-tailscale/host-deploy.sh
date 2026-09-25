@@ -13,7 +13,7 @@ readonly CURRENT="$STATE/runtime/compose.json"
 
 fail() { printf '%s\n' "$*" >&2; exit 1; }
 [ "$(id -u)" = 0 ] || fail "Run this VM helper as root."
-[ -f "$CONFIG" ] && [ -f "$REPO/Dockerfile" ] || fail "Private configuration or source release is missing."
+[ -f "$CONFIG" ] && [ -f "$REPO/Dockerfile.saturn" ] || fail "Private configuration or source release is missing."
 
 config_value() {
   python3 - "$CONFIG" "$1" <<'PY'
@@ -51,7 +51,7 @@ PY
   while IFS= read -r pin; do
     [ -z "$pin" ] || base_args+=(--build-arg "$pin")
   done <<< "$pins"
-  docker build ${base_args[@]+"${base_args[@]}"} "$@" "$REPO"
+  docker build --file "$REPO/Dockerfile.saturn" ${base_args[@]+"${base_args[@]}"} "$@" "$REPO"
 }
 
 plan_services() {

@@ -207,8 +207,12 @@ successful deployment. Both are gitignored, atomically replaced with mode 600,
 and contain content fingerprints rather than credential values. The command
 prints affected service names and the changed input components or paths, without
 printing configuration values or credentials. Node base images are pinned by
-digest in the root Dockerfile; preparation reads those reviewed references without
-consulting mutable registry tags. Actual builds still require registry access.
+digest in root `Dockerfile.saturn`; preparation reads those reviewed references
+without consulting mutable registry tags. Actual builds still require registry access.
+Both app builds (`APP=erp|mes`) and the migration/seed `ops` target explicitly use
+`--file Dockerfile.saturn`. Root `Dockerfile` remains upstream-owned; do not put
+fork build changes there. The fork file retains workspace pruning and runtime
+behavior. Portal services use their own `contrib/deploying/portal/Dockerfile.*`.
 Every apply regenerates inputs, so an old preview cannot silently authorize a
 different revision. The explicit `--release-plan PATH` option remains available
 for operators supplying a custom reviewed input.
@@ -273,14 +277,14 @@ maintenance work.
 Base-image security updates are ordinary reviewed source changes. Inspect the
 current multi-platform digests with `docker buildx imagetools inspect node:22`
 and `docker buildx imagetools inspect node:22-slim`, review the upstream image
-changes, then update both Dockerfile defaults as appropriate. Run the image-pin
-regressions and actual builds before merging. Keep these updates in regular
+changes, then update both `Dockerfile.saturn` defaults as appropriate. Run the
+image-pin regressions and actual builds before merging. Keep these updates in regular
 dependency maintenance; pinned images do not update themselves.
 
 The Docker dependency layer installs the pruned manifests and lockfile before
 application source is copied. A BuildKit package cache retains downloaded packages
-when an installation really changes. CI exercises the actual Dockerfile with
-synthetic workspaces: app source and unrelated-app edits must reuse the dependency
+when an installation really changes. The cache proof exercises `Dockerfile.saturn`
+with synthetic workspaces: app source and unrelated-app edits must reuse the dependency
 image; removing a workspace dependency must invalidate it. Run this proof locally
 with `python3 contrib/deploying/gcp-tailscale/verify-build-cache.py`.
 

@@ -21,7 +21,7 @@ APPS = ("erp", "mes")
 APP_SECRETS = ("postgres_password", "jwt_secret", "anon_key", "service_role_key",
                "session_secret", "inngest_signing_key", "inngest_event_key", "resend_api_key")
 HERE_REL = "contrib/deploying/gcp-tailscale/"
-BUILD_PATHS = ["Dockerfile", ".dockerignore", "lingui.config.js"]
+BUILD_PATHS = ["Dockerfile.saturn", ".dockerignore", "lingui.config.js"]
 MAINTENANCE_PATHS = ["packages/database/supabase/migrations", "packages/database/supabase/functions",
                      "packages/database/supabase/config.toml", "packages/dev/docker",
                      HERE_REL + "bootstrap.sh", HERE_REL + "host-deploy.sh", HERE_REL + "private_postgres.py",
@@ -79,12 +79,12 @@ def observe(cloud):
 
 def resolve_base_images(repo):
     """Read reviewed immutable Docker defaults; ordinary planning is offline."""
-    dockerfile = (repo / "Dockerfile").read_text()
+    dockerfile = (repo / "Dockerfile.saturn").read_text()
     resolved = {}
     for key, expected in BASE_DEFAULTS.items():
         declaration = re.search(r"^ARG " + key + r"=(\S+)\s*$", dockerfile, re.M)
         if declaration is None or not re.fullmatch(re.escape(expected) + r"@sha256:[a-f0-9]{64}", declaration[1]):
-            raise ValueError(f"{key} must pin {expected} to a reviewed sha256 digest in Dockerfile")
+            raise ValueError(f"{key} must pin {expected} to a reviewed sha256 digest in Dockerfile.saturn")
         resolved[key] = declaration[1]
     return resolved
 

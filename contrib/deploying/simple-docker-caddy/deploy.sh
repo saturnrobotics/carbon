@@ -47,7 +47,7 @@ load_env() {
     set -a; . "$ENV_FILE"; set +a
     : "${CARBON_REPO:?CARBON_REPO must be set in .env}"
     : "${STACK_NAME:?STACK_NAME must be set in .env}"
-    [ -f "$CARBON_REPO/Dockerfile" ] || error "CARBON_REPO=$CARBON_REPO is not a Carbon checkout (no Dockerfile)"
+    [ -f "$CARBON_REPO/Dockerfile.saturn" ] || error "CARBON_REPO=$CARBON_REPO is not a Carbon checkout (no Dockerfile.saturn)"
 }
 
 swarm_active() { [ "$(docker info --format '{{.Swarm.LocalNodeState}}' 2>/dev/null)" = "active" ]; }
@@ -153,9 +153,9 @@ cmd_build() {
         return 0
     fi
     log "Building erp image ($CARBON_IMAGE_ERP) — needs ~8 GB RAM (NODE_OPTIONS)"
-    docker build --build-arg APP=erp -t "$CARBON_IMAGE_ERP" "$CARBON_REPO"
+    docker build --file "$CARBON_REPO/Dockerfile.saturn" --build-arg APP=erp -t "$CARBON_IMAGE_ERP" "$CARBON_REPO"
     log "Building mes image ($CARBON_IMAGE_MES)"
-    docker build --build-arg APP=mes -t "$CARBON_IMAGE_MES" "$CARBON_REPO"
+    docker build --file "$CARBON_REPO/Dockerfile.saturn" --build-arg APP=mes -t "$CARBON_IMAGE_MES" "$CARBON_REPO"
 }
 
 # ── deploy ─────────────────────────────────────────────────────────────────────

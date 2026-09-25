@@ -5,6 +5,11 @@ Linux VPS** as a single-node [Docker Swarm](https://docs.docker.com/engine/swarm
 behind an automatic-HTTPS [Caddy](https://caddyserver.com/docs/) reverse proxy.
 Secrets are real Docker Swarm secrets; only ports 80/443 are exposed.
 
+This fork's `deploy.sh build` explicitly selects root `Dockerfile.saturn` for
+ERP and MES. It retains reviewed Node image pins, workspace pruning, and the fork's
+runtime behavior. Root `Dockerfile` stays unchanged from upstream; place fork
+image changes in `Dockerfile.saturn`. Portal images remain separate.
+
 ## 📖 Full guide → [docs.carbon.ms/docs/platform/self-hosting/docker-caddy](https://docs.carbon.ms/docs/platform/self-hosting/docker-caddy)
 
 Prerequisites, step-by-step install, how secrets work, operations, and the

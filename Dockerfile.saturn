@@ -1,0 +1,79 @@
+# syntax=docker/dockerfile:1
+# Fork-owned ERP/MES and migration images. Keep root Dockerfile upstream-owned.
+# docker build -f Dockerfile.saturn --build-arg APP=erp -t carbon/erp .
+# docker build -f Dockerfile.saturn --target ops -t carbon/ops .
+# Review both immutable base-image digests together during security updates.
+ARG APP
+ARG NODE_IMAGE=node:22@sha256:8a34c4ab3ea2c5cd194f07e317b2a8f09461d3c8b05c4e34c8ccd56d56024c4d
+ARG NODE_SLIM_IMAGE=node:22-slim@sha256:83f487e0a63425e5b4d146fb5e5be574bcbe1b7b843d3ebafdd95eaf7767a7e5
+
+# Workspace analysis includes the fork apps; only the selected closure is installed.
+FROM ${NODE_IMAGE} AS source
+WORKDIR /repo
+RUN corepack enable
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc turbo.json lingui.config.js ./
+COPY apps ./apps
+COPY packages ./packages
+COPY patches ./patches
+COPY scripts ./scripts
+
+FROM source AS pruned
+ARG APP
+# Keep dependency installation cached across source-only changes.
+RUN pnpm dlx turbo@2.9.6 prune --scope="$APP" --docker
+
+FROM ${NODE_IMAGE} AS deps
+WORKDIR /repo
+RUN corepack enable
+COPY --from=pruned /repo/out/json/ ./
+# Root postinstall assumes ERP source. Build the selected app graph instead.
+# Rebuild the native CLIs needed by generators after the script-free install.
+RUN --mount=type=cache,id=carbon-pnpm,target=/pnpm/store,sharing=locked \
+    pnpm install --store-dir /pnpm/store --frozen-lockfile --ignore-scripts && pnpm rebuild esbuild supabase
+
+FROM deps AS build
+ARG APP
+ARG NODE_OPTIONS="--max-old-space-size=8024"
+ENV NODE_OPTIONS=${NODE_OPTIONS}
+COPY --from=pruned /repo/out/full/ ./
+COPY --from=source /repo/scripts ./scripts
+COPY --from=source /repo/lingui.config.js ./lingui.config.js
+RUN pnpm run build:${APP}
+
+# Migration/seed jobs retain supabase and tsx; served images strip these tools.
+FROM source AS ops-deps
+RUN pnpm install --frozen-lockfile
+
+FROM ops-deps AS ops
+WORKDIR /repo/packages/database
+CMD ["bash"]
+
+# Keep runner last: deployments use the default target for APP=erp or APP=mes.
+FROM ${NODE_SLIM_IMAGE} AS runner
+ARG APP
+WORKDIR /repo
+ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+RUN corepack enable
+# Start with the package manager already downloaded; no registry access at boot.
+COPY --from=deps /root/.cache/node/corepack /root/.cache/node/corepack
+ENV NODE_ENV=production
+ENV PORT=3000
+ENV TZ=UTC
+COPY --from=deps /repo/package.json /repo/pnpm-lock.yaml /repo/pnpm-workspace.yaml /repo/.npmrc ./
+COPY --from=deps /repo/node_modules ./node_modules
+COPY --from=build /repo/packages ./packages
+COPY --from=build /repo/apps/${APP} ./apps/${APP}
+# Remove build-only CLIs while retaining the SST JavaScript runtime package.
+RUN find node_modules/.pnpm -maxdepth 1 -type d \( \
+        -name 'sst-linux-*' -o -name 'sst-darwin-*' -o -name 'sst-win32-*' -o \
+        -name 'esbuild@*' -o -name '@esbuild+*' -o \
+        -name 'supabase@*' -o \
+        -name 'tar@*' -o \
+        -name 'npm@*' -o \
+        -name '@typescript+native-preview-*' \
+    \) -prune -exec rm -rf {} + ; \
+    find node_modules -type d -name '@esbuild' -prune -exec rm -rf {} + 2>/dev/null || true ; \
+    rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
+EXPOSE 3000
+WORKDIR /repo/apps/${APP}
+CMD ["pnpm","run","start"]

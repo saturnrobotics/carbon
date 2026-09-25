@@ -4,7 +4,7 @@ paths:
   - "sst.config.ts"
   - "ci/**"
   - ".github/workflows/deploy.yml"
-  - "Dockerfile"
+  - "Dockerfile.saturn"
 ---
 
 # SST / AWS ECS Deployment (managed cloud path)
@@ -12,7 +12,9 @@ paths:
 SST is **still used** — it is the managed, multi-tenant cloud deployment path.
 The self-hosted single-VPS Docker **Swarm** stack (see
 [contrib-deployment-swarm.md](contrib-deployment-swarm.md)) is a separate,
-alternative deployment, not a replacement. Both build from the same root `Dockerfile`.
+alternative deployment, not a replacement. In this fork, both explicitly build
+from root `Dockerfile.saturn`; GCP app and ops builds select it too. Root
+`Dockerfile` stays unchanged from upstream, and Portal uses separate Dockerfiles.
 
 ## What SST deploys (`sst.config.ts`)
 - App `carbon`, `home: "aws"`, region from `process.env.AWS_REGION` (no hardcoded
@@ -44,13 +46,13 @@ alternative deployment, not a replacement. Both build from the same root `Docker
   stubs; do not hand-edit.
 
 ## Build → push (`.github/workflows/deploy.yml`, job `build`)
-Triggers on push to `main` touching `apps/erp/**`, `apps/mes/**`, `packages/**`
-(or manual `workflow_dispatch`). Matrix over `[erp, mes]`:
+Triggers on push to `main` touching `apps/erp/**`, `apps/mes/**`, `packages/**`,
+or `Dockerfile.saturn` (or manual `workflow_dispatch`). Matrix over `[erp, mes]`:
 - `aws-actions/configure-aws-credentials` + `amazon-ecr-login`.
-- `docker/build-push-action` builds the **single root `Dockerfile`** with
-  `--build-arg APP=<erp|mes>` (the old per-app `apps/{erp,mes}/Dockerfile` claim is
-  stale — there is now ONE Dockerfile: `deps`→`build` (`pnpm run build:${APP}`)→
-  `runner` on `node:22-slim`).
+- `docker/build-push-action` explicitly selects **root `Dockerfile.saturn`** with
+  `--build-arg APP=<erp|mes>`. Its pruned workspace closure feeds `deps`→`build`
+  (`pnpm run build:${APP}`)→`runner`, using reviewed Node image pins and preserving
+  fork runtime behavior. Root `Dockerfile` remains upstream-owned.
 - Pushes `carbon/<app>:latest` **and** `carbon/<app>:${{ github.sha }}` to ECR,
   `platforms: linux/amd64`, GHA buildx cache.
 

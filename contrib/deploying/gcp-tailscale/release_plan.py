@@ -487,6 +487,7 @@ def classify_repository_changes(
         "Cargo.lock",
         "Cargo.toml",
         "Dockerfile",
+        "Dockerfile.saturn",
         "LICENSE",
         "NOTICE",
         "Makefile",
@@ -542,7 +543,7 @@ def materialize_repository_inputs(
                 "assets",
             ):
                 service["inputs"][key] = closure[key]
-            build_paths = service.get("build_paths", ["Dockerfile"])
+            build_paths = service.get("build_paths", ["Dockerfile.saturn"])
             if not isinstance(build_paths, list) or not all(
                 isinstance(path, str) for path in build_paths
             ):

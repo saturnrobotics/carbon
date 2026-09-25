@@ -16,12 +16,47 @@ Put new fork-only code where upstream never writes, so it can never conflict:
 | Standalone apps and workers | `apps/saturn-<name>/` (`apps/portal*` predate this rule and stay where they are) | same reason as packages |
 | Database migrations | `packages/database/supabase/migrations/<timestamp>_saturn-<slug>.sql` | the `saturn-` slug makes fork migrations visible in `check-migrations.sh` output and in merges |
 | Edge functions | `packages/database/supabase/functions/saturn-<name>/` | upstream never creates a `saturn-*` function |
+| ERP/MES and ops container build | Root `Dockerfile.saturn` | fork deployment recipes explicitly select it; root `Dockerfile` stays upstream-owned |
 | Deployment and operations | `contrib/deploying/gcp-tailscale/`, `contrib/deploying/portal/` | already fork-owned; private inputs stay in their ignored `.local/` |
 | Sync tooling | `scripts/fork/`, `.github/workflows/{generated-files-drift,upstream-sync,resolve-sync-conflicts}.yml`, `docs/fork/` | the one sync mechanism |
 | Agent records (plans, specs, lessons, decisions) | `.fork/` per `.fork/agent-policy.md` | upstream's `.ai/` churns on every sync |
 
 Fork-owned code may import from upstream packages freely. Upstream code should
 import from fork-owned code only through the hooks described next.
+
+### Container build ownership
+
+Root `Dockerfile` belongs to upstream and must remain byte-for-byte identical to
+its reviewed upstream version. The separation starts with upstream commit
+`5ba005208b53584224d846ef8544225fe3781191`; later syncs take upstream's file
+unchanged. Put fork image changes in root `Dockerfile.saturn`. GCP app and ops
+builds, the Swarm recipe, and the AWS deploy workflow explicitly select that
+file. It retains reviewed Node image pins, workspace pruning, and the fork's
+runtime behavior. Portal services keep their separate
+`contrib/deploying/portal/Dockerfile.*` files.
+
+For the one-time transition of draft PR #77, merge this standalone change into
+`saturn/main` first. Then merge the updated integration branch into the existing
+sync branch; do not rebase or force-push. Finish or commit any local edits before
+starting that merge:
+
+```bash
+# In the checkout of sync/upstream-2026-09-24-2:
+git fetch origin
+git merge origin/saturn/main
+```
+
+That draft already committed conflict markers in root `Dockerfile`. When ready
+to discard that unresolved root file, replace only that path with the newly
+merged trunk version, even if Git does not list it as an unmerged path:
+
+```bash
+git restore --source origin/saturn/main --staged --worktree -- Dockerfile
+```
+
+Resolve any other conflicts, validate, and commit the merge or follow-up fix;
+then push normally to the same sync branch. This transition needs no chain of
+rebased PRs. Future fork work must leave root `Dockerfile` untouched.
 
 ## 2. Shared upstream files get the minimal hook, nothing more
 
