@@ -1,3 +1,4 @@
+import { storage } from "@carbon/files";
 import { getLogger } from "@carbon/logger";
 import { Spinner, useCarbon } from "@carbon/react";
 import { stripSpecialCharacters } from "@carbon/utils";
@@ -123,8 +124,8 @@ export function PdfExtractor({
     setUploading(true);
     const storagePath = `${company.id}/extractions/${crypto.randomUUID()}_${stripSpecialCharacters(file.name) || "document.pdf"}`;
 
-    const { error } = await supabase.storage
-      .from("private")
+    const { error } = await storage(supabase)
+      .company(company.id)
       .upload(storagePath, file);
 
     if (error) {

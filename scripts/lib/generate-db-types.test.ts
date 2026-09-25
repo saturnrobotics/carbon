@@ -16,6 +16,7 @@ import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { test } from "node:test";
+<<<<<<< HEAD
 import { sortRelationships } from "./generate-db-types";
 import { fileURLToPath } from "node:url";
 
@@ -179,6 +180,144 @@ test("failure replacing the second output rolls back the first output", () => {
   assert.deepEqual(result.contents, [original, original]);
   assert.deepEqual(result.remaining, [["types.ts"], ["types.ts"]]);
 });
+||||||| 85d9006e1
+=======
+import { fileURLToPath } from "node:url";
+import { sortRelationships } from "./generate-db-types";
+
+const require = createRequire(import.meta.url);
+const root = fileURLToPath(new URL("../../", import.meta.url));
+const targets = [
+  "packages/database/src/types.ts",
+  "packages/database/supabase/functions/lib/types.ts"
+] as const;
+const original = "export type Database = { public: { Tables: {} } };\n";
+const generated =
+  "export type Database = { public: { Tables: { example: {} } } };\n";
+
+function runGenerator(
+  output: string,
+  options: {
+    exit?: number;
+    databaseUrl?: string;
+    missingExecutable?: boolean;
+    envFiles?: Record<string, string>;
+  } = {}
+) {
+  const directory = realpathSync(
+    mkdtempSync(join(tmpdir(), "carbon-db-generation-"))
+  );
+  try {
+    for (const [file, content] of Object.entries(options.envFiles ?? {})) {
+      writeFileSync(join(directory, file), content);
+    }
+    for (const target of targets) {
+      mkdirSync(dirname(join(directory, target)), { recursive: true });
+      writeFileSync(join(directory, target), original);
+    }
+    mkdirSync(join(directory, "scripts/lib"), { recursive: true });
+    for (const file of [
+      "scripts/generate-db-types.ts",
+      "scripts/lib/generate-db-types.ts",
+      "scripts/lib/local-script-config.ts"
+    ]) {
+      copyFileSync(join(root, file), join(directory, file));
+    }
+    symlinkSync(
+      join(root, "node_modules"),
+      join(directory, "node_modules"),
+      "dir"
+    );
+    const bin = join(directory, "bin");
+    mkdirSync(bin);
+    const marker = join(directory, "invoked");
+    writeFileSync(join(directory, "output.txt"), output);
+    if (!options.missingExecutable) {
+      writeFileSync(
+        join(bin, "supabase"),
+        `#!${process.execPath}\nconst fs = require('node:fs');\nfs.writeFileSync(${JSON.stringify(marker)}, 'yes');\nfs.writeSync(1, fs.readFileSync(${JSON.stringify(join(directory, "output.txt"))}));\nprocess.exit(${options.exit ?? 0});\n`,
+        { mode: 0o755 }
+      );
+    }
+    const result = spawnSync(
+      process.execPath,
+      ["--import", require.resolve("tsx"), join(directory, "scripts/generate-db-types.ts")],
+      {
+        cwd: directory,
+        encoding: "utf8",
+        timeout: 20_000,
+        env: {
+          ...process.env,
+          NODE_PATH: undefined,
+          PATH: bin,
+          SUPABASE_DB_URL:
+            options.databaseUrl ??
+            "postgresql://example:synthetic@127.0.0.1:5432/example"
+        }
+      }
+    );
+    return {
+      ...result,
+      invoked: existsSync(marker),
+      contents: targets.map((target) =>
+        readFileSync(join(directory, target), "utf8")
+      ),
+      remaining: targets.map((target) =>
+        readdirSync(dirname(join(directory, target)))
+      )
+    };
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+}
+
+test("default .env preserves the caller's database URL", () => {
+  const result = runGenerator(generated, {
+    envFiles: {
+      ".env": "SUPABASE_DB_URL=postgresql://external.example.com/database\n"
+    }
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.invoked, true);
+});
+
+test(".env.local overrides the caller's URL before the local-host safety check", () => {
+  const result = runGenerator(generated, {
+    envFiles: {
+      ".env.local":
+        "SUPABASE_DB_URL=postgresql://external.example.com/database\n"
+    }
+  });
+  assert.notEqual(result.status, 0);
+  assert.equal(result.invoked, false);
+  assert.deepEqual(result.contents, [original, original]);
+});
+
+test("failed subprocess preserves both last-good outputs and cleans temporary files", () => {
+  const result = runGenerator("partial output", { exit: 7 });
+  assert.equal(result.invoked, true, result.stderr);
+  assert.notEqual(result.status, 0);
+  assert.deepEqual(result.contents, [original, original]);
+  assert.deepEqual(result.remaining, [["types.ts"], ["types.ts"]]);
+});
+
+test("missing generator executable preserves both last-good outputs", () => {
+  const result = runGenerator(generated, { missingExecutable: true });
+  assert.notEqual(result.status, 0);
+  assert.deepEqual(result.contents, [original, original]);
+  assert.deepEqual(result.remaining, [["types.ts"], ["types.ts"]]);
+});
+
+for (const output of ["", "   \n", "export const unrelated = 42;", "type Database = {};"]) {
+  test(`rejects unusable successful output (${JSON.stringify(output)})`, () => {
+    const result = runGenerator(output);
+    assert.equal(result.invoked, true, result.stderr);
+    assert.notEqual(result.status, 0);
+    assert.deepEqual(result.contents, [original, original]);
+    assert.deepEqual(result.remaining, [["types.ts"], ["types.ts"]]);
+  });
+}
+>>>>>>> 5ba005208b53584224d846ef8544225fe3781191
 
 for (const databaseUrl of [
   "postgresql://localhost:synthetic-secret@example.com/example",
