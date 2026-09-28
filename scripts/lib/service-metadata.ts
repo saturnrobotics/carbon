@@ -66,6 +66,8 @@ const DESCRIPTION_OVERRIDES: Record<string, string> = {
     "Create a new quote with all business logic - generates sequence, creates opportunity, resolves payment/shipping defaults from customer. LLM can create a quote with just customerId.",
   sales_updateQuote:
     "Update an existing quote - handles exchange rate updates when currency changes, syncs customer to opportunity",
+  sales_upsertQuoteLine:
+    "Create or update a quote line. Keep description to a short one-line label - it is truncated on the digital quote. Long specifications belong in externalNotes (TipTap doc JSON, rendered in full under the line on the digital quote and PDF); internalNotes takes the same shape and is never shown to the customer.",
   sales_insertSalesOrder:
     "Create a new sales order with all business logic - generates sequence, creates opportunity, resolves payment/shipping defaults from customer. LLM can create a sales order with just customerId.",
   sales_updateSalesOrder:
@@ -99,7 +101,9 @@ const CLASSIFICATION_OVERRIDES: Record<string, Classification> = {
 //   - accounting_upsertFixedAssetUsageLog       → fixedAssetUsageLog
 // account_upsertNotificationPreference spreads its argument into an upsert on
 // notificationPreference, which (like userModulePreference) carries no
-// createdBy/updatedBy columns at all — injecting them breaks the write.
+// createdBy/updatedBy columns at all — injecting them breaks the write. The
+// four lean material lookups (dimension, finish, grade, type) are the same:
+// no audit columns, argument spread into the row.
 const INJECT_AUTH_OVERRIDES: Record<string, AuthField[]> = {
   // The portal procurement command has a strict payload and stamps actor,
   // company, source and audit state inside its server-only execution boundary.
@@ -107,11 +111,32 @@ const INJECT_AUTH_OVERRIDES: Record<string, AuthField[]> = {
   inventory_insertManualInventoryAdjustment: ["companyId", "createdBy"],
   accounting_upsertFixedAssetUsageLog: ["companyId", "createdBy"],
   account_upsertNotificationPreference: ["companyId"],
+  items_upsertMaterialDimension: ["companyId"],
+  items_upsertMaterialFinish: ["companyId"],
+  items_upsertMaterialGrade: ["companyId"],
+  items_upsertMaterialType: ["companyId"],
   // Both operations replace settlement rows in a transaction. Their verbs do
   // not imply INSERT to the name-based rule, but the service requires the
   // authenticated creator for every replacement row.
   invoicing_replaceInvoiceSettlements: ["companyId", "createdBy"],
   invoicing_applyCreditsToInvoices: ["companyId", "createdBy"],
+  // Both read the caller's group-scoped currency with the payload's
+  // companyGroupId and write a memo, so it must come from the auth context —
+  // a caller-supplied group would resolve another group's currency rows.
+  purchasing_createPurchaseReturnOrderCredit: [
+    "companyId",
+    "companyGroupId",
+    "createdBy",
+    "updatedBy",
+    "userId",
+  ],
+  sales_createSalesReturnOrderCredit: [
+    "companyId",
+    "companyGroupId",
+    "createdBy",
+    "updatedBy",
+    "userId",
+  ],
 };
 
 // service-module → permission-module. `items` operations are gated by the `parts`
@@ -127,6 +152,7 @@ const PERMISSION_MODULE_MAP: Record<string, string | null> = {
 // module than their service module (spot-checked against the real routes). Keep
 // this hand-curated list small and grounded — each entry needs a verified route.
 const PERMISSION_OVERRIDES: Record<string, ToolPermission> = {
+<<<<<<< HEAD
   portal_resolveItems: { module: "parts", actions: ["view"] },
   portal_getItemIdentity: { module: "parts", actions: ["view"] },
   portal_getDocumentReferences: { module: "parts", actions: ["view"] },
@@ -151,9 +177,28 @@ const PERMISSION_OVERRIDES: Record<string, ToolPermission> = {
   // x+/settings+/api-keys.tsx (list loader), api-keys.new.tsx, api-keys.$id.tsx,
   // api-keys.delete.$id.tsx — gates on { update: "users" }, not "settings".
   // Deriving "settings" would let a settings-scoped key mint new API keys.
+||||||| 85d9006e1
+  // API-key management is an admin capability: every route in the family —
+  // x+/settings+/api-keys.tsx (list loader), api-keys.new.tsx, api-keys.$id.tsx,
+  // api-keys.delete.$id.tsx — gates on { update: "users" }, not "settings".
+  // Deriving "settings" would let a settings-scoped key mint new API keys.
+=======
+  // API-key management is an admin capability: the list loader
+  // (x+/settings+/api-keys.tsx) gates on { update: "users" }, not "settings" —
+  // deriving "settings" would let a settings-scoped key read the key family.
+  // The WRITES (upsert/delete) moved to @carbon/ee/api-keys.server behind
+  // requireEntitlement, so they are no longer scanned as MCP tools; only the
+  // read remains here.
+>>>>>>> 0608ffdc42d0089409e81ee6e8dee290416e4822
   settings_getApiKeys: { module: "users", actions: ["update"] },
+<<<<<<< HEAD
   settings_upsertApiKey: { module: "users", actions: ["update"] },
   settings_deleteApiKey: { module: "users", actions: ["update"] }
+||||||| 85d9006e1
+  settings_upsertApiKey: { module: "users", actions: ["update"] },
+  settings_deleteApiKey: { module: "users", actions: ["update"] },
+=======
+>>>>>>> 0608ffdc42d0089409e81ee6e8dee290416e4822
 };
 
 // ---------------------------------------------------------------------------
@@ -1223,6 +1268,17 @@ function computeInjectAuth(
   return ["companyId"];
 }
 
+export function withPayloadUserId(
+  fields: AuthField[],
+  func: ParsedFunction
+): AuthField[] {
+  if (fields.includes("userId")) return fields;
+  const declaresUserId = func.params.some(
+    (p) => p.name !== "userId" && /(^|[{;,\s])userId\s*\??\s*:/.test(p.typeStr)
+  );
+  return declaresUserId ? [...fields, "userId"] : fields;
+}
+
 // The permission an API-key caller must hold. `module` follows the service→permission
 // map; `actions` are derived from the operation verb, mirroring `computeInjectAuth`'s
 // verb groups but split into CRUD actions. An unmatched write verb (issue/post/ship/
@@ -1606,7 +1662,7 @@ export function buildAllToolMetadata(opts: BuildOptions = {}): ManifestEntry[] {
     if (!fs.existsSync(serviceFile)) {
       // Fall back to the `.ee`-licensed variant (see root LICENSE) when a
       // module keeps its single service file under that name (e.g.
-      // accounting.ee.service.ts).
+      // accounting.service.ts).
       const eeServiceFile = path.join(MODULES_DIR, mod, `${mod}.ee.service.ts`);
       if (!fs.existsSync(eeServiceFile)) {
         process.stderr.write(`  ⚠ Service file not found: ${serviceFile}\n`);
@@ -1659,12 +1715,22 @@ export function buildAllToolMetadata(opts: BuildOptions = {}): ManifestEntry[] {
       const toolName = `${mod}_${func.name}`;
       if (MCP_BLOCKED_TOOL_NAMES.includes(toolName)) continue;
 
+<<<<<<< HEAD
       const classification =
         CLASSIFICATION_OVERRIDES[toolName] ??
         classifyFunction(func.name, content);
       const injectAuth =
+||||||| 85d9006e1
+      const classification = classifyFunction(func.name, content);
+      const injectAuth =
+=======
+      const classification = classifyFunction(func.name, content);
+      const injectAuth = withPayloadUserId(
+>>>>>>> 0608ffdc42d0089409e81ee6e8dee290416e4822
         INJECT_AUTH_OVERRIDES[toolName] ||
-        computeInjectAuth(func.name, classification);
+          computeInjectAuth(func.name, classification),
+        func
+      );
       // A JSDoc on the function itself beats the override table (code closest
       // wins); the de-camelCased name remains the fallback.
       const description =

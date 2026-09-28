@@ -1,11 +1,11 @@
 {
   "kind": "carbon-company-backup",
   "version": 1,
-  "schemaVersion": "20260913192022",
+  "schemaVersion": "20260927230425",
   "sourceCompanyId": "schema-baseline",
   "sourceCompanyGroupId": null,
   "sourceCompanyName": null,
-  "exportedAt": "2026-09-13T19:47:40.497Z",
+  "exportedAt": "2026-09-27T23:05:53.317Z",
   "exportedBy": "schema-baseline",
   "label": "schema baseline",
   "includeStorage": "none",
@@ -411,6 +411,7 @@
         "showCurrencyTrailingZeros",
         "requireMfa",
         "allowLowercaseItemIds",
+        "includeOperationsOnTraveler",
         "id",
         "digitalQuoteNotificationGroup",
         "rfqReadyNotificationGroup",
@@ -430,7 +431,8 @@
         "accountsReceivableEmail",
         "plmReleaseControl",
         "incompletePickingListPolicy",
-        "returnPickedMaterialTiming"
+        "returnPickedMaterialTiming",
+        "salesRuleNotificationGroup"
       ]
     },
     {
@@ -651,6 +653,26 @@
       ]
     },
     {
+      "name": "documentExtraction",
+      "rows": 0,
+      "columns": [
+        "documentType",
+        "status",
+        "extractedData",
+        "filteredData",
+        "createdAt",
+        "updatedAt",
+        "id",
+        "companyId",
+        "sourceDocument",
+        "sourceDocumentId",
+        "storagePath",
+        "error",
+        "createdBy",
+        "updatedBy"
+      ]
+    },
+    {
       "name": "documentFavorite",
       "rows": 0,
       "columns": ["documentId", "userId"]
@@ -723,7 +745,7 @@
     {
       "name": "employee",
       "rows": 0,
-      "columns": ["active", "id", "companyId", "employeeTypeId", "pin"]
+      "columns": ["active", "id", "companyId", "employeeTypeId"]
     },
     {
       "name": "employeeTypePermission",
@@ -737,6 +759,52 @@
         "delete",
         "update",
         "view"
+      ]
+    },
+    {
+      "name": "enforcementRule",
+      "rows": 0,
+      "columns": [
+        "family",
+        "conditionAst",
+        "surfaces",
+        "targetType",
+        "appliesToAll",
+        "filteredItemMatchAll",
+        "active",
+        "createdAt",
+        "updatedAt",
+        "customFields",
+        "id",
+        "companyId",
+        "name",
+        "description",
+        "message",
+        "severity",
+        "filteredItemTypes",
+        "filteredItemGroupIds",
+        "createdBy",
+        "updatedBy"
+      ]
+    },
+    {
+      "name": "enforcementRuleAcknowledgment",
+      "rows": 0,
+      "columns": [
+        "createdAt",
+        "id",
+        "companyId",
+        "ruleId",
+        "ruleName",
+        "documentType",
+        "documentId",
+        "documentLineId",
+        "itemId",
+        "severity",
+        "outcome",
+        "message",
+        "createdBy",
+        "updatedBy"
       ]
     },
     {
@@ -933,27 +1001,6 @@
         "createdBy",
         "updatedBy",
         "attestedBy"
-      ]
-    },
-    {
-      "name": "invoiceIntakeSettings",
-      "rows": 0,
-      "columns": [
-        "enabled",
-        "automaticMercuryIntake",
-        "dailyBudgetUsd",
-        "monthlyBudgetUsd",
-        "backfillCursor",
-        "backfillUpperBound",
-        "backfillCounts",
-        "createdAt",
-        "updatedAt",
-        "id",
-        "companyId",
-        "backfillStatus",
-        "lastErrorCode",
-        "createdBy",
-        "updatedBy"
       ]
     },
     {
@@ -1338,28 +1385,6 @@
       "columns": ["id", "groupId", "memberGroupId", "memberUserId"]
     },
     {
-      "name": "mercurySyncSettings",
-      "rows": 0,
-      "columns": [
-        "enabled",
-        "gmailEnabled",
-        "syncFromDate",
-        "lastAttemptAt",
-        "lastSuccessAt",
-        "createdAt",
-        "updatedAt",
-        "id",
-        "companyId",
-        "disabledMailboxes",
-        "cursor",
-        "eventCursor",
-        "lastError",
-        "lastGmailError",
-        "createdBy",
-        "updatedBy"
-      ]
-    },
-    {
       "name": "modelUpload",
       "rows": 0,
       "columns": [
@@ -1678,12 +1703,12 @@
       "name": "part",
       "rows": 0,
       "columns": [
-        "approved",
-        "fromDate",
-        "toDate",
         "createdAt",
         "updatedAt",
         "customFields",
+        "approved",
+        "fromDate",
+        "toDate",
         "id",
         "approvedBy",
         "companyId",
@@ -1778,30 +1803,6 @@
         "companyId",
         "createdBy",
         "updatedBy"
-      ]
-    },
-    {
-      "name": "portalSourceOutbox",
-      "rows": 0,
-      "columns": [
-        "updatedAt",
-        "payload",
-        "availableAt",
-        "claimedAt",
-        "leaseExpiresAt",
-        "attempts",
-        "deliveredAt",
-        "createdAt",
-        "source",
-        "entityType",
-        "entityId",
-        "sourceVersion",
-        "eventType",
-        "createdBy",
-        "updatedBy",
-        "leaseOwner",
-        "id",
-        "companyId"
       ]
     },
     {
@@ -1905,7 +1906,6 @@
         "updatedAt",
         "recertifyEveryDays",
         "id",
-        "name",
         "companyId",
         "createdBy",
         "updatedBy",
@@ -1955,6 +1955,21 @@
         "key",
         "value",
         "companyId",
+        "createdBy",
+        "updatedBy"
+      ]
+    },
+    {
+      "name": "project",
+      "rows": 0,
+      "columns": [
+        "active",
+        "createdAt",
+        "updatedAt",
+        "id",
+        "companyId",
+        "name",
+        "description",
         "createdBy",
         "updatedBy"
       ]
@@ -2275,31 +2290,6 @@
       ]
     },
     {
-      "name": "storageRule",
-      "rows": 0,
-      "columns": [
-        "conditionAst",
-        "surfaces",
-        "active",
-        "createdAt",
-        "updatedAt",
-        "customFields",
-        "targetType",
-        "appliesToAll",
-        "filteredItemMatchAll",
-        "id",
-        "companyId",
-        "name",
-        "description",
-        "message",
-        "severity",
-        "createdBy",
-        "updatedBy",
-        "filteredItemTypes",
-        "filteredItemGroupIds"
-      ]
-    },
-    {
       "name": "storageType",
       "rows": 0,
       "columns": [
@@ -2332,10 +2322,10 @@
       "name": "supplierType",
       "rows": 0,
       "columns": [
-        "protected",
-        "createdAt",
         "updatedAt",
         "customFields",
+        "protected",
+        "createdAt",
         "id",
         "name",
         "companyId",
@@ -2624,6 +2614,8 @@
         "updatedAt",
         "status",
         "buildWave",
+        "updatedBy",
+        "rootStepId",
         "id",
         "assemblyInstructionId",
         "parentStepId",
@@ -2635,9 +2627,7 @@
         "componentNodeIds",
         "planConfidence",
         "companyId",
-        "createdBy",
-        "updatedBy",
-        "rootStepId"
+        "createdBy"
       ]
     },
     {
@@ -2822,6 +2812,18 @@
         "createdBy",
         "updatedBy",
         "id"
+      ]
+    },
+    {
+      "name": "enforcementRuleItemAssignment",
+      "rows": 0,
+      "columns": [
+        "createdAt",
+        "itemId",
+        "ruleId",
+        "companyId",
+        "createdBy",
+        "updatedBy"
       ]
     },
     {
@@ -3206,18 +3208,6 @@
       ]
     },
     {
-      "name": "storageRuleItemAssignment",
-      "rows": 0,
-      "columns": [
-        "createdAt",
-        "itemId",
-        "ruleId",
-        "companyId",
-        "createdBy",
-        "updatedBy"
-      ]
-    },
-    {
       "name": "trackedEntity",
       "rows": 0,
       "columns": [
@@ -3332,19 +3322,19 @@
       "name": "userAttributeValue",
       "rows": 0,
       "columns": [
+        "updatedAt",
         "valueBoolean",
         "valueDate",
         "valueNumeric",
         "createdAt",
-        "updatedAt",
         "id",
         "userAttributeId",
         "userId",
         "valueText",
         "valueUser",
         "createdBy",
-        "updatedBy",
-        "valueFile"
+        "valueFile",
+        "updatedBy"
       ]
     },
     {
@@ -3435,6 +3425,18 @@
       ]
     },
     {
+      "name": "enforcementRuleWorkCenterAssignment",
+      "rows": 0,
+      "columns": [
+        "createdAt",
+        "workCenterId",
+        "ruleId",
+        "companyId",
+        "createdBy",
+        "updatedBy"
+      ]
+    },
+    {
       "name": "jobOperationBatch",
       "rows": 0,
       "columns": [
@@ -3442,6 +3444,7 @@
         "customFields",
         "createdAt",
         "updatedAt",
+        "mergeOutput",
         "id",
         "readableId",
         "companyId",
@@ -3450,7 +3453,8 @@
         "locationId",
         "notes",
         "createdBy",
-        "updatedBy"
+        "updatedBy",
+        "outputLotNumber"
       ]
     },
     {
@@ -3633,18 +3637,6 @@
       ]
     },
     {
-      "name": "storageRuleWorkCenterAssignment",
-      "rows": 0,
-      "columns": [
-        "createdAt",
-        "workCenterId",
-        "ruleId",
-        "companyId",
-        "createdBy",
-        "updatedBy"
-      ]
-    },
-    {
       "name": "storageUnit",
       "rows": 0,
       "columns": [
@@ -3777,6 +3769,60 @@
       ]
     },
     {
+      "name": "cardTransaction",
+      "rows": 0,
+      "columns": [
+        "type",
+        "status",
+        "transactionDate",
+        "postingDate",
+        "exchangeRate",
+        "amount",
+        "postedAt",
+        "voidedAt",
+        "createdAt",
+        "updatedAt",
+        "customFields",
+        "id",
+        "companyId",
+        "cardTransactionId",
+        "integration",
+        "cardAccountId",
+        "offsetAccountId",
+        "supplierId",
+        "merchantName",
+        "cardHolderName",
+        "cardLast4",
+        "memo",
+        "currencyCode",
+        "journalId",
+        "postedBy",
+        "voidedBy",
+        "createdBy",
+        "updatedBy"
+      ]
+    },
+    {
+      "name": "cardTransactionLine",
+      "rows": 0,
+      "columns": [
+        "amount",
+        "sequence",
+        "createdAt",
+        "updatedAt",
+        "customFields",
+        "id",
+        "companyId",
+        "cardTransactionId",
+        "accountId",
+        "costCenterId",
+        "description",
+        "createdBy",
+        "updatedBy",
+        "projectId"
+      ]
+    },
+    {
       "name": "contractor",
       "rows": 0,
       "columns": [
@@ -3862,6 +3908,33 @@
       "name": "customerAccount",
       "rows": 0,
       "columns": ["active", "id", "customerId", "companyId"]
+    },
+    {
+      "name": "customerBankAccount",
+      "rows": 0,
+      "columns": [
+        "isPrimary",
+        "active",
+        "createdAt",
+        "updatedAt",
+        "customFields",
+        "id",
+        "companyId",
+        "customerId",
+        "name",
+        "accountHolderName",
+        "bankName",
+        "bankAddress",
+        "countryCode",
+        "currencyCode",
+        "accountNumber",
+        "bankCode",
+        "swiftBic",
+        "notes",
+        "createdBy",
+        "updatedBy",
+        "tags"
+      ]
     },
     {
       "name": "customerItemPriceOverride",
@@ -4291,44 +4364,6 @@
       ]
     },
     {
-      "name": "documentExtraction",
-      "rows": 0,
-      "columns": [
-        "documentType",
-        "status",
-        "extractedData",
-        "filteredData",
-        "createdAt",
-        "updatedAt",
-        "generation",
-        "inputRevision",
-        "attemptNumber",
-        "leaseUntil",
-        "reservedCostUsd",
-        "reservedAt",
-        "priceSnapshot",
-        "actualCostUsd",
-        "usage",
-        "id",
-        "companyId",
-        "sourceDocument",
-        "sourceDocumentId",
-        "storagePath",
-        "error",
-        "createdBy",
-        "updatedBy",
-        "intakeId",
-        "operation",
-        "schemaVersion",
-        "promptVersion",
-        "modelId",
-        "provider",
-        "processingRegion",
-        "claimToken",
-        "billingState"
-      ]
-    },
-    {
       "name": "externalLink",
       "rows": 0,
       "columns": [
@@ -4386,9 +4421,6 @@
       "name": "job",
       "rows": 0,
       "columns": [
-        "status",
-        "dueDate",
-        "deadlineType",
         "quantity",
         "scrapQuantity",
         "quantityComplete",
@@ -4407,6 +4439,9 @@
         "priority",
         "projectedCompletionAt",
         "scheduleOutdatedAt",
+        "status",
+        "dueDate",
+        "deadlineType",
         "id",
         "jobId",
         "itemId",
@@ -5172,20 +5207,6 @@
       ]
     },
     {
-      "name": "mercuryRecipientMapping",
-      "rows": 0,
-      "columns": [
-        "createdAt",
-        "updatedAt",
-        "id",
-        "companyId",
-        "mercuryRecipientId",
-        "supplierId",
-        "createdBy",
-        "updatedBy"
-      ]
-    },
-    {
       "name": "methodMaterial",
       "rows": 0,
       "columns": [
@@ -5373,14 +5394,14 @@
         "quantity",
         "createdAt",
         "updatedAt",
-        "companyId",
-        "createdBy",
-        "updatedBy",
         "id",
         "nonConformanceId",
         "purchaseReturnOrderLineId",
         "purchaseReturnOrderId",
-        "purchaseReturnOrderReadableId"
+        "purchaseReturnOrderReadableId",
+        "companyId",
+        "createdBy",
+        "updatedBy"
       ]
     },
     {
@@ -5458,47 +5479,6 @@
         "postedBy",
         "voidedBy",
         "companyId",
-        "createdBy",
-        "updatedBy"
-      ]
-    },
-    {
-      "name": "portalCommandReceipt",
-      "rows": 0,
-      "columns": [
-        "createdAt",
-        "version",
-        "id",
-        "companyId",
-        "actorId",
-        "action",
-        "idempotencyKey",
-        "payloadHash",
-        "purchaseOrderId"
-      ]
-    },
-    {
-      "name": "portalProcurementSchedule",
-      "rows": 0,
-      "columns": [
-        "version",
-        "payload",
-        "executeAt",
-        "claimedAt",
-        "revocationCheckedAt",
-        "createdAt",
-        "updatedAt",
-        "id",
-        "companyId",
-        "companyGroupId",
-        "actorId",
-        "action",
-        "payloadHash",
-        "idempotencyKey",
-        "status",
-        "revocationVersion",
-        "purchaseOrderId",
-        "failureCode",
         "createdBy",
         "updatedBy"
       ]
@@ -5797,14 +5777,14 @@
       "name": "quoteOperationStep",
       "rows": 0,
       "columns": [
-        "required",
-        "sortOrder",
-        "type",
         "minValue",
         "maxValue",
         "createdAt",
         "updatedAt",
         "description",
+        "required",
+        "sortOrder",
+        "type",
         "id",
         "name",
         "unitOfMeasureCode",
@@ -6159,6 +6139,33 @@
       "columns": ["active", "id", "supplierId", "companyId"]
     },
     {
+      "name": "supplierBankAccount",
+      "rows": 0,
+      "columns": [
+        "isPrimary",
+        "active",
+        "createdAt",
+        "updatedAt",
+        "customFields",
+        "id",
+        "companyId",
+        "supplierId",
+        "name",
+        "accountHolderName",
+        "bankName",
+        "bankAddress",
+        "countryCode",
+        "currencyCode",
+        "accountNumber",
+        "bankCode",
+        "swiftBic",
+        "notes",
+        "createdBy",
+        "updatedBy",
+        "tags"
+      ]
+    },
+    {
       "name": "supplierInteraction",
       "rows": 0,
       "columns": ["id", "companyId", "supplierId"]
@@ -6305,90 +6312,6 @@
       ]
     },
     {
-      "name": "invoiceIntake",
-      "rows": 0,
-      "columns": [
-        "revision",
-        "generation",
-        "header",
-        "newSupplier",
-        "historical",
-        "approvalSnapshot",
-        "approvedAt",
-        "createdAt",
-        "updatedAt",
-        "id",
-        "companyId",
-        "status",
-        "supplierId",
-        "purchaseInvoiceId",
-        "activeExtractionId",
-        "locationId",
-        "paymentTermId",
-        "invoiceSupplierId",
-        "invoiceSupplierContactId",
-        "invoiceSupplierLocationId",
-        "documentKind",
-        "approvalKey",
-        "approvedBy",
-        "attachmentStatus",
-        "lastErrorCode",
-        "createdBy",
-        "updatedBy"
-      ]
-    },
-    {
-      "name": "mercuryTransactionImport",
-      "rows": 0,
-      "columns": [
-        "amount",
-        "vendorSuggestion",
-        "invoiceEvidence",
-        "attachments",
-        "createdAt",
-        "updatedAt",
-        "id",
-        "companyId",
-        "mercuryTransactionId",
-        "mercuryAccountId",
-        "mercuryRecipientId",
-        "remoteStatus",
-        "currencyCode",
-        "transactionDate",
-        "reference",
-        "memo",
-        "reviewStatus",
-        "supplierId",
-        "purchaseInvoiceId",
-        "lastError",
-        "createdBy",
-        "updatedBy"
-      ]
-    },
-    {
-      "name": "invoiceIntakeSource",
-      "rows": 0,
-      "columns": [
-        "byteSize",
-        "provenance",
-        "createdAt",
-        "updatedAt",
-        "id",
-        "companyId",
-        "intakeId",
-        "mercuryImportId",
-        "kind",
-        "sourceKey",
-        "storageBucket",
-        "storagePath",
-        "sha256",
-        "mediaType",
-        "fileName",
-        "createdBy",
-        "updatedBy"
-      ]
-    },
-    {
       "name": "purchaseOrder",
       "rows": 0,
       "columns": [
@@ -6460,47 +6383,8 @@
         "jobOperationId",
         "accountId",
         "costCenterId",
-        "ownerId"
-      ]
-    },
-    {
-      "name": "invoiceIntakeLine",
-      "rows": 0,
-      "columns": [
-        "sortOrder",
-        "raw",
-        "quantity",
-        "supplierUnitPrice",
-        "discountAmount",
-        "supplierTaxAmount",
-        "taxPercent",
-        "supplierShippingCost",
-        "documentLineTotal",
-        "conversionFactor",
-        "newItem",
-        "review",
-        "createdAt",
-        "updatedAt",
-        "purchaseOrderLineId",
-        "accountId",
-        "assetId",
-        "purchaseInvoiceLineId",
-        "locationId",
-        "storageUnitId",
-        "costCenterId",
-        "lineType",
-        "purchaseUnit",
-        "stockUnit",
-        "createdBy",
-        "updatedBy",
-        "id",
-        "companyId",
-        "intakeId",
-        "lineKey",
-        "description",
-        "supplierSku",
-        "manufacturerPartNumber",
-        "itemId"
+        "ownerId",
+        "projectId"
       ]
     },
     {
@@ -6687,31 +6571,6 @@
         "createdBy",
         "updatedBy",
         "tags"
-      ]
-    },
-    {
-      "name": "invoiceRecognitionRule",
-      "rows": 0,
-      "columns": [
-        "conversionFactor",
-        "active",
-        "version",
-        "createdAt",
-        "updatedAt",
-        "id",
-        "companyId",
-        "kind",
-        "matchKey",
-        "sourceText",
-        "supplierId",
-        "itemId",
-        "supplierPartId",
-        "purchaseUnit",
-        "stockUnit",
-        "supersedesId",
-        "intakeId",
-        "createdBy",
-        "updatedBy"
       ]
     },
     {
@@ -6996,6 +6855,7 @@
     "apiKey",
     "apiKeyRateLimit",
     "companyIntegration",
+    "employeePin",
     "oauthClient",
     "oauthToken",
     "webhook"

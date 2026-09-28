@@ -1,3 +1,4 @@
+import { safeStorageFileName, storage } from "@carbon/files";
 import { getLogger } from "@carbon/logger";
 import { Spinner, useCarbon } from "@carbon/react";
 import { stripSpecialCharacters } from "@carbon/utils";
@@ -121,10 +122,18 @@ export function PdfExtractor({
     setUploadFailed(false);
     setUploadedFileName(file.name);
     setUploading(true);
+<<<<<<< HEAD
     const storagePath = `${company.id}/extractions/${crypto.randomUUID()}_${stripSpecialCharacters(file.name) || "document.pdf"}`;
+||||||| 85d9006e1
+    const storagePath = `${company.id}/extractions/${Date.now()}_${file.name}`;
+=======
+    // The key is internal (the user sees file.name above); drop the characters
+    // a storage key can't hold so a "#" never shortens it.
+    const storagePath = `${company.id}/extractions/${Date.now()}_${safeStorageFileName(file.name) ?? "document.pdf"}`;
+>>>>>>> 0608ffdc42d0089409e81ee6e8dee290416e4822
 
-    const { error } = await supabase.storage
-      .from("private")
+    const { error } = await storage(supabase)
+      .company(company.id)
       .upload(storagePath, file);
 
     if (error) {
