@@ -18,9 +18,14 @@ import {
   buildAllToolMetadataWithValidators,
   MODULE_LIST
 } from "./lib/service-metadata";
+<<<<<<< HEAD
 
 const log = (message: string) => process.stdout.write(`${message}\n`);
 const warn = (message: string) => process.stderr.write(`${message}\n`);
+||||||| 85d9006e1
+import { buildAllToolMetadataWithValidators } from "./lib/service-metadata";
+=======
+>>>>>>> 0608ffdc42d0089409e81ee6e8dee290416e4822
 
 const ROOT = path.resolve(__dirname, "..");
 const METADATA_FILE = path.join(
@@ -48,6 +53,8 @@ export async function generateToolMetadata(): Promise<void> {
     onModule: (mod, count) => log(`  ✓ ${mod}: ${count} tools`)
   });
 
+  // No timestamp: the file must be a pure function of the sources so repeated
+  // runs on an unchanged tree are byte-identical.
   const metadata = {
     totalTools: allTools.length,
     modules: [...new Set(allTools.map((t) => t.module))].length,
@@ -69,7 +76,14 @@ export async function generateToolMetadata(): Promise<void> {
   // produces a manifest entry, so surface it rather than letting the degrade pass
   // silently — that fallback is the only path that can publish a lossy schema.
   const fallbacks = resolutions.filter((r) => r.how !== "native");
+<<<<<<< HEAD
   log(
+||||||| 85d9006e1
+  console.log(
+    `  Schemas: ${registryStats.validatorsConverted} validators converted from ${registryStats.modulesLoaded}/15 modules`
+=======
+  console.log(
+>>>>>>> 0608ffdc42d0089409e81ee6e8dee290416e4822
     `  Schemas: ${registryStats.validatorsConverted} validators converted from ${registryStats.modulesLoaded}/${MODULE_LIST.length} modules`
   );
   log(

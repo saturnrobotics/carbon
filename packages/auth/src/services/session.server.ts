@@ -128,6 +128,7 @@ export function getAuthSessionCookieOptions(
     path: "/",
     sameSite: "lax" as const,
     secrets: [SESSION_SECRET!],
+<<<<<<< HEAD
     secure: !(isDevelopment && isLocal && url.protocol === "http:")
   };
 }
@@ -156,6 +157,17 @@ export async function expireLegacyAuthCookie(request: Request) {
   );
   return legacyStorage.destroySession(legacySession);
 }
+||||||| 85d9006e1
+    secure: !!cookieDomain,
+    domain: cookieDomain
+  }
+});
+=======
+    secure: isTestEdition || !!cookieDomain,
+    domain: cookieDomain
+  }
+});
+>>>>>>> 0608ffdc42d0089409e81ee6e8dee290416e4822
 
 export async function setAuthSession(
   request: Request,
@@ -314,9 +326,22 @@ export async function clearAuthCookies(request: Request) {
   ];
 }
 
-export async function destroyAuthSession(request: Request) {
+/**
+ * `reason` is a slug naming why the session was destroyed (e.g. "no-claims"),
+ * echoed to the browser console by login.tsx — a forced logout is otherwise
+ * invisible client-side, since the browser sees nothing but a 302 to /login.
+ *
+ * It reaches the client in every environment, so it must stay a fixed set of
+ * internal state names: nothing user-identifying, and nothing that reveals
+ * whether an account exists. Identifying detail goes in the server log instead.
+ */
+export async function destroyAuthSession(request: Request, reason?: string) {
   const headers = await clearAuthCookies(request);
-  return redirect(path.to.login, {
+  const destination = reason
+    ? `${path.to.login}?reason=${encodeURIComponent(reason)}`
+    : path.to.login;
+
+  return redirect(destination, {
     headers
   });
 }

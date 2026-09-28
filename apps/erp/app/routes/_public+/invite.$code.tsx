@@ -4,8 +4,13 @@ import {
   error,
   getAppUrl,
   getPermissionCacheKey,
+<<<<<<< HEAD
   isAuthProviderEnabled,
   RESEND_DOMAIN,
+||||||| 85d9006e1
+  RESEND_DOMAIN,
+=======
+>>>>>>> 0608ffdc42d0089409e81ee6e8dee290416e4822
   success as successFlash
 } from "@carbon/auth";
 import { getCarbonServiceRole } from "@carbon/auth/client.server";
@@ -15,14 +20,14 @@ import {
   getAuthSession,
   updateCompanySession
 } from "@carbon/auth/session.server";
-import { insertAuditLogEntries } from "@carbon/database/audit";
 import { InviteEmail } from "@carbon/documents/email";
+import { insertAuditLogEntries } from "@carbon/ee/audit.server";
 import { Ratelimit, redis } from "@carbon/kv";
-import { sendEmail } from "@carbon/lib/resend.server";
+import { sendEmail } from "@carbon/lib/email.server";
 import { getLogger } from "@carbon/logger";
 import { Button as _Button, Heading as _Heading, VStack } from "@carbon/react";
 import { updateSubscriptionQuantityForCompany } from "@carbon/stripe/stripe.server";
-import { datetime, Edition } from "@carbon/utils";
+import { datetime, Edition, getClientIp } from "@carbon/utils";
 import { Trans, useLingui } from "@lingui/react/macro";
 import { render } from "@react-email/components";
 import { AnimatePresence, motion } from "framer-motion";
@@ -111,9 +116,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
         actorId: null,
         diff: { acceptedAt: { old: null, new: accept.data.acceptedAt } },
         metadata: {
-          ipAddress:
-            request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-            undefined,
+          ipAddress: getClientIp(request) ?? undefined,
           userAgent: request.headers.get("user-agent") ?? undefined
         }
       }
@@ -184,9 +187,7 @@ async function requestNewInvite(
   code: string,
   serviceRole: ReturnType<typeof getCarbonServiceRole>
 ) {
-  const ip =
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-    "127.0.0.1";
+  const ip = getClientIp(request) ?? "127.0.0.1";
   const location = request.headers.get("x-vercel-ip-city") ?? "Unknown";
 
   const invite = await serviceRole
@@ -266,7 +267,6 @@ async function requestNewInvite(
     .single();
 
   await sendEmail({
-    from: `Carbon <no-reply@${RESEND_DOMAIN}>`,
     to: invite.data.email,
     subject: `You have been invited to join ${invite.data.company?.name} on Carbon`,
     headers: { "X-Entity-Ref-ID": nanoid() },
