@@ -399,6 +399,40 @@ class HqSignInTests(GoTrueStack):
         self.assertEqual(self.sql(f"SELECT string_agg(provider, ',' ORDER BY provider) FROM auth.identities WHERE user_id = '{LINKED_USER}';"), "google,keycloak")
         self.assertEqual(self.sql("SELECT count(*) FROM auth.users WHERE email = 'linked.employee@example.com';"), "1")
 
+    def refresh(self, token):
+        request = urllib.request.Request(
+            self.url + "/token?grant_type=refresh_token", method="POST",
+            data=json.dumps({"refresh_token": token}).encode(), headers={"Content-Type": "application/json"},
+        )
+        try:
+            with urllib.request.build_opener(urllib.request.ProxyHandler({})).open(request, timeout=10) as response:
+                return response.status, json.load(response)
+        except urllib.error.HTTPError as error:
+            with error:
+                return error.code, json.load(error)
+
+    def test_hq_session_limits_end_refresh_so_revocation_reaches_carbon(self):
+        # A fresh session refreshes; one past the 12 h timebox or idle past the
+        # 2 h inactivity timeout is refused, and Carbon sends the person to HQ.
+        for backdate, expected in (
+            (None, None),
+            ("UPDATE auth.sessions SET created_at = now() - interval '13 hours', refreshed_at = now() WHERE id = '{session}';",
+             "Invalid Refresh Token: Session Expired"),
+            ("UPDATE auth.sessions SET created_at = now() - interval '3 hours', refreshed_at = NULL WHERE id = '{session}';"
+             " UPDATE auth.refresh_tokens SET updated_at = now() - interval '3 hours' WHERE session_id = '{session}';",
+             "Invalid Refresh Token: Session Expired (Inactivity)"),
+        ):
+            with self.subTest(expected=expected):
+                result, _ = self.sign_in("new-employee")
+                if backdate:
+                    self.sql(backdate.format(session=self.claims(result["access_token"][0])["session_id"]))
+                status, body = self.refresh(result["refresh_token"][0])
+                if expected is None:
+                    self.assertEqual(status, 200, body)
+                    self.assertIn("access_token", body)
+                else:
+                    self.assertEqual((status, body.get("error_code"), body.get("msg")), (400, "session_expired", expected))
+
     def test_other_workspace_and_unverified_email_get_no_session(self):
         for code, reason in (("other-workspace", "Sign in with an authorized Google Workspace account."),
                              ("unverified", "Unverified email with keycloak")):

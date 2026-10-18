@@ -4,6 +4,11 @@
 // Keycloak-compatible OpenID provider (see
 // contrib/deploying/gcp-tailscale/hq_sign_in.py). HQ returns to Carbon's
 // ordinary /callback, which matches the account by email like every OAuth login.
+//
+// GoTrue copies HQ's userinfo claims, including `hq_capabilities`, into the
+// user's metadata, which users can edit themselves. Never let `hq_capabilities`
+// (or any other HQ claim in user metadata) drive authorization in Carbon:
+// Carbon's roles, permissions and RLS stay authoritative.
 import { Button, toast, useMount } from "@carbon/react";
 import type { ReactNode } from "react";
 import { useRef } from "react";

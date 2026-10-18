@@ -1,6 +1,8 @@
 """Security and upgrade invariants for the rendered deployment, without a DB."""
 
+import contextlib
 import importlib.util
+import io
 import json
 import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -145,25 +147,36 @@ class PrivateStackTests(unittest.TestCase):
         for app in ("erp", "mes"):
             self.assertEqual(self.stack["services"][app]["environment"]["AUTH_PROVIDERS"], "google")
         for name in ("gotrue", "gotrue-bootstrap"):
-            self.assertFalse([key for key in self.stack["services"][name]["environment"] if "KEYCLOAK" in key])
+            self.assertFalse([key for key in self.stack["services"][name]["environment"] if "KEYCLOAK" in key or "SESSIONS" in key])
         self.assertNotIn("hq_oidc_carbon_secret", self.stack["secrets"])
         staged = {**self.config, **self.HQ, "HQ_SIGN_IN_ENABLED": "false"}
-        stack, files = module.render(staged, REPO, self.output, self.state, materialize=False)
+        warnings = io.StringIO()
+        with contextlib.redirect_stderr(warnings):
+            stack, files = module.render(staged, REPO, self.output, self.state, materialize=False)
         self.assertEqual(stack, self.stack)
+        self.assertEqual(warnings.getvalue(), "")
         self.assertNotIn(self.HQ["HQ_OIDC_CARBON_SECRET"], json.dumps(files))
 
     def test_hq_sign_in_keeps_google_as_break_glass_and_changes_only_auth(self):
-        stack, files = module.render({**self.config, **self.HQ}, REPO, self.output, self.state, materialize=False)
+        warnings = io.StringIO()
+        with contextlib.redirect_stderr(warnings):
+            stack, files = module.render({**self.config, **self.HQ}, REPO, self.output, self.state, materialize=False)
+        # Before cutover a person HQ denies can still choose Google: say so.
+        self.assertEqual(warnings.getvalue().splitlines(), [module.hq_sign_in.GATING_WARNING])
+        self.assertIn("applies only once Google sign-in is off (cutover)", module.hq_sign_in.GATING_WARNING)
         secret = str(self.state / "secrets/hq_oidc_carbon_secret")
         self.assertEqual(files.pop(secret), self.HQ["HQ_OIDC_CARBON_SECRET"])
         self.assertNotIn(self.HQ["HQ_OIDC_CARBON_SECRET"], json.dumps(stack))
         auth, baseline_auth = stack["services"]["gotrue"], self.stack["services"]["gotrue"]
-        self.assertEqual({key: auth["environment"].pop(key) for key in list(auth["environment"]) if "KEYCLOAK" in key}, {
+        self.assertEqual({key: auth["environment"].pop(key) for key in list(auth["environment"]) if "KEYCLOAK" in key or "SESSIONS" in key}, {
             "GOTRUE_EXTERNAL_KEYCLOAK_ENABLED": "true",
             "GOTRUE_EXTERNAL_KEYCLOAK_CLIENT_ID": "carbon",
             "GOTRUE_EXTERNAL_KEYCLOAK_SECRET": "__HQ_OIDC_CARBON_SECRET__",
             "GOTRUE_EXTERNAL_KEYCLOAK_URL": "https://hq.example.com/oidc/keycloak",
             "GOTRUE_EXTERNAL_KEYCLOAK_REDIRECT_URI": "https://api.example.com/auth/v1/callback",
+            # HQ revocation reaches Carbon: refreshes stop after these limits.
+            "GOTRUE_SESSIONS_TIMEBOX": "12h",
+            "GOTRUE_SESSIONS_INACTIVITY_TIMEOUT": "2h",
         })
         self.assertEqual(auth["environment"]["GOTRUE_EXTERNAL_GOOGLE_ENABLED"], "true")
         self.assertEqual(auth["secrets"], baseline_auth["secrets"] + ["hq_oidc_carbon_secret"])
@@ -177,18 +190,23 @@ class PrivateStackTests(unittest.TestCase):
 
     def test_hq_cutover_disables_google_but_keeps_its_credentials_for_break_glass(self):
         config = {**self.config, **self.HQ, "GOOGLE_SIGN_IN_ENABLED": "false"}
-        module.render(config, REPO, self.output, self.state)
+        warnings = io.StringIO()
+        with contextlib.redirect_stderr(warnings):
+            module.render(config, REPO, self.output, self.state)
+        self.assertEqual(warnings.getvalue(), "")
         stack = json.loads((self.output / "compose.json").read_text())
         auth = stack["services"]["gotrue"]
         self.assertEqual(auth["environment"]["GOTRUE_EXTERNAL_GOOGLE_ENABLED"], "false")
         self.assertEqual(auth["environment"]["GOTRUE_EXTERNAL_KEYCLOAK_ENABLED"], "true")
+        self.assertEqual(auth["environment"]["GOTRUE_SESSIONS_TIMEBOX"], "12h")
+        self.assertEqual(auth["environment"]["GOTRUE_SESSIONS_INACTIVITY_TIMEOUT"], "2h")
         self.assertIn("google_client_secret", auth["secrets"])
         for app in ("erp", "mes"):
             self.assertEqual(stack["services"][app]["environment"]["AUTH_PROVIDERS"], "hq")
             self.assertNotIn("hq_oidc_carbon_secret", stack["services"][app].get("secrets", []))
         bootstrap = stack["services"]["gotrue-bootstrap"]
         self.assertEqual(bootstrap["environment"]["GOTRUE_EXTERNAL_GOOGLE_ENABLED"], "false")
-        self.assertFalse([key for key in bootstrap["environment"] if "KEYCLOAK" in key])
+        self.assertFalse([key for key in bootstrap["environment"] if "KEYCLOAK" in key or "SESSIONS" in key])
         self.assertNotIn("hq_oidc_carbon_secret", bootstrap["secrets"])
         self.assertEqual([name for name, service in stack["services"].items() if "hq_oidc_carbon_secret" in service.get("secrets", [])], ["gotrue"])
         path = self.state / "secrets/hq_oidc_carbon_secret"

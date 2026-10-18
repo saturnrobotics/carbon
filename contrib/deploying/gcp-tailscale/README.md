@@ -441,6 +441,15 @@ uses. The same token hook still admits only verified accounts on
 `AUTH_ALLOWED_GOOGLE_DOMAIN` (see [the authentication policy](auth/README.md#sign-in-through-hq)).
 Google sign-in stays available as break-glass until you turn it off.
 
+**HQ's app gating applies only once Google sign-in is off (cutover).** During
+the transition a person HQ denies can still sign in with Google; rendering
+prints a warning while both are enabled. With HQ enabled, GoTrue also applies
+HQ's session limits to every session (`GOTRUE_SESSIONS_TIMEBOX=12h`,
+`GOTRUE_SESSIONS_INACTIVITY_TIMEOUT=2h`), so a revocation in HQ reaches Carbon
+within the 2-hour inactivity timeout, or 12 hours after sign-in at most, plus up
+to one hour for the last access token. `hq_capabilities` from HQ is never used
+for authorization in Carbon; Carbon's roles and RLS stay authoritative.
+
 Private inputs, all optional and off by default:
 
 - `HQ_SIGN_IN_ENABLED` (`"true"`/`"false"`) and `HQ_ISSUER` (HQ's origin,
@@ -470,13 +479,17 @@ Rollout:
    secret, and deploy. Both login pages show **Sign in with HQ** above **Sign in
    with Google**. An employee's first HQ sign-in adds an HQ identity to their
    existing Google-created account by verified email; nothing is migrated.
+   Sessions now end after 12 hours, or 2 hours idle, so existing sessions older
+   than 12 hours end at their next refresh. HQ does not yet gate entry: anyone
+   who qualifies can still use Google.
    Verify from a tailnet device: an HQ sign-in lands in ERP and MES; a person HQ
    denies stays on HQ's page; Google sign-in still works.
 2. **Cutover.** Set `GOOGLE_SIGN_IN_ENABLED` to `"false"` and deploy. GoTrue
    refuses Google and both apps use `AUTH_PROVIDERS=hq`: a visit to a protected
    page goes straight to HQ, while a plain `/login` (for example after signing
-   out) shows the HQ button. Existing sessions continue until they expire or are
-   revoked.
+   out) shows the HQ button. From here HQ's app gating applies to every new
+   sign-in. Existing sessions continue until the session limits end them or they
+   are revoked.
 3. **Break-glass.** If HQ is unavailable, set `GOOGLE_SIGN_IN_ENABLED` back to
    `"true"` (keep the Google client and its Internal audience in place) and
    deploy. Setting `HQ_SIGN_IN_ENABLED` to `"false"` returns the stack to

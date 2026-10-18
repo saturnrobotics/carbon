@@ -92,8 +92,27 @@ existing account in its default linking domain (not an SSO account) adds the
 Google therefore gains an HQ identity on their first HQ sign-in, keeping their
 Carbon user and memberships; nothing needs to be pre-seeded. Carbon's ERP and MES
 callbacks match the account by email and do not check the provider.
-`hq_capabilities` is recorded but not used yet: Carbon's own roles stay
-authoritative.
+
+GoTrue also copies HQ's userinfo claims, including `hq_capabilities`, into the
+user's metadata, which users can edit themselves. `hq_capabilities` must
+**never** drive authorization in Carbon: Carbon's roles, permissions and RLS stay
+authoritative, and this hook reads only `auth.identities`, never user metadata.
+
+**HQ's app gating applies only once Google sign-in is off (cutover).** While
+Google stays enabled as break-glass, a person HQ denies can still choose
+**Sign in with Google** and pass this hook if their Workspace account qualifies.
+Rendering prints a warning while both are enabled.
+
+With HQ enabled, GoTrue adopts HQ's session limits for every session it issues,
+Google's included: `GOTRUE_SESSIONS_TIMEBOX=12h` and
+`GOTRUE_SESSIONS_INACTIVITY_TIMEOUT=2h`. GoTrue refuses to refresh a session
+older than 12 hours or idle (unrefreshed) for 2 hours, and Carbon then clears its
+cookie and sends the person back through `/login`, where HQ decides again. A
+revocation in HQ therefore reaches Carbon within the 2-hour inactivity timeout
+for an idle person, and at most 12 hours after sign-in for an active one, plus
+the remaining life of the last access token (up to `GOTRUE_JWT_EXP`, one hour).
+Enabling HQ also ends existing sessions older than 12 hours at their next
+refresh.
 
 The login page shows **Sign in with HQ** whenever `hq` is enabled. When it is the
 only provider, a visitor sent to `/login` from a protected page (the URL carries
@@ -105,7 +124,8 @@ refused sign-in cannot loop.
 For user offboarding, deactivate the Carbon account and revoke its Supabase
 sessions as well as disabling its Google Workspace account and removing their HQ
 access. Supabase refreshes its own sessions without contacting Google or HQ on
-every refresh. Existing access tokens remain valid until their configured
+every refresh; only the session limits above bound how long a revoked person
+keeps a session. Existing access tokens remain valid until their configured
 expiry.
 
 The tested GoTrue version is `supabase/gotrue:v2.189.0`. Its
@@ -139,7 +159,8 @@ privileges. They do not connect to the application's database.
 GoTrue image with HQ sign-in enabled against a synthetic Keycloak-compatible
 provider and the real hook: the authorize redirect, the server-to-server code
 exchange, a new member's identity record, linking to an existing Google account,
-and refusals for another workspace and an unverified email. A real Google and HQ
+refusals for another workspace and an unverified email, and refreshes refused
+past the session timebox and inactivity timeout. A real Google and HQ
 sign-in from the tailnet remains a required deployment acceptance check.
 
 ## Edge function boundary
