@@ -3,9 +3,11 @@
 
 Contract: .fork/specs/2026-10-18-hq-feed-exporter.md (HQ plan 0006C). A systemd
 timer installed by host-deploy.sh runs this on the Carbon host every five
-minutes. It reads the database once, as the service role, in a single READ ONLY
-REPEATABLE READ transaction, and POSTs one JSON snapshot with an HS256 bearer
-token. HQ shows a record only when its own policy and these entitlements both
+minutes. It reads the database in a single READ ONLY REPEATABLE READ
+transaction. Only confirmed sign-in emails come from auth.users through the
+admin connection; everything else is read as the service role. It then POSTs one
+JSON snapshot with an HS256 bearer token. HQ shows a record only when its own
+policy and these entitlements both
 allow it, so this file only reads Carbon's permissions; it changes no
 authentication or RBAC logic.
 
@@ -87,14 +89,27 @@ DEPLOYMENT_PSQL = (
 LOCAL_PSQL = ("psql",)
 PSQL_OPTIONS = ("-X", "-q", "-A", "-t", "-v", "ON_ERROR_STOP=1")
 
-# One snapshot, read as service_role (no login of its own; the admin connection
-# switches to it), so the read has exactly the service role's privileges.
+# One REPEATABLE READ snapshot: every statement below sees the same data.
 PREAMBLE = """\
 BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY;
-SET LOCAL ROLE service_role;
 SET LOCAL statement_timeout = '60s';
 SET LOCAL lock_timeout = '10s';
 """
+
+# Entitlements are keyed on the sign-in email GoTrue confirmed, never on
+# public."user".email, which users may edit themselves. service_role has no
+# SELECT on auth.users, so the admin connection reads exactly these two columns
+# into a psql variable before narrowing to service_role.
+IDENTITIES = """\
+SELECT COALESCE(json_object_agg(au."id"::text, lower(au."email")), '{}'::json) AS verified_identities
+FROM auth."users" au
+WHERE au."email_confirmed_at" IS NOT NULL AND au."email" IS NOT NULL \\gset
+"""
+
+# Everything else is read as service_role (no login of its own; the admin
+# connection switches to it), so the read has exactly the service role's
+# privileges.
+NARROW = "SET LOCAL ROLE service_role;\n"
 
 # Columns are named explicitly; no price, cost, rate, total, currency or tax
 # column is read. Open-status lists are part of the contract.
@@ -107,7 +122,7 @@ SELECT json_build_object(
   ), '[]'::json),
   'entitlements', COALESCE((
     SELECT json_agg(json_build_object(
-      'email', lower(u."email"),
+      'email', vi."email",
       'scope', m."companyId",
       'permissions', COALESCE((
         SELECT json_agg(p.key ORDER BY p.key)
@@ -115,16 +130,31 @@ SELECT json_build_object(
                              THEN up."permissions" ELSE '{}'::jsonb END) p
         WHERE jsonb_typeof(p.value) = 'array' AND p.value ? m."companyId"
       ), '[]'::json)
-    ) ORDER BY lower(u."email"), m."companyId")
+    ) ORDER BY vi."email", m."companyId")
     FROM public."userToCompany" m
     JOIN public."user" u ON u."id" = m."userId"
     JOIN public."employee" e ON e."id" = m."userId" AND e."companyId" = m."companyId"
+    JOIN jsonb_each_text(:'verified_identities'::jsonb) vi("id", "email") ON vi."id" = u."id"
     LEFT JOIN public."userPermission" up ON up."id" = m."userId"
     WHERE m."role"::text = 'employee'
       AND u."active" IS TRUE
       AND e."active" IS TRUE
-      AND split_part(lower(u."email"), '@', 2) = :'email_domain'
+      AND lower(u."email") = vi."email"
+      AND split_part(vi."email", '@', 2) = :'email_domain'
   ), '[]'::json),
+  -- Employees whose editable profile email disagrees with their confirmed
+  -- sign-in email get no entitlements; only their number leaves the database.
+  'email_mismatches', (
+    SELECT count(DISTINCT u."id")
+    FROM public."userToCompany" m
+    JOIN public."user" u ON u."id" = m."userId"
+    JOIN public."employee" e ON e."id" = m."userId" AND e."companyId" = m."companyId"
+    JOIN jsonb_each_text(:'verified_identities'::jsonb) vi("id", "email") ON vi."id" = u."id"
+    WHERE m."role"::text = 'employee'
+      AND u."active" IS TRUE
+      AND e."active" IS TRUE
+      AND lower(u."email") IS DISTINCT FROM vi."email"
+  ),
   'sales_orders', COALESCE((
     SELECT json_agg(json_build_object(
       'id', so."id",
@@ -175,7 +205,7 @@ SELECT json_build_object(
 );
 """
 
-QUERY = PREAMBLE + SNAPSHOT + "COMMIT;\n"
+QUERY = PREAMBLE + IDENTITIES + NARROW + SNAPSHOT + "COMMIT;\n"
 
 
 class FeedError(ValueError):
@@ -330,8 +360,14 @@ def _row(kind, row, domain):
 
 def build_payload(snapshot, domain):
     """Project the database snapshot onto exactly the contract's fields."""
-    if not isinstance(snapshot, dict) or set(snapshot) != {"snapshot_time", *LISTS}:
+    if not isinstance(snapshot, dict) or set(snapshot) != {"snapshot_time", "email_mismatches", *LISTS}:
         raise FeedError("Unexpected database snapshot shape")
+    mismatches = snapshot["email_mismatches"]
+    if not isinstance(mismatches, int) or isinstance(mismatches, bool) or mismatches < 0:
+        raise FeedError("Unexpected email mismatch count")
+    if mismatches:
+        log(f"dropped entitlements for {mismatches} employee(s) whose profile email differs "
+            "from their confirmed sign-in email")
     generated_at = snapshot["snapshot_time"]
     if not isinstance(generated_at, str) or not TIMESTAMP_PATTERN.fullmatch(generated_at):
         raise FeedError("Unexpected snapshot time format")

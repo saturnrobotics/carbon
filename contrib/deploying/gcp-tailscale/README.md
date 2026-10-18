@@ -451,7 +451,11 @@ SHA-256 of the exact body. No
 price, cost, rate, total, currency or tax column is read or sent. Only active
 employees whose email is in the login domain are exported. Any HTTP status other
 than 200 or 204 fails the run. Logs show counts and the HTTP status, never the
-token, the key or the body.
+token, the key or the body. Entitlements are keyed on each user's confirmed
+sign-in email in `auth.users`, not on the editable profile email; an employee
+whose two emails disagree gets none, and only their number is logged. Because
+the service role cannot read `auth.users`, the admin connection reads its id and
+email in the same snapshot before switching to the service role.
 
 To enable it:
 
@@ -479,9 +483,11 @@ only with `--accept-routes`, and installs accepted routes ahead of the host's
 own. Enrollment keeps route acceptance off. Each deployment turns it on only when
 `TAILNET_ACCEPT_ROUTES` lists networks, then turns it off again and fails if any
 accepted route is outside that list or overlaps the VM subnet, Docker networks,
-link-local metadata or private PostgreSQL clients. The feed timer repeats this
-check before every push, so a conflicting route approved later is turned off
-within five minutes. Entries must be private /24 (IPv6 /64) or narrower networks.
+link-local metadata or private PostgreSQL clients. While the list is set,
+`carbon-tailnet-routes.timer` repeats this check every five minutes, whether or
+not the feed is enabled, and the feed repeats it before every push, so a
+conflicting route approved later is turned off within five minutes. Entries must
+be private /24 (IPv6 /64) or narrower networks.
 
 ## Private-network limitations
 

@@ -63,7 +63,12 @@ bytes, used as its UTF-8 bytes on both sides. Claims:
   with `Z`. `scope` is the company id. Dates are `YYYY-MM-DD` or `null`.
 - `companies` lists every company.
 - `entitlements` has one row per active `user` and company where
-  `userToCompany.role = 'employee'` and the `employee` row is active. It lists the
+  `userToCompany.role = 'employee'` and the `employee` row is active. The `email`
+  is the user's confirmed sign-in email: `auth.users.email` joined on
+  `auth.users.id = "user".id` with `email_confirmed_at IS NOT NULL`, lowercased.
+  `public."user".email` is never the key, because users may edit their own row.
+  When the two emails disagree, the user gets no entitlements, and only the number
+  of such users is logged. Users without a confirmed sign-in email get none. It lists the
   `userPermission.permissions` keys whose array contains that company id, sorted.
   Carbon no longer treats `"0"` as every company, so only exact ids count. Emails
   are lowercased. Only addresses in the configured domain are included:
@@ -97,8 +102,9 @@ bytes, used as its UTF-8 bytes on both sides. Claims:
 | Decision | Choice | Rationale |
 | --- | --- | --- |
 | Runner | systemd `carbon-hq-feed.timer` (`OnCalendar=*:0/5`) on the host, installed by `host-deploy.sh finalize` | The host routes to HQ over the tailnet. Only a verified release installs it, and the same function removes it. Same pattern as `carbon-certificates.timer` |
+| Route re-check | systemd `carbon-tailnet-routes.timer` (`OnCalendar=*:0/5`), installed and removed by the same `finalize` function whenever `TAILNET_ACCEPT_ROUTES` is set | Re-verifies accepted routes even when the feed is off |
 | Docker dependency | `After=docker.service` only, never `Requires`/`Wants` | A timer firing during a maintenance snapshot must fail, not restart Docker |
-| Database read | `docker compose exec -T postgres carbon-secrets-entrypoint.sh psql -h 127.0.0.1 -U supabase_admin`, then `BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY; SET LOCAL ROLE service_role` | The admin connection the host already uses, narrowed to the service role. One consistent snapshot with statement and lock timeouts |
+| Database read | `docker compose exec -T postgres carbon-secrets-entrypoint.sh psql -h 127.0.0.1 -U supabase_admin`, then `BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY`. The admin connection reads only `auth.users.id` and `email` (confirmed) into a psql variable, then switches with `SET LOCAL ROLE service_role` for everything else | One consistent snapshot with statement and lock timeouts. `service_role` has no SELECT on `auth.users` in the production image, so that one read stays with the admin connection |
 | Dependencies | Python standard library only | The host has `python3` but no PostgreSQL driver. No new production dependencies |
 | Projection | Explicit SQL columns, then an explicit Python field list per row | A widened query cannot widen the payload |
 | Key storage | `HQ_INGEST_CARBON_KEY` in private secrets, then `/var/lib/carbon/secrets/hq_ingest_carbon_key` (mode 0400, root) via `render.initialize_secrets`. Removed when unset | Host-only secret: no container mounts it |
@@ -121,8 +127,10 @@ link-local metadata, or private PostgreSQL clients. So:
   current behaviour. Otherwise it sets `true`, then verifies that every accepted
   non-tailnet route lies inside the allowlist and overlaps no local route. On any
   violation, or if the tables cannot be read, it sets `false` again and fails.
-- `carbon-tailnet-routes check` runs as the timer's `ExecStartPre` and enforces
-  the same rule, so a conflicting route approved later lasts at most five minutes.
+- `carbon-tailnet-routes check` enforces the same rule from its own five-minute
+  timer whenever the allowlist is set, whether or not the feed is enabled, and
+  again as the feed's `ExecStartPre`. A conflicting route approved later lasts at
+  most five minutes.
 - Allowlist entries must be private /24 (IPv6 /64) or narrower, outside the tailnet
   range, the VM subnet, Docker's default pools, link-local and
   `POSTGRES_CLIENT_CIDRS`.

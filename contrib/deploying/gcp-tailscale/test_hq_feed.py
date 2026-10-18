@@ -16,6 +16,7 @@ import os
 from pathlib import Path
 import re
 import shutil
+from string import Template
 import subprocess
 import sys
 import tempfile
@@ -43,6 +44,7 @@ def snapshot():
     """What the query returns, including columns the projection must drop."""
     return {
         "snapshot_time": "2026-10-18T14:00:00Z",
+        "email_mismatches": 0,
         "companies": [{"id": "c1", "name": "Example Works", "baseCurrencyCode": "USD"}],
         "entitlements": [
             {"email": "Ada@Example.com", "scope": "c1", "permissions": ["sales_view", "production_view"]},
@@ -161,6 +163,25 @@ class PayloadTests(unittest.TestCase):
             {"email": "ada@example.com", "scope": "c2", "permissions": ["sales_view"]}])
         self.assertIn("1 ambiguous", stderr.getvalue())
         self.assertNotIn("ada@", stderr.getvalue())
+
+    def test_email_mismatches_are_counted_never_named(self):
+        raw = snapshot()
+        raw["email_mismatches"] = 3
+        with patch.object(sys, "stderr", io.StringIO()) as stderr:
+            hq_feed.build_payload(raw, "example.com")
+        self.assertIn("3 employee(s)", stderr.getvalue())
+        for value in (-1, True, "3", None):
+            raw["email_mismatches"] = value
+            with self.subTest(value=value), self.assertRaises(hq_feed.FeedError):
+                hq_feed.build_payload(raw, "example.com")
+
+    def test_identity_read_uses_only_the_confirmed_sign_in_email(self):
+        self.assertEqual(set(re.findall(r'au\."([^"]+)"', hq_feed.IDENTITIES)), {"id", "email", "email_confirmed_at"})
+        self.assertIn('"email_confirmed_at" IS NOT NULL', hq_feed.IDENTITIES)
+        self.assertNotIn('lower(u."email"),', hq_feed.SNAPSHOT)
+        # One snapshot: the admin identity read, then service_role for everything else.
+        self.assertEqual(hq_feed.QUERY, hq_feed.PREAMBLE + hq_feed.IDENTITIES + hq_feed.NARROW + hq_feed.SNAPSHOT
+                         + "COMMIT;\n")
 
     def test_oversized_body_is_never_sent(self):
         payload = hq_feed.build_payload(snapshot(), "example.com")
@@ -372,18 +393,67 @@ class ConfigurationTests(unittest.TestCase):
 
 
 class HostWiringTests(unittest.TestCase):
-    def test_timer_runs_every_five_minutes_without_pulling_in_docker(self):
+    def test_units_run_every_five_minutes_without_pulling_in_docker(self):
         script = (HERE / "host-deploy.sh").read_text()
-        service = re.search(r"carbon-hq-feed\.service <<'EOF'\n(.*?)\nEOF", script, re.S)[1]
-        timer = re.search(r"carbon-hq-feed\.timer <<'EOF'\n(.*?)\nEOF", script, re.S)[1]
+        timer = re.search(r'\$1\.timer" <<EOF\n(.*?)\nEOF', script, re.S)[1]
         self.assertIn("OnCalendar=*:0/5", timer)
-        self.assertIn("Type=oneshot", service)
-        self.assertIn("ExecStart=/usr/local/sbin/carbon-hq-feed\n", service + "\n")
-        self.assertIn("ExecStartPre=/usr/local/sbin/carbon-tailnet-routes check", service)
-        # A timer firing during a maintenance snapshot must not restart Docker.
-        self.assertNotRegex(service, r"(Requires|Wants|BindsTo)=.*docker")
+        feed = re.search(r"carbon-hq-feed\.service <<'EOF'\n(.*?)\nEOF", script, re.S)[1]
+        routes = re.search(r"carbon-tailnet-routes\.service <<'EOF'\n(.*?)\nEOF", script, re.S)[1]
+        for service in (feed, routes):
+            self.assertIn("Type=oneshot", service)
+            # A timer firing during a maintenance snapshot must not restart Docker.
+            self.assertNotRegex(service, r"(Requires|Wants|BindsTo)=.*docker")
+        self.assertIn("ExecStart=/usr/local/sbin/carbon-hq-feed\n", feed + "\n")
+        self.assertIn("ExecStartPre=/usr/local/sbin/carbon-tailnet-routes check", feed)
+        self.assertIn("ExecStart=/usr/local/sbin/carbon-tailnet-routes check /var/lib/carbon/config.json", routes)
+        self.assertNotIn("docker", routes)
         finalize = re.search(r"\n  finalize\)\n(.*?)\n    ;;", script, re.S)[1]
-        self.assertIn("configure_hq_feed", finalize)
+        self.assertIn("configure_host_timers", finalize)
+
+    def test_finalize_installs_and_removes_each_timer_independently(self):
+        script = (HERE / "host-deploy.sh").read_text()
+        functions = script[script.index("host_timer_enabled() {"):script.index("check_stack() {")]
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            units, sbin = root / "units", root / "sbin"
+            units.mkdir()
+            sbin.mkdir()
+            functions = functions.replace("/etc/systemd/system", str(units))
+            functions = functions.replace(" /usr/local/sbin/carbon-hq-feed\n", f" {sbin}/carbon-hq-feed\n")
+            config, log = root / "config.json", root / "systemctl.log"
+            harness = (f"set -euo pipefail\nCONFIG='{config}'\nHERE='{HERE}'\n"
+                       f"systemctl() {{ printf '%s\\n' \"$*\" >> '{log}'; }}\n{functions}\nconfigure_host_timers\n")
+
+            def finalize(values):
+                config.write_text(json.dumps(values))
+                log.write_text("")
+                subprocess.run(["bash", "-c", harness], check=True, capture_output=True, text=True, timeout=30)
+                return {path.name for path in units.iterdir()}, log.read_text().splitlines()
+
+            routes_only = {"TAILNET_ACCEPT_ROUTES": ["10.20.0.10/32"]}
+            feed = {"HQ_INGEST_URL": URL, "HQ_INGEST_CARBON_KEY": KEY}
+            installed, calls = finalize({})
+            self.assertEqual(installed, set())
+            self.assertNotIn("enable --now carbon-tailnet-routes.timer", calls)
+            # Route verification runs even with the HQ feed off.
+            installed, calls = finalize(routes_only)
+            self.assertEqual(installed, {"carbon-tailnet-routes.service", "carbon-tailnet-routes.timer"})
+            self.assertIn("enable --now carbon-tailnet-routes.timer", calls)
+            self.assertNotIn("enable --now carbon-hq-feed.timer", calls)
+            self.assertFalse((sbin / "carbon-hq-feed").exists())
+            self.assertIn("OnCalendar=*:0/5", (units / "carbon-tailnet-routes.timer").read_text())
+            installed, calls = finalize({**routes_only, **feed})
+            self.assertEqual(installed, {"carbon-tailnet-routes.service", "carbon-tailnet-routes.timer",
+                                         "carbon-hq-feed.service", "carbon-hq-feed.timer"})
+            self.assertIn("enable --now carbon-hq-feed.timer", calls)
+            self.assertEqual((sbin / "carbon-hq-feed").read_bytes(), (HERE / "hq_feed.py").read_bytes())
+            installed, calls = finalize(feed)
+            self.assertEqual(installed, {"carbon-hq-feed.service", "carbon-hq-feed.timer"})
+            self.assertIn("disable --now carbon-tailnet-routes.timer", calls)
+            installed, calls = finalize({"HQ_INGEST_URL": URL})
+            self.assertEqual(installed, set())
+            self.assertIn("disable --now carbon-hq-feed.timer", calls)
+            self.assertFalse((sbin / "carbon-hq-feed").exists())
 
     def test_bootstrap_accepts_routes_only_through_the_allowlist_guard(self):
         script = (HERE / "bootstrap.sh").read_text()
@@ -455,7 +525,10 @@ class DatabaseTests(unittest.TestCase):
             return hq_feed.read_database(domain, (*self.psql, "-U", "postgres", "-d", "feed_test"))
 
     def test_snapshot_matches_the_contract_semantics(self):
-        payload = hq_feed.build_payload(self.read(), "example.com")
+        raw = self.read()
+        self.assertEqual(raw["email_mismatches"], 2)
+        with patch.object(sys, "stderr", io.StringIO()):
+            payload = hq_feed.build_payload(raw, "example.com")
         self.assertRegex(payload["generated_at"], r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
         self.assertEqual(payload["companies"], [{"id": "c1", "name": "Example Works"},
                                                 {"id": "c2", "name": "Second Shop"}])
@@ -490,27 +563,67 @@ class DatabaseTests(unittest.TestCase):
         assert_no_money_keys(self, payload)
 
     def test_read_is_one_read_only_repeatable_read_transaction_as_service_role(self):
-        probe = hq_feed.PREAMBLE + ("SELECT current_setting('transaction_isolation'), "
+        probe = hq_feed.PREAMBLE + hq_feed.NARROW + ("SELECT current_setting('transaction_isolation'), "
                                     "current_setting('transaction_read_only'), current_user;\nCOMMIT;\n")
         self.assertEqual(self.sql(probe).stdout.strip(), "repeatable read|on|service_role")
         self.assertEqual(hq_feed.QUERY.count("BEGIN"), 1)
         self.assertTrue(hq_feed.QUERY.startswith(hq_feed.PREAMBLE))
-        write = self.sql(hq_feed.PREAMBLE + "DELETE FROM public.\"job\";\nCOMMIT;\n", check=False)
+        write = self.sql(hq_feed.PREAMBLE + hq_feed.NARROW + "DELETE FROM public.\"job\";\nCOMMIT;\n", check=False)
         self.assertNotEqual(write.returncode, 0)
         self.assertIn("read-only transaction", write.stderr)
 
     def test_reading_a_money_column_would_fail_this_harness(self):
-        result = self.sql(hq_feed.PREAMBLE + 'SELECT "unitPrice" FROM public."salesOrderLine";\nCOMMIT;\n',
+        result = self.sql(hq_feed.PREAMBLE + hq_feed.NARROW + 'SELECT "unitPrice" FROM public."salesOrderLine";\n'
+                          "COMMIT;\n", check=False)
+        self.assertIn("permission denied", result.stderr)
+
+    def test_service_role_cannot_read_sign_in_identities(self):
+        # As in the production image: hence the admin's two-column identity read.
+        result = self.sql(hq_feed.PREAMBLE + hq_feed.NARROW + 'SELECT "email" FROM auth."users";\nCOMMIT;\n',
                           check=False)
         self.assertIn("permission denied", result.stderr)
 
-    def test_unknown_domain_exports_no_entitlements(self):
-        self.assertEqual(hq_feed.build_payload(self.read("example.net"), "example.net")["entitlements"], [])
+    def test_edited_profile_email_cannot_claim_or_disturb_another_identity(self):
+        with patch.object(sys, "stderr", io.StringIO()) as stderr:
+            payload = hq_feed.build_payload(self.read(), "example.com")
+        # u8 set its profile email to Ada's address and u9 to an address with no
+        # Carbon account. Neither gains anything, and Ada keeps exactly her own.
+        self.assertEqual({row["email"] for row in payload["entitlements"]}, {"ada@example.com", "bo@example.com"})
+        ada = [row for row in payload["entitlements"] if row["email"] == "ada@example.com" and row["scope"] == "c1"]
+        self.assertEqual(ada[0]["permissions"], ["invoicing_update", "production_view", "sales_view"])
+        self.assertIn("2 employee(s)", stderr.getvalue())
+        for private in ("mallory", "trent", "nobody", "ada@"):
+            self.assertNotIn(private, stderr.getvalue())
 
+    def test_unconfirmed_sign_in_email_grants_nothing_until_confirmed(self):
+        def emails():
+            with patch.object(sys, "stderr", io.StringIO()):
+                return {row["email"] for row in hq_feed.build_payload(self.read(), "example.com")["entitlements"]}
+
+        self.assertNotIn("una@example.com", emails())
+        self.sql(f"UPDATE auth.\"users\" SET \"email_confirmed_at\" = now() WHERE \"id\" = '{USERS['u10']}'")
+        try:
+            self.assertIn("una@example.com", emails())
+        finally:
+            self.sql(f"UPDATE auth.\"users\" SET \"email_confirmed_at\" = NULL WHERE \"id\" = '{USERS['u10']}'")
+        self.assertNotIn("noa@example.com", emails())
+
+    def test_unknown_domain_exports_no_entitlements(self):
+        with patch.object(sys, "stderr", io.StringIO()):
+            self.assertEqual(hq_feed.build_payload(self.read("example.net"), "example.net")["entitlements"], [])
+
+
+# Carbon user ids are GoTrue auth.users ids.
+USERS = {f"u{n}": f"00000000-0000-4000-8000-{n:012d}" for n in range(1, 12)}
 
 SCHEMA = """
 CREATE ROLE service_role NOLOGIN BYPASSRLS;
 GRANT USAGE ON SCHEMA public TO service_role;
+-- As in the production image: schema usage, but no SELECT on auth.users.
+CREATE SCHEMA auth;
+GRANT USAGE ON SCHEMA auth TO service_role;
+CREATE TABLE auth."users" ("id" UUID PRIMARY KEY, "email" VARCHAR(255), "email_confirmed_at" TIMESTAMPTZ,
+  "encrypted_password" VARCHAR(255), "raw_user_meta_data" JSONB);
 CREATE TYPE "role" AS ENUM ('customer', 'employee', 'supplier');
 CREATE TYPE "salesOrderStatus" AS ENUM ('Draft', 'Needs Approval', 'Confirmed', 'In Progress', 'Completed',
   'Invoiced', 'Cancelled', 'Closed', 'To Ship and Invoice', 'To Ship', 'To Invoice');
@@ -520,6 +633,7 @@ CREATE TYPE "jobStatus" AS ENUM ('Draft', 'Ready', 'In Progress', 'Paused', 'Com
   'Due Today', 'Planned', 'Closed');
 CREATE TABLE "company" ("id" TEXT PRIMARY KEY, "name" TEXT NOT NULL, "baseCurrencyCode" TEXT, "taxId" TEXT);
 CREATE TABLE "user" ("id" TEXT PRIMARY KEY, "email" TEXT NOT NULL, "firstName" TEXT, "active" BOOLEAN DEFAULT TRUE);
+CREATE UNIQUE INDEX "index_user_email_key" ON "user"("email");
 CREATE TABLE "userToCompany" ("userId" TEXT, "companyId" TEXT, "role" "role");
 CREATE TABLE "employee" ("id" TEXT, "companyId" TEXT, "active" BOOLEAN DEFAULT FALSE, "pin" TEXT);
 CREATE TABLE "userPermission" ("id" TEXT PRIMARY KEY, "permissions" JSONB DEFAULT '{}');
@@ -559,23 +673,35 @@ GRANT SELECT ("companyId", "purchaseOrderId", "promisedDate", "requiredDate") ON
 GRANT SELECT ("id", "companyId", "jobId", "status", "itemId", "dueDate") ON "job" TO service_role;
 """
 
-DATA = """
+DATA = Template("""
 INSERT INTO "company" VALUES ('c1', 'Example Works', 'USD', 'T-1'), ('c2', 'Second Shop', 'EUR', 'T-2');
 INSERT INTO "user" ("id", "email", "active") VALUES
-  ('u1', 'Ada@Example.com', TRUE), ('u2', 'bo@example.com', TRUE), ('u3', 'cy@example.com', FALSE),
-  ('u4', 'di@example.com', TRUE), ('u5', 'ed@example.com', TRUE), ('u6', 'fa@other.example', TRUE),
-  ('u7', 'gu@sub.example.com', TRUE);
-INSERT INTO "userToCompany" VALUES ('u1', 'c1', 'employee'), ('u1', 'c2', 'employee'), ('u2', 'c1', 'employee'),
-  ('u3', 'c1', 'employee'), ('u4', 'c1', 'employee'), ('u5', 'c1', 'customer'), ('u6', 'c1', 'employee'),
-  ('u7', 'c1', 'employee');
-INSERT INTO "employee" ("id", "companyId", "active") VALUES ('u1', 'c1', TRUE), ('u1', 'c2', TRUE),
-  ('u2', 'c1', TRUE), ('u3', 'c1', TRUE), ('u4', 'c1', FALSE), ('u5', 'c1', TRUE), ('u6', 'c1', TRUE),
-  ('u7', 'c1', TRUE);
+  ('$u1', 'Ada@Example.com', TRUE), ('$u2', 'bo@example.com', TRUE), ('$u3', 'cy@example.com', FALSE),
+  ('$u4', 'di@example.com', TRUE), ('$u5', 'ed@example.com', TRUE), ('$u6', 'fa@other.example', TRUE),
+  ('$u7', 'gu@sub.example.com', TRUE),
+  -- Profile emails edited by their owners: one claims Ada's address, one an address with no Carbon account.
+  ('$u8', 'ada@example.com', TRUE), ('$u9', 'nobody@example.com', TRUE),
+  -- An unconfirmed sign-in email, and no sign-in identity at all.
+  ('$u10', 'una@example.com', TRUE), ('$u11', 'noa@example.com', TRUE);
+INSERT INTO auth."users" ("id", "email", "email_confirmed_at", "encrypted_password") VALUES
+  ('$u1', 'ada@example.com', now(), 'x'), ('$u2', 'BO@example.com', now(), 'x'), ('$u3', 'cy@example.com', now(), 'x'),
+  ('$u4', 'di@example.com', now(), 'x'), ('$u5', 'ed@example.com', now(), 'x'), ('$u6', 'fa@other.example', now(), 'x'),
+  ('$u7', 'gu@sub.example.com', now(), 'x'), ('$u8', 'mallory@example.com', now(), 'x'),
+  ('$u9', 'trent@example.com', now(), 'x'), ('$u10', 'una@example.com', NULL, 'x');
+INSERT INTO "userToCompany" VALUES ('$u1', 'c1', 'employee'), ('$u1', 'c2', 'employee'), ('$u2', 'c1', 'employee'),
+  ('$u3', 'c1', 'employee'), ('$u4', 'c1', 'employee'), ('$u5', 'c1', 'customer'), ('$u6', 'c1', 'employee'),
+  ('$u7', 'c1', 'employee'), ('$u8', 'c1', 'employee'), ('$u9', 'c1', 'employee'), ('$u10', 'c1', 'employee'),
+  ('$u11', 'c1', 'employee');
+INSERT INTO "employee" ("id", "companyId", "active") VALUES ('$u1', 'c1', TRUE), ('$u1', 'c2', TRUE),
+  ('$u2', 'c1', TRUE), ('$u3', 'c1', TRUE), ('$u4', 'c1', FALSE), ('$u5', 'c1', TRUE), ('$u6', 'c1', TRUE),
+  ('$u7', 'c1', TRUE), ('$u8', 'c1', TRUE), ('$u9', 'c1', TRUE), ('$u10', 'c1', TRUE), ('$u11', 'c1', TRUE);
 INSERT INTO "userPermission" VALUES
-  ('u1', '{"sales_view": ["c1"], "production_view": ["c1", "c2"], "purchasing_view": ["c2"],
+  ('$u1', '{"sales_view": ["c1"], "production_view": ["c1", "c2"], "purchasing_view": ["c2"],
            "invoicing_update": ["c1"], "settings_view": "c1", "accounting_view": []}'),
-  ('u3', '{"sales_view": ["c1"]}'), ('u4', '{"sales_view": ["c1"]}'), ('u5', '{"sales_view": ["c1"]}'),
-  ('u6', '{"sales_view": ["c1"]}'), ('u7', '{"sales_view": ["c1"]}');
+  ('$u3', '{"sales_view": ["c1"]}'), ('$u4', '{"sales_view": ["c1"]}'), ('$u5', '{"sales_view": ["c1"]}'),
+  ('$u6', '{"sales_view": ["c1"]}'), ('$u7', '{"sales_view": ["c1"]}'),
+  ('$u8', '{"accounting_view": ["c1"], "sales_view": ["c1"]}'), ('$u9', '{"sales_view": ["c1"]}'),
+  ('$u10', '{"production_view": ["c1"]}'), ('$u11', '{"sales_view": ["c1"]}');
 INSERT INTO "customer" VALUES ('cu1', 'c1', 'Acme Customer', 'USD', 0.1);
 INSERT INTO "supplier" VALUES ('su1', 'c1', 'Bolt Supply', 'USD', 0.2);
 INSERT INTO "item" VALUES ('i1', 'c1', 'PART-1', 'PART-1.A', 'Bracket'), ('i2', 'c1', NULL, NULL, 'Unnamed widget');
@@ -598,7 +724,7 @@ INSERT INTO "job" VALUES ('j1', 'c1', 'J-1', 'In Progress', 'i1', '2026-10-19', 
   ('j5', 'c1', 'J-5', 'Overdue', 'i1', NULL, 1), ('j6', 'c1', 'J-6', 'Planned', 'i2', NULL, 1),
   ('j7', 'c1', 'J-7', 'Ready', NULL, NULL, 1), ('j8', 'c1', 'J-8', 'Draft', 'i1', NULL, 1),
   ('j9', 'c1', 'J-9', 'Paused', 'i1', NULL, 1);
-"""
+""").substitute(USERS)
 
 
 if __name__ == "__main__":

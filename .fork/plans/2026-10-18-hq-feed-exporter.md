@@ -27,6 +27,13 @@ schema, RLS, authentication or permission logic changes.
       container started like the deployment's, `supabase_admin` over 127.0.0.1
       switches to `service_role` and reads migration-created tables with RLS
       enabled.
+- [x] Security review follow-up: key entitlements on the confirmed
+      `auth.users.email` instead of the user-editable `public."user".email`, and
+      drop and count disagreements. Add `carbon-tailnet-routes.timer`, which
+      re-checks routes independently of the feed. A disposable
+      `supabase/postgres` plus `supabase/gotrue:v2.189.0` stack confirmed that the
+      migrated `auth.users` has `email_confirmed_at`, that `service_role` cannot read
+      it, and that the admin two-column read works.
 - [ ] Not verifiable locally: the `docker compose exec` and secrets-shim wrapper
       on the VM, systemd timer installation, Tailscale route installation on the
       VM, TLS to HQ, and HQ's acceptance of a push. These need HQ's endpoint (plan

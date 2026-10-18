@@ -9,8 +9,9 @@ unexpected route could divert this host's own traffic into the tailnet.
 
 `apply` (run by bootstrap.sh on every deployment) turns route acceptance on only
 when TAILNET_ACCEPT_ROUTES lists networks, then refuses any accepted route outside
-that list or overlapping a network this host reaches directly. `check` (run before
-each HQ push) repeats the verification. Either one turns acceptance back off
+that list or overlapping a network this host reaches directly. `check` repeats the
+verification every five minutes from carbon-tailnet-routes.timer whenever the
+allowlist is set, and before each HQ push. Either one turns acceptance back off
 before failing. An empty or absent list keeps --accept-routes=false.
 """
 

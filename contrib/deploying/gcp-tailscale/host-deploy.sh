@@ -186,19 +186,63 @@ verify_tailnet() {
     || fail "Tailscale Funnel must be disabled for this private deployment."
 }
 
-# Optional push of money-free projections and entitlements to HQ (hq_feed.py),
-# every five minutes from the host, which is the side that routes to HQ over
-# the tailnet. Installed only by a verified release; removed when the private
-# configuration no longer sets both HQ_INGEST_URL and HQ_INGEST_CARBON_KEY.
-# The units never Require/Want Docker: a timer firing while a maintenance
-# snapshot has Docker stopped must fail, not start Docker again.
-configure_hq_feed() {
-  if python3 - "$CONFIG" <<'PY'
+# Host timers, installed only by a verified release and removed when the
+# private configuration no longer enables them. They run on the host because
+# only the host routes over the tailnet. No unit Requires/Wants Docker: a timer
+# firing while a maintenance snapshot has Docker stopped must fail, not start it.
+host_timer_enabled() {
+  python3 - "$CONFIG" "$1" <<'PY'
 import json, sys
 config = json.load(open(sys.argv[1]))
-sys.exit(0 if config.get("HQ_INGEST_URL") and config.get("HQ_INGEST_CARBON_KEY") else 1)
+if sys.argv[2] == "carbon-hq-feed":
+    enabled = config.get("HQ_INGEST_URL") and config.get("HQ_INGEST_CARBON_KEY")
+else:
+    enabled = config.get("TAILNET_ACCEPT_ROUTES")
+sys.exit(0 if enabled else 1)
 PY
-  then
+}
+
+write_five_minute_timer() {
+  cat > "/etc/systemd/system/$1.timer" <<EOF
+[Unit]
+Description=$2
+[Timer]
+OnCalendar=*:0/5
+AccuracySec=30s
+[Install]
+WantedBy=timers.target
+EOF
+}
+
+remove_host_timer() {
+  systemctl disable --now "$1.timer" >/dev/null 2>&1 || true
+  rm -f "/etc/systemd/system/$1.service" "/etc/systemd/system/$1.timer"
+}
+
+configure_host_timers() {
+  # Re-verify accepted tailnet routes (tailnet_routes.py) independently of any
+  # consumer, so a conflicting route approved after deployment is turned off
+  # within five minutes even when the HQ feed is disabled.
+  if host_timer_enabled carbon-tailnet-routes; then
+    cat > /etc/systemd/system/carbon-tailnet-routes.service <<'EOF'
+[Unit]
+Description=Verify accepted tailnet routes against TAILNET_ACCEPT_ROUTES
+After=tailscaled.service
+RequiresMountsFor=/var/lib/carbon
+[Service]
+Type=oneshot
+UMask=0077
+NoNewPrivileges=yes
+PrivateTmp=yes
+TimeoutStartSec=60
+ExecStart=/usr/local/sbin/carbon-tailnet-routes check /var/lib/carbon/config.json
+EOF
+    write_five_minute_timer carbon-tailnet-routes "Verify accepted tailnet routes every five minutes"
+  else
+    remove_host_timer carbon-tailnet-routes
+  fi
+  # Optional push of money-free projections and entitlements to HQ (hq_feed.py).
+  if host_timer_enabled carbon-hq-feed; then
     install -m 0755 "$HERE/hq_feed.py" /usr/local/sbin/carbon-hq-feed
     cat > /etc/systemd/system/carbon-hq-feed.service <<'EOF'
 [Unit]
@@ -215,23 +259,18 @@ TimeoutStartSec=180
 ExecStartPre=/usr/local/sbin/carbon-tailnet-routes check /var/lib/carbon/config.json
 ExecStart=/usr/local/sbin/carbon-hq-feed
 EOF
-    cat > /etc/systemd/system/carbon-hq-feed.timer <<'EOF'
-[Unit]
-Description=Push Carbon feed projections to HQ every five minutes
-[Timer]
-OnCalendar=*:0/5
-AccuracySec=30s
-[Install]
-WantedBy=timers.target
-EOF
-    systemctl daemon-reload
-    systemctl enable --now carbon-hq-feed.timer
-    printf '%s\n' "HQ feed timer installed; inspect it with journalctl -u carbon-hq-feed."
+    write_five_minute_timer carbon-hq-feed "Push Carbon feed projections to HQ every five minutes"
   else
-    systemctl disable --now carbon-hq-feed.timer >/dev/null 2>&1 || true
-    rm -f /etc/systemd/system/carbon-hq-feed.service /etc/systemd/system/carbon-hq-feed.timer /usr/local/sbin/carbon-hq-feed
-    systemctl daemon-reload
+    remove_host_timer carbon-hq-feed
+    rm -f /usr/local/sbin/carbon-hq-feed
   fi
+  systemctl daemon-reload
+  for timer in carbon-tailnet-routes carbon-hq-feed; do
+    if [ -f "/etc/systemd/system/$timer.timer" ]; then
+      systemctl enable --now "$timer.timer"
+      printf '%s\n' "$timer timer installed; inspect it with journalctl -u $timer."
+    fi
+  done
 }
 
 check_stack() {
@@ -357,7 +396,7 @@ case "$ACTION" in
   finalize)
     [ -f "$CURRENT" ] || fail "No applied deployment to finalize."
     python3 "$HERE/host_release.py" finalize "$CONFIG" "$CURRENT" "$STATE/runtime/release-manifest.json"
-    configure_hq_feed
+    configure_host_timers
     ;;
   start)
     [ -f "$CURRENT" ] || fail "No existing deployment to start."
