@@ -95,6 +95,9 @@ systemctl enable --now tailscaled.service
 if ! tailscale status --json | python3 -c 'import json,sys; sys.exit(0 if json.load(sys.stdin).get("BackendState") == "Running" else 1)'; then
   [[ -s /var/lib/carbon/secrets/tailscale_auth_key ]] || { echo 'Supply a new preauthorized TAILSCALE_AUTH_KEY in private secrets configuration' >&2; exit 1; }
   hostname=$(python3 -c 'import json; print(json.load(open("/var/lib/carbon/config.json"))["TAILSCALE_HOSTNAME"])')
+  # Enrollment accepts no subnet routes. Reaching HQ (the feed push, and later
+  # the HQ login back channel) needs --accept-routes on Linux; tailnet_routes.py
+  # below turns it on only for the private TAILNET_ACCEPT_ROUTES allowlist.
   tailscale up --auth-key=file:/var/lib/carbon/secrets/tailscale_auth_key --hostname="$hostname" --accept-dns=false --accept-routes=false --ssh=false --timeout=120s
 fi
 rm -f /var/lib/carbon/secrets/tailscale_auth_key
@@ -168,5 +171,10 @@ fi
 # Commit mode bits are not assumed for inherited scripts mounted in containers.
 chmod 755 "$release/contrib/deploying/simple-docker-caddy/bin/secrets-entrypoint.sh" "$release/contrib/deploying/simple-docker-caddy/postgres/"*.sh
 install -m 0755 "$release/contrib/deploying/gcp-tailscale/certificates.sh" /usr/local/sbin/carbon-certificates
+# Accept tailnet subnet routes (--accept-routes) only when the private
+# TAILNET_ACCEPT_ROUTES lists them; this is how the host reaches HQ. Routes
+# outside that list turn acceptance back off and fail the deployment.
+install -m 0755 "$release/contrib/deploying/gcp-tailscale/tailnet_routes.py" /usr/local/sbin/carbon-tailnet-routes
+/usr/local/sbin/carbon-tailnet-routes apply /var/lib/carbon/config.json
 touch /etc/carbon-bootstrap-v1
 echo 'VM ready; configuration and node identity retained on the private data disk.'

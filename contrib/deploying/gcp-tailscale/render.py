@@ -23,6 +23,7 @@ import private_postgres
 import payment_sync
 import invoice_inference
 import portal_receiver
+import hq_feed
 
 
 def write_private(path, content):
@@ -84,6 +85,8 @@ def initialize_secrets(config, directory):
         if config.get(key):
             write_private(directory / name, config[key])
         secret_file(directory, name, config.get(key, ""))
+    # Host-only key for the HQ feed timer; written or removed with the config.
+    hq_feed.store_secret(config, directory, write_private)
 
 
 def render(config, repo, output, state=Path("/var/lib/carbon"), *, materialize=True):
@@ -101,6 +104,7 @@ def render(config, repo, output, state=Path("/var/lib/carbon"), *, materialize=T
     private_postgres.validate(config)
     payment_sync.validate(config)
     portal_receiver.validate(config)
+    hq_feed.validate(config)
     repo, output = repo.resolve(), output.resolve()
     names = ("ERP_HOST", "MES_HOST", "SUPABASE_HOST", "AUTH_ALLOWED_GOOGLE_DOMAIN")
     for key in names:

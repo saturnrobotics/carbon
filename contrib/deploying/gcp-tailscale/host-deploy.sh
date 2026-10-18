@@ -186,6 +186,54 @@ verify_tailnet() {
     || fail "Tailscale Funnel must be disabled for this private deployment."
 }
 
+# Optional push of money-free projections and entitlements to HQ (hq_feed.py),
+# every five minutes from the host, which is the side that routes to HQ over
+# the tailnet. Installed only by a verified release; removed when the private
+# configuration no longer sets both HQ_INGEST_URL and HQ_INGEST_CARBON_KEY.
+# The units never Require/Want Docker: a timer firing while a maintenance
+# snapshot has Docker stopped must fail, not start Docker again.
+configure_hq_feed() {
+  if python3 - "$CONFIG" <<'PY'
+import json, sys
+config = json.load(open(sys.argv[1]))
+sys.exit(0 if config.get("HQ_INGEST_URL") and config.get("HQ_INGEST_CARBON_KEY") else 1)
+PY
+  then
+    install -m 0755 "$HERE/hq_feed.py" /usr/local/sbin/carbon-hq-feed
+    cat > /etc/systemd/system/carbon-hq-feed.service <<'EOF'
+[Unit]
+Description=Push Carbon open-record projections and entitlements to HQ
+After=docker.service tailscaled.service
+RequiresMountsFor=/var/lib/carbon
+ConditionPathExists=/var/lib/carbon/runtime/compose.json
+[Service]
+Type=oneshot
+UMask=0077
+NoNewPrivileges=yes
+PrivateTmp=yes
+TimeoutStartSec=180
+ExecStartPre=/usr/local/sbin/carbon-tailnet-routes check /var/lib/carbon/config.json
+ExecStart=/usr/local/sbin/carbon-hq-feed
+EOF
+    cat > /etc/systemd/system/carbon-hq-feed.timer <<'EOF'
+[Unit]
+Description=Push Carbon feed projections to HQ every five minutes
+[Timer]
+OnCalendar=*:0/5
+AccuracySec=30s
+[Install]
+WantedBy=timers.target
+EOF
+    systemctl daemon-reload
+    systemctl enable --now carbon-hq-feed.timer
+    printf '%s\n' "HQ feed timer installed; inspect it with journalctl -u carbon-hq-feed."
+  else
+    systemctl disable --now carbon-hq-feed.timer >/dev/null 2>&1 || true
+    rm -f /etc/systemd/system/carbon-hq-feed.service /etc/systemd/system/carbon-hq-feed.timer /usr/local/sbin/carbon-hq-feed
+    systemctl daemon-reload
+  fi
+}
+
 check_stack() {
   verify_tailnet
   for service in postgres storage gotrue postgrest redis inngest erp mes kong caddy; do
@@ -309,6 +357,7 @@ case "$ACTION" in
   finalize)
     [ -f "$CURRENT" ] || fail "No applied deployment to finalize."
     python3 "$HERE/host_release.py" finalize "$CONFIG" "$CURRENT" "$STATE/runtime/release-manifest.json"
+    configure_hq_feed
     ;;
   start)
     [ -f "$CURRENT" ] || fail "No existing deployment to start."

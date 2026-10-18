@@ -99,7 +99,8 @@ it preserves any existing configuration:
    on the data disk; later deploys do not require a fresh enrollment key while
    the node is still authenticated. Do not enable Funnel or share this node
    outside the organization. Ensure existing split DNS settings resolve the
-   three DNS-only records. No app connector or exit node is needed.
+   three DNS-only records. No app connector or exit node is needed. The VM
+   accepts no subnet routes unless the optional [HQ feed](#hq-feed) lists them.
 
    ```json
    {
@@ -431,6 +432,56 @@ with a plain `401 Unauthorized` on any verification failure, and with
 body never says why. Enrolling users and registering the portal services'
 identities happens in [the portal deployment](../portal/README.md); this
 deployment only carries ERP's half of the contract.
+
+## HQ feed
+
+An optional host timer pushes a money-free snapshot of open sales orders,
+purchase orders and jobs, plus each employee's Carbon permissions, to HQ, a
+separately deployed internal hub. HQ shows a record only when its own policy and
+these Carbon permissions both allow it. The payload and token contract is in
+[the fork spec](../../../.fork/specs/2026-10-18-hq-feed-exporter.md). The
+exporter, `hq_feed.py`, only reads permissions; it changes no Carbon
+authentication or permission logic.
+
+Every five minutes `carbon-hq-feed.timer` reads the database once, as the
+service role, in a single read-only REPEATABLE READ transaction. It POSTs the
+snapshot (at most 8 MiB) to `HQ_INGEST_URL` with an HS256 bearer token that
+lasts 60 seconds, carries a fresh `jti` for HQ's replay check, and binds the
+SHA-256 of the exact body. No
+price, cost, rate, total, currency or tax column is read or sent. Only active
+employees whose email is in the login domain are exported. Any HTTP status other
+than 200 or 204 fails the run. Logs show counts and the HTTP status, never the
+token, the key or the body.
+
+To enable it:
+
+1. Generate a key with `openssl rand -hex 32`. Store it in HQ's secret store and
+   in the ignored `.local/secrets.json` as `HQ_INGEST_CARBON_KEY`. Both sides use
+   the same bytes; do not paste the key anywhere else.
+2. In the ignored `.local/config.json`, set `HQ_INGEST_URL` to the ingest URL HQ
+   publishes and `TAILNET_ACCEPT_ROUTES` to the subnet route that carries HQ's
+   address, for example (synthetic) `["10.20.0.10/32"]`. `HQ_INGEST_EMAIL_DOMAIN`
+   is optional and defaults to `AUTH_ALLOWED_GOOGLE_DOMAIN`.
+3. In the tailnet policy, grant `tag:carbon` TCP 443 to HQ's address.
+4. Run `make deploy`. These are host settings rather than app services, so
+   adding or changing them selects the coordinated maintenance rollout.
+5. Over IAP SSH, check `sudo systemctl list-timers carbon-hq-feed.timer` and
+   `sudo journalctl -u carbon-hq-feed`. `sudo carbon-hq-feed --dry-run` prints the
+   payload and sends nothing; it shows private records, so read it only there.
+
+Removing `HQ_INGEST_URL` or the key and redeploying removes the timer and the
+stored key. To check a local development database instead, export the `PG*`
+variables for it and run
+`python3 contrib/deploying/gcp-tailscale/hq_feed.py --dry-run --local-psql --email-domain example.com`.
+
+Linux Tailscale reaches an address advertised as another node's subnet route
+only with `--accept-routes`, and installs accepted routes ahead of the host's
+own. Enrollment keeps route acceptance off. Each deployment turns it on only when
+`TAILNET_ACCEPT_ROUTES` lists networks, then turns it off again and fails if any
+accepted route is outside that list or overlaps the VM subnet, Docker networks,
+link-local metadata or private PostgreSQL clients. The feed timer repeats this
+check before every push, so a conflicting route approved later is turned off
+within five minutes. Entries must be private /24 (IPv6 /64) or narrower networks.
 
 ## Private-network limitations
 

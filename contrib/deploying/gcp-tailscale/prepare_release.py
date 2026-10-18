@@ -26,6 +26,8 @@ MAINTENANCE_PATHS = ["packages/database/supabase/migrations", "packages/database
                      "packages/database/supabase/config.toml", "packages/dev/docker",
                      HERE_REL + "bootstrap.sh", HERE_REL + "host-deploy.sh", HERE_REL + "private_postgres.py",
                      HERE_REL + "certificates.sh", HERE_REL + "private-client-isolation.sql",
+                     # Host-installed timer and route guard: no service owns them.
+                     HERE_REL + "hq_feed.py", HERE_REL + "tailnet_routes.py",
                      HERE_REL + "auth/google-domain-hook.sql", HERE_REL + "auth/edge-main"]
 COMMON_CONFIG = {"ERP_HOST", "MES_HOST", "SUPABASE_HOST", "AUTH_ALLOWED_GOOGLE_DOMAIN", "RESEND_DOMAIN"}
 APP_CONFIG = (COMMON_CONFIG | payment_sync.CONFIG_KEYS | invoice_inference.CONFIG_KEYS | portal_receiver.CONFIG_KEYS
