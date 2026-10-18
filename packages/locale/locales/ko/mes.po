@@ -1344,6 +1344,9 @@ msgstr "이 오버레이 표시"
 msgid "Sign in with Google"
 msgstr "Google로 로그인"
 
+msgid "Sign in with HQ"
+msgstr "HQ로 로그인"
+
 msgid "Sign in with Outlook"
 msgstr "Outlook으로 로그인"
 

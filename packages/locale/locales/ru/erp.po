@@ -16250,6 +16250,9 @@ msgstr "Войдите с использованием биометрии вме
 msgid "Sign in with Google"
 msgstr "Войти с помощью Google"
 
+msgid "Sign in with HQ"
+msgstr "Войти с помощью HQ"
+
 msgid "Sign in with Outlook"
 msgstr "Войти через Outlook"
 

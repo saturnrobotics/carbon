@@ -30,6 +30,18 @@ IDENTITY = {
     "email_verified": True,
     "custom_claims": {"hd": "example.com"},
 }
+# GoTrue v2.189.0's Keycloak provider stores the HQ identity provider's userinfo:
+# standard claims at the top level, every other claim under custom_claims.
+KEYCLOAK_IDENTITY = {
+    "iss": "https://hq.example.com/oidc/keycloak",
+    "sub": "synthetic-google-subject",
+    "provider_id": "synthetic-google-subject",
+    "name": "Synthetic Employee",
+    "full_name": "Synthetic Employee",
+    "email": EMAIL,
+    "email_verified": True,
+    "custom_claims": {"hd": "example.com", "hq_capabilities": ["read:app"]},
+}
 
 
 def literal(value):
@@ -175,8 +187,85 @@ class GoogleDomainHookTest(unittest.TestCase):
                 claims = {**CLAIMS, "amr": amr}
                 self.assert_denied(method="token_refresh", claims=claims)
 
-    def test_rejects_non_google_identity(self):
-        self.sql("UPDATE auth.identities SET provider = 'azure';")
+    def test_rejects_identities_from_other_providers(self):
+        for provider in ("azure", "github", "email", "sso:synthetic", "Keycloak", "keycloak ", "Google"):
+            with self.subTest(provider=provider):
+                self.sql(f"UPDATE auth.identities SET provider = {literal(provider)};")
+                self.assert_denied()
+
+    def use_keycloak(self, identity=None):
+        self.sql(
+            "UPDATE auth.identities SET provider = 'keycloak', identity_data = "
+            f"{literal(KEYCLOAK_IDENTITY if identity is None else identity)}::JSONB;"
+        )
+
+    def test_keycloak_oauth_refresh_and_mfa_preserve_all_claims(self):
+        self.use_keycloak()
+        for method in ("oauth", "token_refresh", "totp"):
+            with self.subTest(method=method):
+                self.assertEqual(self.hook(method=method), {"claims": CLAIMS})
+
+    def test_keycloak_still_requires_an_oauth_session(self):
+        self.use_keycloak()
+        for method in ("password", "magiclink", "sso/saml", "otp", None):
+            with self.subTest(method=method):
+                self.assert_denied(method=method)
+        self.assert_denied(method="token_refresh", claims={**CLAIMS, "amr": [{"method": "password"}]})
+
+    def test_keycloak_rejects_wrong_or_missing_hosted_domain(self):
+        for custom_claims in (
+            {"hd": "other.example"}, {"hd": "sub.example.com"}, {"hd": ""}, {"hd": None},
+            {"hq_capabilities": ["read:app"]}, None,
+        ):
+            with self.subTest(custom_claims=custom_claims):
+                identity = {**KEYCLOAK_IDENTITY, "custom_claims": custom_claims}
+                if custom_claims is None:
+                    del identity["custom_claims"]
+                self.use_keycloak(identity)
+                self.assert_denied()
+
+    def test_keycloak_hosted_domain_must_be_inside_custom_claims(self):
+        identity = {**KEYCLOAK_IDENTITY, "hd": "example.com", "custom_claims": {}}
+        self.use_keycloak(identity)
+        self.assert_denied()
+
+    def test_keycloak_requires_boolean_verified_email(self):
+        for verified in (False, "true", None):
+            with self.subTest(verified=verified):
+                self.use_keycloak({**KEYCLOAK_IDENTITY, "email_verified": verified})
+                self.assert_denied()
+        identity = dict(KEYCLOAK_IDENTITY)
+        del identity["email_verified"]
+        self.use_keycloak(identity)
+        self.assert_denied()
+
+    def test_keycloak_identity_email_must_match_account(self):
+        for email in ("someone.else@example.com", "employee@other.example", "", None):
+            with self.subTest(email=email):
+                self.use_keycloak({**KEYCLOAK_IDENTITY, "email": email})
+                self.assert_denied()
+
+    def test_keycloak_account_must_be_confirmed_and_on_the_domain(self):
+        self.use_keycloak()
+        self.sql("UPDATE auth.users SET email_confirmed_at = NULL;")
+        self.assert_denied()
+        self.sql("UPDATE auth.users SET email_confirmed_at = CURRENT_TIMESTAMP, email = 'employee@other.example';")
+        self.use_keycloak({**KEYCLOAK_IDENTITY, "email": "employee@other.example",
+                           "custom_claims": {"hd": "other.example"}})
+        self.assert_denied(claims={**CLAIMS, "email": "employee@other.example"})
+
+    def test_account_with_google_and_keycloak_identities_is_admitted_by_either(self):
+        # AMR cannot name the session's provider, so one qualifying identity from
+        # either enabled provider admits the account (documented in the hook).
+        self.sql(f"""
+            INSERT INTO auth.identities VALUES (
+              {literal(USER_ID)}, 'keycloak', {literal(KEYCLOAK_IDENTITY)}::JSONB
+            );
+        """)
+        self.assertEqual(self.hook(), {"claims": CLAIMS})
+        self.sql("UPDATE auth.identities SET identity_data = identity_data || '{\"email_verified\":false}' WHERE provider = 'google';")
+        self.assertEqual(self.hook(), {"claims": CLAIMS})
+        self.sql("UPDATE auth.identities SET identity_data = identity_data || '{\"email_verified\":false}' WHERE provider = 'keycloak';")
         self.assert_denied()
 
     def test_rejects_missing_google_identity_even_with_user_metadata(self):

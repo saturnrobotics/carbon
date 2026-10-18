@@ -138,6 +138,85 @@ class PrivateStackTests(unittest.TestCase):
         self.assertNotIn("PORTAL_RECEIVER_AUDIENCE", self.stack["services"]["mes"]["environment"])
         self.assertNotIn("PORTAL_TRUSTED_CALLERS_JSON", self.stack["services"]["mes"]["environment"])
 
+    HQ = {"HQ_SIGN_IN_ENABLED": "true", "HQ_ISSUER": "https://hq.example.com",
+          "HQ_OIDC_CARBON_SECRET": "synthetic-hq-client-secret-" + "x" * 16}
+
+    def test_hq_sign_in_is_off_by_default_and_staged_inputs_change_nothing(self):
+        for app in ("erp", "mes"):
+            self.assertEqual(self.stack["services"][app]["environment"]["AUTH_PROVIDERS"], "google")
+        for name in ("gotrue", "gotrue-bootstrap"):
+            self.assertFalse([key for key in self.stack["services"][name]["environment"] if "KEYCLOAK" in key])
+        self.assertNotIn("hq_oidc_carbon_secret", self.stack["secrets"])
+        staged = {**self.config, **self.HQ, "HQ_SIGN_IN_ENABLED": "false"}
+        stack, files = module.render(staged, REPO, self.output, self.state, materialize=False)
+        self.assertEqual(stack, self.stack)
+        self.assertNotIn(self.HQ["HQ_OIDC_CARBON_SECRET"], json.dumps(files))
+
+    def test_hq_sign_in_keeps_google_as_break_glass_and_changes_only_auth(self):
+        stack, files = module.render({**self.config, **self.HQ}, REPO, self.output, self.state, materialize=False)
+        secret = str(self.state / "secrets/hq_oidc_carbon_secret")
+        self.assertEqual(files.pop(secret), self.HQ["HQ_OIDC_CARBON_SECRET"])
+        self.assertNotIn(self.HQ["HQ_OIDC_CARBON_SECRET"], json.dumps(stack))
+        auth, baseline_auth = stack["services"]["gotrue"], self.stack["services"]["gotrue"]
+        self.assertEqual({key: auth["environment"].pop(key) for key in list(auth["environment"]) if "KEYCLOAK" in key}, {
+            "GOTRUE_EXTERNAL_KEYCLOAK_ENABLED": "true",
+            "GOTRUE_EXTERNAL_KEYCLOAK_CLIENT_ID": "carbon",
+            "GOTRUE_EXTERNAL_KEYCLOAK_SECRET": "__HQ_OIDC_CARBON_SECRET__",
+            "GOTRUE_EXTERNAL_KEYCLOAK_URL": "https://hq.example.com/oidc/keycloak",
+            "GOTRUE_EXTERNAL_KEYCLOAK_REDIRECT_URI": "https://api.example.com/auth/v1/callback",
+        })
+        self.assertEqual(auth["environment"]["GOTRUE_EXTERNAL_GOOGLE_ENABLED"], "true")
+        self.assertEqual(auth["secrets"], baseline_auth["secrets"] + ["hq_oidc_carbon_secret"])
+        auth["secrets"] = baseline_auth["secrets"]
+        self.assertEqual(stack["secrets"].pop("hq_oidc_carbon_secret"), {"file": secret})
+        for app in ("erp", "mes"):
+            self.assertEqual(stack["services"][app]["environment"].pop("AUTH_PROVIDERS"), "hq,google")
+            self.stack["services"][app]["environment"].pop("AUTH_PROVIDERS")
+        # Bootstrap, the apps and every other service are otherwise byte-identical.
+        self.assertEqual(stack, self.stack)
+
+    def test_hq_cutover_disables_google_but_keeps_its_credentials_for_break_glass(self):
+        config = {**self.config, **self.HQ, "GOOGLE_SIGN_IN_ENABLED": "false"}
+        module.render(config, REPO, self.output, self.state)
+        stack = json.loads((self.output / "compose.json").read_text())
+        auth = stack["services"]["gotrue"]
+        self.assertEqual(auth["environment"]["GOTRUE_EXTERNAL_GOOGLE_ENABLED"], "false")
+        self.assertEqual(auth["environment"]["GOTRUE_EXTERNAL_KEYCLOAK_ENABLED"], "true")
+        self.assertIn("google_client_secret", auth["secrets"])
+        for app in ("erp", "mes"):
+            self.assertEqual(stack["services"][app]["environment"]["AUTH_PROVIDERS"], "hq")
+            self.assertNotIn("hq_oidc_carbon_secret", stack["services"][app].get("secrets", []))
+        bootstrap = stack["services"]["gotrue-bootstrap"]
+        self.assertEqual(bootstrap["environment"]["GOTRUE_EXTERNAL_GOOGLE_ENABLED"], "false")
+        self.assertFalse([key for key in bootstrap["environment"] if "KEYCLOAK" in key])
+        self.assertNotIn("hq_oidc_carbon_secret", bootstrap["secrets"])
+        self.assertEqual([name for name, service in stack["services"].items() if "hq_oidc_carbon_secret" in service.get("secrets", [])], ["gotrue"])
+        path = self.state / "secrets/hq_oidc_carbon_secret"
+        self.assertEqual(path.read_text(), self.HQ["HQ_OIDC_CARBON_SECRET"])
+        self.assertEqual(path.stat().st_mode & 0o777, 0o444)
+        self.assertNotIn(self.HQ["HQ_OIDC_CARBON_SECRET"], (self.output / "compose.json").read_text())
+        subprocess.run(["docker", "compose", "--file", str(self.output / "compose.json"), "config", "--quiet"], check=True)
+
+    def test_hq_sign_in_inputs_fail_closed_without_echoing_the_secret(self):
+        cases = [
+            {"HQ_SIGN_IN_ENABLED": "1"}, {"HQ_SIGN_IN_ENABLED": True}, {"GOOGLE_SIGN_IN_ENABLED": "no"},
+            {"HQ_ISSUER": ""}, {"HQ_ISSUER": "http://hq.example.com"}, {"HQ_ISSUER": "https://hq.example.com/"},
+            {"HQ_ISSUER": "https://hq.example.com/oidc/keycloak"}, {"HQ_ISSUER": "https://HQ.example.com"},
+            {"HQ_ISSUER": "https://hq.example.com:8443"}, {"HQ_ISSUER": "https://user@hq.example.com"},
+            {"HQ_OIDC_CARBON_SECRET": ""}, {"HQ_OIDC_CARBON_SECRET": "too-short-synthetic-secret"},
+            {"HQ_OIDC_CARBON_SECRET": "replace-with-the-hq-oidc-client-secret-or-remove-this-key"},
+            {"HQ_OIDC_CARBON_SECRET": "synthetic secret with spaces and enough length"},
+            {"HQ_OIDC_CARBON_SECRET": "synthetic-hq-client-secret\n" + "x" * 32},
+            {"HQ_SIGN_IN_ENABLED": "false", "GOOGLE_SIGN_IN_ENABLED": "false"},
+        ]
+        for changes in cases:
+            with self.subTest(changes=changes):
+                with patch.object(module, "initialize_secrets") as initialize:
+                    with self.assertRaises(ValueError) as raised:
+                        module.render({**self.config, **self.HQ, **changes}, REPO, self.output, self.state)
+                    initialize.assert_not_called()
+                self.assertNotIn("synthetic-hq-client-secret", str(raised.exception))
+
     def test_only_tailnet_https_is_published(self):
         published = [(name, svc["ports"]) for name, svc in self.stack["services"].items() if "ports" in svc]
         self.assertEqual(published, [("caddy", [{"target": 443, "published": "443", "host_ip": "100.72.10.8", "protocol": "tcp"}])])

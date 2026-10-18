@@ -53,6 +53,10 @@ vi.mock("@carbon/auth/session.server", () => ({
   flash: async () => ({})
 }));
 vi.mock("@carbon/auth/users.server", () => ({ getUserByEmail: auth.user }));
+vi.mock("@carbon/auth/saturn/hq-sign-in", () => ({
+  HqSignInButton: () => null,
+  useHqAutoStart: vi.fn()
+}));
 vi.mock("@carbon/auth/verification.server", () => ({}));
 vi.mock("@carbon/ee/sso.server", () => ({
   isSsoEnabled: () => auth.sso,
@@ -89,13 +93,16 @@ vi.mock("@simplewebauthn/browser", () => ({}));
 import * as mes from "../../mes/app/routes/_public+/login";
 import * as erp from "../app/routes/_public+/login";
 
-function loaderArgs() {
+function loaderArgs(url = "https://erp.example.com/login?workforce=google") {
   return {
-    request: new Request("https://erp.example.com/login?workforce=google"),
+    request: new Request(url),
     params: {},
     context: {}
   } as LoaderFunctionArgs;
 }
+
+// An unauthenticated visit to a protected page lands here with redirectTo.
+const BOUNCED = "https://erp.example.com/login?redirectTo=%2Fx%2Fparts";
 
 function actionArgs() {
   return {
@@ -164,6 +171,71 @@ describe.each([
       hasEmailAuth: true,
       autoGoogle: false,
       turnstileSiteKey: "synthetic-site-key"
+    });
+  });
+
+  it("offers HQ beside Google during the transition without starting either", async () => {
+    auth.providers = new Set(["hq", "google"]);
+    expect(await route.loader(loaderArgs(BOUNCED))).toMatchObject({
+      hasHqAuth: true,
+      autoHq: false,
+      hasGoogleAuth: true,
+      autoGoogle: false
+    });
+  });
+
+  it("starts HQ automatically when it is the only provider", async () => {
+    auth.providers = new Set(["hq"]);
+    expect(await route.loader(loaderArgs(BOUNCED))).toMatchObject({
+      hasHqAuth: true,
+      autoHq: true,
+      hasGoogleAuth: false,
+      hasEmailAuth: false
+    });
+  });
+
+  it("keeps HQ's automatic start when clearing an expired session", async () => {
+    auth.providers = new Set(["hq"]);
+    auth.session.mockResolvedValue({ accessToken: "expired-test-token" });
+    expect(await route.loader(loaderArgs(BOUNCED))).toMatchObject({
+      data: { hasHqAuth: true, autoHq: true },
+      init: { headers: { "Set-Cookie": "carbon=; Max-Age=0" } }
+    });
+  });
+
+  it("shows the HQ button on a plain /login, so signing out does not sign straight back in", async () => {
+    auth.providers = new Set(["hq"]);
+    for (const url of [
+      "https://erp.example.com/login",
+      "https://erp.example.com/login?workforce=google"
+    ]) {
+      expect(await route.loader(loaderArgs(url))).toMatchObject({
+        hasHqAuth: true,
+        autoHq: false
+      });
+    }
+  });
+
+  it("does not start HQ automatically beside any other sign-in method", async () => {
+    for (const other of ["email", "google", "azure", "passkey"]) {
+      auth.providers = new Set(["hq", other]);
+      expect(await route.loader(loaderArgs(BOUNCED))).toMatchObject({
+        hasHqAuth: true,
+        autoHq: false
+      });
+    }
+    auth.providers = new Set(["hq"]);
+    auth.sso = true;
+    expect(await route.loader(loaderArgs(BOUNCED))).toMatchObject({
+      autoHq: false
+    });
+  });
+
+  it("leaves Google-only deployments without HQ", async () => {
+    expect(await route.loader(loaderArgs(BOUNCED))).toMatchObject({
+      hasHqAuth: false,
+      autoHq: false,
+      hasGoogleAuth: true
     });
   });
 

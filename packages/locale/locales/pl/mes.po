@@ -1344,6 +1344,9 @@ msgstr "Wyświetl to okno nakładki"
 msgid "Sign in with Google"
 msgstr "Zaloguj się przez Google"
 
+msgid "Sign in with HQ"
+msgstr "Zaloguj się przez HQ"
+
 msgid "Sign in with Outlook"
 msgstr "Zaloguj się przez Outlook"
 

@@ -16250,6 +16250,9 @@ msgstr "Melden Sie sich mit Biometrie statt mit einem Magic Link an. Passkeys si
 msgid "Sign in with Google"
 msgstr "Mit Google anmelden"
 
+msgid "Sign in with HQ"
+msgstr "Mit HQ anmelden"
+
 msgid "Sign in with Outlook"
 msgstr "Mit Outlook anmelden"
 

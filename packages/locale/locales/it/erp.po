@@ -16250,6 +16250,9 @@ msgstr "Accedi con biometrica invece di un magic link. Le passkey sono protette 
 msgid "Sign in with Google"
 msgstr "Accedi con Google"
 
+msgid "Sign in with HQ"
+msgstr "Accedi con HQ"
+
 msgid "Sign in with Outlook"
 msgstr "Accedi con Outlook"
 

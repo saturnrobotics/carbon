@@ -16250,6 +16250,9 @@ msgstr "Inicie sesión con biometría en lugar de un enlace mágico. Las llaves 
 msgid "Sign in with Google"
 msgstr "Iniciar sesión con Google"
 
+msgid "Sign in with HQ"
+msgstr "Iniciar sesión con HQ"
+
 msgid "Sign in with Outlook"
 msgstr "Iniciar sesión con Outlook"
 

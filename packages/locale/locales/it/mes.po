@@ -1344,6 +1344,9 @@ msgstr "Mostra questo pannello"
 msgid "Sign in with Google"
 msgstr "Accedi con Google"
 
+msgid "Sign in with HQ"
+msgstr "Accedi con HQ"
+
 msgid "Sign in with Outlook"
 msgstr "Accedi con Outlook"
 

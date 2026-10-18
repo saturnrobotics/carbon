@@ -21,6 +21,14 @@ Swarm, and AWS build recipes explicitly select the fork file. See
 [the transition instructions](CONVENTIONS.md#container-build-ownership) for draft
 PR #77.
 
+On 2026-10-18, sign-in through an HQ identity provider (GoTrue's Keycloak
+provider) was added. Its behavior is fork-owned (`packages/auth/src/saturn/`,
+`contrib/deploying/gcp-tailscale/hq_sign_in.py`). It adds hooks to shared files
+already listed under **Login / public pages** and **Environment schema** (the
+`hq` provider), one new shared-file line (the `./saturn/hq-sign-in` export in
+`packages/auth/package.json`), and one message to the ERP and MES locale
+catalogs.
+
 ## (a) Fork-owned additions — files upstream never touches
 
 These cannot conflict on a sync. They only cost when a shared file they depend on

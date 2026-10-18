@@ -16250,6 +16250,9 @@ msgstr "使用生物识别而不是魔法链接登录。通行密钥由 Face ID�
 msgid "Sign in with Google"
 msgstr "用 Google 登录"
 
+msgid "Sign in with HQ"
+msgstr "用 HQ 登录"
+
 msgid "Sign in with Outlook"
 msgstr "使用 Outlook 登录"
 
