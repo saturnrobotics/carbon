@@ -89,6 +89,7 @@ import {
   weeklyFunction,
   workflowRunRetentionFunction
 } from "./functions/scheduled";
+import { saturnAuthzProjectionFunction } from "./functions/scheduled/saturn-authz-projection";
 import {
   assemblyConvertFunction,
   assemblyPlanFunction,
@@ -174,6 +175,7 @@ export const functions = [
   procurementScheduleExecuteFunction,
   procurementScheduleSweepFunction,
   workflowRunRetentionFunction,
+  saturnAuthzProjectionFunction,
   // Integrations
   mercurySyncFunction,
   jiraSyncFunction,

@@ -166,6 +166,22 @@ class PreparationTests(unittest.TestCase):
         changed = self.generate(config={**CONFIG, "GOOGLE_CLIENT_SECRET": "changed-private-value"}, observed=observed)
         self.assertTrue(changed["maintenance_required"])
 
+    def test_hq_sign_in_reconfigures_both_apps_under_maintenance_without_private_values(self):
+        first = self.generate()
+        observed = observation()
+        observed["manifest"]["maintenance_fingerprint"] = first["maintenance_fingerprint"]
+        hq = {"HQ_SIGN_IN_ENABLED": "true", "HQ_ISSUER": "https://hq.example.com",
+              "HQ_OIDC_CARBON_SECRET": "synthetic-hq-client-secret-" + "x" * 16}
+        for changes in (hq, {**hq, "GOOGLE_SIGN_IN_ENABLED": "false"}):
+            with self.subTest(changes=sorted(changes)):
+                changed = self.generate(config={**CONFIG, **changes}, observed=observed)
+                # GoTrue is platform state: provider changes use coordinated maintenance.
+                self.assertTrue(changed["maintenance_required"])
+                for app in ("erp", "mes"):
+                    self.assertNotEqual(changed["services"][app]["runtime_config"], first["services"][app]["runtime_config"])
+                self.assertNotIn("synthetic-hq-client-secret", json.dumps(changed))
+                self.assertNotIn("hq.example.com", json.dumps(changed))
+
     def test_routing_and_domain_changes_require_maintenance(self):
         first = self.generate()
         observed = observation()

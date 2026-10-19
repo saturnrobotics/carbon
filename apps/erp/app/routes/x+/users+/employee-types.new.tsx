@@ -8,6 +8,11 @@ import type {
   LoaderFunctionArgs
 } from "react-router";
 import { data, redirect, useLoaderData } from "react-router";
+import { AuthzManagedPermissions } from "~/modules/saturn";
+import {
+  getAuthzManagement,
+  refuseWhileAuthzManaged
+} from "~/modules/saturn/saturn.server";
 import type { CompanyPermission } from "~/modules/users";
 import {
   EmployeeTypeForm,
@@ -35,7 +40,8 @@ export async function loader({ request }: LoaderFunctionArgs) {
   }
 
   return {
-    permissions: makeEmptyPermissionsFromModules(modules.data)
+    permissions: makeEmptyPermissionsFromModules(modules.data),
+    authz: await getAuthzManagement()
   };
 }
 
@@ -44,6 +50,7 @@ export async function action({ request }: ActionFunctionArgs) {
   const { client, companyId } = await requirePermissions(request, {
     create: "users"
   });
+  await refuseWhileAuthzManaged(request, path.to.employeeTypes);
 
   const validation = await validator(employeeTypeValidator).validate(
     await request.formData()
@@ -127,7 +134,10 @@ export async function clientAction({ serverAction }: ClientActionFunctionArgs) {
 }
 
 export default function NewEmployeeTypesRoute() {
-  const { permissions } = useLoaderData<typeof loader>();
+  const { permissions, authz } = useLoaderData<typeof loader>();
+  if (authz.managed) {
+    return <AuthzManagedPermissions accessUrl={authz.accessUrl} />;
+  }
 
   const initialValues = {
     name: "",

@@ -1344,6 +1344,9 @@ msgstr "Mostrar esta sobreposição"
 msgid "Sign in with Google"
 msgstr "Entrar com Google"
 
+msgid "Sign in with HQ"
+msgstr "Entrar com HQ"
+
 msgid "Sign in with Outlook"
 msgstr "Entrar com Outlook"
 

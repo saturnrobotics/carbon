@@ -3366,6 +3366,9 @@ msgstr "Carbon Logosu"
 msgid "Carbon only"
 msgstr "Yalnızca Carbon"
 
+msgid "Carbon permissions are managed in HQ, so they cannot be changed here."
+msgstr "Carbon izinleri HQ'da yönetilir, bu nedenle burada değiştirilemez."
+
 msgid "Carbon Posted"
 msgstr "Carbon Kaydedildi"
 
@@ -10118,6 +10121,9 @@ msgstr "Aboneliği Yönet"
 msgid "Manage your subscription and billing information"
 msgstr "Aboneliğinizi ve faturalandırma bilgilerinizi yönetin"
 
+msgid "Managed in HQ"
+msgstr "HQ'da yönetiliyor"
+
 msgid "Manager"
 msgstr "Yönetici"
 
@@ -12080,6 +12086,9 @@ msgstr "Belge incelemesini aç"
 
 msgid "Open document review and original attachment"
 msgstr "Belge incelemesini ve özgün eki aç"
+
+msgid "Open HQ access"
+msgstr "HQ erişimini aç"
 
 msgid "Open in Carbon"
 msgstr "Carbon'da Aç"
@@ -16249,6 +16258,9 @@ msgstr "Sihirli bağlantı yerine biyometrik kimlik doğrulama ile oturum açın
 
 msgid "Sign in with Google"
 msgstr "Google ile giriş yap"
+
+msgid "Sign in with HQ"
+msgstr "HQ ile giriş yap"
 
 msgid "Sign in with Outlook"
 msgstr "Outlook ile giriş yap"

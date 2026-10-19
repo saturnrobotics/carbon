@@ -1344,6 +1344,9 @@ msgstr "このオーバーレイを表示"
 msgid "Sign in with Google"
 msgstr "Googleでサインイン"
 
+msgid "Sign in with HQ"
+msgstr "HQでサインイン"
+
 msgid "Sign in with Outlook"
 msgstr "Outlookでサインイン"
 

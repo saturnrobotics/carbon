@@ -1,6 +1,9 @@
 -- Deployment policy, separate from Carbon's application schema/migrations.
 -- Run with psql -X -v ON_ERROR_STOP=1 -v allowed_email_domain=example.com -f ...
 -- The value comes from private deployment configuration, never this file.
+-- The file and function keep their Google names because GoTrue's hook URI and
+-- the release tooling refer to them; the policy admits Google Workspace and the
+-- HQ identity provider (GoTrue's 'keycloak' provider) under the same rules.
 BEGIN;
 
 CREATE SCHEMA IF NOT EXISTS carbon_private;
@@ -37,6 +40,10 @@ DECLARE
   claims JSONB := event -> 'claims';
   allowed_domain TEXT;
   denied CONSTANT JSONB := '{"error":{"http_code":403,"message":"Sign in with an authorized Google Workspace account."}}'::JSONB;
+  not_in_hq CONSTANT JSONB := '{"error":{"http_code":403,"message":"Your account is not active in HQ."}}'::JSONB;
+  authz_managed BOOLEAN := FALSE;
+  subject TEXT;
+  api_resources JSONB;
 BEGIN
   SELECT allowed_email_domain INTO allowed_domain
   FROM carbon_private.auth_policy WHERE singleton;
@@ -62,11 +69,16 @@ BEGIN
   END IF;
 
   -- Do not trust user_metadata: users can change it themselves. identity_data
-  -- is populated by GoTrue from Google's validated provider response. The
-  -- signed hd claim distinguishes Workspace accounts from consumer Google
-  -- accounts that happen to use an address on the same domain.
-  -- Google must be the ONLY enabled OAuth provider on this deployment:
-  -- Supabase AMR identifies OAuth, but does not identify its provider.
+  -- is populated by GoTrue from the provider's validated response: Google's ID
+  -- token, or the HQ identity provider's userinfo (GoTrue's Keycloak provider
+  -- keeps non-standard claims such as hd under custom_claims). The hd claim
+  -- distinguishes Workspace accounts from consumer Google accounts that happen
+  -- to use an address on the same domain; HQ passes on Google's hd.
+  -- Supabase AMR records only the method ('oauth'), never which provider
+  -- authenticated the session, so this hook cannot tell a Google session from an
+  -- HQ one. It relies on Google and the HQ Keycloak-compatible provider being the
+  -- ONLY enabled OAuth providers on this deployment, and admits an account that
+  -- holds a qualifying identity from either of them.
   IF NOT EXISTS (
     SELECT 1
     FROM auth.users AS account
@@ -77,12 +89,39 @@ BEGIN
       AND split_part(lower(account.email), '@', 2) = allowed_domain
       AND split_part(account.email, '@', 1) <> ''
       AND length(account.email) - length(replace(account.email, '@', '')) = 1
-      AND identity.provider = 'google'
+      AND identity.provider IN ('google', 'keycloak')
       AND lower(identity.identity_data ->> 'email') = lower(account.email)
       AND identity.identity_data -> 'email_verified' = 'true'::JSONB
       AND lower(identity.identity_data #>> '{custom_claims,hd}') = allowed_domain
   ) THEN
     RETURN denied;
+  END IF;
+
+  -- HQ plan 0006B (B8): once Carbon's permissions are managed by hq-authz
+  -- (carbon_private.authz_projection.enabled, from the Saturn authz migration),
+  -- the token carries a top-level authz_api claim, the api: resources the person
+  -- may use, computed here from authz and never from anything the user can edit;
+  -- Kong checks it per route. A person authz does not know, or has disabled, gets
+  -- no token. Before then, and on databases without the migration, nothing
+  -- changes. Any authz_api the incoming claims carry is dropped either way.
+  claims := claims - 'authz_api';
+  IF to_regprocedure('carbon_private.authz_projection_enabled()') IS NOT NULL THEN
+    authz_managed := carbon_private.authz_projection_enabled();
+  END IF;
+  IF authz_managed THEN
+    subject := authz.subject_of_auth_user((event ->> 'user_id')::UUID);
+    IF subject IS NULL THEN
+      RETURN not_in_hq;
+    END IF;
+    -- capabilities are '<action>:<resource>'; the api: types grant 'use'.
+    SELECT coalesce(
+      jsonb_agg(DISTINCT substr(capability, 5) ORDER BY substr(capability, 5)),
+      '[]'::JSONB
+    )
+    INTO api_resources
+    FROM unnest(authz.capabilities(subject, 'api')) AS capability
+    WHERE capability LIKE 'use:api:%';
+    claims := claims || jsonb_build_object('authz_api', api_resources);
   END IF;
 
   RETURN jsonb_build_object('claims', claims);

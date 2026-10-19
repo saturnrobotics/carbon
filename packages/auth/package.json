@@ -22,6 +22,7 @@
     "./users.server": "./src/services/users.server.ts",
     "./workforce.server": "./src/services/workforce.server.ts",
     "./passkey.server": "./src/services/passkey.server.ts",
+    "./saturn/hq-sign-in": "./src/saturn/hq-sign-in.tsx",
     "./verification.server": "./src/services/verification.server.ts",
     "./middleware/flash.server": "./src/middleware/flash.server.ts",
     "./middleware/flash.client": "./src/middleware/flash.client.ts"
