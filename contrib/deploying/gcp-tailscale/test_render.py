@@ -144,6 +144,21 @@ class PrivateStackTests(unittest.TestCase):
         self.assertEqual(self.stack["networks"]["internal"]["driver"], "bridge")
         self.assertNotIn("network_mode", self.stack["services"]["caddy"])
 
+    def test_tailscale_mode_output_is_byte_identical_with_or_without_the_mode_key(self):
+        before = {str(path.relative_to(self.output)): path.read_bytes() for path in self.output.rglob("*") if path.is_file()}
+        module.render({**self.config, "INGRESS_MODE": "tailscale"}, REPO, self.output, self.state)
+        after = {str(path.relative_to(self.output)): path.read_bytes() for path in self.output.rglob("*") if path.is_file()}
+        self.assertEqual(before, after)
+        # The proxy configuration predates private-lb mode; keep it exactly.
+        self.assertEqual((self.output / "Caddyfile").read_text(), TAILSCALE_CADDYFILE)
+        caddy = self.stack["services"]["caddy"]
+        self.assertEqual(caddy["networks"], {"internal": {"aliases": ["erp.example.com", "mes.example.com", "api.example.com"]}})
+        self.assertEqual(caddy["volumes"][0]["source"], str(self.output.resolve() / "Caddyfile"))
+        self.assertEqual(caddy["volumes"][-1], {"type": "bind", "source": str(self.state / "tls"), "target": "/tls", "read_only": True})
+        self.assertNotIn("healthz", json.dumps(self.stack))
+        with self.assertRaises(KeyError):  # tailscale mode still requires the tailnet address
+            module.render({key: value for key, value in self.config.items() if key != "TAILSCALE_IP"}, REPO, self.output, self.state)
+
     def test_each_application_keeps_its_own_config_digest(self):
         config = {**self.config, "RELEASE_PLAN": {"services": {
             "erp": {"config_digest": "sha256:" + "1" * 64},
@@ -298,6 +313,145 @@ class PrivateStackTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 module.render({**self.config, "POSTGRES_PRIVATE_IP": "0.0.0.0", "POSTGRES_CLIENT_CIDRS": ["0.0.0.0/0"]}, REPO, self.output, self.state)
             certificates.assert_not_called()
+
+
+TAILSCALE_CADDYFILE = """{
+  auto_https off
+  servers {
+    protocols h1 h2
+  }
+}
+
+https://erp.example.com {
+  tls /tls/live/carbon/fullchain.pem /tls/live/carbon/privkey.pem
+  reverse_proxy erp:3000
+}
+
+https://mes.example.com {
+  tls /tls/live/carbon/fullchain.pem /tls/live/carbon/privkey.pem
+  reverse_proxy mes:3000
+}
+
+https://api.example.com {
+  tls /tls/live/carbon/fullchain.pem /tls/live/carbon/privkey.pem
+  reverse_proxy kong:8000
+}
+"""
+
+ACCOUNT = "carbon-vm@example-project.iam.gserviceaccount.com"
+
+
+def private_lb_config():
+    """Synthetic private-lb settings: example hosts, RFC1918 and Google's documented ranges."""
+    return {
+        "ERP_HOST": "erp.example.com", "MES_HOST": "mes.example.com", "SUPABASE_HOST": "api.example.com",
+        "AUTH_ALLOWED_GOOGLE_DOMAIN": "example.com", "PROJECT_ID": "example-project",
+        "DEPLOY_REVISION": "a" * 40, "GOOGLE_CLIENT_ID": "unit-test-client",
+        "GOOGLE_CLIENT_SECRET": "unit-test-secret-not-a-real-credential",
+        "SOURCE_CODE_URL": "https://github.com/example/carbon/tree/" + "a" * 40,
+        "INGRESS_MODE": "private-lb", "NETWORK": "shared-vpc", "SUBNET": "shared-data", "SERVICE_ACCOUNT": ACCOUNT,
+        "POSTGRES_PRIVATE_IP": "10.73.8.2", "POSTGRES_CLIENT_CIDRS": ["10.81.0.0/24"],
+        "INGRESS_ALLOWLIST": [
+            {"name": "shared-allow-proxy-to-carbon", "priority": 1000, "ports": ["tcp:443"], "sources": ["10.73.4.0/26"], "target": ACCOUNT},
+            {"name": "shared-allow-hc-to-carbon", "priority": 1000, "ports": ["tcp:443"], "sources": ["35.191.0.0/16", "130.211.0.0/22"], "target": ACCOUNT},
+            {"name": "shared-allow-run-to-postgres", "priority": 1000, "ports": ["tcp:5432"], "sources": ["10.81.0.0/24"], "target": ACCOUNT},
+            {"name": "shared-allow-iap-ssh-carbon", "priority": 1000, "ports": ["tcp:22"], "sources": ["35.235.240.0/20"], "target": ACCOUNT},
+        ],
+    }
+
+
+class PrivateLoadBalancerStackTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.state = Path(self.temp.name)
+        self.output = self.state / "prepared"
+        self.config = private_lb_config()
+        module.render(self.config, REPO, self.output, self.state)
+        self.stack = json.loads((self.output / "compose.json").read_text())
+
+    def test_only_the_private_address_is_published(self):
+        published = {name: svc["ports"] for name, svc in self.stack["services"].items() if "ports" in svc}
+        self.assertEqual(published, {
+            "caddy": [{"target": 443, "published": "443", "host_ip": "10.73.8.2", "protocol": "tcp"}],
+            "postgres": [{"target": 5432, "published": "5432", "host_ip": "10.73.8.2", "protocol": "tcp"}],
+        })
+        self.assertNotIn("100.", json.dumps(published))
+
+    def test_caddy_serves_the_load_balancer_and_its_health_check(self):
+        self.assertEqual((self.output / "Caddyfile").read_text(), """{
+  auto_https off
+  default_sni erp.example.com
+  servers {
+    protocols h1 h2
+    trusted_proxies static 10.73.4.0/26
+  }
+}
+
+https://erp.example.com {
+  tls /tls/live/carbon/fullchain.pem /tls/live/carbon/privkey.pem
+  respond /healthz 200
+  reverse_proxy erp:3000
+}
+
+https://mes.example.com {
+  tls /tls/live/carbon/fullchain.pem /tls/live/carbon/privkey.pem
+  respond /healthz 200
+  reverse_proxy mes:3000
+}
+
+https://api.example.com {
+  tls /tls/live/carbon/fullchain.pem /tls/live/carbon/privkey.pem
+  respond /healthz 200
+  reverse_proxy kong:8000
+}
+""")
+        # The same certbot certificates; public health-check ranges are never trusted proxies.
+        self.assertIn({"type": "bind", "source": str(self.state / "tls"), "target": "/tls", "read_only": True},
+                      self.stack["services"]["caddy"]["volumes"])
+        self.assertNotIn("35.191.0.0/16", (self.output / "Caddyfile").read_text())
+
+    def test_private_listener_serves_only_the_client_subnets_over_tls(self):
+        script = (self.output / "private-postgres-entrypoint.sh").read_text()
+        for line in ("hostnossl all all 10.81.0.0/24 reject", "hostssl postgres all 10.81.0.0/24 scram-sha-256",
+                     "host all all 10.81.0.0/24 reject", "host replication all 10.81.0.0/24 reject"):
+            self.assertIn(line, script)
+        tls = self.state / "private-postgres"
+        subprocess.run(["openssl", "verify", "-CAfile", str(tls / "ca.crt"), "-verify_ip", "10.73.8.2", str(tls / "server.crt")],
+                       check=True, capture_output=True)
+
+    def test_tailnet_and_incomplete_settings_are_rejected(self):
+        incomplete = dict(self.config)
+        del incomplete["POSTGRES_PRIVATE_IP"]
+        widened = private_lb_config()
+        widened["INGRESS_ALLOWLIST"][2]["sources"] = ["10.81.0.0/24", "10.82.0.0/24"]
+        for label, config in (("tailnet address", {**self.config, "TAILSCALE_IP": "100.72.10.8"}),
+                              ("tailnet hostname", {**self.config, "TAILSCALE_HOSTNAME": "carbon"}),
+                              ("portal", {**self.config, "PORTAL_RECEIVER_AUDIENCE": "https://erp.example.com"}),
+                              ("no private address", incomplete), ("database widened", widened)):
+            with self.subTest(label), self.assertRaises(ValueError):
+                module.render(config, REPO, self.output, self.state, materialize=False)
+
+    def test_preview_matches_real_render_without_writes(self):
+        before = {str(path.relative_to(self.state)): path.read_bytes() for path in self.state.rglob("*") if path.is_file()}
+        with patch.object(module, "write_private", side_effect=AssertionError("preview wrote a file")), \
+             patch.object(module, "initialize_secrets", side_effect=AssertionError("preview initialized secrets")), \
+             patch.object(module.private_postgres, "certificates", side_effect=AssertionError("preview issued certificates")):
+            stack, files = module.render(self.config, REPO, self.output, self.state, materialize=False)
+        self.assertEqual(stack, self.stack)
+        self.assertEqual(files[str(self.output.resolve() / "Caddyfile")], (self.output / "Caddyfile").read_text())
+        self.assertEqual(before, {str(path.relative_to(self.state)): path.read_bytes() for path in self.state.rglob("*") if path.is_file()})
+
+    def test_release_fingerprints_carry_no_tailnet_address(self):
+        runtime_inputs = importlib.import_module("runtime_inputs")
+        with patch.object(runtime_inputs.render, "render", wraps=runtime_inputs.render.render) as rendered:
+            services, platform = runtime_inputs.materialize(self.config, REPO, {})
+        self.assertNotIn("TAILSCALE_IP", rendered.call_args.args[0])
+        self.assertEqual(set(services), {"erp", "mes"})
+        self.assertIn("caddy", platform["services"])
+
+    def test_compose_schema(self):
+        subprocess.run(["docker", "compose", "--file", str(self.output / "compose.json"), "config", "--quiet"], check=True)
 
 
 if __name__ == "__main__":

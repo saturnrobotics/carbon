@@ -2,6 +2,7 @@
   "PROJECT_ID": "your-gcp-project",
   "REGION": "us-east1",
   "ZONE": "us-east1-b",
+  "INGRESS_MODE": "tailscale",
   "VM_NAME": "carbon",
   "MACHINE_TYPE": "e2-standard-4",
   "DATA_DISK_GB": 200,

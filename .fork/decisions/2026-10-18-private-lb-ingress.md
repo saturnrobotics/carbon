@@ -1,0 +1,24 @@
+# Private load balancer ingress mode
+
+`contrib/deploying/gcp-tailscale` gains `INGRESS_MODE=private-lb` beside the default `tailscale` mode. It is one code path, not a copy, so fixes reach both targets while the tailscale installation stays available for rollback. In private-lb mode the stack is the HTTPS backend of another deployment's internal load balancer. The tooling creates only the instance and its snapshot schedule. It verifies, and never creates or changes, the network, subnet, reserved address `<VM_NAME>-ip`, service account, data disk and ingress rules. New names: config keys `INGRESS_MODE`, `NETWORK`, `SUBNET`, `SERVICE_ACCOUNT` and `INGRESS_ALLOWLIST`; `deploy.py --adopt`, run as `make deploy-adopt`.
+
+Choices:
+
+- **Adoption only.** Provisioning refuses to create `<VM_NAME>-data`, because bootstrap would format a blank disk. Bootstrap refuses a blank disk or one without Carbon state. `make deploy` stops before any change until the adopted VM exists.
+- **Crash-consistent copies start nothing.** Docker restarts `unless-stopped` containers from a copied data-root when it first starts. Before that start, bootstrap records `HasBeenManuallyStopped`, which is what `docker compose stop` records. Adoption then removes the old host's containers and networks with `compose down`, never `-v`, so the networks are recreated in the `172.31.0.0/16` pool. It refuses to run while anything is running.
+- **No tailnet node.** Nothing is installed. The copied identity and any saved auth key are deleted, and Docker waits for the private address instead. DNS writes are off; certbot keeps its Cloudflare token for DNS-01.
+- **Exact ingress allowlist.** The enabled ingress rules on `NETWORK` must equal `INGRESS_ALLOWLIST` (name, priority, ports, sources, one target service account; never tags). TCP 5432 sources must equal `POSTGRES_CLIENT_CIDRS`, because Supabase's default `pg_hba.conf` accepts other sources with a password.
+- **Caddy.** `default_sni` is the ERP host, Caddy answers `/healthz` itself on every host, and only the private sources allowed to TCP 443 are trusted proxies.
+- **PostgreSQL.** The CA is kept. Only adoption reissues the server certificate for a new address; rendering still refuses an address change.
+- **Refused in this mode:** `backups.json`, invoice intake, the Portal receiver and `TAILSCALE_*` settings, since each creates or needs resources outside the shared platform.
+
+Verification (local, 2026-10-18):
+
+- The deployment tooling suite passes (265 tests, 227 before), as do Ruff 0.4.1, ShellCheck on the touched scripts, `bash -n` and `git diff --check`.
+- **Tailscale mode is byte-identical.** One harness ran the base revision `7886e86c74` and this change over the same synthetic tailscale inputs. It captured the provisioning `gcloud` calls, the deploy remote-action sequence (maintenance and routine), the rendered file hashes and Compose stacks (with and without the private listener) and the release fingerprints. Both captures have the same sha256.
+- **Caddy production image** (`caddy:2-alpine`, v2.11.4, arm64 locally). The rendered private-lb Caddyfile validates. `/healthz` returns 200 on all three hosts, both with SNI and without it, and a no-SNI handshake presents the ERP certificate. Other paths, and `/healthz/extra`, reach the proxy (502 without an upstream). An unknown SNI is refused, and `X-Forwarded-For` from an untrusted source is ignored. The tailscale Caddyfile fails a no-SNI handshake, which is why private-lb sets the default.
+- **Docker 29.9.1** (`docker:29-dind`, data-root on a volume, classic overlay2). A crash-consistent copy restarted both `unless-stopped` containers on daemon start. After the shipped marking step, none started, both remained for `compose down`, and a marked container still started on request.
+- **OpenSSL 3.** Adoption keeps the CA bytes, and the new certificate verifies for the new address only. A missing, incomplete or foreign TLS set is left unchanged or refused.
+- `host-deploy.sh` ran with stub host commands. Adoption runs only in private-lb mode, starts nothing and refuses a running stack. The ingress check requires the private address on the NIC and no Tailscale, and tailscale mode still checks the tailnet address.
+
+Limits: provider acceptance of the private-lb `gcloud` requests (instance flags; network, subnet, address and service-account listings) is unverified, because there is no non-persisting validation facility. The first bounded platform check is an isolated rehearsal on a copied disk. The load balancer's and health check's real SNI behavior is unobserved; the default covers both cases. `check_stack`, the complete bootstrap on a VM and a libpq `verify-full` connection to the reissued certificate need that rehearsal. The production image architecture there is amd64. Retention of maintenance snapshots is unchanged.

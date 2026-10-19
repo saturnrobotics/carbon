@@ -4,8 +4,10 @@ import importlib.util
 import io
 import json
 from pathlib import Path
+import shutil
 import subprocess
 import sys
+import tempfile
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -28,9 +30,10 @@ def plan(generation=3, *, changed=True, maintenance_required=False):
 
 
 class DeployLifecycleTests(unittest.TestCase):
-    def run_release(self, planned, *, snapshot_error=None, events=None, final_check_error=None, fail_at=None):
-        config = json.loads((HERE / "config.example.json").read_text())
-        config.update(PROJECT_ID="example-project", CLOUDFLARE_API_TOKEN="synthetic-token")
+    def run_release(self, planned, *, snapshot_error=None, events=None, final_check_error=None, fail_at=None, config=None):
+        if config is None:
+            config = json.loads((HERE / "config.example.json").read_text())
+            config.update(PROJECT_ID="example-project", CLOUDFLARE_API_TOKEN="synthetic-token")
         desired = {"prepared_source_commit": REVISION, "base_images": BASES}
         events = [] if events is None else events
         uploaded = []
@@ -40,7 +43,10 @@ class DeployLifecycleTests(unittest.TestCase):
             if args[:2] == ("mktemp", "-d"):
                 return "/tmp/carbon-upload.synthetic\n"
             if args[:3] == ("sudo", "tailscale", "ip"):
+                events.append("tailscale-ip")
                 return "100.64.0.10\n"
+            if len(args) > 2 and str(args[2]).endswith("/bootstrap.sh"):
+                events.append("bootstrap:" + ",".join(map(str, args[4:])))
             if len(args) > 2 and str(args[2]).endswith("/host-deploy.sh"):
                 events.append(args[-1])
                 if args[-1] == "check" and final_check_error is not None:
@@ -100,7 +106,7 @@ class DeployLifecycleTests(unittest.TestCase):
 
     def assert_maintenance(self, planned):
         events, uploaded, cloud, publish, _, _, inference = self.run_release(planned)
-        self.assertEqual(events, ["prepare", "quiesce", "docker-stop", "snapshot",
+        self.assertEqual(events, ["bootstrap:" + REVISION, "tailscale-ip", "prepare", "quiesce", "docker-stop", "snapshot",
                                   "docker-start", "maintenance-apply", "check", "finalize"])
         publish.assert_called_once()
         cloud.provision.assert_called_once()
@@ -126,13 +132,13 @@ class DeployLifecycleTests(unittest.TestCase):
             self.run_release(plan(generation=3, maintenance_required=True),
                              snapshot_error=failure, events=events)
         self.assertIs(raised.exception, failure)
-        self.assertEqual(events, ["prepare", "quiesce", "docker-stop", "snapshot",
+        self.assertEqual(events, ["bootstrap:" + REVISION, "tailscale-ip", "prepare", "quiesce", "docker-stop", "snapshot",
                                   "docker-start", "start"])
 
     def test_erp_only_release_stays_routine_without_snapshot_or_quiesce(self):
         planned = plan()
         events, uploaded, cloud, publish, _, _, _ = self.run_release(planned)
-        self.assertEqual(events, ["prepare", "routine-apply", "check", "finalize"])
+        self.assertEqual(events, ["bootstrap:" + REVISION, "tailscale-ip", "prepare", "routine-apply", "check", "finalize"])
         cloud.call.assert_not_called()
         publish.assert_called_once()
         self.assertEqual(len(uploaded), 1)
@@ -175,6 +181,149 @@ class DeployLifecycleTests(unittest.TestCase):
         dns.assert_not_called()
         inference.assert_not_called()
         cloud.provision.assert_not_called()
+
+
+    def private_lb_config(self):
+        from test_deploy import private_lb_fixture
+        config = private_lb_fixture()
+        config.update(CLOUDFLARE_API_TOKEN="synthetic-token")
+        return config
+
+    def test_private_lb_release_skips_tailnet_and_dns_but_keeps_certificate_access(self):
+        for planned in (plan(generation=3, changed=False, maintenance_required=True), plan()):
+            with self.subTest(maintenance=planned["maintenance_required"]):
+                events, uploaded, cloud, publish, _, dns, _ = self.run_release(planned, config=self.private_lb_config())
+                self.assertEqual(events[0], "bootstrap:" + REVISION + ",private-lb")
+                self.assertNotIn("tailscale-ip", events)
+                self.assertEqual(events[-2:], ["check", "finalize"])
+                dns.return_value.zone.assert_called_once()
+                dns.return_value.update.assert_not_called()
+                self.assertEqual(uploaded[0]["INGRESS_MODE"], "private-lb")
+                certificates = [call.args for call in cloud.ssh.call_args_list if str(call.args[-1]).endswith("/certificates.sh")]
+                self.assertEqual(len(certificates), 1)
+
+    def run_adoption(self):
+        config = self.private_lb_config()
+        events, uploaded = [], []
+        cloud = MagicMock(spec=deploy.Cloud)
+
+        def ssh(*args, **kwargs):
+            if args[:2] == ("mktemp", "-d"):
+                events.append("stage")
+                return "/tmp/carbon-upload.synthetic\n"
+            if args == ("true",):
+                events.append("ssh-ready")
+            elif len(args) > 2 and str(args[2]).endswith("/bootstrap.sh"):
+                events.append("bootstrap:" + ",".join(map(str, args[4:])))
+            elif len(args) > 2 and str(args[2]).endswith("/host-deploy.sh"):
+                events.append("host:" + args[-1])
+            elif args[:3] == ("rm", "-rf", "--"):
+                events.append("cleanup")
+            else:
+                events.append("ssh:" + " ".join(map(str, args)))
+            return ""
+
+        cloud.ssh.side_effect = ssh
+        cloud.provision.side_effect = lambda: events.append("provision")
+        cloud.check_vm.side_effect = lambda: events.append("check-vm")
+        cloud.check_firewall.side_effect = lambda: events.append("check-firewall")
+        cloud.call.side_effect = lambda *args, **kwargs: events.append("call:" + " ".join(args))
+        cloud.scp.side_effect = lambda source, destination: (
+            uploaded.append(json.loads(Path(source).read_text())) if Path(source).name == "config.json" else None)
+        with ExitStack() as stack:
+            stack.enter_context(redirect_stdout(io.StringIO()))
+            stack.enter_context(patch.object(deploy, "revision", return_value=REVISION))
+            verification = stack.enter_context(patch.object(deploy.verify_source, "require_verified"))
+            publish = stack.enter_context(patch.object(deploy, "publish_source"))
+            factory = stack.enter_context(patch.object(deploy, "Cloud", return_value=cloud))
+            dns = stack.enter_context(patch.object(deploy, "Cloudflare"))
+            stack.enter_context(patch.object(deploy, "run"))
+            deploy.adopt(config)
+            publish.assert_not_called()
+            dns.assert_not_called()
+        return events, uploaded, verification, factory
+
+    def test_adoption_bootstraps_the_copied_disk_and_starts_nothing(self):
+        events, uploaded, verification, _ = self.run_adoption()
+        verification.assert_called_once_with(self.private_lb_config()["SOURCE_REPO_URL"], REVISION)
+        self.assertEqual(events, ["provision", "ssh-ready", "stage", "bootstrap:" + REVISION + ",private-lb",
+                                  "host:adopt", "check-vm", "check-firewall", "cleanup"])
+        self.assertEqual(uploaded[0]["DEPLOY_REVISION"], REVISION)
+        self.assertNotIn("RELEASE_PLAN", uploaded[0])
+
+    def test_adoption_without_verified_source_makes_no_cloud_request(self):
+        with patch.object(deploy, "revision", return_value=REVISION), \
+             patch.object(deploy.verify_source, "require_verified", side_effect=ValueError("CI evidence missing")), \
+             patch.object(deploy, "Cloud") as factory:
+            with self.assertRaisesRegex(ValueError, "CI evidence missing"):
+                deploy.adopt(self.private_lb_config())
+            factory.assert_not_called()
+
+
+@unittest.skipIf(Path("/var/lib/carbon").exists(), "host-script tests need a machine without Carbon state")
+class HostScriptIngressTests(unittest.TestCase):
+    """Run host-deploy.sh with stub host commands; nothing touches Docker or the network."""
+
+    def run_host(self, action, mode, *, address="10.73.8.2", running="", tailscale=None):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            bin_dir = root / "bin"
+            bin_dir.mkdir()
+            stubs = {
+                "id": "echo 0",
+                "ip": f"printf '2: ens4    inet %s/32 scope global ens4\\n' '{address}'",
+                "docker": f"printf '%s\\n' \"$*\" >> '{root}/docker.log'; if [ \"$1\" = ps ]; then printf '%s' '{running}'; fi",
+            }
+            if tailscale is not None:
+                stubs["tailscale"] = tailscale
+            for name, body in stubs.items():
+                (bin_dir / name).write_text("#!/bin/sh\n" + body + "\n")
+                (bin_dir / name).chmod(0o755)
+            for name in ("python3", "bash", "grep", "cat"):
+                (bin_dir / name).symlink_to(sys.executable if name == "python3" else shutil.which(name))
+            config = {"DEPLOY_REVISION": REVISION, "POSTGRES_PRIVATE_IP": "10.73.8.2", "TAILSCALE_IP": "100.64.0.10"}
+            if mode is not None:
+                config["INGRESS_MODE"] = mode
+            (root / "config.json").write_text(json.dumps(config))
+            result = subprocess.run(["bash", str(HERE / "host-deploy.sh"), str(root / "config.json"), str(HERE.parents[2]), action],
+                                    env={"PATH": str(bin_dir), "HOME": temporary}, capture_output=True, text=True, timeout=60)
+            docker = (root / "docker.log").read_text() if (root / "docker.log").exists() else ""
+        return result, docker
+
+    def test_adoption_runs_only_in_private_lb_mode_and_starts_nothing(self):
+        result, docker = self.run_host("adopt", "private-lb")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("nothing was started", result.stdout)
+        self.assertNotIn(" up", docker)
+        for mode in (None, "tailscale"):
+            with self.subTest(mode=mode):
+                result, docker = self.run_host("adopt", mode)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn("only to INGRESS_MODE=private-lb", result.stderr)
+                self.assertEqual(docker, "")
+
+    def test_adoption_never_stops_a_running_stack(self):
+        result, docker = self.run_host("adopt", "private-lb", running="synthetic-container")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("never stops a running stack", result.stderr)
+        self.assertNotIn("down", docker)
+
+    def test_private_lb_requires_the_private_address_and_no_tailscale(self):
+        result, _ = self.run_host("prepare", "private-lb")
+        # The ingress check passed; the next precondition (certificates) stops this stub host.
+        self.assertIn("DNS-validated certificate", result.stderr)
+        result, _ = self.run_host("prepare", "private-lb", address="10.73.8.3")
+        self.assertIn("not on this VM's network interface", result.stderr)
+        result, _ = self.run_host("prepare", "private-lb", tailscale="echo 100.64.0.10")
+        self.assertIn("must not be installed", result.stderr)
+
+    def test_tailscale_mode_still_verifies_the_tailnet_address(self):
+        for mode in (None, "tailscale"):
+            with self.subTest(mode=mode):
+                result, _ = self.run_host("prepare", mode, tailscale="echo 100.64.0.99")
+                self.assertIn("Configured Tailscale address does not match", result.stderr)
+        result, _ = self.run_host("prepare", "public")
+        self.assertIn("Invalid ingress mode", result.stderr)
 
 
 if __name__ == "__main__":
