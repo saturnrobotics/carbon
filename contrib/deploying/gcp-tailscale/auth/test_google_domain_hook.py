@@ -339,6 +339,87 @@ class GoogleDomainHookTest(unittest.TestCase):
             self.install("example.com'); DROP SCHEMA auth CASCADE; --")
         self.assertEqual(self.hook(), {"claims": CLAIMS})
 
+    # HQ plan 0006B (B8). The stubs stand in for the Saturn authz migration's
+    # carbon_private.authz_projection_enabled() and for HQ's authz functions,
+    # with the signatures and grants plan 0006B B4 gives them.
+    def manage(self, enabled=True, subject="user:synthetic-google-subject", capabilities=()):
+        self.sql(f"""
+            CREATE TABLE public.hook_test_authz (enabled BOOLEAN, subject TEXT, capabilities TEXT[]);
+            INSERT INTO public.hook_test_authz VALUES (
+              {str(enabled).upper()},
+              {"NULL" if subject is None else literal(subject)},
+              ARRAY[{", ".join(literal(c) for c in capabilities)}]::TEXT[]
+            );
+            CREATE FUNCTION carbon_private.authz_projection_enabled() RETURNS BOOLEAN
+              LANGUAGE sql STABLE SECURITY DEFINER SET search_path = ''
+              AS $$ SELECT enabled FROM public.hook_test_authz $$;
+            REVOKE ALL ON FUNCTION carbon_private.authz_projection_enabled() FROM PUBLIC;
+            GRANT EXECUTE ON FUNCTION carbon_private.authz_projection_enabled() TO supabase_auth_admin;
+            CREATE SCHEMA authz;
+            CREATE FUNCTION authz.subject_of_auth_user(auth_uid UUID) RETURNS TEXT
+              LANGUAGE sql STABLE SECURITY DEFINER SET search_path = ''
+              AS $$ SELECT subject FROM public.hook_test_authz WHERE auth_uid = {literal(USER_ID)}::UUID $$;
+            CREATE FUNCTION authz.capabilities(subject TEXT, namespace TEXT) RETURNS TEXT[]
+              LANGUAGE sql STABLE SECURITY DEFINER SET search_path = ''
+              AS $$ SELECT CASE WHEN namespace = 'api' THEN capabilities END FROM public.hook_test_authz $$;
+            REVOKE ALL ON ALL FUNCTIONS IN SCHEMA authz FROM PUBLIC;
+            GRANT USAGE ON SCHEMA authz TO supabase_auth_admin;
+            GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA authz TO supabase_auth_admin;
+        """)
+        self.addCleanup(self.sql, """
+            DROP SCHEMA IF EXISTS authz CASCADE;
+            DROP FUNCTION IF EXISTS carbon_private.authz_projection_enabled();
+            DROP TABLE IF EXISTS public.hook_test_authz;
+        """)
+
+    def test_authz_claim_is_absent_until_the_projection_is_enabled(self):
+        forged = {**CLAIMS, "authz_api": ["api:supabase.storage"]}
+        self.assertEqual(self.hook(claims=forged), {"claims": CLAIMS})
+        self.manage(enabled=False, capabilities=("use:api:supabase.rest",))
+        self.assertEqual(self.hook(claims=forged), {"claims": CLAIMS})
+
+    def test_authz_claim_lists_the_api_resources_authz_grants(self):
+        self.manage(capabilities=(
+            "use:api:supabase.rest", "read:hq:app", "use:api:supabase.realtime",
+            "use:api:supabase.rest", "admin:authz:grant",
+        ))
+        expected = {**CLAIMS, "authz_api": ["api:supabase.realtime", "api:supabase.rest"]}
+        for method in ("oauth", "token_refresh", "totp"):
+            with self.subTest(method=method):
+                self.assertEqual(self.hook(method=method), {"claims": expected})
+        # Neither a forged top-level claim nor user-editable metadata changes it.
+        forged = {**CLAIMS, "authz_api": ["api:supabase.storage"],
+                  "user_metadata": {"authz_api": ["api:supabase.functions"]}}
+        self.assertEqual(
+            self.hook(claims=forged)["claims"]["authz_api"],
+            ["api:supabase.realtime", "api:supabase.rest"],
+        )
+
+    def test_authz_claim_is_empty_without_api_grants(self):
+        self.manage(capabilities=("read:hq:app",))
+        self.assertEqual(self.hook(), {"claims": {**CLAIMS, "authz_api": []}})
+
+    def test_unknown_or_disabled_subject_gets_no_token(self):
+        self.manage(subject=None, capabilities=("use:api:supabase.rest",))
+        for method in ("oauth", "token_refresh"):
+            with self.subTest(method=method):
+                result = self.hook(method=method)
+                self.assertEqual(result["error"]["http_code"], 403)
+                self.assertIn("not active in HQ", result["error"]["message"])
+                self.assertNotIn("claims", result)
+
+    def test_workspace_rules_still_apply_when_authz_manages_carbon(self):
+        self.manage(capabilities=("use:api:supabase.rest",))
+        self.set_identity({**IDENTITY, "custom_claims": {"hd": "other.example"}})
+        self.assert_denied()
+
+    def test_an_authz_failure_refuses_the_token(self):
+        self.manage(capabilities=("use:api:supabase.rest",))
+        self.sql("DROP FUNCTION authz.capabilities(TEXT, TEXT);")
+        # GoTrue refuses to issue a token when the hook errors.
+        with self.assertRaises(AssertionError):
+            self.hook()
+
     def test_client_roles_cannot_call_hook_or_change_policy(self):
         for role in ("anon", "authenticated"):
             for query in (

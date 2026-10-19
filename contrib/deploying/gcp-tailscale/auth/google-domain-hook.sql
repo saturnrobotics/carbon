@@ -40,6 +40,10 @@ DECLARE
   claims JSONB := event -> 'claims';
   allowed_domain TEXT;
   denied CONSTANT JSONB := '{"error":{"http_code":403,"message":"Sign in with an authorized Google Workspace account."}}'::JSONB;
+  not_in_hq CONSTANT JSONB := '{"error":{"http_code":403,"message":"Your account is not active in HQ."}}'::JSONB;
+  authz_managed BOOLEAN := FALSE;
+  subject TEXT;
+  api_resources JSONB;
 BEGIN
   SELECT allowed_email_domain INTO allowed_domain
   FROM carbon_private.auth_policy WHERE singleton;
@@ -91,6 +95,33 @@ BEGIN
       AND lower(identity.identity_data #>> '{custom_claims,hd}') = allowed_domain
   ) THEN
     RETURN denied;
+  END IF;
+
+  -- HQ plan 0006B (B8): once Carbon's permissions are managed by hq-authz
+  -- (carbon_private.authz_projection.enabled, from the Saturn authz migration),
+  -- the token carries a top-level authz_api claim, the api: resources the person
+  -- may use, computed here from authz and never from anything the user can edit;
+  -- Kong checks it per route. A person authz does not know, or has disabled, gets
+  -- no token. Before then, and on databases without the migration, nothing
+  -- changes. Any authz_api the incoming claims carry is dropped either way.
+  claims := claims - 'authz_api';
+  IF to_regprocedure('carbon_private.authz_projection_enabled()') IS NOT NULL THEN
+    authz_managed := carbon_private.authz_projection_enabled();
+  END IF;
+  IF authz_managed THEN
+    subject := authz.subject_of_auth_user((event ->> 'user_id')::UUID);
+    IF subject IS NULL THEN
+      RETURN not_in_hq;
+    END IF;
+    -- capabilities are '<action>:<resource>'; the api: types grant 'use'.
+    SELECT coalesce(
+      jsonb_agg(DISTINCT substr(capability, 5) ORDER BY substr(capability, 5)),
+      '[]'::JSONB
+    )
+    INTO api_resources
+    FROM unnest(authz.capabilities(subject, 'api')) AS capability
+    WHERE capability LIKE 'use:api:%';
+    claims := claims || jsonb_build_object('authz_api', api_resources);
   END IF;
 
   RETURN jsonb_build_object('claims', claims);

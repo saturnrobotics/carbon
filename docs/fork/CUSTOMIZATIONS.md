@@ -29,6 +29,18 @@ already listed under **Login / public pages** and **Environment schema** (the
 `packages/auth/package.json`), and one message to the ERP and MES locale
 catalogs.
 
+On 2026-10-19, Carbon's side of HQ's central authz service (HQ plan 0006B) was
+added, off until the operator enables it: fork migration
+`20261018214537_saturn-authz-projection` (schema `carbon_private`, role
+`carbon_authz_applier`, guard triggers on `userPermission`, `employeeType` and
+`employeeTypePermission`), the ERP module `apps/erp/app/modules/saturn/`, the
+Inngest job `packages/jobs/src/saturn-authz/` and the token hook's `authz_api`
+claim. Shared files gain one-line hooks: the five permission routes under
+`apps/erp/app/routes/x+/users+/`, the API gate in `routes/api+/v1+/lib/base.server.ts`
+(both under **Auth / session**) and the function list in
+`packages/jobs/src/inngest/index.ts` (**Inngest / event dispatch hooks**), plus
+three ERP catalog messages.
+
 ## (a) Fork-owned additions — files upstream never touches
 
 These cannot conflict on a sync. They only cost when a shared file they depend on

@@ -3366,6 +3366,9 @@ msgstr "कार्बन लोगो"
 msgid "Carbon only"
 msgstr "केवल कार्बन"
 
+msgid "Carbon permissions are managed in HQ, so they cannot be changed here."
+msgstr "Carbon अनुमतियाँ HQ में प्रबंधित होती हैं, इसलिए उन्हें यहाँ बदला नहीं जा सकता।"
+
 msgid "Carbon Posted"
 msgstr "Carbon पोस्ट किया गया"
 
@@ -10118,6 +10121,9 @@ msgstr "सदस्यता प्रबंधित करें"
 msgid "Manage your subscription and billing information"
 msgstr "अपनी सदस्यता और बिलिंग जानकारी प्रबंधित करें"
 
+msgid "Managed in HQ"
+msgstr "HQ में प्रबंधित"
+
 msgid "Manager"
 msgstr "प्रबंधक"
 
@@ -12080,6 +12086,9 @@ msgstr "दस्तावेज़ समीक्षा खोलें"
 
 msgid "Open document review and original attachment"
 msgstr "दस्तावेज़ की समीक्षा और मूल अनुलग्नक खोलें"
+
+msgid "Open HQ access"
+msgstr "HQ एक्सेस खोलें"
 
 msgid "Open in Carbon"
 msgstr "Carbon में खोलें"
