@@ -24,10 +24,20 @@ gate passes.
   de-duplicated, writing only rows that differ. Unknown or disabled people get
   `{}`; customers, suppliers and console operators are never projected. No
   payload crosses a wire.
-- **Owners.** The three functions that call `authz.*` belong to the NOLOGIN,
-  memberless role `carbon_authz_applier`, so authz code never runs with the
-  migration role's privileges. The only writer of `userPermission` while the
-  lock is on, `authz_write_permissions`, is executable by that role alone.
+- **Readers for authz.** `authz_modules()`, `authz_memberships()`,
+  `authz_user_permissions()` and `authz_employee_type_permissions()` (the last
+  two return Carbon's tables exactly as stored, for authz's seed and C3 gate),
+  so authz needs no SELECT grant on `public`. `authz_api` gets only the
+  membership and status readers.
+- **Owners.** The migration runs as the session's superuser
+  (`supabase_admin`): the Supabase CLI applies migrations under
+  `SET SESSION ROLE postgres`, which can neither create objects in the
+  administrator's existing `carbon_private` nor should own the lock's state.
+  It switches back at the end. The three functions that call `authz.*` belong to
+  the NOLOGIN, memberless role `carbon_authz_applier`, so authz code never runs
+  with the administrator's privileges. The only writer of `userPermission`
+  while the lock is on, `authz_write_permissions`, is executable by that role
+  alone.
 - **Lock.** Guard triggers on `userPermission`, `employeeType` and
   `employeeTypePermission` refuse every other change with SQLSTATE 42501. The
   projection path's flag is a row keyed on the transaction id in a table only
@@ -55,6 +65,8 @@ gate passes.
 - [x] Inngest job with Redis invalidation and its tests.
 - [x] ERP module, five route hooks, API gate hook; route, gate and view tests.
 - [x] Token hook claim; hook suite fails on the old hook and passes on the new one.
+- [x] Stored-permission readers for authz's seed and gate; verified in the
+      deployment's order (HQ roles, then the hook SQL, then the pinned CLI).
 - [ ] Draft PR into `saturn/main` after #82; operator review.
 - [ ] HQ: `authz` schema, the grants in the migration header (also in HQ's
       tenant provisioning), seed and C3 gate (HQ plan 0006B steps 1-3).

@@ -1,6 +1,7 @@
 -- Regression test for 20261018214537_saturn-authz-projection.sql (HQ plan 0006B):
--- the projection receiver, the lock on Carbon's permission writers, and the
--- EXECUTE matrix.
+-- the projection receiver, the lock on Carbon's permission writers, the readers
+-- authz uses, and the EXECUTE matrix. The authz roles' grants are checked when
+-- HQ's tenant roles (authz_owner, authz_migrator, authz_api) existed at migration.
 --
 -- Run against a local database migrated to head, as a superuser, on a database
 -- without HQ's schema authz (it is stubbed below), for example:
@@ -433,6 +434,8 @@ BEGIN
     ('authz_projection_status()', ARRAY['postgres']),
     ('authz_modules()', ARRAY['carbon_authz_applier']),
     ('authz_memberships()', ARRAY[]::TEXT[]),
+    ('authz_user_permissions()', ARRAY[]::TEXT[]),
+    ('authz_employee_type_permissions()', ARRAY[]::TEXT[]),
     ('authz_is_workforce_user(text)', ARRAY['carbon_authz_applier']),
     ('authz_workforce_users()', ARRAY['carbon_authz_applier']),
     ('authz_canonical_permissions(jsonb)', ARRAY['carbon_authz_applier']),
@@ -467,7 +470,7 @@ BEGIN
          OR p.proconfig IS NULL OR NOT ('search_path=""' = ANY (p.proconfig)));
   ASSERT bad IS NULL, format('PUBLIC EXECUTE or a search_path other than '''': %s', bad);
   ASSERT (SELECT count(*) FROM pg_proc AS p
-          WHERE p.pronamespace = 'carbon_private'::REGNAMESPACE AND p.proname LIKE 'authz\_%') = 16,
+          WHERE p.pronamespace = 'carbon_private'::REGNAMESPACE AND p.proname LIKE 'authz\_%') = 18,
     'every function is covered above';
 
   ASSERT (SELECT array_agg(p.proname::TEXT ORDER BY p.proname) FROM pg_proc AS p
@@ -477,6 +480,14 @@ BEGIN
     'the applier owns exactly the functions that call authz';
   ASSERT (SELECT NOT (rolcanlogin OR rolsuper OR rolbypassrls OR rolinherit)
           FROM pg_roles WHERE rolname = 'carbon_authz_applier'), 'the applier is NOLOGIN and plain';
+  -- The Supabase CLI migrates as postgres, the apps' own role; the lock's state
+  -- and its writer must still belong to the administrator.
+  ASSERT (SELECT r.rolsuper FROM pg_class AS c JOIN pg_roles AS r ON r.oid = c.relowner
+          WHERE c.oid = 'carbon_private.authz_projection_writer'::REGCLASS),
+    'the lock''s state is owned by a superuser, not the apps'' role';
+  ASSERT (SELECT r.rolsuper FROM pg_proc AS p JOIN pg_roles AS r ON r.oid = p.proowner
+          WHERE p.oid = 'carbon_private.authz_write_permissions(text,jsonb)'::REGPROCEDURE),
+    'the writer is owned by a superuser';
   ASSERT NOT EXISTS (SELECT FROM pg_auth_members WHERE roleid = 'carbon_authz_applier'::REGROLE),
     'nobody can SET ROLE to the applier';
 
@@ -568,6 +579,114 @@ BEGIN
   PERFORM pg_temp.expect_ok('service_role', format(
     'UPDATE public."employeeType" SET name = ''Unlocked'' WHERE id = %L', et));
   ASSERT pg_temp.permissions(emp) = '{"parts_view": []}'::JSONB, 'the write landed';
+END $$;
+
+-- 13. The stored-permission readers (authz's seed and C3 gate) -----------------
+
+DO $$
+DECLARE
+  emp TEXT := current_setting('test.emp');
+  off TEXT := current_setting('test.off');
+  et TEXT := current_setting('test.et');
+  co_a TEXT := current_setting('test.co_a');
+  co_b TEXT := current_setting('test.co_b');
+  raw JSONB := jsonb_build_object('sales_view', jsonb_build_array(co_b, co_a, co_b),
+                                  'parts_view', '[]'::JSONB);
+  fn TEXT;
+  r TEXT;
+  owner_can TEXT[] := ARRAY['authz_modules()', 'authz_memberships()',
+    'authz_user_permissions()', 'authz_employee_type_permissions()',
+    'authz_projection_status()', 'authz_apply_projection(text)'];
+  api_can TEXT[] := ARRAY['authz_memberships()', 'authz_projection_status()'];
+BEGIN
+  -- Exact signatures: hq-authz depends on them.
+  ASSERT pg_get_function_result('carbon_private.authz_user_permissions()'::REGPROCEDURE)
+    = 'TABLE(user_id text, permissions jsonb)', 'authz_user_permissions signature';
+  ASSERT pg_get_function_result('carbon_private.authz_employee_type_permissions()'::REGPROCEDURE)
+    = 'TABLE(employee_type_id text, module text, action text, company_ids text[])',
+    'authz_employee_type_permissions signature';
+
+  -- Raw values: not sorted, not de-duplicated, NULL kept.
+  UPDATE public."userPermission" SET permissions = raw WHERE id = emp;
+  UPDATE public."userPermission" SET permissions = NULL WHERE id = off;
+  ASSERT (SELECT u.permissions FROM carbon_private.authz_user_permissions() AS u
+          WHERE u.user_id = emp) = raw, 'userPermission is returned as stored';
+  ASSERT (SELECT u.permissions::TEXT FROM carbon_private.authz_user_permissions() AS u
+          WHERE u.user_id = emp) = raw::TEXT, 'array order and duplicates kept';
+  ASSERT EXISTS (SELECT FROM carbon_private.authz_user_permissions() AS u
+                 WHERE u.user_id = off AND u.permissions IS NULL), 'a NULL row is returned as NULL';
+  ASSERT (SELECT count(*) FROM carbon_private.authz_user_permissions())
+    = (SELECT count(*) FROM public."userPermission"), 'one row per userPermission row';
+  ASSERT (SELECT array_agg(u.user_id ORDER BY u.ord)
+          FROM carbon_private.authz_user_permissions() WITH ORDINALITY AS u(user_id, permissions, ord))
+    = (SELECT array_agg(u.user_id ORDER BY u.user_id)
+       FROM carbon_private.authz_user_permissions() AS u), 'ordered by user_id';
+
+  -- One row per (template row, action), arrays as stored, empty ones included.
+  INSERT INTO public."employeeTypePermission" ("employeeTypeId", module, "view", "create")
+  VALUES (et, 'Parts', ARRAY[co_b, co_a, co_b], ARRAY[co_a]);
+  ASSERT (SELECT array_agg(format('%s/%s/%s', e.module, e.action, e.company_ids) ORDER BY e.ord)
+          FROM carbon_private.authz_employee_type_permissions() WITH ORDINALITY
+            AS e(employee_type_id, module, action, company_ids, ord)
+          WHERE e.employee_type_id = et)
+    = ARRAY[
+        format('Parts/create/{%s}', co_a), 'Parts/delete/{}', 'Parts/update/{}',
+        format('Parts/view/{%s,%s,%s}', co_b, co_a, co_b),
+        'Sales/create/{}', 'Sales/delete/{}', format('Sales/update/{%s}', co_a),
+        format('Sales/view/{%s}', co_a)
+      ], 'template rows by module and action, arrays as stored';
+  ASSERT (SELECT count(*) FROM carbon_private.authz_employee_type_permissions())
+    = 4 * (SELECT count(*) FROM public."employeeTypePermission"), 'four actions per row';
+  ASSERT (SELECT array_agg(ARRAY[e.employee_type_id, e.module, e.action] ORDER BY e.ord)
+          FROM carbon_private.authz_employee_type_permissions() WITH ORDINALITY
+            AS e(employee_type_id, module, action, company_ids, ord))
+    = (SELECT array_agg(ARRAY[e.employee_type_id, e.module, e.action]
+                        ORDER BY e.employee_type_id, e.module, e.action)
+       FROM carbon_private.authz_employee_type_permissions() AS e), 'ordered by 1, 2, 3';
+  ASSERT NOT EXISTS (SELECT FROM carbon_private.authz_employee_type_permissions() AS e
+                     WHERE e.module NOT IN (SELECT m.module FROM carbon_private.authz_modules() AS m)
+                        OR e.action NOT IN ('view', 'create', 'update', 'delete')
+                        OR e.company_ids IS NULL),
+    'modules are catalog labels, actions the four, arrays never NULL';
+
+  -- Client roles cannot read them.
+  FOREACH r IN ARRAY ARRAY['anon', 'authenticated', 'service_role'] LOOP
+    FOREACH fn IN ARRAY ARRAY['authz_user_permissions()', 'authz_employee_type_permissions()'] LOOP
+      PERFORM pg_temp.expect_error(r, format('SELECT * FROM carbon_private.%s', fn), '42501');
+    END LOOP;
+  END LOOP;
+
+  -- HQ's roles, when they existed at migration time.
+  IF EXISTS (SELECT FROM pg_roles WHERE rolname = 'authz_owner') THEN
+    FOREACH fn IN ARRAY ARRAY(
+      SELECT p.oid::REGPROCEDURE::TEXT FROM pg_proc AS p
+      WHERE p.pronamespace = 'carbon_private'::REGNAMESPACE AND p.proname LIKE 'authz\_%'
+    ) LOOP
+      ASSERT has_function_privilege('authz_owner', fn, 'EXECUTE')
+        = (replace(fn, 'carbon_private.', '') = ANY (owner_can)),
+        format('authz_owner EXECUTE on %s', fn);
+      IF EXISTS (SELECT FROM pg_roles WHERE rolname = 'authz_api') THEN
+        ASSERT has_function_privilege('authz_api', fn, 'EXECUTE')
+          = (replace(fn, 'carbon_private.', '') = ANY (api_can)),
+          format('authz_api EXECUTE on %s', fn);
+      END IF;
+    END LOOP;
+    PERFORM pg_temp.expect_ok('authz_owner', 'SELECT * FROM carbon_private.authz_user_permissions()');
+    PERFORM pg_temp.expect_ok('authz_owner', 'SELECT * FROM carbon_private.authz_employee_type_permissions()');
+    IF EXISTS (SELECT FROM pg_roles WHERE rolname = 'authz_migrator')
+      AND pg_has_role('authz_migrator', 'authz_owner', 'USAGE')
+    THEN
+      PERFORM pg_temp.expect_ok('authz_migrator', 'SELECT * FROM carbon_private.authz_user_permissions()');
+      PERFORM pg_temp.expect_ok('authz_migrator', 'SELECT * FROM carbon_private.authz_employee_type_permissions()');
+    END IF;
+    IF EXISTS (SELECT FROM pg_roles WHERE rolname = 'authz_api') THEN
+      PERFORM pg_temp.expect_error('authz_api', 'SELECT * FROM carbon_private.authz_user_permissions()', '42501');
+      PERFORM pg_temp.expect_error('authz_api', 'SELECT * FROM carbon_private.authz_employee_type_permissions()', '42501');
+    END IF;
+    RAISE NOTICE 'authz roles: grants checked';
+  ELSE
+    RAISE NOTICE 'authz roles absent at migration: their grants come from HQ''s tenants.sql';
+  END IF;
 END $$;
 
 SELECT 'saturn-authz-projection: all checks passed' AS result;

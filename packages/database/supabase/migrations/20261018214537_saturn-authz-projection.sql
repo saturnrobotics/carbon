@@ -25,8 +25,18 @@
 --   authz.epoch()                    -> bigint
 -- Carbon offers authz, through SECURITY DEFINER functions (registered clients may
 -- not reach outside their own schema, private-client-isolation.sql):
---   authz_modules(), authz_memberships(), authz_projection_status(),
---   authz_apply_projection(text)
+--   authz_modules()                    -> (module, permission_prefix, sort_order)
+--   authz_memberships()                -> (user_id, email, user_active, company_id,
+--                                          role, employee_type_id, employee_active)
+--   authz_user_permissions()           -> (user_id text, permissions jsonb)
+--   authz_employee_type_permissions()  -> (employee_type_id text, module text,
+--                                          action text, company_ids text[])
+--   authz_projection_status()          -> (enabled, access_url, synced_epoch, synced_at)
+--   authz_apply_projection(text)       -> boolean
+-- The two *_permissions readers return Carbon's permission tables exactly as
+-- stored, for authz's seed and C3 gate (plan 0006B B10), so authz needs no
+-- SELECT grant on public. authz_api gets only authz_memberships() and
+-- authz_projection_status().
 -- The grants below apply when the authz roles already exist; HQ's
 -- deploy/data/tenants.sql carries the same lines for databases where they are
 -- created later.
@@ -35,19 +45,39 @@
 --   carbon_authz_applier  NOLOGIN, no members. Owns the three functions that call
 --                         authz.*, so whatever authz's functions do runs with this
 --                         role's privileges (EXECUTE on a few functions here),
---                         never the migration role's.
---   the migration role    Owns everything else, including the only function that
---                         writes userPermission while the lock is on
---                         (authz_write_permissions; EXECUTE: the applier only).
+--                         never the administrator's.
+--   the administrator     supabase_admin (section 0). Owns everything else,
+--                         including the only function that writes userPermission
+--                         while the lock is on (authz_write_permissions;
+--                         EXECUTE: the applier only).
 --
 -- The lock's "projection path" flag is a row in authz_projection_writer keyed on
 -- the current transaction id. Only authz_write_permissions inserts it, and it
 -- deletes it before returning. A role that cannot write that table cannot raise
--- it: PostgREST's roles, service_role, and the apps' postgres connection where
--- migrations run as another role (supabase_admin, as in this deployment). A
+-- it: PostgREST's roles, service_role and the apps' postgres connection. A
 -- session GUC would not do: any session can set one. Supabase's postgres role
 -- does hold CREATEROLE, so code written to grant itself the applier could still
 -- get past the lock; as plan 0006B says, fork review is the control there.
+
+-- 0. Run as the database administrator -------------------------------------------
+
+-- carbon_private is the deployment administrator's schema: google-domain-hook.sql
+-- creates it as supabase_admin, before this migration on an existing deployment.
+-- The Supabase CLI connects as supabase_admin but applies migrations under
+-- SET SESSION ROLE postgres, which can neither create objects there nor should
+-- own the lock's state (postgres is also the apps' connection). So when the
+-- session user is a superuser, this file runs as it, and section 11 switches
+-- back to the role the CLI chose. Session-level, so it holds whether or not the
+-- CLI wraps the file in a transaction; an aborted transaction rolls it back.
+DO $$
+BEGIN
+  PERFORM pg_catalog.set_config('carbon_private.migration_role', current_user, false);
+  IF session_user <> current_user
+    AND (SELECT rolsuper FROM pg_catalog.pg_roles WHERE rolname = session_user)
+  THEN
+    PERFORM pg_catalog.set_config('role', session_user, false);
+  END IF;
+END $$;
 
 -- 1. The applier role ----------------------------------------------------------
 
@@ -122,7 +152,7 @@ DO $$
 DECLARE
   grantee TEXT;
 BEGIN
-  -- Only the owner (the migration role) touches these directly.
+  -- Only the owner (the administrator) touches these directly.
   FOREACH grantee IN ARRAY ARRAY['anon', 'authenticated', 'service_role', 'postgres',
                                   'supabase_auth_admin']
   LOOP
@@ -215,6 +245,46 @@ AS $$
   JOIN public."user" AS u ON u.id = m."userId"
   LEFT JOIN public.employee AS e ON e.id = m."userId" AND e."companyId" = m."companyId"
   ORDER BY u.id, m."companyId"
+$$;
+
+-- Every userPermission row exactly as stored (never canonicalised): authz's
+-- seed reads grants from it and its C3 gate compares raw values against
+-- authz.carbon_permissions.
+CREATE FUNCTION carbon_private.authz_user_permissions()
+RETURNS TABLE (user_id TEXT, permissions JSONB)
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+  SELECT p.id::TEXT, p.permissions
+  FROM public."userPermission" AS p
+  ORDER BY 1
+$$;
+
+-- Every employee type's template, one row per (employeeTypePermission row,
+-- action), the company array as stored; authz's seed turns these into roles.
+-- module is the enum label, as in authz_modules().module.
+CREATE FUNCTION carbon_private.authz_employee_type_permissions()
+RETURNS TABLE (employee_type_id TEXT, module TEXT, action TEXT, company_ids TEXT[])
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+  SELECT
+    etp."employeeTypeId"::TEXT,
+    etp.module::TEXT,
+    a.action,
+    COALESCE(a.company_ids, '{}'::TEXT[])
+  FROM public."employeeTypePermission" AS etp
+  CROSS JOIN LATERAL (VALUES
+    ('view', etp."view"),
+    ('create', etp."create"),
+    ('update', etp."update"),
+    ('delete', etp."delete")
+  ) AS a(action, company_ids)
+  ORDER BY 1, 2, 3
 $$;
 
 -- Carbon projects every user with a workforce sign-in identity: the providers the
@@ -324,7 +394,7 @@ BEGIN
 END
 $$;
 
--- 6. Writes (migration role) ---------------------------------------------------
+-- 6. Writes (administrator) ----------------------------------------------------
 
 -- The only writer of userPermission while the lock is on. EXECUTE: the applier
 -- only. Skips a row that already equals the projection, so a sync rewrites
@@ -588,6 +658,8 @@ REVOKE ALL ON FUNCTION
   carbon_private.authz_projection_status(),
   carbon_private.authz_modules(),
   carbon_private.authz_memberships(),
+  carbon_private.authz_user_permissions(),
+  carbon_private.authz_employee_type_permissions(),
   carbon_private.authz_is_workforce_user(TEXT),
   carbon_private.authz_workforce_users(),
   carbon_private.authz_canonical_permissions(JSONB),
@@ -615,7 +687,7 @@ GRANT EXECUTE ON FUNCTION
 TO carbon_authz_applier;
 
 -- The apps' own connection: the "managed in HQ" views, the Inngest job, and the
--- guard where the migration role is not a superuser.
+-- guard where no superuser runs the migration.
 GRANT EXECUTE ON FUNCTION
   carbon_private.authz_projection_enabled(),
   carbon_private.authz_projection_status(),
@@ -630,8 +702,10 @@ TO postgres;
 GRANT EXECUTE ON FUNCTION carbon_private.authz_projection_enabled() TO supabase_auth_admin;
 
 -- hq-authz (plan 0006B B4): authz_owner owns authz.carbon_permissions, which
--- expands modules from the catalog; authz_migrator (a member) seeds from
--- membership and may apply after the C3 gate; authz_api serves /admin/access.
+-- expands modules from the catalog; authz_migrator, a member of authz_owner
+-- (INHERIT, HQ's tenants.sql), seeds from membership and the stored permissions,
+-- runs the C3 gate, and may apply afterwards; authz_api serves /admin/access.
+-- Never grant the stored-permission readers to authz_api.
 DO $$
 BEGIN
   IF EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'authz_owner') THEN
@@ -639,6 +713,8 @@ BEGIN
     GRANT EXECUTE ON FUNCTION
       carbon_private.authz_modules(),
       carbon_private.authz_memberships(),
+      carbon_private.authz_user_permissions(),
+      carbon_private.authz_employee_type_permissions(),
       carbon_private.authz_projection_status(),
       carbon_private.authz_apply_projection(TEXT)
     TO authz_owner;
@@ -665,4 +741,12 @@ BEGIN
   ) THEN
     RAISE EXCEPTION 'carbon_authz_applier must have no members';
   END IF;
+END $$;
+
+-- 11. Back to the role the migration tool chose --------------------------------
+
+DO $$
+BEGIN
+  PERFORM pg_catalog.set_config(
+    'role', current_setting('carbon_private.migration_role'), false);
 END $$;
