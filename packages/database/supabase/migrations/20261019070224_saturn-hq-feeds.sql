@@ -3,9 +3,12 @@
 --
 -- HQ shows each person counts of Carbon's open sales orders, open purchase orders
 -- and active jobs. Its API role hq_api reads them live, in this database, through
--- HQ's own views hq.carbon_sales_orders, hq.carbon_purchase_orders and
--- hq.carbon_jobs. Those views are security_invoker, so the grants and row policies
+-- HQ's own functions hq.carbon_sales_orders(), hq.carbon_purchase_orders() and
+-- hq.carbon_jobs(). They are SECURITY INVOKER, so the grants and row policies
 -- below, on Carbon's tables, decide what hq_api can see. HQ never copies a row.
+-- Their bodies are strings, so Postgres records no dependency on these columns:
+-- a Carbon migration that drops or retypes one never fails because of HQ; HQ's
+-- feed reports the drift instead (HQ plan 0012 Q4).
 --
 -- 1. Columns. hq_api may SELECT exactly these columns, holds no other privilege on
 --    these tables, and nothing on any other Carbon table. None of them is money:
@@ -46,8 +49,9 @@
 --    none, so they return no company, and the restrictive policy makes their answer
 --    irrelevant to what hq_api sees.
 --
--- 4. HQ's view owner. hq_owner (NOLOGIN; HQ's migrations run as it) gets USAGE on
---    schema public, which it needs to create the views. It gets no table grant.
+-- 4. HQ's function owner. hq_owner (NOLOGIN; HQ's migrations run as it) gets USAGE
+--    on schema public: Postgres checks the functions' bodies against these tables
+--    when HQ creates them. It gets no table grant.
 --
 -- Nothing here changes what Carbon's own roles (anon, authenticated,
 -- service_role, postgres) can see or do: every grant and policy names hq_api or
