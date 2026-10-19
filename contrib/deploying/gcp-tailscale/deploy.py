@@ -249,7 +249,7 @@ class Cloud:
             raise ValueError(f"Data disk {n}-data is attached to another instance")
         self.check_firewall()
         self.snapshot_schedule()
-        existed = self.ensure(["instances"], n, ["--zone", zone, "--machine-type", c["MACHINE_TYPE"], "--subnet", c["SUBNET"], "--private-network-ip", c["POSTGRES_PRIVATE_IP"], "--no-address", "--service-account", c["SERVICE_ACCOUNT"], "--scopes=cloud-platform", "--image-family=debian-12", "--image-project=debian-cloud", "--boot-disk-size=50GB", "--disk", f"name={n}-data,device-name=carbon-data,mode=rw,boot=no,auto-delete=no", "--tags", n, "--metadata=enable-oslogin=TRUE,block-project-ssh-keys=TRUE", "--shielded-secure-boot", "--deletion-protection"], ["--zones", zone])
+        existed = self.ensure(["instances"], n, ["--zone", zone, "--machine-type", c["MACHINE_TYPE"], "--subnet", c["SUBNET"], "--private-network-ip", c["POSTGRES_PRIVATE_IP"], "--no-address", "--service-account", c["SERVICE_ACCOUNT"], "--scopes=cloud-platform", "--image-family=debian-12", "--image-project=debian-cloud", "--boot-disk-size=50GB", "--disk", f"name={n}-data,device-name=carbon-data,mode=rw,boot=no,auto-delete=no", "--tags", n, "--metadata=enable-oslogin=TRUE,block-project-ssh-keys=TRUE", "--shielded-secure-boot", "--deletion-protection", "--labels=" + private_lb.LABELS], ["--zones", zone])
         self.check_vm()
         return existed
 

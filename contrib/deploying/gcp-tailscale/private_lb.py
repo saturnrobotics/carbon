@@ -20,6 +20,8 @@ REQUIRED_KEYS = {"NETWORK", "SUBNET", "SERVICE_ACCOUNT", "INGRESS_ALLOWLIST", "P
 TAILSCALE_KEYS = {"TAILSCALE_HOSTNAME", "TAILSCALE_AUTH_KEY", "TAILSCALE_IP"}
 RULE_KEYS = {"name", "priority", "ports", "sources", "target"}
 SCOPES = ["https://www.googleapis.com/auth/cloud-platform"]
+# The labels the owning platform's data-plane contract checks on the instance.
+LABELS = "app=hq,role=data"
 RESOURCE_NAME = r"[a-z](?:[a-z0-9-]{0,61}[a-z0-9])?"
 ACCOUNT_ID = r"[a-z][a-z0-9-]{4,28}[a-z0-9]"
 PROJECT = r"[a-z][a-z0-9-]{4,28}[a-z0-9]"

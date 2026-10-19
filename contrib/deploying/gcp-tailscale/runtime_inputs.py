@@ -6,6 +6,7 @@ from pathlib import Path
 import private_lb
 import release_plan
 import render
+import wal_g
 
 APPS = {"erp", "mes"}
 
@@ -81,6 +82,8 @@ def materialize(config, repo, secret_versions):
                 state / "tls",
                 state / "private-postgres/server.crt",
                 state / "private-postgres/server.key",
+                # The pinned WAL-G release; its version is in the path.
+                wal_g.binary_source(state),
             }:
                 raise ValueError("Unknown runtime bind mount ownership for " + name)
         versions = {}

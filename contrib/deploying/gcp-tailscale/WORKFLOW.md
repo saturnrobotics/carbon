@@ -80,6 +80,11 @@ writes no DNS records and stops before any change when the VM, its network,
 address, service account, data disk or exact ingress allowlist is missing. See
 [private load balancer mode](README.md#private-load-balancer-mode).
 
+PostgreSQL archives WAL with WAL-G in this mode. After the first maintenance
+release with archiving, take the first base backup on the VM at once
+(`sudo systemctl start carbon-wal-g-backup.service`); a timer takes one daily. See
+[WAL-G archiving](README.md#wal-g-archiving-and-base-backups).
+
 If publishing is rejected because someone else updated `origin/saturn/main`,
 fetch and review their commits, pull them with `git pull --ff-only`, and retry.
 Never force-push away another contributor's work.

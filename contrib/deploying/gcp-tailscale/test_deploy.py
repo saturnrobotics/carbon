@@ -667,6 +667,8 @@ class PrivateLbProvisioningTests(unittest.TestCase):
         self.assertEqual(vm[vm.index("--service-account") + 1], ACCOUNT)
         self.assertEqual(vm[vm.index("--tags") + 1], "carbon")
         self.assertNotIn("--no-service-account", vm)
+        # The owning platform's data-plane contract checks these labels.
+        self.assertEqual([flag for flag in vm if flag.startswith("--labels")], ["--labels=app=hq,role=data"])
 
     def check_firewall(self, rules):
         cloud = deploy.Cloud(private_lb_fixture())
