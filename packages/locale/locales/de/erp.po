@@ -3366,6 +3366,9 @@ msgstr "Carbon-Logo"
 msgid "Carbon only"
 msgstr "Nur Carbon"
 
+msgid "Carbon permissions are managed in HQ, so they cannot be changed here."
+msgstr "Carbon-Berechtigungen werden in HQ verwaltet und können hier nicht geändert werden."
+
 msgid "Carbon Posted"
 msgstr "Carbon gebucht"
 
@@ -10118,6 +10121,9 @@ msgstr "Abonnement verwalten"
 msgid "Manage your subscription and billing information"
 msgstr "Verwalten Sie Ihr Abonnement und Ihre Abrechnungsinformationen"
 
+msgid "Managed in HQ"
+msgstr "In HQ verwaltet"
+
 msgid "Manager"
 msgstr "Manager"
 
@@ -12080,6 +12086,9 @@ msgstr "Dokumentüberprüfung öffnen"
 
 msgid "Open document review and original attachment"
 msgstr "Dokumentüberprüfung und ursprünglichen Anhang öffnen"
+
+msgid "Open HQ access"
+msgstr "HQ-Zugriff öffnen"
 
 msgid "Open in Carbon"
 msgstr "In Carbon öffnen"
@@ -16249,6 +16258,9 @@ msgstr "Melden Sie sich mit Biometrie statt mit einem Magic Link an. Passkeys si
 
 msgid "Sign in with Google"
 msgstr "Mit Google anmelden"
+
+msgid "Sign in with HQ"
+msgstr "Mit HQ anmelden"
 
 msgid "Sign in with Outlook"
 msgstr "Mit Outlook anmelden"

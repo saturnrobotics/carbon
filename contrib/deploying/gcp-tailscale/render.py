@@ -20,9 +20,11 @@ import time
 
 import yaml
 import private_postgres
+import private_lb
 import payment_sync
 import invoice_inference
 import portal_receiver
+import hq_sign_in
 
 
 def write_private(path, content):
@@ -101,6 +103,8 @@ def render(config, repo, output, state=Path("/var/lib/carbon"), *, materialize=T
     private_postgres.validate(config)
     payment_sync.validate(config)
     portal_receiver.validate(config)
+    private_lb.validate(config)
+    hq_sign_in.validate(config)
     repo, output = repo.resolve(), output.resolve()
     names = ("ERP_HOST", "MES_HOST", "SUPABASE_HOST", "AUTH_ALLOWED_GOOGLE_DOMAIN")
     for key in names:
@@ -108,9 +112,13 @@ def render(config, repo, output, state=Path("/var/lib/carbon"), *, materialize=T
             raise ValueError(f"Invalid DNS name: {key}")
     if len({config[key] for key in names[:3]}) != 3:
         raise ValueError("ERP, MES and Supabase must use distinct hostnames")
-    ip = ipaddress.ip_address(config["TAILSCALE_IP"])
-    if ip.version != 4 or ip not in ipaddress.ip_network("100.64.0.0/10"):
-        raise ValueError("TAILSCALE_IP must be this VM's Tailscale IPv4 address")
+    if private_lb.enabled(config):
+        # The VM's only address serves Caddy and PostgreSQL (validated RFC1918).
+        ip = ipaddress.ip_address(config["POSTGRES_PRIVATE_IP"])
+    else:
+        ip = ipaddress.ip_address(config["TAILSCALE_IP"])
+        if ip.version != 4 or ip not in ipaddress.ip_network("100.64.0.0/10"):
+            raise ValueError("TAILSCALE_IP must be this VM's Tailscale IPv4 address")
     revision = config.get("DEPLOY_REVISION", repo.name)
     if not re.fullmatch(r"[a-f0-9]{40,64}", revision):
         raise ValueError("DEPLOY_REVISION must be the immutable source revision")
@@ -184,7 +192,7 @@ def render(config, repo, output, state=Path("/var/lib/carbon"), *, materialize=T
     for app in ("erp", "mes"):
         env = services[app]["environment"]
         env.update({
-            "CARBON_EDITION": "community", "AUTH_PROVIDERS": "google",
+            "CARBON_EDITION": "community", "AUTH_PROVIDERS": hq_sign_in.auth_providers(config),
             "VERCEL_ENV": "production", "VERCEL_URL": config[app.upper() + "_HOST"],
             "POSTHOG_API_HOST": "https://" + config["ERP_HOST"],
             "POSTHOG_PROJECT_PUBLIC_KEY": "disabled",
@@ -231,7 +239,7 @@ request.on('error', () => process.exit(1));
     auth = services["gotrue"]
     auth["secrets"] += ["google_client_id", "google_client_secret"]
     auth["environment"].update({
-        "GOTRUE_EXTERNAL_GOOGLE_ENABLED": "true",
+        "GOTRUE_EXTERNAL_GOOGLE_ENABLED": hq_sign_in.google_enabled(config),
         "GOTRUE_EXTERNAL_GOOGLE_CLIENT_ID": "__GOOGLE_CLIENT_ID__",
         "GOTRUE_EXTERNAL_GOOGLE_SECRET": "__GOOGLE_CLIENT_SECRET__",
         "GOTRUE_EXTERNAL_GOOGLE_REDIRECT_URI": values["SUPABASE_URL"] + "/auth/v1/callback",
@@ -250,6 +258,8 @@ request.on('error', () => process.exit(1));
     bootstrap["environment"]["GOTRUE_EXTERNAL_GOOGLE_ENABLED"] = "false"
     bootstrap["environment"]["GOTRUE_DISABLE_SIGNUP"] = "true"
     services["gotrue-bootstrap"] = bootstrap
+    # After the copy, so bootstrap never gets the HQ provider or its secret.
+    hq_sign_in.configure(config, auth, directory, emit)
 
     realtime = services["realtime"]
     realtime["secrets"] += ["realtime_secret_key_base", "realtime_db_enc_key"]
@@ -279,10 +289,14 @@ request.on('error', () => process.exit(1));
     proxy["networks"] = {"internal": {"aliases": [config[key] for key in names[:3]]}}
     proxy["volumes"][0]["source"] = str(output / "Caddyfile")
     proxy["volumes"].append({"type": "bind", "source": str(state / "tls"), "target": "/tls", "read_only": True})
-    blocks = ["{\n  auto_https off\n  servers {\n    protocols h1 h2\n  }\n}\n"]
-    for key, upstream in (("ERP_HOST", "erp:3000"), ("MES_HOST", "mes:3000"), ("SUPABASE_HOST", "kong:8000")):
-        blocks.append(f"https://{config[key]} {{\n  tls /tls/live/carbon/fullchain.pem /tls/live/carbon/privkey.pem\n  reverse_proxy {upstream}\n}}\n")
-    emit(output / "Caddyfile", "\n".join(blocks))
+    sites = (("ERP_HOST", "erp:3000"), ("MES_HOST", "mes:3000"), ("SUPABASE_HOST", "kong:8000"))
+    if private_lb.enabled(config):
+        emit(output / "Caddyfile", private_lb.caddyfile(config, sites))
+    else:
+        blocks = ["{\n  auto_https off\n  servers {\n    protocols h1 h2\n  }\n}\n"]
+        for key, upstream in sites:
+            blocks.append(f"https://{config[key]} {{\n  tls /tls/live/carbon/fullchain.pem /tls/live/carbon/privkey.pem\n  reverse_proxy {upstream}\n}}\n")
+        emit(output / "Caddyfile", "\n".join(blocks))
     used = {name for service in services.values() for name in service.get("secrets", [])}
     stack["secrets"] = {name: {"file": str(directory / name)} for name in sorted(used)}
     if materialize:

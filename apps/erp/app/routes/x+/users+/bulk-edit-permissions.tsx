@@ -5,6 +5,7 @@ import { validationError, validator } from "@carbon/form";
 import { batchTrigger } from "@carbon/jobs";
 import type { ActionFunctionArgs } from "react-router";
 import { redirect } from "react-router";
+import { refuseWhileAuthzManaged } from "~/modules/saturn/saturn.server";
 import {
   bulkPermissionsValidator,
   userPermissionsValidator
@@ -16,6 +17,7 @@ export async function action({ request }: ActionFunctionArgs) {
   const { companyId, userId } = await requirePermissions(request, {
     update: "users"
   });
+  await refuseWhileAuthzManaged(request, path.to.employeeAccounts);
 
   const validation = await validator(bulkPermissionsValidator).validate(
     await request.formData()

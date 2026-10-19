@@ -23,7 +23,7 @@ endif
 --force:
 	@:
 
-.PHONY: help deploy deploy-check deploy-plan deploy-maintenance deploy-portal deploy-portal-check
+.PHONY: help deploy deploy-check deploy-plan deploy-maintenance deploy-adopt deploy-portal deploy-portal-check
 
 help:
 	@printf '%s\n' \
@@ -33,6 +33,7 @@ help:
 	  'make deploy-portal-check  Check portal setup without cloud changes.' \
 	  'make deploy-check  Validate private deployment settings without cloud changes.' \
 	  'make deploy-plan   Generate a private preview using read-only cloud queries.' \
+	  'make deploy-adopt  INGRESS_MODE=private-lb only: boot the VM on a copied data disk; starts nothing.' \
 	  'Setup guide: contrib/deploying/gcp-tailscale/README.md' \
 	  'Portal setup: contrib/deploying/portal/README.md'
 
@@ -48,6 +49,9 @@ deploy-plan:
 
 deploy-maintenance:
 	@bash ./contrib/deploying/gcp-tailscale/deploy.sh --apply --maintenance
+
+deploy-adopt:
+	@bash ./contrib/deploying/gcp-tailscale/deploy.sh --adopt
 
 deploy-portal:
 	@python3 ./contrib/deploying/portal/deploy.py --apply $(DEPLOY_FORCE_FLAG)

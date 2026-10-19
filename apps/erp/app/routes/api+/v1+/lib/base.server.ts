@@ -11,6 +11,7 @@ import {
   isPortalOperation,
   portalCapabilityFor
 } from "~/modules/portal/portal.server";
+import { refuseLockedAuthzOperation } from "~/modules/saturn/saturn.server";
 import { isMcpBlockedTool } from "../../mcp+/lib/mcp-blocked-tools";
 
 /**
@@ -126,6 +127,7 @@ export function assertWorkforceAuthorization(
 export const gate = (meta: ManifestEntry) =>
   base.middleware(async ({ context, next }) => {
     if (isMcpBlockedTool(meta.name)) throw new ORPCError("NOT_FOUND");
+    await refuseLockedAuthzOperation(meta.name);
     if (isPortalOperation(meta) && context.authKind !== "workforce") {
       throw new ORPCError("NOT_FOUND");
     }

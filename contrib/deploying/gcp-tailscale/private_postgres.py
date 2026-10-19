@@ -52,8 +52,7 @@ def openssl(*args, check=True):
                           stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
 
-def certificates(directory, address):
-    """Keep the CA stable; renew its server certificate on deploy before expiry."""
+def require_openssl():
     prerequisite = "Private PostgreSQL TLS requires OpenSSL 3 or later on PATH; check `openssl version`"
     try:
         toolchain = openssl("version", check=False)
@@ -62,6 +61,11 @@ def certificates(directory, address):
     version = re.match(r"OpenSSL ([0-9]+)\.[0-9]+\.[0-9]+(?:\s|$)", toolchain.stdout)
     if toolchain.returncode or version is None or int(version.group(1)) < 3:
         raise ValueError(prerequisite)
+
+
+def certificates(directory, address):
+    """Keep the CA stable; renew its server certificate on deploy before expiry."""
+    require_openssl()
     directory = Path(directory)
     directory.mkdir(parents=True, exist_ok=True, mode=0o700)
     directory.chmod(0o700)
@@ -81,10 +85,16 @@ def certificates(directory, address):
             raise ValueError("Private PostgreSQL IP differs from its persistent certificate; review the address change")
         if openssl("x509", "-in", directory / "server.crt", "-noout", "-checkend", str(30 * 86400), check=False).returncode == 0:
             return
+    issue(directory, address, new_ca=not any(present))
+
+
+def issue(directory, address, *, new_ca):
+    """Issue a server certificate, from a new CA or the persistent one."""
+    names = ("ca.crt", "ca.key", "server.crt", "server.key")
     with tempfile.TemporaryDirectory(prefix=".issue-", dir=directory) as temporary:
         work = Path(temporary)
-        ca = directory if all(present) else work
-        if not any(present):
+        ca = work if new_ca else directory
+        if new_ca:
             openssl("req", "-x509", "-newkey", "rsa:3072", "-nodes", "-sha256", "-days", "3650",
                     "-subj", "/CN=Private PostgreSQL CA", "-addext", "basicConstraints=critical,CA:TRUE",
                     "-addext", "keyUsage=critical,keyCertSign,cRLSign", "-keyout", work / "ca.key", "-out", work / "ca.crt")
@@ -101,6 +111,33 @@ def certificates(directory, address):
             if (work / name).exists():
                 (work / name).chmod(0o600)
                 os.replace(work / name, directory / name)
+
+
+def reissue(directory, address):
+    """Adoption only: keep the CA, reissue the server certificate for a moved address.
+
+    Returns True when a certificate was issued. Absent TLS state is left for the
+    first render; an incomplete set or a CA that did not sign the certificate
+    stops, as during deployment. Deployment itself never follows an address change.
+    """
+    address = str(ipaddress.IPv4Address(address))
+    directory = Path(directory)
+    names = ("ca.crt", "ca.key", "server.crt", "server.key")
+    present = [(directory / name).exists() for name in names]
+    if not any(present):
+        return False
+    if not all(present):
+        raise ValueError("Incomplete private PostgreSQL TLS files; restore them from backup")
+    require_openssl()
+    directory.chmod(0o700)
+    for name in names:
+        (directory / name).chmod(0o600)
+    openssl("verify", "-no_check_time", "-CAfile", directory / "ca.crt", directory / "server.crt")
+    if not openssl("verify", "-no_check_time", "-CAfile", directory / "ca.crt",
+                   "-verify_ip", address, directory / "server.crt", check=False).returncode:
+        return False
+    issue(directory, address, new_ca=False)
+    return True
 
 
 def configure(config, postgres, output, state, *, writer=None, materialize=True):
@@ -153,3 +190,18 @@ exec "$@"
                            "-c", "ssl_cert_file=" + runtime + "/server.crt",
                            "-c", "ssl_key_file=" + runtime + "/server.key",
                            "-c", "hba_file=" + runtime + "/pg_hba.conf"]
+
+
+if __name__ == "__main__":
+    import sys
+    if len(sys.argv) != 4 or sys.argv[1] != "adopt":
+        sys.exit("Usage: private_postgres.py adopt TLS_DIRECTORY PRIVATE_IP")
+    try:
+        if not any(ipaddress.IPv4Address(sys.argv[3]) in network for network in PRIVATE_NETWORKS):
+            raise ValueError("The private PostgreSQL address must be an RFC1918 IPv4 address")
+        changed = reissue(sys.argv[2], sys.argv[3])
+    except (ValueError, OSError, subprocess.CalledProcessError) as exc:
+        message = str(exc) if isinstance(exc, ValueError) else type(exc).__name__ + ": certificate step failed"
+        sys.exit(f"Cannot adopt private PostgreSQL TLS: {message}")
+    print("Reissued the private PostgreSQL server certificate from the persistent CA." if changed
+          else "Private PostgreSQL TLS needs no change for this address.")

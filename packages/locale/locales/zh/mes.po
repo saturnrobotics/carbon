@@ -1344,6 +1344,9 @@ msgstr "显示此覆盖层"
 msgid "Sign in with Google"
 msgstr "使用 Google 登录"
 
+msgid "Sign in with HQ"
+msgstr "使用 HQ 登录"
+
 msgid "Sign in with Outlook"
 msgstr "使用 Outlook 登录"
 

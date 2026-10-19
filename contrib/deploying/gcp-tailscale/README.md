@@ -34,6 +34,9 @@ installation.
 
 An optional private PostgreSQL listener supports another backend on a connected
 GCP VPC. See [private database clients](#private-database-clients) below.
+An optional [private load balancer mode](#private-load-balancer-mode) instead
+serves the same stack behind another deployment's internal load balancer, on a
+data disk copied from an existing installation, with no tailnet node.
 
 ## One-time setup
 
@@ -399,6 +402,109 @@ delete TLS state to rotate it implicitly. All database clients share Carbon's
 PostgreSQL service downtime, server resources, and disk snapshot recovery point.
 Their application releases can remain independent of Carbon's releases.
 
+## Private load balancer mode
+
+`INGRESS_MODE` selects how users reach this installation. `tailscale` (the
+default, also when the key is absent) is everything described above, and its
+behavior and rendered output are unchanged. `private-lb` runs the same stack as
+the HTTPS backend of an internal Application Load Balancer that another
+deployment owns, on that deployment's VPC, and adopts a data disk copied from an
+existing installation. In this mode the tooling creates only the instance and its
+daily snapshot schedule. It verifies everything else and never creates or
+changes it.
+
+What changes in `private-lb` mode:
+
+- **Network.** `NETWORK` and `SUBNET` name an existing VPC network and subnet.
+  No network, subnet, router, NAT, address or firewall rule is created, and no
+  API is enabled.
+- **Address.** The reserved internal address `<VM_NAME>-ip` must exist and hold
+  `POSTGRES_PRIVATE_IP` in `SUBNET`. It is the VM's only address: Caddy publishes
+  `POSTGRES_PRIVATE_IP:443` and PostgreSQL publishes `POSTGRES_PRIVATE_IP:5432`.
+  The VM has no external address.
+- **Identity.** The VM runs as `SERVICE_ACCOUNT`, an existing, enabled service
+  account in `PROJECT_ID`, with the `cloud-platform` scope. That account's IAM,
+  managed by the owning deployment, is the permission boundary.
+- **Data disk.** `<VM_NAME>-data` must already exist, made from a snapshot of an
+  installation's data disk. Provisioning refuses to create it, and bootstrap
+  refuses to format a blank disk or to adopt one without Carbon state.
+- **No Tailscale.** Nothing is installed. Bootstrap deletes the identity copied
+  with the disk (`/var/lib/carbon/tailscale` and any saved auth key), so no second
+  node can claim it. Docker waits for the private address instead of the tailnet,
+  and its networks use the `172.31.0.0/16` address pool.
+- **DNS.** Deployment writes no DNS records; the owning deployment points them at
+  its load balancer. The Cloudflare token is still required, because certbot's
+  DNS-01 validation keeps renewing the same certificates.
+- **Proxy.** Caddy sets `default_sni` to `ERP_HOST`, because the load balancer and
+  its health check may connect without SNI, and it answers `GET /healthz` with 200
+  on every host itself, so one app's failure cannot fail its siblings' health
+  checks. It trusts `X-Forwarded-For` only from the private (RFC1918) sources that
+  the allowlist admits to TCP 443 on `SERVICE_ACCOUNT`, which is the load
+  balancer's proxy-only subnet. Public health-check ranges are never trusted.
+- **Firewall.** The enabled ingress rules on `NETWORK` must equal
+  `INGRESS_ALLOWLIST` exactly: name, priority, ports, source ranges and one target
+  service account. Tag targets, source tags, unlisted rules (allow or deny) and
+  missing, changed or disabled listed rules all stop deployment before any change.
+  GCP's implied deny covers everything else, so no deny rule is created. The list
+  must admit TCP 5432 to `SERVICE_ACCOUNT` from exactly `POSTGRES_CLIENT_CIDRS`,
+  because Supabase's own `pg_hba.conf` would accept other sources with a password,
+  and TCP 443 from a private proxy-only subnet.
+- **Refused.** Managed cold backups (`backups.json`), invoice intake
+  (`INVOICE_INTAKE_ENABLED=true`), the Portal receiver (`PORTAL_*`) and
+  `TAILSCALE_*` settings. Each would create or need resources outside the shared
+  platform.
+
+A synthetic example of the keys that differ from the tailscale configuration
+(remove `TAILSCALE_HOSTNAME`, `PORTAL_*` and `TAILSCALE_AUTH_KEY`):
+
+```json
+{
+  "INGRESS_MODE": "private-lb",
+  "NETWORK": "shared-vpc",
+  "SUBNET": "shared-data",
+  "SERVICE_ACCOUNT": "carbon-vm@your-gcp-project.iam.gserviceaccount.com",
+  "POSTGRES_PRIVATE_IP": "10.73.8.2",
+  "POSTGRES_CLIENT_CIDRS": ["10.81.0.0/24"],
+  "INGRESS_ALLOWLIST": [
+    {"name": "shared-allow-proxy-to-carbon", "priority": 1000, "ports": ["tcp:443"],
+     "sources": ["10.73.4.0/26"], "target": "carbon-vm@your-gcp-project.iam.gserviceaccount.com"},
+    {"name": "shared-allow-hc-to-carbon", "priority": 1000, "ports": ["tcp:443"],
+     "sources": ["35.191.0.0/16", "130.211.0.0/22"], "target": "carbon-vm@your-gcp-project.iam.gserviceaccount.com"},
+    {"name": "shared-allow-run-to-postgres", "priority": 1000, "ports": ["tcp:5432"],
+     "sources": ["10.81.0.0/24"], "target": "carbon-vm@your-gcp-project.iam.gserviceaccount.com"},
+    {"name": "shared-allow-iap-ssh-carbon", "priority": 1000, "ports": ["tcp:22"],
+     "sources": ["35.235.240.0/20"], "target": "carbon-vm@your-gcp-project.iam.gserviceaccount.com"}
+  ]
+}
+```
+
+### Adopting a copied data disk
+
+1. Quiesce the source installation and snapshot its data disk (stop Compose with
+   `host-deploy.sh … quiesce`, then stop Docker), and create `<VM_NAME>-data` in
+   `ZONE` from that snapshot. Keep the source VM stopped from then on: never run
+   both installations against the same DNS names.
+2. Select the private-lb configuration, either as `.local/` files or with
+   `deploy.py --config … --secrets …`.
+3. Run `make deploy-adopt` from a clean `saturn/main` whose CI passed. It
+   verifies the shared resources and the allowlist, creates the instance on the
+   disk and bootstraps it. Bootstrap marks the copied containers stopped, which
+   is what `docker compose stop` records, so Docker's first start on the copy runs
+   nothing even if the snapshot was crash-consistent. The host then keeps the
+   PostgreSQL CA, reissues the server certificate only if the address changed,
+   and removes the old host's containers and networks with `docker compose down`
+   (never volumes) so they are recreated in the new address pool. It refuses to
+   run while Carbon containers are running. Nothing is started, and no source is
+   published.
+4. Run `make deploy-maintenance`. The release plan observes the moved release
+   manifest. Maintenance takes a recovery snapshot, applies migrations, starts the
+   stack and checks every host through the private address, including `/healthz`.
+
+Without adoption, `make deploy` in this mode stops before any change when the VM
+does not exist. Deployment never follows an address change on its own: only
+adoption reissues the PostgreSQL server certificate. The CA does not change, so
+database clients keep their trusted `ca.crt`.
+
 ## Portal workforce receiver
 
 The ERP API (`/api/v1/portal/*`) also accepts delegated requests from the
@@ -431,6 +537,69 @@ with a plain `401 Unauthorized` on any verification failure, and with
 body never says why. Enrolling users and registering the portal services'
 identities happens in [the portal deployment](../portal/README.md); this
 deployment only carries ERP's half of the contract.
+
+## Sign-in through HQ (optional)
+
+ERP and MES can sign people in through an HQ identity provider: HQ authenticates
+them with Google Workspace, applies its own app-entry policy, and serves a
+Keycloak-compatible OpenID provider that GoTrue's built-in Keycloak provider
+uses. The same token hook still admits only verified accounts on
+`AUTH_ALLOWED_GOOGLE_DOMAIN` (see [the authentication policy](auth/README.md#sign-in-through-hq)).
+Google sign-in stays available as break-glass until you turn it off.
+
+**HQ's app gating applies only once Google sign-in is off (cutover).** During
+the transition a person HQ denies can still sign in with Google; rendering
+prints a warning while both are enabled. With HQ enabled, GoTrue also applies
+HQ's session limits to every session (`GOTRUE_SESSIONS_TIMEBOX=12h`,
+`GOTRUE_SESSIONS_INACTIVITY_TIMEOUT=2h`), so a revocation in HQ reaches Carbon
+within the 2-hour inactivity timeout, or 12 hours after sign-in at most, plus up
+to one hour for the last access token. `hq_capabilities` from HQ is never used
+for authorization in Carbon; Carbon's roles and RLS stay authoritative.
+
+Private inputs, all optional and off by default:
+
+- `HQ_SIGN_IN_ENABLED` (`"true"`/`"false"`) and `HQ_ISSUER` (HQ's origin,
+  `https://<host>` without a path) in `.local/config.json`. GoTrue uses
+  `<HQ_ISSUER>/oidc/keycloak` with client id `carbon` and the same
+  `https://<SUPABASE_HOST>/auth/v1/callback` redirect URI as Google; register
+  that URI with HQ.
+- `HQ_OIDC_CARBON_SECRET` in `.local/secrets.json`: the `carbon` client secret
+  HQ issued (at least 32 characters). It is mounted into GoTrue alone; the
+  bootstrap GoTrue, ERP and MES never receive it. Remove the example placeholder
+  if you do not use HQ.
+- `GOOGLE_SIGN_IN_ENABLED` (`"true"` by default) in `.local/config.json`.
+  `"false"` is accepted only together with HQ sign-in, so a deployment always
+  keeps one way in. The Google client stays configured either way.
+
+GoTrue calls HQ's token and userinfo endpoints from this VM, so the VM must reach
+HQ over the tailnet: the Tailscale node must accept the subnet route to HQ, the
+tailnet policy must let `tag:carbon` reach HQ on TCP 443, `HQ_ISSUER`'s host must
+resolve to that private address from the VM, and HQ must present a certificate
+the GoTrue image trusts. Browsers reach HQ from their own tailnet devices.
+Changing any of these inputs selects coordinated maintenance, because it
+reconfigures GoTrue as well as ERP and MES.
+
+Rollout:
+
+1. **Transition.** Set `HQ_SIGN_IN_ENABLED` to `"true"` with `HQ_ISSUER` and the
+   secret, and deploy. Both login pages show **Sign in with HQ** above **Sign in
+   with Google**. An employee's first HQ sign-in adds an HQ identity to their
+   existing Google-created account by verified email; nothing is migrated.
+   Sessions now end after 12 hours, or 2 hours idle, so existing sessions older
+   than 12 hours end at their next refresh. HQ does not yet gate entry: anyone
+   who qualifies can still use Google.
+   Verify from a tailnet device: an HQ sign-in lands in ERP and MES; a person HQ
+   denies stays on HQ's page; Google sign-in still works.
+2. **Cutover.** Set `GOOGLE_SIGN_IN_ENABLED` to `"false"` and deploy. GoTrue
+   refuses Google and both apps use `AUTH_PROVIDERS=hq`: a visit to a protected
+   page goes straight to HQ, while a plain `/login` (for example after signing
+   out) shows the HQ button. From here HQ's app gating applies to every new
+   sign-in. Existing sessions continue until the session limits end them or they
+   are revoked.
+3. **Break-glass.** If HQ is unavailable, set `GOOGLE_SIGN_IN_ENABLED` back to
+   `"true"` (keep the Google client and its Internal audience in place) and
+   deploy. Setting `HQ_SIGN_IN_ENABLED` to `"false"` returns the stack to
+   Google-only exactly as before.
 
 ## Private-network limitations
 

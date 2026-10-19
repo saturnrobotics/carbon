@@ -21,6 +21,26 @@ Swarm, and AWS build recipes explicitly select the fork file. See
 [the transition instructions](CONVENTIONS.md#container-build-ownership) for draft
 PR #77.
 
+On 2026-10-18, sign-in through an HQ identity provider (GoTrue's Keycloak
+provider) was added. Its behavior is fork-owned (`packages/auth/src/saturn/`,
+`contrib/deploying/gcp-tailscale/hq_sign_in.py`). It adds hooks to shared files
+already listed under **Login / public pages** and **Environment schema** (the
+`hq` provider), one new shared-file line (the `./saturn/hq-sign-in` export in
+`packages/auth/package.json`), and one message to the ERP and MES locale
+catalogs.
+
+On 2026-10-19, Carbon's side of HQ's central authz service (HQ plan 0006B) was
+added, off until the operator enables it: fork migration
+`20261018214537_saturn-authz-projection` (schema `carbon_private`, role
+`carbon_authz_applier`, guard triggers on `userPermission`, `employeeType` and
+`employeeTypePermission`), the ERP module `apps/erp/app/modules/saturn/`, the
+Inngest job `packages/jobs/src/saturn-authz/` and the token hook's `authz_api`
+claim. Shared files gain one-line hooks: the five permission routes under
+`apps/erp/app/routes/x+/users+/`, the API gate in `routes/api+/v1+/lib/base.server.ts`
+(both under **Auth / session**) and the function list in
+`packages/jobs/src/inngest/index.ts` (**Inngest / event dispatch hooks**), plus
+three ERP catalog messages.
+
 On 2026-10-19, Carbon's read contract for HQ's feed canvas (HQ plan 0012 Step 5)
 was added as fork migration `20261019070224_saturn-hq-feeds` and its regression
 test `packages/database/supabase/tests/saturn-hq-feeds.test.sql`. It only acts

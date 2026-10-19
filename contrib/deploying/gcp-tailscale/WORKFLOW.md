@@ -70,6 +70,16 @@ for the build and deployment. Private `.local/` configuration is transferred
 separately. Uncommitted files are never included in the source archive. The
 application's source link identifies the exact deployed revision.
 
+## Private load balancer mode
+
+With `INGRESS_MODE=private-lb` the first command on a copied data disk is
+`make deploy-adopt`, then `make deploy-maintenance`; later releases use
+`make deploy` as usual. Adoption requires the same clean, CI-verified
+`saturn/main`, publishes nothing and starts nothing. Deployment in this mode
+writes no DNS records and stops before any change when the VM, its network,
+address, service account, data disk or exact ingress allowlist is missing. See
+[private load balancer mode](README.md#private-load-balancer-mode).
+
 If publishing is rejected because someone else updated `origin/saturn/main`,
 fetch and review their commits, pull them with `git pull --ff-only`, and retry.
 Never force-push away another contributor's work.

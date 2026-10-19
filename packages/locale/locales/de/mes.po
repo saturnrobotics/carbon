@@ -1344,6 +1344,9 @@ msgstr "Dieses Overlay anzeigen"
 msgid "Sign in with Google"
 msgstr "Mit Google anmelden"
 
+msgid "Sign in with HQ"
+msgstr "Mit HQ anmelden"
+
 msgid "Sign in with Outlook"
 msgstr "Mit Outlook anmelden"
 

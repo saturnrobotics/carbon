@@ -3366,6 +3366,9 @@ msgstr "Carbon Logo"
 msgid "Carbon only"
 msgstr "Carbon only"
 
+msgid "Carbon permissions are managed in HQ, so they cannot be changed here."
+msgstr "Carbon permissions are managed in HQ, so they cannot be changed here."
+
 msgid "Carbon Posted"
 msgstr "Carbon Posted"
 
@@ -10118,6 +10121,9 @@ msgstr "Manage Subscription"
 msgid "Manage your subscription and billing information"
 msgstr "Manage your subscription and billing information"
 
+msgid "Managed in HQ"
+msgstr "Managed in HQ"
+
 msgid "Manager"
 msgstr "Manager"
 
@@ -12080,6 +12086,9 @@ msgstr "Open document review"
 
 msgid "Open document review and original attachment"
 msgstr "Open document review and original attachment"
+
+msgid "Open HQ access"
+msgstr "Open HQ access"
 
 msgid "Open in Carbon"
 msgstr "Open in Carbon"
@@ -16249,6 +16258,9 @@ msgstr "Sign in with biometrics instead of a magic link. Passkeys are secured by
 
 msgid "Sign in with Google"
 msgstr "Sign in with Google"
+
+msgid "Sign in with HQ"
+msgstr "Sign in with HQ"
 
 msgid "Sign in with Outlook"
 msgstr "Sign in with Outlook"

@@ -117,7 +117,14 @@ export function getEnv(
  * Server env
  */
 
-export type AuthProvider = "email" | "google" | "azure" | "passkey" | "sso";
+// "hq" (Saturn fork) is the HQ identity provider, Supabase provider "keycloak".
+export type AuthProvider =
+  | "email"
+  | "google"
+  | "azure"
+  | "passkey"
+  | "sso"
+  | "hq";
 
 export const AUTH_PROVIDERS =
   getEnv("AUTH_PROVIDERS", {

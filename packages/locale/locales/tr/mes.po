@@ -1344,6 +1344,9 @@ msgstr "Bu katmanı göster"
 msgid "Sign in with Google"
 msgstr "Google ile giriş yap"
 
+msgid "Sign in with HQ"
+msgstr "HQ ile giriş yap"
+
 msgid "Sign in with Outlook"
 msgstr "Outlook ile giriş yap"
 

@@ -1344,6 +1344,9 @@ msgstr "यह ओवरले दिखाएं"
 msgid "Sign in with Google"
 msgstr "Google के साथ साइन इन करें"
 
+msgid "Sign in with HQ"
+msgstr "HQ के साथ साइन इन करें"
+
 msgid "Sign in with Outlook"
 msgstr "Outlook के साथ साइन इन करें"
 
