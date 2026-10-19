@@ -9,6 +9,7 @@ import type {
 } from "react-router";
 import { redirect, useLoaderData, useNavigate, useParams } from "react-router";
 import { ConfirmDelete } from "~/components/Modals";
+import { refuseWhileAuthzManaged } from "~/modules/saturn/saturn.server";
 import { deleteEmployeeType, getEmployeeType } from "~/modules/users";
 import { path } from "~/utils/path";
 import { getCompanyId, invalidateUserSelectQueries } from "~/utils/react-query";
@@ -41,6 +42,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
   const { client } = await requirePermissions(request, {
     delete: "users"
   });
+  await refuseWhileAuthzManaged(request, path.to.employeeTypes);
 
   const { employeeTypeId } = params;
   if (!employeeTypeId) {

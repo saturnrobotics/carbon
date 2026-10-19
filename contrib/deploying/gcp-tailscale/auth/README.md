@@ -163,6 +163,52 @@ refusals for another workspace and an unverified email, and refreshes refused
 past the session timebox and inactivity timeout. A real Google and HQ
 sign-in from the tailnet remains a required deployment acceptance check.
 
+## Permissions managed by HQ
+
+HQ's authz service (`hq-authz`, schema `authz` on the same Postgres) can become
+the source of Carbon's permissions. Migration
+`*_saturn-authz-projection.sql` adds the receiver and the lock, both off until
+the operator turns them on after HQ's seed gate passes (authz's projection
+equals `userPermission` for every seeded user):
+
+```sql
+-- as the database administrator; the origin is a private value
+UPDATE carbon_private.authz_projection
+   SET enabled = true, hq_origin = 'https://<HQ host>'
+ WHERE singleton;
+```
+
+Once on:
+
+- Every minute the Inngest job `saturn-authz-projection` sets each workforce
+  user's `userPermission` row (users with a `google` or `keycloak` identity) to
+  `authz.carbon_permissions(authz.subject_of_auth_user(<user>))`, writing only
+  rows that differ, and then deletes those users' cached claims
+  (`permissions:<uid>`) once Redis confirms. Unknown or disabled people get `{}`.
+  Customers, suppliers and console operators are never projected.
+- Guard triggers on `userPermission`, `employeeType` and
+  `employeeTypePermission` refuse every other write with SQLSTATE 42501 ("Carbon
+  permissions are managed by HQ"); deletes pass, and a new `userPermission` row
+  (GoTrue's `create_public_user`) is written as the projection. Upstream
+  migrations that edit permissions fail too; re-express them as authz seed
+  changes. Turning the lock off restores Carbon's own editing.
+- The ERP permission screens show what Carbon holds, read-only, with a link to
+  `<HQ origin>/admin/access`; their actions, and the API/MCP employee-type
+  tools, refuse.
+- This hook adds a top-level `authz_api` claim (the `api:` resources authz
+  grants, from `authz.capabilities(subject, 'api')`, never from user metadata)
+  and refuses a token for a person authz does not know or has disabled.
+
+HQ grants `carbon_authz_applier` EXECUTE (and USAGE on schema `authz`) on
+`authz.subject_of_auth_user(uuid)`, `authz.carbon_permissions(text)` and
+`authz.epoch()`, and `supabase_auth_admin` on `authz.subject_of_auth_user(uuid)`
+and `authz.capabilities(text, text)`. Carbon grants authz's roles the
+`carbon_private` functions listed in the migration's header.
+
+`packages/database/supabase/tests/saturn-authz-projection.test.sql` covers the
+receiver, the lock and the grants on a migrated local database; this
+directory's hook suite covers the claim.
+
 ## Edge function boundary
 
 The deployment mounts `edge-main/` instead of the development dispatcher. It
