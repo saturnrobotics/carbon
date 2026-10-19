@@ -25,6 +25,7 @@ import payment_sync
 import invoice_inference
 import portal_receiver
 import hq_sign_in
+import wal_g
 
 
 def write_private(path, content):
@@ -186,6 +187,7 @@ def render(config, repo, output, state=Path("/var/lib/carbon"), *, materialize=T
         service["restart"] = "unless-stopped"
         service["logging"] = {"driver": "json-file", "options": {"max-size": "10m", "max-file": "3"}}
     private_postgres.configure(config, services["postgres"], output, state, writer=emit, materialize=materialize)
+    wal_g.configure(config, services["postgres"], repo, output, state, writer=emit)
     directory = state / "secrets"
     if materialize:
         initialize_secrets(config, directory)

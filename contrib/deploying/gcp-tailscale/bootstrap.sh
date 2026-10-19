@@ -239,6 +239,29 @@ fi
 # Commit mode bits are not assumed for inherited scripts mounted in containers.
 chmod 755 "$release/contrib/deploying/simple-docker-caddy/bin/secrets-entrypoint.sh" "$release/contrib/deploying/simple-docker-caddy/postgres/"*.sh
 install -m 0755 "$release/contrib/deploying/gcp-tailscale/certificates.sh" /usr/local/sbin/carbon-certificates
+if [[ $mode == private-lb ]]; then
+  # The owning platform's data plane (wal_g.py): the pinned WAL-G release,
+  # refused unless its sha256 matches, the wrapper PostgreSQL runs it through,
+  # and the daily base backup.
+  tooling=$release/contrib/deploying/gcp-tailscale
+  chmod 755 "$tooling/wal-g-glibc.sh"
+  python3 "$tooling/wal_g.py" install
+  install -m 0755 "$tooling/wal-g-backup.sh" /usr/local/sbin/carbon-wal-g-backup
+  python3 "$tooling/wal_g.py" units /etc/systemd/system
+  systemctl daemon-reload
+  systemctl enable --now carbon-wal-g-backup.timer
+  # Host metrics and logs for the owning platform's alerts, such as data disk
+  # use, sent as the VM's service account. Google's signed repository, major
+  # version 2, as Google's installer script configures it.
+  if ! dpkg-query --show --showformat='${Status}' google-cloud-ops-agent 2>/dev/null | grep -qx 'install ok installed'; then
+    install -d -m 0755 /etc/apt/keyrings
+    curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg -o /etc/apt/keyrings/google-cloud-ops-agent.asc
+    chmod 644 /etc/apt/keyrings/google-cloud-ops-agent.asc
+    printf 'deb [signed-by=/etc/apt/keyrings/google-cloud-ops-agent.asc] https://packages.cloud.google.com/apt google-cloud-ops-agent-bookworm-2 main\n' > /etc/apt/sources.list.d/google-cloud-ops-agent.list
+    apt-get update -qq
+    DEBIAN_FRONTEND=noninteractive apt-get install -y google-cloud-ops-agent
+  fi
+fi
 touch /etc/carbon-bootstrap-v1
 if [[ $mode == private-lb ]]; then
   echo 'VM ready; configuration retained on the private data disk; no tailnet identity.'

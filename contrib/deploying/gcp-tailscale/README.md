@@ -449,6 +449,18 @@ What changes in `private-lb` mode:
   must admit TCP 5432 to `SERVICE_ACCOUNT` from exactly `POSTGRES_CLIENT_CIDRS`,
   because Supabase's own `pg_hba.conf` would accept other sources with a password,
   and TCP 443 from a private proxy-only subnet.
+- **PostgreSQL.** The owning platform's settings are passed on the command line,
+  which overrides `postgresql.conf` and earlier `ALTER SYSTEM` values:
+  `max_connections=200`, `shared_buffers=1GB`, `effective_cache_size=3GB`,
+  `work_mem=8MB`, `maintenance_work_mem=256MB`, `wal_level=logical`,
+  `password_encryption=scram-sha-256`, `archive_mode=on`,
+  `archive_command='wal-g wal-push %p'` and `archive_timeout=60s`, with a 4 GB
+  container memory limit and the private listener's `ssl=on`. See
+  [WAL-G archiving](#wal-g-archiving-and-base-backups).
+- **Host agents.** Bootstrap installs the pinned WAL-G release, a daily base-backup
+  timer and Google's Ops Agent (host metrics and logs, sent as `SERVICE_ACCOUNT`).
+- **Labels.** A new instance gets the labels `app=hq,role=data`, which the owning
+  platform's data-plane contract checks.
 - **Refused.** Managed cold backups (`backups.json`), invoice intake
   (`INVOICE_INTAKE_ENABLED=true`), the Portal receiver (`PORTAL_*`) and
   `TAILSCALE_*` settings. Each would create or need resources outside the shared
@@ -504,6 +516,74 @@ Without adoption, `make deploy` in this mode stops before any change when the VM
 does not exist. Deployment never follows an address change on its own: only
 adoption reissues the PostgreSQL server certificate. The CA does not change, so
 database clients keep their trusted `ca.crt`.
+
+### WAL-G archiving and base backups
+
+In `private-lb` mode PostgreSQL archives every WAL segment with WAL-G to the bucket
+`<PROJECT_ID>-pg-wal`, at most a minute after it is written, and the host takes a
+base backup daily at 07:00 UTC. The owning deployment creates that bucket and
+grants `SERVICE_ACCOUNT` object create and read only; this tooling never creates
+the bucket, holds no key file and needs no secret. WAL-G gets the account's token
+from the metadata server, which containers on the Compose bridge network reach
+through the host's NAT like any other address. `GCE_METADATA_HOST` names it by
+address, so no DNS lookup is involved.
+
+- **Binary.** `wal_g.py` pins WAL-G's PostgreSQL release build for linux/amd64
+  by version, URL and the release's published sha256. Bootstrap downloads it to
+  `/var/lib/carbon/wal-g/<version>/wal-g` and refuses any other bytes, including
+  an installed file that changed. The Supabase PostgreSQL image's userland is
+  musl and the release binary is linked against glibc, so `wal-g-glibc.sh` is
+  mounted read-only as `/usr/local/bin/wal-g` and runs the binary, mounted
+  read-only beside it, with the newest glibc loader from the image's Nix store,
+  where PostgreSQL's own glibc lives.
+- **Settings.** The rendered, secret-free `wal-g.env` beside `compose.json` is the
+  PostgreSQL container's `env_file`: the bucket prefix, `zstd` compression,
+  `WALG_PREVENT_WAL_OVERWRITE=true`, `GCS_MAX_RETRIES=3`,
+  `WALG_UPLOAD_CONCURRENCY=2` and `GCE_METADATA_HOST`.
+- **Fail closed.** Any WAL-G failure exits non-zero, so PostgreSQL keeps the segment
+  in `pg_wal` and retries it; nothing is archived to `/dev/null`. Watch
+  `pg_stat_archiver` and the free space of the data disk.
+- **Base backups.** `carbon-wal-g-backup.timer` runs `/usr/local/sbin/carbon-wal-g-backup`,
+  which runs `wal-g backup-push` as `postgres` inside the running PostgreSQL
+  container, connected as the superuser over the container's loopback. Take the
+  first one right after the first deployment in this mode, since archived WAL is
+  only restorable on top of a base backup:
+
+  ```bash
+  gcloud compute ssh <VM_NAME> --zone <ZONE> --project <PROJECT_ID> --tunnel-through-iap \
+    --command 'sudo systemctl start carbon-wal-g-backup.service; sudo journalctl -u carbon-wal-g-backup.service -n 20 --no-pager'
+  ```
+
+  `systemctl start` returns when the backup ends. Then confirm both halves of the
+  archive: `gcloud storage ls 'gs://<PROJECT_ID>-pg-wal/basebackups_005/*_backup_stop_sentinel.json'`
+  lists the backup, and `gcloud storage ls -l 'gs://<PROJECT_ID>-pg-wal/wal_005/'`
+  shows segments a minute or two old.
+- **Restore.** The owning deployment's restore runbook runs a scratch container of
+  the same image with the same two read-only mounts and `--env-file wal-g.env`:
+  `wal-g backup-fetch <directory> LATEST`, then `recovery.signal` with
+  `restore_command='wal-g wal-fetch %f %p'`. The pgsodium root key is not in the
+  archive; it stays in the `pgconfig` volume, which only disk snapshots cover.
+- **No delete rights.** WAL-G's GCS uploader writes each object as a temporary
+  `<object>_chunks/chunk0`, composes the object from it and then tries to delete
+  the chunk. The account may not delete, and the bucket's retention policy forbids
+  it anyway, so every object leaves its chunk behind until the bucket's lifecycle
+  rule removes it, doubling the stored bytes. `GCS_MAX_RETRIES=3` bounds that
+  refused delete to about two seconds per object; WAL-G's default of 16 retries
+  would hold each segment for about half an hour. The same names make one failure
+  permanent: if a push stops after its chunk was written but before the object
+  was composed, every retry must replace that chunk, which is refused, and
+  `pg_stat_archiver.last_failed_wal` stays on that segment. Clearing it takes the
+  bucket owner removing that stray chunk, which the retention policy must first
+  allow; until then WAL accumulates on the data disk.
+- **Existing instance.** Provisioning only labels an instance it creates. Label a
+  VM that predates this once, then deploy:
+
+  ```bash
+  gcloud compute instances add-labels <VM_NAME> --zone <ZONE> --project <PROJECT_ID> --labels=app=hq,role=data
+  ```
+
+The first `make deploy-maintenance` after this change installs everything and
+recreates PostgreSQL with the new settings; archiving starts with it.
 
 ## Portal workforce receiver
 
