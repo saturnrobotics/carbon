@@ -5,7 +5,10 @@ umask 077
 [[ $EUID -eq 0 ]] || { echo 'Run bootstrap as root' >&2; exit 1; }
 upload=${1:?private upload directory required}
 revision=${2:?source commit required}
+# deploy.py passes private-lb explicitly; the private configuration must agree.
+mode=${3:-tailscale}
 [[ $upload =~ ^/tmp/carbon-upload\.[A-Za-z0-9]+$ && $revision =~ ^[a-f0-9]{40}$ ]] || exit 1
+[[ $mode == tailscale || $mode == private-lb ]] || exit 1
 device=/dev/disk/by-id/google-carbon-data
 [[ -b $device ]] || { echo 'Retained carbon-data disk is missing' >&2; exit 1; }
 
@@ -13,6 +16,8 @@ device=/dev/disk/by-id/google-carbon-data
 # existing signature except ext4; never reformat a recognizable filesystem.
 filesystem=$(blkid -s TYPE -o value "$device" || true)
 if [[ -z $filesystem ]]; then
+  # private-lb adopts a disk copied from an existing deployment, never a new one.
+  [[ $mode == tailscale ]] || { echo 'Blank data disk; private-lb mode adopts a copied Carbon disk and never formats one' >&2; exit 1; }
   [[ -z $(wipefs --no-act --noheadings --output TYPE "$device") ]] || { echo 'Unexpected data disk signature; refusing to format' >&2; exit 1; }
   mkfs.ext4 -q -L carbon-data "$device"
 elif [[ $filesystem != ext4 ]]; then
@@ -30,6 +35,10 @@ if ! grep -q "UUID=$disk_uuid /var/lib/carbon " /etc/fstab; then
   printf 'UUID=%s /var/lib/carbon ext4 defaults 0 2\n' "$disk_uuid" >> /etc/fstab
 fi
 chmod 700 /var/lib/carbon
+if [[ $mode == private-lb ]] && ! [[ -d /var/lib/carbon/docker && -d /var/lib/carbon/secrets ]]; then
+  echo 'The data disk holds no Carbon deployment; private-lb mode adopts a copied disk only' >&2
+  exit 1
+fi
 
 if [[ ! -f /etc/carbon-bootstrap-v1 ]]; then
   export DEBIAN_FRONTEND=noninteractive
@@ -39,11 +48,15 @@ if [[ ! -f /etc/carbon-bootstrap-v1 ]]; then
   curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
   chmod 644 /etc/apt/keyrings/docker.asc
   printf 'deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian bookworm stable\n' > /etc/apt/sources.list.d/docker.list
-  curl -fsSL https://pkgs.tailscale.com/stable/debian/bookworm.noarmor.gpg -o /etc/apt/keyrings/tailscale.gpg
-  chmod 644 /etc/apt/keyrings/tailscale.gpg
-  printf 'deb [signed-by=/etc/apt/keyrings/tailscale.gpg] https://pkgs.tailscale.com/stable/debian bookworm main\n' > /etc/apt/sources.list.d/tailscale.list
+  packages=(docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin)
+  if [[ $mode == tailscale ]]; then
+    curl -fsSL https://pkgs.tailscale.com/stable/debian/bookworm.noarmor.gpg -o /etc/apt/keyrings/tailscale.gpg
+    chmod 644 /etc/apt/keyrings/tailscale.gpg
+    printf 'deb [signed-by=/etc/apt/keyrings/tailscale.gpg] https://pkgs.tailscale.com/stable/debian bookworm main\n' > /etc/apt/sources.list.d/tailscale.list
+    packages+=(tailscale)
+  fi
   apt-get update -qq
-  apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin tailscale
+  apt-get install -y "${packages[@]}"
 fi
 
 install -d -m 0700 /var/lib/carbon/releases /var/lib/carbon/secrets
@@ -61,7 +74,22 @@ if key and not key.startswith('replace-'):
 p.write_text(json.dumps(c))
 os.replace(p, '/var/lib/carbon/config.json')
 PY
+configured=$(python3 -c 'import json; print(json.load(open("/var/lib/carbon/config.json")).get("INGRESS_MODE", "tailscale"))')
+[[ $configured == "$mode" ]] || { echo 'Bootstrap ingress mode differs from the private configuration' >&2; exit 1; }
 
+if [[ $mode == private-lb ]]; then
+  # No tailnet node. Destroy the identity copied with the disk so no second
+  # node can ever claim it, and keep Tailscale off this host.
+  if command -v tailscale >/dev/null || command -v tailscaled >/dev/null || [[ -e /var/lib/tailscale || -L /var/lib/tailscale ]]; then
+    echo 'Tailscale is present on this host; private-lb mode runs no tailnet node' >&2
+    exit 1
+  fi
+  rm -rf --one-file-system /var/lib/carbon/tailscale
+  rm -f /var/lib/carbon/secrets/tailscale_auth_key
+fi
+
+# Tailscale mode only; this block is unchanged and deliberately left unindented.
+if [[ $mode == tailscale ]]; then
 # Persist node identity with the data disk so VM recovery preserves the tailnet
 # address. Do not erase or overwrite an existing Tailscale identity.
 if [[ ! -L /var/lib/tailscale ]]; then
@@ -106,6 +134,7 @@ assert ipaddress.ip_address(address) in ipaddress.ip_network("100.64.0.0/10")
 c=json.load(open(p)); c["TAILSCALE_IP"]=address
 with open(p,"w") as f: json.dump(c,f)
 '
+fi
 
 # Docker must wait for the retained disk and Tailscale after a reboot. Its
 # containers restart only after the private bind address exists.
@@ -113,8 +142,8 @@ mkdir -p /etc/docker /etc/systemd/system/docker.service.d
 if [[ ! -f /etc/carbon-bootstrap-v1 ]] && [[ $(docker info --format '{{.DockerRootDir}}') != /var/lib/carbon/docker ]]; then
   [[ -z $(docker ps --all --quiet) && -z $(docker image ls --quiet) ]] || { echo 'Existing Docker state on the boot disk; migrate it deliberately before deploying' >&2; exit 1; }
 fi
-python3 - <<'PY'
-import json
+python3 - "$mode" <<'PY'
+import json, sys
 from pathlib import Path
 p=Path('/etc/docker/daemon.json')
 c=json.loads(p.read_text()) if p.exists() else {}
@@ -126,9 +155,35 @@ features = c.setdefault('features', {})
 if Path('/etc/carbon-bootstrap-v1').exists() and features.get('containerd-snapshotter', True):
     raise SystemExit('Existing Docker uses a different image store; migrate it deliberately before deploying')
 features['containerd-snapshotter'] = False
+if sys.argv[1] == 'private-lb':
+    # Keep Docker networks outside every range of the shared VPC.
+    pools = [{'base': '172.31.0.0/16', 'size': 24}]
+    if Path('/etc/carbon-bootstrap-v1').exists() and c.get('default-address-pools', pools) != pools:
+        raise SystemExit('Existing Docker address pools differ; migrate them deliberately before deploying')
+    c['default-address-pools'] = pools
 c.update({'data-root':'/var/lib/carbon/docker', 'log-driver':'local', 'log-opts':{'max-size':'10m','max-file':'3'}})
 p.write_text(json.dumps(c))
 PY
+if [[ $mode == private-lb ]]; then
+cat > /usr/local/sbin/carbon-wait-private-ip <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+address=$(python3 -c 'import ipaddress, json; print(ipaddress.IPv4Address(json.load(open("/var/lib/carbon/config.json"))["POSTGRES_PRIVATE_IP"]))')
+for attempt in {1..60}; do
+  if ip -4 -o address show scope global | grep -qF "inet $address/"; then exit 0; fi
+  sleep 2
+done
+echo 'Private address unavailable; Docker startup refused' >&2
+exit 1
+EOF
+chmod 755 /usr/local/sbin/carbon-wait-private-ip
+cat > /etc/systemd/system/docker.service.d/carbon.conf <<'EOF'
+[Unit]
+RequiresMountsFor=/var/lib/carbon
+[Service]
+ExecStartPre=/usr/local/sbin/carbon-wait-private-ip
+EOF
+else
 cat > /usr/local/sbin/carbon-wait-tailnet <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
@@ -148,8 +203,24 @@ After=tailscaled.service
 [Service]
 ExecStartPre=/usr/local/sbin/carbon-wait-tailnet
 EOF
+fi
 systemctl daemon-reload
 if [[ ! -f /etc/carbon-bootstrap-v1 ]]; then
+  if [[ $mode == private-lb ]]; then
+    # Docker first loads the copied disk here. A crash-consistent copy records
+    # containers as running, and unless-stopped would start them all (jobs,
+    # mail, payment sync). Record what `compose stop` records instead; adoption
+    # then removes them, and nothing starts until a deployment does.
+    python3 - <<'PY'
+import json
+from pathlib import Path
+for path in Path('/var/lib/carbon/docker/containers').glob('*/config.v2.json'):
+    container = json.loads(path.read_text())
+    if not container.get('HasBeenManuallyStopped'):
+        container['HasBeenManuallyStopped'] = True
+        path.write_text(json.dumps(container))
+PY
+  fi
   systemctl restart docker.service
 fi
 systemctl enable docker.service
@@ -169,4 +240,8 @@ fi
 chmod 755 "$release/contrib/deploying/simple-docker-caddy/bin/secrets-entrypoint.sh" "$release/contrib/deploying/simple-docker-caddy/postgres/"*.sh
 install -m 0755 "$release/contrib/deploying/gcp-tailscale/certificates.sh" /usr/local/sbin/carbon-certificates
 touch /etc/carbon-bootstrap-v1
-echo 'VM ready; configuration and node identity retained on the private data disk.'
+if [[ $mode == private-lb ]]; then
+  echo 'VM ready; configuration retained on the private data disk; no tailnet identity.'
+else
+  echo 'VM ready; configuration and node identity retained on the private data disk.'
+fi

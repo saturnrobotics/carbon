@@ -7,7 +7,7 @@ umask 077
 readonly STATE=/var/lib/carbon
 readonly CONFIG=${1:?Usage: host-deploy.sh CONFIG_JSON REPO_PATH COMMAND}
 readonly REPO=${2:?Usage: host-deploy.sh CONFIG_JSON REPO_PATH COMMAND}
-readonly ACTION=${3:?Expected prepare, quiesce, routine-migrate, routine-apply, maintenance-apply, finalize, start, or check}
+readonly ACTION=${3:?Expected prepare, quiesce, routine-migrate, routine-apply, maintenance-apply, finalize, start, check, or adopt}
 readonly HERE="$REPO/contrib/deploying/gcp-tailscale"
 readonly CURRENT="$STATE/runtime/compose.json"
 
@@ -26,6 +26,14 @@ PY
 REVISION=$(config_value DEPLOY_REVISION)
 [[ "$REVISION" =~ ^[a-f0-9]{40,64}$ ]] || fail "Invalid source revision."
 readonly REVISION
+INGRESS_MODE=$(python3 - "$CONFIG" <<'PY'
+import json, sys
+with open(sys.argv[1]) as stream:
+    print(json.load(stream).get("INGRESS_MODE", "tailscale"))
+PY
+)
+[[ "$INGRESS_MODE" =~ ^(tailscale|private-lb)$ ]] || fail "Invalid ingress mode."
+readonly INGRESS_MODE
 readonly PREPARED="$STATE/prepared/$REVISION"
 
 compose() { docker compose --project-name carbon --file "$CURRENT" "$@"; }
@@ -186,8 +194,29 @@ verify_tailnet() {
     || fail "Tailscale Funnel must be disabled for this private deployment."
 }
 
+# private-lb: no tailnet node; Caddy and PostgreSQL bind the VM's private address.
+verify_private_address() {
+  local expected
+  expected=$(config_value POSTGRES_PRIVATE_IP)
+  if command -v tailscale >/dev/null || command -v tailscaled >/dev/null; then
+    fail "Tailscale must not be installed in private-lb mode."
+  fi
+  [ ! -e "$STATE/tailscale" ] || fail "A copied Tailscale identity remains on the data disk."
+  ip -4 -o address show scope global | grep -qF "inet $expected/" \
+    || fail "Configured private address is not on this VM's network interface."
+}
+
+verify_ingress() {
+  if [ "$INGRESS_MODE" = private-lb ]; then verify_private_address; else verify_tailnet; fi
+}
+
+# The address Caddy publishes 443 on: the tailnet IP, or the VM's private IP.
+ingress_address() {
+  if [ "$INGRESS_MODE" = private-lb ]; then config_value POSTGRES_PRIVATE_IP; else config_value TAILSCALE_IP; fi
+}
+
 check_stack() {
-  verify_tailnet
+  verify_ingress
   for service in postgres storage gotrue postgrest redis inngest erp mes kong caddy; do
     # PostgREST is a scratch image with no health probe. Its readiness is also
     # checked by the ERP dependency health response.
@@ -197,9 +226,9 @@ check_stack() {
       wait_service "$service"
     fi
   done
-  # Verify private TLS routing and dependencies from the VM's tailnet address.
+  # Verify private TLS routing and dependencies from the VM's ingress address.
   local host expected
-  expected=$(config_value TAILSCALE_IP)
+  expected=$(ingress_address)
   host=$(config_value ERP_HOST)
   curl --fail --silent --show-error --max-time 15 --resolve "$host:443:$expected" "https://$host/health" \
     | python3 -c 'import json,sys; sys.exit(0 if json.load(sys.stdin).get("status") == "healthy" else 1)'
@@ -207,6 +236,13 @@ check_stack() {
   curl --fail --silent --show-error --max-time 15 --resolve "$host:443:$expected" "https://$host/health" >/dev/null
   host=$(config_value SUPABASE_HOST)
   curl --fail --silent --show-error --max-time 15 --resolve "$host:443:$expected" "https://$host/auth/v1/health" >/dev/null
+  if [ "$INGRESS_MODE" = private-lb ]; then
+    # The load balancer's health check asks Caddy itself on each host.
+    for key in ERP_HOST MES_HOST SUPABASE_HOST; do
+      host=$(config_value "$key")
+      curl --fail --silent --show-error --max-time 15 --resolve "$host:443:$expected" "https://$host/healthz" >/dev/null
+    done
+  fi
   # Force a real signed SDK registration after ERP starts; Inngest's boot-time
   # attempt may race the build or migrations on the first deployment.
   compose exec -T erp /usr/local/bin/carbon-secrets-entrypoint.sh node --input-type=module -e '
@@ -227,7 +263,7 @@ check_stack() {
 
 case "$ACTION" in
   prepare)
-    verify_tailnet
+    verify_ingress
     [ -f "$STATE/tls/live/carbon/fullchain.pem" ] && [ -f "$STATE/tls/live/carbon/privkey.pem" ] \
       || fail "Obtain the private deployment's DNS-validated certificate first."
     mkdir -p "$PREPARED"
@@ -253,14 +289,16 @@ case "$ACTION" in
     printf '%s\n' "Carbon stopped; snapshot the data disk before apply."
     ;;
   routine-migrate)
-    verify_tailnet
+    verify_ingress
     [ -f "$CURRENT" ] || fail "Routine migrations require an existing deployment."
     verify_release_cas_and_drift
+    # Expansion belongs to the container, after its secret entrypoint ran.
+    # shellcheck disable=SC2016
     compose --profile ops run --rm --no-deps ops sh -c \
       'pnpm exec supabase migration up --include-all --db-url "postgresql://supabase_admin:${PGPASSWORD}@postgres:5432/postgres"'
     ;;
   routine-apply)
-    verify_tailnet
+    verify_ingress
     [ -f "$PREPARED/compose.json" ] || fail "Run prepare before routine-apply."
     verify_release_cas_and_drift
     mkdir -p "$STATE/runtime"
@@ -273,7 +311,7 @@ case "$ACTION" in
     fi
     ;;
   maintenance-apply)
-    verify_tailnet
+    verify_ingress
     [ -f "$PREPARED/compose.json" ] || fail "Run prepare before maintenance-apply."
     [ -z "$(docker ps --filter label=com.docker.compose.project=carbon --quiet)" ] \
       || fail "Run quiesce and snapshot the data disk before applying a release."
@@ -312,7 +350,7 @@ case "$ACTION" in
     ;;
   start)
     [ -f "$CURRENT" ] || fail "No existing deployment to start."
-    verify_tailnet
+    verify_ingress
     compose up -d
     check_stack
     ;;
@@ -320,5 +358,21 @@ case "$ACTION" in
     [ -f "$CURRENT" ] || fail "No deployment to check."
     check_stack
     ;;
-  *) fail "Expected prepare, quiesce, routine-migrate, routine-apply, maintenance-apply, finalize, start, or check." ;;
+  adopt)
+    # private-lb only, once, on a data disk copied from another host: keep the
+    # PostgreSQL CA and follow the new address, then remove the old host's
+    # containers and networks (never volumes). Nothing is started.
+    [ "$INGRESS_MODE" = private-lb ] || fail "Adoption applies only to INGRESS_MODE=private-lb."
+    verify_ingress
+    [ -z "$(docker ps --filter label=com.docker.compose.project=carbon --quiet)" ] \
+      || fail "Carbon is running; adoption never stops a running stack."
+    python3 "$HERE/private_postgres.py" adopt "$STATE/private-postgres" "$(config_value POSTGRES_PRIVATE_IP)"
+    if [ -f "$CURRENT" ]; then
+      compose --profile bootstrap --profile ops down --remove-orphans --timeout 120
+    fi
+    [ -z "$(docker ps --all --filter label=com.docker.compose.project=carbon --quiet)" ] \
+      || fail "Carbon containers remain after adoption; inspect them before deploying."
+    printf '%s\n' "Adopted the copied data disk; nothing was started."
+    ;;
+  *) fail "Expected prepare, quiesce, routine-migrate, routine-apply, maintenance-apply, finalize, start, check, or adopt." ;;
 esac

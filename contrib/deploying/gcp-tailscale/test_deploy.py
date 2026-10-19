@@ -364,6 +364,367 @@ class DnsTests(unittest.TestCase):
             self.assertEqual(api.call_count, 1)
 
 
+ACCOUNT = "carbon-vm@test-carbon.iam.gserviceaccount.com"
+
+
+def private_lb_fixture():
+    """A synthetic private-lb configuration; documentation and RFC1918 ranges only."""
+    config = fixture()
+    for key in ("TAILSCALE_HOSTNAME", "PORTAL_RECEIVER_AUDIENCE"):
+        del config[key]
+    config.update({
+        "INGRESS_MODE": "private-lb", "NETWORK": "shared-vpc", "SUBNET": "shared-data",
+        "SERVICE_ACCOUNT": ACCOUNT, "POSTGRES_PRIVATE_IP": "10.73.8.2", "POSTGRES_CLIENT_CIDRS": ["10.81.0.0/24"],
+        "INGRESS_ALLOWLIST": [
+            {"name": "shared-allow-proxy-to-carbon", "priority": 1000, "ports": ["tcp:443"], "sources": ["10.73.4.0/26"], "target": ACCOUNT},
+            {"name": "shared-allow-hc-to-carbon", "priority": 1000, "ports": ["tcp:443"], "sources": ["35.191.0.0/16", "130.211.0.0/22"], "target": ACCOUNT},
+            {"name": "shared-allow-run-to-postgres", "priority": 1000, "ports": ["tcp:5432"], "sources": ["10.81.0.0/24"], "target": ACCOUNT},
+            {"name": "shared-allow-iap-ssh-carbon", "priority": 1000, "ports": ["tcp:22"], "sources": ["35.235.240.0/20"], "target": ACCOUNT},
+        ],
+    })
+    return config
+
+
+def firewall_rules(config):
+    """The GCP firewall listing that exactly matches the configured allowlist."""
+    return [{"name": rule["name"], "network": "https://www.googleapis.com/compute/v1/projects/test-carbon/global/networks/" + config["NETWORK"],
+             "direction": "INGRESS", "priority": rule["priority"],
+             "allowed": [{"IPProtocol": port.split(":")[0], "ports": [port.split(":")[1]]} for port in rule["ports"]],
+             "sourceRanges": list(rule["sources"]), "targetServiceAccounts": [rule["target"]],
+             "logConfig": {"enable": True}} for rule in config["INGRESS_ALLOWLIST"]]
+
+
+def private_vm(config):
+    return {"networkInterfaces": [{"network": "/global/networks/shared-vpc", "subnetwork": "/regions/us-east1/subnetworks/shared-data", "networkIP": "10.73.8.2"}],
+            "serviceAccounts": [{"email": config["SERVICE_ACCOUNT"], "scopes": ["https://www.googleapis.com/auth/cloud-platform"]}],
+            "disks": [{"deviceName": "carbon-data", "autoDelete": False, "source": "/zones/us-east1-b/disks/carbon-data"}]}
+
+
+class TailscaleModeTests(unittest.TestCase):
+    """The default mode's provisioning is pinned to the calls made before private-lb existed."""
+
+    EXPECTED = [
+        ("services", "enable", "compute.googleapis.com", "iap.googleapis.com"),
+        ("compute", "networks", "create", "carbon-vpc", "--subnet-mode=custom"),
+        ("compute", "networks", "subnets", "create", "carbon-subnet", "--network", "carbon-vpc", "--region", "us-east1", "--range=10.73.0.0/24", "--enable-private-ip-google-access"),
+        ("compute", "routers", "create", "carbon-router", "--network", "carbon-vpc", "--region", "us-east1"),
+        ("compute", "routers", "nats", "create", "carbon-nat", "--router", "carbon-router", "--region", "us-east1", "--nat-all-subnet-ip-ranges", "--auto-allocate-nat-external-ips"),
+        ("compute", "firewall-rules", "create", "carbon-iap", "--network", "carbon-vpc", "--direction=INGRESS", "--priority=900", "--action=ALLOW", "--rules=tcp:22", "--source-ranges=35.235.240.0/20", "--target-tags", "carbon"),
+        ("compute", "firewall-rules", "create", "carbon-deny-ingress", "--network", "carbon-vpc", "--direction=INGRESS", "--priority=1000", "--action=DENY", "--rules=all", "--source-ranges=0.0.0.0/0", "--target-tags", "carbon"),
+        ("compute", "disks", "create", "carbon-data", "--zone", "us-east1-b", "--size", "200GB", "--type=pd-balanced", "--labels=application=carbon"),
+        ("compute", "resource-policies", "create", "snapshot-schedule", "carbon-daily", "--region", "us-east1", "--daily-schedule", "--start-time=06:00", "--max-retention-days=14", "--on-source-disk-delete=keep-auto-snapshots", "--storage-location", "us-east1"),
+        ("compute", "disks", "add-resource-policies", "carbon-data", "--zone", "us-east1-b", "--resource-policies", "carbon-daily"),
+        ("compute", "instances", "create", "carbon", "--zone", "us-east1-b", "--machine-type", "e2-standard-4", "--subnet", "carbon-subnet", "--no-address", "--no-service-account", "--no-scopes", "--image-family=debian-12", "--image-project=debian-cloud", "--boot-disk-size=50GB", "--disk", "name=carbon-data,device-name=carbon-data,mode=rw,boot=no,auto-delete=no", "--tags", "carbon", "--metadata=enable-oslogin=TRUE,block-project-ssh-keys=TRUE", "--shielded-secure-boot", "--deletion-protection"),
+    ]
+
+    def provision_calls(self, config):
+        cloud = deploy.Cloud(config)
+        calls = []
+        with patch.object(cloud, "get", side_effect=lambda *args: {} if args[:3] == ("compute", "disks", "describe") else []), \
+             patch.object(cloud, "call", side_effect=lambda *args, **kw: calls.append(args)), \
+             patch.object(cloud, "check_vm"), patch.object(cloud, "check_firewall"):
+            cloud.provision()
+        return calls
+
+    def test_provisioning_is_unchanged_with_and_without_the_mode_key(self):
+        implicit = fixture()
+        del implicit["INGRESS_MODE"]
+        self.assertFalse(deploy.private_lb.enabled(implicit))
+        self.assertEqual(deploy.validate(implicit, SECRETS)["VM_NAME"], "carbon")
+        for config in (implicit, fixture()):
+            with self.subTest(mode=config.get("INGRESS_MODE")):
+                self.assertEqual(self.provision_calls(config), self.EXPECTED)
+
+    def test_private_lb_keys_are_rejected_in_tailscale_mode(self):
+        lb = private_lb_fixture()
+        for key in ("NETWORK", "SUBNET", "SERVICE_ACCOUNT", "INGRESS_ALLOWLIST"):
+            with self.subTest(key=key), self.assertRaisesRegex(ValueError, "only to INGRESS_MODE=private-lb"):
+                deploy.validate({**fixture(), key: lb[key]}, SECRETS)
+        with self.assertRaisesRegex(ValueError, "INGRESS_MODE must be"):
+            deploy.validate({**fixture(), "INGRESS_MODE": "public"}, SECRETS)
+
+    def test_bootstrap_invocation_is_unchanged(self):
+        self.assertEqual(deploy.private_lb.bootstrap_args(fixture()), ())
+        self.assertEqual(deploy.private_lb.bootstrap_args(private_lb_fixture()), ("private-lb",))
+
+
+class PrivateLbValidationTests(unittest.TestCase):
+    def test_valid_private_lb_configuration(self):
+        config = deploy.validate(private_lb_fixture(), SECRETS)
+        self.assertEqual(config["NETWORK"], "shared-vpc")
+        rules = deploy.private_lb.allowlist(config)
+        self.assertEqual([rule["name"] for rule in rules], [rule["name"] for rule in private_lb_fixture()["INGRESS_ALLOWLIST"]])
+        self.assertEqual(rules[1]["sources"], ["130.211.0.0/22", "35.191.0.0/16"])
+        self.assertEqual(deploy.private_lb.trusted_proxies(rules, ACCOUNT), ["10.73.4.0/26"])
+
+    def test_tailscale_and_portal_inputs_are_rejected(self):
+        registry = json.dumps({"version": 1, "receiver": {"id": "carbon-erp", "audience": "https://erp.hq.example.com"}, "callers": [{"callerId": "portal-query", "serviceAccountSubject": "synthetic-subject-1", "sourceIapAudience": "/projects/0/global/backendServices/0", "operations": ["portal_resolveItems"], "capabilities": ["portal.read"], "requiredAccessLevels": []}]})
+        audience = {**private_lb_fixture(), "PORTAL_RECEIVER_AUDIENCE": "https://erp.hq.example.com"}
+        cases = {"hostname": ({**private_lb_fixture(), "TAILSCALE_HOSTNAME": "carbon"}, SECRETS),
+                 "auth key": (private_lb_fixture(), {**SECRETS, "TAILSCALE_AUTH_KEY": "synthetic-key"}),
+                 "tailnet address": ({**private_lb_fixture(), "TAILSCALE_IP": "100.64.0.1"}, SECRETS),
+                 "portal audience": (audience, SECRETS),
+                 "portal registry": (audience, {**SECRETS, "PORTAL_TRUSTED_CALLERS_JSON": registry})}
+        for label, (config, secrets) in cases.items():
+            with self.subTest(label), self.assertRaisesRegex(ValueError, "private-lb|Unknown configuration keys"):
+                deploy.validate(config, secrets)
+        self.assertEqual(deploy.validate({**fixture(), "PORTAL_RECEIVER_AUDIENCE": "https://erp.hq.example.com"},
+                                         {**SECRETS, "PORTAL_TRUSTED_CALLERS_JSON": registry})["VM_NAME"], "carbon")
+
+    def test_required_private_lb_keys(self):
+        for key in ("NETWORK", "SUBNET", "SERVICE_ACCOUNT", "INGRESS_ALLOWLIST", "POSTGRES_PRIVATE_IP", "POSTGRES_CLIENT_CIDRS"):
+            config = private_lb_fixture()
+            del config[key]
+            with self.subTest(key=key), self.assertRaises(ValueError):
+                deploy.validate(config, SECRETS)
+
+    def test_names_and_service_account_are_validated(self):
+        for key, value in (("NETWORK", "Shared VPC"), ("SUBNET", "subnet;rm"), ("SERVICE_ACCOUNT", "carbon-vm"),
+                           ("SERVICE_ACCOUNT", "carbon-vm@other-project.iam.gserviceaccount.com"),
+                           ("SERVICE_ACCOUNT", "someone@example.com")):
+            with self.subTest(key=key, value=value), self.assertRaises(ValueError):
+                deploy.validate({**private_lb_fixture(), key: value}, SECRETS)
+
+    def test_allowlist_rejects_broad_tagged_or_inconsistent_rules(self):
+        def changed(index, **changes):
+            config = private_lb_fixture()
+            config["INGRESS_ALLOWLIST"] = copy.deepcopy(config["INGRESS_ALLOWLIST"])
+            config["INGRESS_ALLOWLIST"][index].update(changes)
+            return config
+
+        def without(index):
+            config = private_lb_fixture()
+            del config["INGRESS_ALLOWLIST"][index]
+            return config
+
+        duplicate = private_lb_fixture()
+        duplicate["INGRESS_ALLOWLIST"][1]["name"] = duplicate["INGRESS_ALLOWLIST"][0]["name"]
+        extra_key = changed(0)
+        extra_key["INGRESS_ALLOWLIST"][0]["targetTags"] = ["carbon"]
+        cases = {
+            "everywhere": changed(1, sources=["0.0.0.0/0"]), "wide": changed(1, sources=["35.0.0.0/8"]),
+            "non-canonical": changed(0, sources=["10.73.4.1/26"]), "ipv6": changed(0, sources=["::/0"]),
+            "all ports": changed(0, ports=["all"]), "range": changed(0, ports=["tcp:443-445"]),
+            "port zero": changed(0, ports=["tcp:0"]), "icmp": changed(0, ports=["icmp"]),
+            "tag target": changed(0, target="carbon"), "user target": changed(0, target="someone@example.com"),
+            "string priority": changed(0, priority="1000"), "boolean priority": changed(0, priority=True),
+            "duplicate": duplicate, "extra key": extra_key, "empty": {**private_lb_fixture(), "INGRESS_ALLOWLIST": []},
+            # Supabase's own pg_hba.conf admits other sources; the firewall must admit exactly the TLS clients.
+            "database widened": changed(2, sources=["10.81.0.0/24", "10.82.0.0/24"]),
+            "database missing": without(2),
+            "no proxy subnet": without(0),
+        }
+        for label, config in cases.items():
+            with self.subTest(label), self.assertRaises(ValueError):
+                deploy.validate(config, SECRETS)
+
+    def test_unmanaged_features_are_refused(self):
+        with self.assertRaisesRegex(ValueError, "backups"):
+            deploy.private_lb.check_unmanaged(private_lb_fixture(), backups=True)
+        with self.assertRaisesRegex(ValueError, "invoice intake"):
+            deploy.private_lb.check_unmanaged({**private_lb_fixture(), "INVOICE_INTAKE_ENABLED": "true"})
+        deploy.private_lb.check_unmanaged(fixture(), backups=True)
+        deploy.private_lb.check_unmanaged({**private_lb_fixture(), "INVOICE_INTAKE_ENABLED": "false"})
+
+    def test_backups_are_refused_before_any_cloud_request(self):
+        for flags in ([], ["--plan"], ["--adopt"]):
+            with self.subTest(flags=flags), patch.object(deploy.sys, "argv", ["deploy.py", *flags]), \
+                 patch.object(deploy, "private_json", side_effect=[private_lb_fixture(), SECRETS, {}]), \
+                 patch.object(deploy.Path, "exists", return_value=True), \
+                 patch.object(deploy.invoice_inference, "configuration", side_effect=lambda config, settings: config), \
+                 patch.object(deploy, "Cloud") as cloud:
+                with self.assertRaisesRegex(ValueError, "backups"):
+                    deploy.main()
+                cloud.assert_not_called()
+
+    def test_adopt_is_private_lb_only_and_takes_no_release_options(self):
+        with patch.object(deploy, "revision") as revision, patch.object(deploy, "Cloud") as cloud:
+            with self.assertRaisesRegex(ValueError, "only to INGRESS_MODE=private-lb"):
+                deploy.adopt(fixture())
+            revision.assert_not_called()
+            cloud.assert_not_called()
+        for flags in (["--adopt", "--maintenance"], ["--adopt", "--apply"], ["--adopt", "--force"]):
+            with self.subTest(flags=flags), patch.object(deploy.sys, "argv", ["deploy.py", *flags]), \
+                 patch.object(deploy, "private_json") as read, self.assertRaises(SystemExit):
+                deploy.main()
+            read.assert_not_called()
+
+    def test_private_lb_deploy_requires_an_adopted_vm(self):
+        planned = {"expected_generation": 0, "build": {}, "configure": {}, "migrate": {}, "deploy": {}}
+        cloud = MagicMock()
+        cloud.get.return_value = []
+        with patch.object(deploy, "revision", return_value="a" * 40), patch.object(deploy, "Cloud", return_value=cloud), \
+             patch.object(deploy.verify_source, "require_verified") as verify, patch.object(deploy, "publish_source") as publish:
+            with self.assertRaisesRegex(ValueError, "make deploy-adopt"):
+                deploy.deploy(private_lb_fixture(), {}, prepared_release=planned)
+            verify.assert_not_called()
+            publish.assert_not_called()
+            cloud.provision.assert_not_called()
+        with patch.object(deploy, "revision", return_value="a" * 40), patch.object(deploy, "Cloud") as factory, \
+             patch.object(deploy, "publish_source") as publish:
+            with self.assertRaisesRegex(ValueError, "invoice intake"):
+                deploy.deploy({**private_lb_fixture(), "INVOICE_INTAKE_ENABLED": "true"}, {}, prepared_release=planned)
+            factory.assert_not_called()
+            publish.assert_not_called()
+
+
+class PrivateLbProvisioningTests(unittest.TestCase):
+    """private-lb creates only the instance and its snapshot schedule."""
+
+    def world(self, config, *, missing=(), changes=None):
+        changes = changes or {}
+        resources = {
+            "networks": [{"name": "shared-vpc"}],
+            "subnets": [{"name": "shared-data", "network": "/global/networks/shared-vpc"}],
+            "addresses": [{"name": "carbon-ip", "addressType": "INTERNAL", "address": "10.73.8.2", "subnetwork": "/regions/us-east1/subnetworks/shared-data"}],
+            "service-accounts": [{"email": config["SERVICE_ACCOUNT"]}],
+            "disks": [{"name": "carbon-data", "users": []}],
+            "firewall-rules": firewall_rules(config),
+        }
+        for kind, value in changes.items():
+            resources[kind] = value
+        for kind in missing:
+            resources[kind] = []
+
+        def get(*args):
+            if args[:3] == ("compute", "networks", "list"):
+                return resources["networks"]
+            if args[:4] == ("compute", "networks", "subnets", "list"):
+                return resources["subnets"]
+            if args[:3] == ("compute", "addresses", "list"):
+                return resources["addresses"]
+            if args[:3] == ("iam", "service-accounts", "list"):
+                return resources["service-accounts"]
+            if args[:3] == ("compute", "disks", "list"):
+                return resources["disks"]
+            if args[:3] == ("compute", "disks", "describe"):
+                return {}
+            if args[:3] == ("compute", "firewall-rules", "list"):
+                return resources["firewall-rules"]
+            if args[:3] in (("compute", "resource-policies", "list"), ("compute", "instances", "list")):
+                return []
+            if args[:3] == ("compute", "instances", "describe"):
+                return private_vm(config)
+            raise AssertionError(f"unexpected cloud read {args}")
+        return get
+
+    def provision(self, config, **world):
+        cloud = deploy.Cloud(config)
+        calls = []
+        with patch.object(cloud, "get", side_effect=self.world(config, **world)), \
+             patch.object(cloud, "call", side_effect=lambda *args, **kw: calls.append(args)):
+            try:
+                cloud.provision()
+            except ValueError as exc:
+                return calls, str(exc)
+        return calls, None
+
+    def test_missing_data_disk_is_refused_and_never_created(self):
+        calls, error = self.provision(private_lb_fixture(), missing=["disks"])
+        self.assertRegex(error, "carbon-data is missing.*never creates a blank one")
+        self.assertEqual(calls, [])
+
+    def test_shared_resources_must_already_exist(self):
+        for kind in ("networks", "subnets", "addresses", "service-accounts"):
+            with self.subTest(kind=kind):
+                calls, error = self.provision(private_lb_fixture(), missing=[kind])
+                self.assertIsNotNone(error)
+                self.assertEqual(calls, [])
+
+    def test_shared_resources_must_match(self):
+        address = {"name": "carbon-ip", "addressType": "INTERNAL", "address": "10.73.8.2", "subnetwork": "/regions/us-east1/subnetworks/shared-data"}
+        cases = {
+            "subnet in other network": {"subnets": [{"name": "shared-data", "network": "/global/networks/other"}]},
+            "external address": {"addresses": [{**address, "addressType": "EXTERNAL"}]},
+            "other address": {"addresses": [{**address, "address": "10.73.8.3"}]},
+            "address in other subnet": {"addresses": [{**address, "subnetwork": "/subnetworks/other"}]},
+            "address used elsewhere": {"addresses": [{**address, "users": ["/zones/us-east1-b/instances/other"]}]},
+            "disabled account": {"service-accounts": [{"email": ACCOUNT, "disabled": True}]},
+            "disk attached elsewhere": {"disks": [{"name": "carbon-data", "users": ["/zones/us-east1-b/instances/other"]}]},
+            "similar disk name": {"disks": [{"name": "carbon-data-old", "users": []}]},
+            "firewall drift": {"firewall-rules": [*firewall_rules(private_lb_fixture()), {"name": "allow-all", "network": "/global/networks/shared-vpc", "direction": "INGRESS", "priority": 900, "allowed": [{"IPProtocol": "all"}], "sourceRanges": ["0.0.0.0/0"]}]},
+        }
+        for label, changes in cases.items():
+            with self.subTest(label):
+                calls, error = self.provision(private_lb_fixture(), changes=changes)
+                self.assertIsNotNone(error)
+                self.assertEqual(calls, [])
+
+    def test_creates_only_the_instance_and_snapshot_schedule(self):
+        calls, error = self.provision(private_lb_fixture())
+        self.assertIsNone(error)
+        self.assertEqual([call[:3] for call in calls], [("compute", "resource-policies", "create"),
+                                                        ("compute", "disks", "add-resource-policies"),
+                                                        ("compute", "instances", "create")])
+        self.assertEqual(calls[0][4], "carbon-daily")
+        vm = calls[2]
+        for flag in ("--no-address", "--scopes=cloud-platform", "--shielded-secure-boot", "--deletion-protection",
+                     "--metadata=enable-oslogin=TRUE,block-project-ssh-keys=TRUE",
+                     "name=carbon-data,device-name=carbon-data,mode=rw,boot=no,auto-delete=no"):
+            self.assertIn(flag, vm)
+        self.assertEqual(vm[vm.index("--subnet") + 1], "shared-data")
+        self.assertEqual(vm[vm.index("--private-network-ip") + 1], "10.73.8.2")
+        self.assertEqual(vm[vm.index("--service-account") + 1], ACCOUNT)
+        self.assertEqual(vm[vm.index("--tags") + 1], "carbon")
+        self.assertNotIn("--no-service-account", vm)
+
+    def check_firewall(self, rules):
+        cloud = deploy.Cloud(private_lb_fixture())
+        with patch.object(cloud, "get", return_value=rules):
+            cloud.check_firewall()
+
+    def test_ingress_rules_must_equal_the_allowlist(self):
+        exact = firewall_rules(private_lb_fixture())
+        egress = {"name": "deny-data", "network": exact[0]["network"], "direction": "EGRESS", "priority": 1000, "denied": [{"IPProtocol": "all"}], "destinationRanges": ["10.73.8.0/28"]}
+        elsewhere = {**exact[0], "name": "other-network-rule", "network": "/global/networks/default", "sourceRanges": ["0.0.0.0/0"]}
+        disabled = {**exact[0], "name": "parked-rule", "disabled": True, "sourceRanges": ["0.0.0.0/0"]}
+        self.check_firewall([*reversed(exact), egress, elsewhere, disabled])
+
+        def altered(**changes):
+            return [{**exact[0], **changes}, *exact[1:]]
+
+        variants = {
+            "missing rule": exact[1:],
+            "extra allow": [*exact, {**exact[0], "name": "extra"}],
+            "extra deny": [*exact, {"name": "extra-deny", "network": exact[0]["network"], "direction": "INGRESS", "priority": 100, "denied": [{"IPProtocol": "tcp", "ports": ["443"]}], "sourceRanges": ["10.0.0.0/8"]}],
+            "priority": altered(priority=900), "ports": altered(allowed=[{"IPProtocol": "tcp", "ports": ["443", "80"]}]),
+            "all ports": altered(allowed=[{"IPProtocol": "tcp"}]),
+            "widened sources": altered(sourceRanges=["10.73.0.0/16"]),
+            "tag target": altered(targetServiceAccounts=None, targetTags=["carbon"]),
+            "tag and account": altered(targetTags=["carbon"]),
+            "other account": altered(targetServiceAccounts=["other-vm@test-carbon.iam.gserviceaccount.com"]),
+            "all instances": altered(targetServiceAccounts=None),
+            "disabled": altered(disabled=True),
+            "source tags": altered(sourceTags=["router"]),
+            "source accounts": altered(sourceServiceAccounts=[ACCOUNT]),
+            "destination ranges": altered(destinationRanges=["10.73.8.2/32"]),
+        }
+        for label, rules in variants.items():
+            with self.subTest(label), self.assertRaisesRegex(ValueError, "review it before deploying"):
+                self.check_firewall(rules)
+
+    def test_vm_contract(self):
+        config = private_lb_fixture()
+        cloud = deploy.Cloud(config)
+        with patch.object(cloud, "get", return_value=private_vm(config)):
+            cloud.check_vm()
+        nic = private_vm(config)["networkInterfaces"][0]
+        variants = {
+            "external address": {"networkInterfaces": [{**nic, "accessConfigs": [{}]}]},
+            "two interfaces": {"networkInterfaces": [nic, nic]},
+            "other network": {"networkInterfaces": [{**nic, "network": "/global/networks/default"}]},
+            "other subnet": {"networkInterfaces": [{**nic, "subnetwork": "/subnetworks/other"}]},
+            "other address": {"networkInterfaces": [{**nic, "networkIP": "10.73.8.3"}]},
+            "no account": {"serviceAccounts": []},
+            "other account": {"serviceAccounts": [{"email": "other-vm@test-carbon.iam.gserviceaccount.com", "scopes": ["https://www.googleapis.com/auth/cloud-platform"]}]},
+            "extra scope": {"serviceAccounts": [{"email": ACCOUNT, "scopes": ["https://www.googleapis.com/auth/cloud-platform", "https://www.googleapis.com/auth/userinfo.email"]}]},
+            "deleted disk": {"disks": [{"deviceName": "carbon-data", "autoDelete": True, "source": "/disks/carbon-data"}]},
+        }
+        for label, changes in variants.items():
+            with self.subTest(label), patch.object(cloud, "get", return_value={**private_vm(config), **changes}), self.assertRaises(ValueError):
+                cloud.check_vm()
+
+
 class SourceTests(unittest.TestCase):
     def test_feature_branch_cannot_deploy(self):
         with patch.object(deploy, "run", return_value="feature/example\n"), patch.object(deploy, "Cloud") as cloud:

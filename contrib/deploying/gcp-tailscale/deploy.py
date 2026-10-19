@@ -2,6 +2,7 @@
 """Provision a private Carbon VM; --plan observes cloud state, --apply deploys."""
 
 import argparse
+import contextlib
 import ipaddress
 import json
 from pathlib import Path
@@ -15,6 +16,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import private_postgres
+import private_lb
 import payment_sync
 import invoice_inference
 import portal_receiver
@@ -101,18 +103,19 @@ def private_json(path):
 
 
 def validate(config, secrets):
-    if set(config) - CONFIG_KEYS - private_postgres.OPTIONAL_KEYS - payment_sync.CONFIG_KEYS - invoice_inference.CONFIG_KEYS - portal_receiver.CONFIG_KEYS - hq_sign_in.CONFIG_KEYS or set(secrets) - SECRET_KEYS - payment_sync.SECRET_KEYS - portal_receiver.SECRET_KEYS - hq_sign_in.SECRET_KEYS:
+    if set(config) - CONFIG_KEYS - private_postgres.OPTIONAL_KEYS - payment_sync.CONFIG_KEYS - invoice_inference.CONFIG_KEYS - portal_receiver.CONFIG_KEYS - private_lb.CONFIG_KEYS - hq_sign_in.CONFIG_KEYS or set(secrets) - SECRET_KEYS - payment_sync.SECRET_KEYS - portal_receiver.SECRET_KEYS - hq_sign_in.SECRET_KEYS:
         raise ValueError("Unknown configuration keys; see config.example.json and secrets.example.json")
     private_postgres.validate(config)
     payment_sync.validate({**config, **secrets})
     portal_receiver.validate({**config, **secrets})
     hq_sign_in.validate({**config, **secrets})
     invoice_inference.validate(config, project=config.get("PROJECT_ID"))
-    for key in CONFIG_KEYS:
+    for key in private_lb.required_keys(CONFIG_KEYS, config):
         if key not in config:
             raise ValueError(f"Missing {key}")
         if key != "DATA_DISK_GB" and not isinstance(config[key], str):
             raise ValueError(f"{key} must be a string")
+    private_lb.validate(config, secrets)
     if any(not isinstance(value, str) for value in secrets.values()):
         raise ValueError("Secret values must be strings")
     for key in SECRET_KEYS - {"RESEND_API_KEY", "TAILSCALE_AUTH_KEY"}:
@@ -128,7 +131,7 @@ def validate(config, secrets):
     if not re.fullmatch(re.escape(config["REGION"]) + r"-[a-z]", config["ZONE"]):
         raise ValueError("ZONE must be in REGION")
     for key in ("VM_NAME", "TAILSCALE_HOSTNAME"):
-        if not re.fullmatch(r"[a-z][a-z0-9-]{0,24}[a-z0-9]", config[key]):
+        if key in config and not re.fullmatch(r"[a-z][a-z0-9-]{0,24}[a-z0-9]", config[key]):
             raise ValueError(f"Invalid {key}; use 2–26 lowercase letters, digits or hyphens")
     if not re.fullmatch(r"[a-z][a-z0-9-]+", config["MACHINE_TYPE"]):
         raise ValueError("Invalid MACHINE_TYPE")
@@ -178,6 +181,8 @@ class Cloud:
                   "--zone", self.c["ZONE"], "--tunnel-through-iap")
 
     def provision(self):
+        if private_lb.enabled(self.c):
+            return self.provision_private_lb()
         c, n, region, zone = self.c, self.c["VM_NAME"], self.c["REGION"], self.c["ZONE"]
         self.call("services", "enable", "compute.googleapis.com", "iap.googleapis.com")
         self.ensure(["networks"], n + "-vpc", ["--subnet-mode=custom"])
@@ -191,18 +196,61 @@ class Cloud:
             self.ensure(["firewall-rules"], n + "-postgres", ["--network", n + "-vpc", "--direction=INGRESS", "--priority=900", "--action=ALLOW", "--rules=tcp:5432", "--source-ranges", ",".join(c["POSTGRES_CLIENT_CIDRS"]), "--target-tags", n])
         self.ensure(["firewall-rules"], n + "-deny-ingress", ["--network", n + "-vpc", "--direction=INGRESS", "--priority=1000", "--action=DENY", "--rules=all", "--source-ranges=0.0.0.0/0", "--target-tags", n])
         self.ensure(["disks"], n + "-data", ["--zone", zone, "--size", str(c["DATA_DISK_GB"]) + "GB", "--type=pd-balanced", "--labels=application=carbon"], ["--zones", zone])
-        policies = self.get("compute", "resource-policies", "list", "--regions", region, "--filter", f"name={n}-daily")
-        if not policies:
-            self.call("compute", "resource-policies", "create", "snapshot-schedule", n + "-daily", "--region", region, "--daily-schedule", "--start-time=06:00", "--max-retention-days=14", "--on-source-disk-delete=keep-auto-snapshots", "--storage-location", region)
-        disk = self.get("compute", "disks", "describe", n + "-data", "--zone", zone)
-        if not any(p.endswith("/" + n + "-daily") for p in disk.get("resourcePolicies", [])):
-            self.call("compute", "disks", "add-resource-policies", n + "-data", "--zone", zone, "--resource-policies", n + "-daily")
+        self.snapshot_schedule()
         private_address = ["--private-network-ip", c["POSTGRES_PRIVATE_IP"]] if c.get("POSTGRES_PRIVATE_IP") else []
         existed = self.ensure(["instances"], n, ["--zone", zone, "--machine-type", c["MACHINE_TYPE"], "--subnet", n + "-subnet", "--no-address", "--no-service-account", "--no-scopes", "--image-family=debian-12", "--image-project=debian-cloud", "--boot-disk-size=50GB", "--disk", f"name={n}-data,device-name=carbon-data,mode=rw,boot=no,auto-delete=no", "--tags", n, "--metadata=enable-oslogin=TRUE,block-project-ssh-keys=TRUE", "--shielded-secure-boot", "--deletion-protection", *private_address], ["--zones", zone])
         self.check_firewall()
         self.check_vm()
         if c.get("POSTGRES_PRIVATE_IP"):
             self.reserve_postgres_address()
+        return existed
+
+    def snapshot_schedule(self):
+        n, region, zone = self.c["VM_NAME"], self.c["REGION"], self.c["ZONE"]
+        policies = self.get("compute", "resource-policies", "list", "--regions", region, "--filter", f"name={n}-daily")
+        if not policies:
+            self.call("compute", "resource-policies", "create", "snapshot-schedule", n + "-daily", "--region", region, "--daily-schedule", "--start-time=06:00", "--max-retention-days=14", "--on-source-disk-delete=keep-auto-snapshots", "--storage-location", region)
+        disk = self.get("compute", "disks", "describe", n + "-data", "--zone", zone)
+        if not any(p.endswith("/" + n + "-daily") for p in disk.get("resourcePolicies", [])):
+            self.call("compute", "disks", "add-resource-policies", n + "-data", "--zone", zone, "--resource-policies", n + "-daily")
+
+    def provision_private_lb(self):
+        """Create only the instance and its snapshot schedule; verify all else first.
+
+        The shared network, subnet, reserved address, service account, ingress
+        allowlist and data disk belong to another deployment. A missing data
+        disk is refused, never created: bootstrap.sh would format a blank one.
+        """
+        c, n, region, zone = self.c, self.c["VM_NAME"], self.c["REGION"], self.c["ZONE"]
+
+        def single(items, name, problem):
+            if len(items) != 1 or items[0].get("name") != name:
+                raise ValueError(problem)
+            return items[0]
+
+        single(self.get("compute", "networks", "list", "--filter", "name=" + c["NETWORK"]), c["NETWORK"],
+               "NETWORK must name one existing VPC network; private-lb mode never creates it")
+        subnet = single(self.get("compute", "networks", "subnets", "list", "--regions", region, "--filter", "name=" + c["SUBNET"]),
+                        c["SUBNET"], "SUBNET must name one existing subnet in REGION; private-lb mode never creates it")
+        if not subnet.get("network", "").endswith("/networks/" + c["NETWORK"]):
+            raise ValueError("SUBNET must belong to NETWORK")
+        address = single(self.get("compute", "addresses", "list", "--regions", region, "--filter", f"name={n}-ip"),
+                         n + "-ip", f"Reserve the internal address {n}-ip first; private-lb mode never creates it")
+        if (address.get("addressType") != "INTERNAL" or address.get("address") != c["POSTGRES_PRIVATE_IP"]
+                or not address.get("subnetwork", "").endswith("/subnetworks/" + c["SUBNET"])
+                or any(not user.endswith("/instances/" + n) for user in address.get("users", []))):
+            raise ValueError(f"Reserved address {n}-ip must hold POSTGRES_PRIVATE_IP in SUBNET for this VM only")
+        accounts = self.get("iam", "service-accounts", "list", "--filter", "email=" + c["SERVICE_ACCOUNT"])
+        if [(account.get("email"), bool(account.get("disabled"))) for account in accounts] != [(c["SERVICE_ACCOUNT"], False)]:
+            raise ValueError("SERVICE_ACCOUNT must exist and be enabled; private-lb mode never creates it")
+        disk = single(self.get("compute", "disks", "list", "--zones", zone, "--filter", f"name={n}-data"), n + "-data",
+                      f"Data disk {n}-data is missing; private-lb mode adopts a disk made from a snapshot and never creates a blank one")
+        if any(not user.endswith("/instances/" + n) for user in disk.get("users", [])):
+            raise ValueError(f"Data disk {n}-data is attached to another instance")
+        self.check_firewall()
+        self.snapshot_schedule()
+        existed = self.ensure(["instances"], n, ["--zone", zone, "--machine-type", c["MACHINE_TYPE"], "--subnet", c["SUBNET"], "--private-network-ip", c["POSTGRES_PRIVATE_IP"], "--no-address", "--service-account", c["SERVICE_ACCOUNT"], "--scopes=cloud-platform", "--image-family=debian-12", "--image-project=debian-cloud", "--boot-disk-size=50GB", "--disk", f"name={n}-data,device-name=carbon-data,mode=rw,boot=no,auto-delete=no", "--tags", n, "--metadata=enable-oslogin=TRUE,block-project-ssh-keys=TRUE", "--shielded-secure-boot", "--deletion-protection"], ["--zones", zone])
+        self.check_vm()
         return existed
 
     def reserve_postgres_address(self):
@@ -215,6 +263,11 @@ class Cloud:
             raise ValueError("Reserved private PostgreSQL address has drifted; review it before deploying")
 
     def check_firewall(self):
+        if private_lb.enabled(self.c):
+            problem = private_lb.firewall_drift(self.get("compute", "firewall-rules", "list"), self.c)
+            if problem:
+                raise ValueError(problem + "; review it before deploying")
+            return
         n = self.c["VM_NAME"]
         rules = self.get("compute", "firewall-rules", "list")
         rules = [r for r in rules if r.get("network", "").endswith("/" + n + "-vpc") and r.get("direction") == "INGRESS"]
@@ -236,13 +289,18 @@ class Cloud:
 
     def check_vm(self):
         vm = self.get("compute", "instances", "describe", self.c["VM_NAME"], "--zone", self.c["ZONE"])
-        interfaces = vm.get("networkInterfaces", [])
-        if len(interfaces) != 1 or interfaces[0].get("accessConfigs") or interfaces[0].get("ipv6AccessConfigs"):
-            raise ValueError("VM must have one network interface and no external IPv4/IPv6 address")
-        if not interfaces[0]["network"].endswith("/" + self.c["VM_NAME"] + "-vpc"):
-            raise ValueError("Existing VM is not on the dedicated Carbon network")
-        if self.c.get("POSTGRES_PRIVATE_IP") and interfaces[0].get("networkIP") != self.c["POSTGRES_PRIVATE_IP"]:
-            raise ValueError("POSTGRES_PRIVATE_IP must match the existing VM's private network address")
+        if private_lb.enabled(self.c):
+            problem = private_lb.vm_drift(vm, self.c)
+            if problem:
+                raise ValueError(problem)
+        else:
+            interfaces = vm.get("networkInterfaces", [])
+            if len(interfaces) != 1 or interfaces[0].get("accessConfigs") or interfaces[0].get("ipv6AccessConfigs"):
+                raise ValueError("VM must have one network interface and no external IPv4/IPv6 address")
+            if not interfaces[0]["network"].endswith("/" + self.c["VM_NAME"] + "-vpc"):
+                raise ValueError("Existing VM is not on the dedicated Carbon network")
+            if self.c.get("POSTGRES_PRIVATE_IP") and interfaces[0].get("networkIP") != self.c["POSTGRES_PRIVATE_IP"]:
+                raise ValueError("POSTGRES_PRIVATE_IP must match the existing VM's private network address")
         if not any(d.get("deviceName") == "carbon-data" and not d.get("autoDelete", True)
                    and d.get("source", "").endswith("/" + self.c["VM_NAME"] + "-data") for d in vm.get("disks", [])):
             raise ValueError("VM must have a retained carbon-data disk")
@@ -323,6 +381,69 @@ def publish_source(config, rev):
             raise ValueError("Could not reach GitHub to verify public source; check your connection and retry") from None
 
 
+def wait_for_ssh(cloud):
+    for attempt in range(30):
+        try:
+            cloud.ssh("true", capture=True)
+            return
+        except subprocess.CalledProcessError:
+            if attempt == 29:
+                raise
+            time.sleep(5)
+
+
+@contextlib.contextmanager
+def staged_release(cloud, config, rev):
+    """Upload private configuration, the committed source and bootstrap; always clean up."""
+    staging = cloud.ssh("mktemp", "-d", "/tmp/carbon-upload.XXXXXXXX", capture=True).strip()
+    if not re.fullmatch(r"/tmp/carbon-upload\.[A-Za-z0-9]+", staging):
+        raise ValueError("Unexpected remote staging path")
+    # TemporaryDirectory is mode 0700. Source and secret configuration travel
+    # separately; neither the Git archive nor Docker build context contains secrets.
+    with tempfile.TemporaryDirectory(prefix="carbon-deploy-") as work:
+        work = Path(work)
+        private = work / "config.json"
+        private.write_text(json.dumps(config))
+        private.chmod(0o600)
+        archive = work / "source.tar.gz"
+        run(["git", "-C", str(REPO), "archive", "--format=tar.gz", "--output", str(archive), rev])
+        try:
+            cloud.scp(private, staging + "/config.json")
+            cloud.scp(archive, staging + "/source.tar.gz")
+            cloud.scp(HERE / "bootstrap.sh", staging + "/bootstrap.sh")
+            cloud.ssh("sudo", "bash", staging + "/bootstrap.sh", staging, rev, *private_lb.bootstrap_args(config))
+            yield staging
+        finally:
+            cloud.ssh("rm", "-rf", "--", staging)
+
+
+def adopt(config):
+    """private-lb: boot the VM on a data disk copied from another host; start nothing.
+
+    Bootstrap removes the copied Tailscale identity and marks the copied
+    containers stopped. The host keeps the PostgreSQL CA, reissues the server
+    certificate for the new address, and removes the old host's Compose
+    containers and networks (never volumes) so they are recreated in this
+    host's address pool. The next deployment observes the moved release manifest.
+    """
+    if not private_lb.enabled(config):
+        raise ValueError("make deploy-adopt applies only to INGRESS_MODE=private-lb")
+    private_lb.check_unmanaged(config)
+    rev = revision()
+    verify_source.require_verified(config["SOURCE_REPO_URL"], rev)
+    config = {**config, "DEPLOY_REVISION": rev, "SOURCE_CODE_URL": config["SOURCE_REPO_URL"] + "/tree/" + rev}
+    cloud = Cloud(config)
+    print("Provisioning the private GCP server on the existing data disk...", flush=True)
+    cloud.provision()
+    wait_for_ssh(cloud)
+    release = "/var/lib/carbon/releases/" + rev
+    with staged_release(cloud, config, rev):
+        cloud.ssh("sudo", "bash", release + "/contrib/deploying/gcp-tailscale/host-deploy.sh", "/var/lib/carbon/config.json", release, "adopt")
+        cloud.check_vm()
+        cloud.check_firewall()
+    print("Adopted the data disk at", rev[:12] + "; nothing was started. Next: make deploy-maintenance")
+
+
 def deploy(config, desired_release=None, *, maintenance=False, prepared_release=None, force=False):
     rev = revision()
     if desired_release is None:
@@ -345,6 +466,11 @@ def deploy(config, desired_release=None, *, maintenance=False, prepared_release=
     if not planned_release["build"] and not planned_release["configure"] and not planned_release["migrate"] and not maintenance:
         print("Release plan is a no-op; no source publication or cloud mutations were issued.")
         return
+    private_lb.check_unmanaged(config)
+    if private_lb.enabled(config) and not Cloud(config).get(
+            "compute", "instances", "list", "--zones", config["ZONE"], "--filter", "name=" + config["VM_NAME"]):
+        # Without adoption a new VM would boot on the copied disk unprepared.
+        raise ValueError("INGRESS_MODE=private-lb deploys only to an adopted VM; run make deploy-adopt first")
     if force:
         print(
             "Force: skipping all required GitHub CI-status checks for this deployment; source and rollout safeguards remain active.",
@@ -361,14 +487,7 @@ def deploy(config, desired_release=None, *, maintenance=False, prepared_release=
     print("Provisioning the private GCP server...", flush=True)
     cloud.provision()
     invoice_inference.provision(cloud)
-    for attempt in range(30):
-        try:
-            cloud.ssh("true", capture=True)
-            break
-        except subprocess.CalledProcessError:
-            if attempt == 29:
-                raise
-            time.sleep(5)
+    wait_for_ssh(cloud)
     previous_release = read_last_successful_manifest(cloud)
     if previous_release.get("generation", 0) != planned_release["expected_generation"]:
         raise ValueError("Release manifest generation changed; re-plan before promotion")
@@ -378,64 +497,49 @@ def deploy(config, desired_release=None, *, maintenance=False, prepared_release=
     config = {**config, "RELEASE_PLAN": planned_release, "RELEASE_MAINTENANCE": maintenance}
     if desired_release.get("base_images"):
         config["RELEASE_BASE_IMAGES"] = desired_release["base_images"]
-    staging = cloud.ssh("mktemp", "-d", "/tmp/carbon-upload.XXXXXXXX", capture=True).strip()
-    if not re.fullmatch(r"/tmp/carbon-upload\.[A-Za-z0-9]+", staging):
-        raise ValueError("Unexpected remote staging path")
-    # TemporaryDirectory is mode 0700. Source and secret configuration travel
-    # separately; neither the Git archive nor Docker build context contains secrets.
-    with tempfile.TemporaryDirectory(prefix="carbon-deploy-") as work:
-        work = Path(work)
-        private = work / "config.json"
-        private.write_text(json.dumps(config))
-        private.chmod(0o600)
-        archive = work / "source.tar.gz"
-        run(["git", "-C", str(REPO), "archive", "--format=tar.gz", "--output", str(archive), rev])
-        try:
-            cloud.scp(private, staging + "/config.json")
-            cloud.scp(archive, staging + "/source.tar.gz")
-            cloud.scp(HERE / "bootstrap.sh", staging + "/bootstrap.sh")
-            cloud.ssh("sudo", "bash", staging + "/bootstrap.sh", staging, rev)
+    release = "/var/lib/carbon/releases/" + rev
+    script = release + "/contrib/deploying/gcp-tailscale/host-deploy.sh"
+    with staged_release(cloud, config, rev):
+        if not private_lb.enabled(config):
             address = cloud.ssh("sudo", "tailscale", "ip", "-4", capture=True).strip()
             if ipaddress.ip_address(address) not in ipaddress.ip_network("100.64.0.0/10"):
                 raise ValueError("Tailscale did not return a tailnet IPv4 address")
             for key in ("ERP_HOST", "MES_HOST", "SUPABASE_HOST"):
                 cf.update(cf_zone, config[key], address)
-            release = "/var/lib/carbon/releases/" + rev
-            script = release + "/contrib/deploying/gcp-tailscale/host-deploy.sh"
-            cloud.ssh("sudo", "bash", release + "/contrib/deploying/gcp-tailscale/certificates.sh")
-            for _, action in routine_host_actions(planned_release, maintenance=maintenance):
-                cloud.ssh("sudo", "bash", script, "/var/lib/carbon/config.json", release, action)
-                if action == "quiesce":
-                    # Coordinated snapshots are selected for maintenance only. A
-                    # routine app rollout never stops Docker or shared services.
+        # private-lb: the shared edge owns the A records; certbot still needs the token.
+        cloud.ssh("sudo", "bash", release + "/contrib/deploying/gcp-tailscale/certificates.sh")
+        for _, action in routine_host_actions(planned_release, maintenance=maintenance):
+            cloud.ssh("sudo", "bash", script, "/var/lib/carbon/config.json", release, action)
+            if action == "quiesce":
+                # Coordinated snapshots are selected for maintenance only. A
+                # routine app rollout never stops Docker or shared services.
+                try:
                     try:
+                        cloud.ssh("sudo", "systemctl", "stop", "docker.service", "docker.socket")
+                        cloud.ssh("sudo", "sync")
+                        snapshot = f"{config['VM_NAME']}-pre-{rev[:8]}-{int(time.time())}"
+                        cloud.call("compute", "snapshots", "create", snapshot, "--source-disk", config["VM_NAME"] + "-data", "--source-disk-zone", config["ZONE"], "--storage-location", config["REGION"], "--description", "Carbon maintenance recovery snapshot")
+                    finally:
+                        cloud.ssh("sudo", "systemctl", "start", "docker.service")
+                except (OSError, subprocess.CalledProcessError):
+                    # Compose stop marks containers deliberately stopped;
+                    # restarting Docker alone does not bring them back.
+                    if desired_release.get("previous_runtime_exists") or planned_release["expected_generation"] > 0:
                         try:
-                            cloud.ssh("sudo", "systemctl", "stop", "docker.service", "docker.socket")
-                            cloud.ssh("sudo", "sync")
-                            snapshot = f"{config['VM_NAME']}-pre-{rev[:8]}-{int(time.time())}"
-                            cloud.call("compute", "snapshots", "create", snapshot, "--source-disk", config["VM_NAME"] + "-data", "--source-disk-zone", config["ZONE"], "--storage-location", config["REGION"], "--description", "Carbon maintenance recovery snapshot")
-                        finally:
-                            cloud.ssh("sudo", "systemctl", "start", "docker.service")
-                    except (OSError, subprocess.CalledProcessError):
-                        # Compose stop marks containers deliberately stopped;
-                        # restarting Docker alone does not bring them back.
-                        if desired_release.get("previous_runtime_exists") or planned_release["expected_generation"] > 0:
-                            try:
-                                cloud.ssh("sudo", "bash", script, "/var/lib/carbon/config.json", release, "start")
-                            except (OSError, subprocess.CalledProcessError):
-                                print("Recovery snapshot failed, and restarting the previous services also failed; inspect the private VM logs.", file=sys.stderr)
-                        raise
-                    print("Maintenance recovery snapshot created:", snapshot)
-            cloud.check_vm()
-            cloud.check_firewall()
-            cloud.ssh("sudo", "bash", script, "/var/lib/carbon/config.json", release, "check")
-        finally:
-            cloud.ssh("rm", "-rf", "--", staging)
+                            cloud.ssh("sudo", "bash", script, "/var/lib/carbon/config.json", release, "start")
+                        except (OSError, subprocess.CalledProcessError):
+                            print("Recovery snapshot failed, and restarting the previous services also failed; inspect the private VM logs.", file=sys.stderr)
+                    raise
+                print("Maintenance recovery snapshot created:", snapshot)
+        cloud.check_vm()
+        cloud.check_firewall()
+        cloud.ssh("sudo", "bash", script, "/var/lib/carbon/config.json", release, "check")
     # This is the last remote action: failed verification or staging cleanup
     # leaves the previous successful manifest intact, even if apps were applied.
     cloud.ssh("sudo", "bash", script, "/var/lib/carbon/config.json", release, "finalize")
     print("Deployed commit", rev)
-    print("From a Tailscale device:", "https://" + config["ERP_HOST"], "https://" + config["MES_HOST"])
+    print("Through the private load balancer:" if private_lb.enabled(config) else "From a Tailscale device:",
+          "https://" + config["ERP_HOST"], "https://" + config["MES_HOST"])
 
 
 def main():
@@ -445,6 +549,7 @@ def main():
     action = parser.add_mutually_exclusive_group()
     action.add_argument("--apply", action="store_true", help="prepare and deploy the committed source")
     action.add_argument("--plan", action="store_true", help="prepare a private release preview using read-only cloud queries")
+    action.add_argument("--adopt", action="store_true", help="INGRESS_MODE=private-lb only: boot the VM on a moved data disk and bootstrap it; starts nothing")
     parser.add_argument("--release-plan", type=Path, help="explicit custom desired-input manifest; normally generated automatically")
     parser.add_argument("--maintenance", action="store_true", help="force coordinated maintenance; normally selected automatically")
     parser.add_argument(
@@ -453,11 +558,17 @@ def main():
     args = parser.parse_args()
     if args.force and not args.apply:
         parser.error("--force requires --apply")
+    if args.adopt and (args.maintenance or args.release_plan):
+        parser.error("--adopt takes no release options")
     config = validate(private_json(args.config), private_json(args.secrets))
     inference_path = args.config.with_name("invoice-inference.json")
     if inference_path.exists():
         config = invoice_inference.configuration(config, private_json(inference_path))
     backup_path = args.config.with_name("backups.json")
+    private_lb.check_unmanaged(config, backups=backup_path.exists())
+    if args.adopt:
+        adopt(config)
+        return
     backup_settings = None
     if backup_path.exists():
         from backups.setup import configuration, Provisioner

@@ -3,6 +3,7 @@
 import hashlib
 from pathlib import Path
 
+import private_lb
 import release_plan
 import render
 
@@ -32,7 +33,8 @@ def materialize(config, repo, secret_versions):
         **config,
         "DEPLOY_REVISION": "0" * 40,
         "SOURCE_CODE_URL": "https://github.com/example/carbon/tree/" + "0" * 40,
-        "TAILSCALE_IP": config.get("TAILSCALE_IP", "100.64.0.1"),
+        # private-lb mode serves the private address and carries no tailnet IP.
+        **({} if private_lb.enabled(config) else {"TAILSCALE_IP": config.get("TAILSCALE_IP", "100.64.0.1")}),
         "RELEASE_PLAN": {},
     }
     stack, files = render.render(preview, repo, output, state, materialize=False)
