@@ -3,9 +3,7 @@
 // point to HQ; the database lock (migration *_saturn-authz-projection.sql) is
 // what actually refuses the writes.
 
-export type AuthzManagement =
-  | { managed: false; accessUrl: null }
-  | { managed: true; accessUrl: string };
+import type { AuthzManagement } from "./types";
 
 export const authzNotManaged: AuthzManagement = {
   managed: false,
