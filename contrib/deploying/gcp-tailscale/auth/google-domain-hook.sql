@@ -1,6 +1,9 @@
 -- Deployment policy, separate from Carbon's application schema/migrations.
 -- Run with psql -X -v ON_ERROR_STOP=1 -v allowed_email_domain=example.com -f ...
 -- The value comes from private deployment configuration, never this file.
+-- The file and function keep their Google names because GoTrue's hook URI and
+-- the release tooling refer to them; the policy admits Google Workspace and the
+-- HQ identity provider (GoTrue's 'keycloak' provider) under the same rules.
 BEGIN;
 
 CREATE SCHEMA IF NOT EXISTS carbon_private;
@@ -62,11 +65,16 @@ BEGIN
   END IF;
 
   -- Do not trust user_metadata: users can change it themselves. identity_data
-  -- is populated by GoTrue from Google's validated provider response. The
-  -- signed hd claim distinguishes Workspace accounts from consumer Google
-  -- accounts that happen to use an address on the same domain.
-  -- Google must be the ONLY enabled OAuth provider on this deployment:
-  -- Supabase AMR identifies OAuth, but does not identify its provider.
+  -- is populated by GoTrue from the provider's validated response: Google's ID
+  -- token, or the HQ identity provider's userinfo (GoTrue's Keycloak provider
+  -- keeps non-standard claims such as hd under custom_claims). The hd claim
+  -- distinguishes Workspace accounts from consumer Google accounts that happen
+  -- to use an address on the same domain; HQ passes on Google's hd.
+  -- Supabase AMR records only the method ('oauth'), never which provider
+  -- authenticated the session, so this hook cannot tell a Google session from an
+  -- HQ one. It relies on Google and the HQ Keycloak-compatible provider being the
+  -- ONLY enabled OAuth providers on this deployment, and admits an account that
+  -- holds a qualifying identity from either of them.
   IF NOT EXISTS (
     SELECT 1
     FROM auth.users AS account
@@ -77,7 +85,7 @@ BEGIN
       AND split_part(lower(account.email), '@', 2) = allowed_domain
       AND split_part(account.email, '@', 1) <> ''
       AND length(account.email) - length(replace(account.email, '@', '')) = 1
-      AND identity.provider = 'google'
+      AND identity.provider IN ('google', 'keycloak')
       AND lower(identity.identity_data ->> 'email') = lower(account.email)
       AND identity.identity_data -> 'email_verified' = 'true'::JSONB
       AND lower(identity.identity_data #>> '{custom_claims,hd}') = allowed_domain

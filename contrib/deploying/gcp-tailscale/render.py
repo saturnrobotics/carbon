@@ -23,6 +23,7 @@ import private_postgres
 import payment_sync
 import invoice_inference
 import portal_receiver
+import hq_sign_in
 
 
 def write_private(path, content):
@@ -101,6 +102,7 @@ def render(config, repo, output, state=Path("/var/lib/carbon"), *, materialize=T
     private_postgres.validate(config)
     payment_sync.validate(config)
     portal_receiver.validate(config)
+    hq_sign_in.validate(config)
     repo, output = repo.resolve(), output.resolve()
     names = ("ERP_HOST", "MES_HOST", "SUPABASE_HOST", "AUTH_ALLOWED_GOOGLE_DOMAIN")
     for key in names:
@@ -184,7 +186,7 @@ def render(config, repo, output, state=Path("/var/lib/carbon"), *, materialize=T
     for app in ("erp", "mes"):
         env = services[app]["environment"]
         env.update({
-            "CARBON_EDITION": "community", "AUTH_PROVIDERS": "google",
+            "CARBON_EDITION": "community", "AUTH_PROVIDERS": hq_sign_in.auth_providers(config),
             "VERCEL_ENV": "production", "VERCEL_URL": config[app.upper() + "_HOST"],
             "POSTHOG_API_HOST": "https://" + config["ERP_HOST"],
             "POSTHOG_PROJECT_PUBLIC_KEY": "disabled",
@@ -231,7 +233,7 @@ request.on('error', () => process.exit(1));
     auth = services["gotrue"]
     auth["secrets"] += ["google_client_id", "google_client_secret"]
     auth["environment"].update({
-        "GOTRUE_EXTERNAL_GOOGLE_ENABLED": "true",
+        "GOTRUE_EXTERNAL_GOOGLE_ENABLED": hq_sign_in.google_enabled(config),
         "GOTRUE_EXTERNAL_GOOGLE_CLIENT_ID": "__GOOGLE_CLIENT_ID__",
         "GOTRUE_EXTERNAL_GOOGLE_SECRET": "__GOOGLE_CLIENT_SECRET__",
         "GOTRUE_EXTERNAL_GOOGLE_REDIRECT_URI": values["SUPABASE_URL"] + "/auth/v1/callback",
@@ -250,6 +252,8 @@ request.on('error', () => process.exit(1));
     bootstrap["environment"]["GOTRUE_EXTERNAL_GOOGLE_ENABLED"] = "false"
     bootstrap["environment"]["GOTRUE_DISABLE_SIGNUP"] = "true"
     services["gotrue-bootstrap"] = bootstrap
+    # After the copy, so bootstrap never gets the HQ provider or its secret.
+    hq_sign_in.configure(config, auth, directory, emit)
 
     realtime = services["realtime"]
     realtime["secrets"] += ["realtime_secret_key_base", "realtime_db_enc_key"]

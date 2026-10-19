@@ -18,6 +18,7 @@ import {
   verifyLoginCaptcha
 } from "@carbon/auth/auth.server";
 import { getCarbonServiceRole } from "@carbon/auth/client.server";
+import { HqSignInButton, useHqAutoStart } from "@carbon/auth/saturn/hq-sign-in";
 import {
   clearAuthCookies,
   flash,
@@ -80,6 +81,15 @@ export async function loader({ request }: LoaderFunctionArgs) {
     !hasOutlookAuth &&
     !hasPasskeyAuth &&
     !hasSsoAuth;
+  const hasHqAuth = isAuthProviderEnabled("hq");
+  const autoHq =
+    hasHqAuth &&
+    new URL(request.url).searchParams.has("redirectTo") &&
+    !hasGoogleAuth &&
+    !hasEmailAuth &&
+    !hasOutlookAuth &&
+    !hasPasskeyAuth &&
+    !hasSsoAuth;
 
   const authSession = await getAuthSession(request);
   if (authSession) {
@@ -95,6 +105,8 @@ export async function loader({ request }: LoaderFunctionArgs) {
         hasPasskeyAuth,
         hasSsoAuth,
         autoGoogle,
+        hasHqAuth,
+        autoHq,
         turnstileSiteKey
       },
       { headers: cookieHeaders }
@@ -108,6 +120,8 @@ export async function loader({ request }: LoaderFunctionArgs) {
     hasPasskeyAuth,
     hasSsoAuth,
     autoGoogle,
+    hasHqAuth,
+    autoHq,
     turnstileSiteKey
   };
 }
@@ -239,6 +253,8 @@ export default function LoginRoute() {
     hasPasskeyAuth,
     hasSsoAuth,
     autoGoogle,
+    hasHqAuth,
+    autoHq,
     turnstileSiteKey: siteKey
   } = useLoaderData<typeof loader>();
 
@@ -377,6 +393,7 @@ export default function LoginRoute() {
     autoGoogleStarted.current = true;
     void onSignInWithGoogle();
   });
+  useHqAutoStart(autoHq, redirectTo);
 
   const onSignInWithAzure = async () => {
     const { error } = await carbonClient.auth.signInWithOAuth({
@@ -520,6 +537,14 @@ export default function LoginRoute() {
                 </Alert>
               )}
 
+              {hasHqAuth && (
+                <HqSignInButton
+                  redirectTo={redirectTo}
+                  isDisabled={fetcher.state !== "idle"}
+                >
+                  <Trans>Sign in with HQ</Trans>
+                </HqSignInButton>
+              )}
               {hasGoogleAuth && (
                 <Button
                   type="button"

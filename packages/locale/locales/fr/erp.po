@@ -16250,6 +16250,9 @@ msgstr "Connectez-vous avec la biométrie au lieu d'un lien magique. Les clés d
 msgid "Sign in with Google"
 msgstr "Se connecter avec Google"
 
+msgid "Sign in with HQ"
+msgstr "Se connecter avec HQ"
+
 msgid "Sign in with Outlook"
 msgstr "Se connecter avec Outlook"
 

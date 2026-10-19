@@ -132,6 +132,23 @@ class ValidationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Unknown configuration keys"):
             deploy.validate(fixture(), {**SECRETS, "PORTAL_MACHINE_CALLERS_JSON": registry})
 
+    def test_optional_hq_sign_in_inputs(self):
+        hq_secret = {"HQ_OIDC_CARBON_SECRET": "synthetic-hq-client-secret-" + "x" * 16}
+        self.assertEqual(fixture()["HQ_SIGN_IN_ENABLED"], "false")
+        deploy.validate(fixture(), {**SECRETS, **hq_secret})
+        enabled = {**fixture(), "HQ_SIGN_IN_ENABLED": "true"}
+        self.assertEqual(deploy.validate(enabled, {**SECRETS, **hq_secret})["HQ_ISSUER"], "https://hq.example.com")
+        deploy.validate({**enabled, "GOOGLE_SIGN_IN_ENABLED": "false"}, {**SECRETS, **hq_secret})
+        for config, secrets in ((enabled, SECRETS),
+                                (enabled, {**SECRETS, "HQ_OIDC_CARBON_SECRET": "replace-with-the-hq-oidc-client-secret"}),
+                                (fixture(), {**SECRETS, "HQ_OIDC_CARBON_SECRET": "replace-with-the-hq-oidc-client-secret"}),
+                                ({**fixture(), "GOOGLE_SIGN_IN_ENABLED": "false"}, SECRETS),
+                                ({**enabled, "HQ_ISSUER": "https://hq.example.com/${PATH}"}, {**SECRETS, **hq_secret})):
+            with self.subTest(config=config, secrets=sorted(secrets)), self.assertRaises(ValueError):
+                deploy.validate(config, secrets)
+        with self.assertRaisesRegex(ValueError, "Unknown configuration keys"):
+            deploy.validate({**enabled, **hq_secret}, SECRETS)
+
     def test_optional_private_postgres_configuration(self):
         config = {**fixture(), "POSTGRES_PRIVATE_IP": "10.73.0.2", "POSTGRES_CLIENT_CIDRS": ["10.81.0.0/26"]}
         self.assertEqual(deploy.validate(config, SECRETS)["POSTGRES_CLIENT_CIDRS"], ["10.81.0.0/26"])

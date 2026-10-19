@@ -16250,6 +16250,9 @@ msgstr "Sign in with biometrics instead of a magic link. Passkeys are secured by
 msgid "Sign in with Google"
 msgstr "Sign in with Google"
 
+msgid "Sign in with HQ"
+msgstr "Sign in with HQ"
+
 msgid "Sign in with Outlook"
 msgstr "Sign in with Outlook"
 

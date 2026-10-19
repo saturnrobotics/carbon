@@ -1344,6 +1344,9 @@ msgstr "Показать это окно"
 msgid "Sign in with Google"
 msgstr "Войти через Google"
 
+msgid "Sign in with HQ"
+msgstr "Войти через HQ"
+
 msgid "Sign in with Outlook"
 msgstr "Войти через Outlook"
 
