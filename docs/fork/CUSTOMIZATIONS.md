@@ -41,6 +41,14 @@ claim. Shared files gain one-line hooks: the five permission routes under
 `packages/jobs/src/inngest/index.ts` (**Inngest / event dispatch hooks**), plus
 three ERP catalog messages.
 
+On 2026-10-19, Carbon's read contract for HQ's feed canvas (HQ plan 0012 Step 5)
+was added as fork migration `20261019070224_saturn-hq-feeds` and its regression
+test `packages/database/supabase/tests/saturn-hq-feeds.test.sql`. It only acts
+where HQ's roles and `authz` functions exist: money-free column grants and
+FOR SELECT policies for HQ's `hq_api` on six tables, EXECUTE on the three RLS
+helpers Carbon's own SELECT policies call, and USAGE on `public` for `hq_owner`.
+It touches no shared upstream file.
+
 ## (a) Fork-owned additions — files upstream never touches
 
 These cannot conflict on a sync. They only cost when a shared file they depend on
