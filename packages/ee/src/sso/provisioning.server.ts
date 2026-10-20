@@ -1,4 +1,8 @@
 import { getPermissionCacheKey } from "@carbon/auth";
+import {
+  getPermissionsManagement,
+  managedInHqMessage
+} from "@carbon/auth/saturn/authz.server";
 import type { Database } from "@carbon/database";
 import type { KyselyDatabase } from "@carbon/database/client";
 import { redis } from "@carbon/kv";
@@ -421,6 +425,10 @@ export async function migrateUserToSso(
     };
   }
 
+  // Saturn fork (HQ plan 0006B): while HQ manages Carbon's permissions the
+  // invite's permissions are not applied; membership is.
+  const authz = await getPermissionsManagement();
+
   let result: { alreadyAccepted: boolean };
 
   try {
@@ -536,26 +544,28 @@ export async function migrateUserToSso(
 
       // Merge invite permissions into userPermission (setUserPermissions
       // semantics), under lock so concurrent grants don't lose writes.
-      const currentPermission = await trx
-        .selectFrom("userPermission")
-        .select("permissions")
-        .where("id", "=", newUserId)
-        .forUpdate()
-        .executeTakeFirst();
+      if (!authz.managed) {
+        const currentPermission = await trx
+          .selectFrom("userPermission")
+          .select("permissions")
+          .where("id", "=", newUserId)
+          .forUpdate()
+          .executeTakeFirst();
 
-      const mergedPermissions = mergeInvitePermissions(
-        (currentPermission?.permissions ?? {}) as Record<string, string[]>,
-        (invite.permissions ?? {}) as Record<string, string[]>
-      );
-      const mergedPermissionsJson = JSON.stringify(mergedPermissions);
+        const mergedPermissions = mergeInvitePermissions(
+          (currentPermission?.permissions ?? {}) as Record<string, string[]>,
+          (invite.permissions ?? {}) as Record<string, string[]>
+        );
+        const mergedPermissionsJson = JSON.stringify(mergedPermissions);
 
-      await trx
-        .insertInto("userPermission")
-        .values({ id: newUserId, permissions: mergedPermissionsJson })
-        .onConflict((oc) =>
-          oc.column("id").doUpdateSet({ permissions: mergedPermissionsJson })
-        )
-        .execute();
+        await trx
+          .insertInto("userPermission")
+          .values({ id: newUserId, permissions: mergedPermissionsJson })
+          .onConflict((oc) =>
+            oc.column("id").doUpdateSet({ permissions: mergedPermissionsJson })
+          )
+          .execute();
+      }
 
       // Accept the invite — guarded so a concurrent accept can never
       // double-apply (we hold the row lock from the SELECT above).
@@ -592,6 +602,12 @@ export async function migrateUserToSso(
     newUserId,
     companyId
   });
+  if (authz.managed) {
+    logger.info(
+      `The invite's permissions were not applied. ${managedInHqMessage(authz.accessUrl)}`,
+      { newUserId, companyId }
+    );
+  }
 
   // Post-commit side effect: idempotent, failure-tolerant — log, never throw.
   try {

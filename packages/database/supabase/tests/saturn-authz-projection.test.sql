@@ -1,6 +1,8 @@
 -- Regression test for 20261018214537_saturn-authz-projection.sql (HQ plan 0006B):
 -- the projection receiver, the lock on Carbon's permission writers, the readers
--- authz uses, and the EXECUTE matrix. The authz roles' grants are checked when
+-- authz uses, and the EXECUTE matrix; and for
+-- 20261020190000_saturn-authz-membership-only.sql: the system employee types
+-- membership needs while the lock is on (section 14). The authz roles' grants are checked when
 -- HQ's tenant roles (authz_owner, authz_migrator, authz_api) existed at migration.
 --
 -- Run against a local database migrated to head, as a superuser, on a database
@@ -447,7 +449,8 @@ BEGIN
     ('authz_projection_for(text)', ARRAY['carbon_authz_applier', 'postgres']),
     ('authz_apply_projection(text)', ARRAY['carbon_authz_applier', 'postgres']),
     ('authz_projection_sync()', ARRAY['carbon_authz_applier', 'postgres']),
-    ('authz_permission_guard()', ARRAY[]::TEXT[])
+    ('authz_permission_guard()', ARRAY[]::TEXT[]),
+    ('authz_ensure_system_employee_type(text,text)', ARRAY['postgres'])
   ),
   roles(name) AS (VALUES ('anon'), ('authenticated'), ('service_role'), ('postgres'),
                          ('supabase_auth_admin'), ('carbon_authz_applier')),
@@ -470,7 +473,7 @@ BEGIN
          OR p.proconfig IS NULL OR NOT ('search_path=""' = ANY (p.proconfig)));
   ASSERT bad IS NULL, format('PUBLIC EXECUTE or a search_path other than '''': %s', bad);
   ASSERT (SELECT count(*) FROM pg_proc AS p
-          WHERE p.pronamespace = 'carbon_private'::REGNAMESPACE AND p.proname LIKE 'authz\_%') = 18,
+          WHERE p.pronamespace = 'carbon_private'::REGNAMESPACE AND p.proname LIKE 'authz\_%') = 19,
     'every function is covered above';
 
   ASSERT (SELECT array_agg(p.proname::TEXT ORDER BY p.proname) FROM pg_proc AS p
@@ -488,6 +491,9 @@ BEGIN
   ASSERT (SELECT r.rolsuper FROM pg_proc AS p JOIN pg_roles AS r ON r.oid = p.proowner
           WHERE p.oid = 'carbon_private.authz_write_permissions(text,jsonb)'::REGPROCEDURE),
     'the writer is owned by a superuser';
+  ASSERT (SELECT r.rolsuper FROM pg_proc AS p JOIN pg_roles AS r ON r.oid = p.proowner
+          WHERE p.oid = 'carbon_private.authz_ensure_system_employee_type(text,text)'::REGPROCEDURE),
+    'the system employee type writer is owned by a superuser';
   ASSERT NOT EXISTS (SELECT FROM pg_auth_members WHERE roleid = 'carbon_authz_applier'::REGROLE),
     'nobody can SET ROLE to the applier';
 
@@ -688,6 +694,111 @@ BEGIN
     RAISE NOTICE 'authz roles absent at migration: their grants come from HQ''s tenants.sql';
   END IF;
 END $$;
+
+-- 14. Membership while the lock is on: system employee types ------------------
+-- (20261020190000_saturn-authz-membership-only.sql) employee."employeeTypeId" is
+-- NOT NULL, so company creation and console mode need a type; the writer creates
+-- one with no template and touches nothing else.
+
+CREATE FUNCTION pg_temp.ensure_type(p_role TEXT, p_company TEXT, p_type TEXT) RETURNS TEXT
+LANGUAGE plpgsql AS $$
+DECLARE
+  v_id TEXT;
+BEGIN
+  EXECUTE format('SET LOCAL SESSION AUTHORIZATION %I', p_role);
+  v_id := carbon_private.authz_ensure_system_employee_type(p_company, p_type);
+  RESET SESSION AUTHORIZATION;
+  RETURN v_id;
+END $$;
+
+UPDATE carbon_private.authz_projection SET enabled = TRUE WHERE singleton;
+DO $$
+DECLARE
+  co_a TEXT := current_setting('test.co_a');
+  emp TEXT := current_setting('test.emp');
+  perms_before JSONB := pg_temp.permissions(current_setting('test.emp'));
+  queued_before BIGINT := (SELECT count(*) FROM carbon_private.authz_permission_invalidation);
+  admin_id TEXT;
+  console_id TEXT;
+  r TEXT;
+BEGIN
+  ASSERT carbon_private.authz_projection_enabled(), 'the lock is on';
+
+  -- Only the apps' own connection may call it.
+  FOREACH r IN ARRAY ARRAY['anon', 'authenticated', 'service_role'] LOOP
+    PERFORM pg_temp.expect_error(r, format(
+      'SELECT carbon_private.authz_ensure_system_employee_type(%L, ''Admin'')', co_a), '42501');
+  END LOOP;
+
+  -- Upstream's own inserts are still refused: the lock is unchanged.
+  PERFORM pg_temp.expect_guard('postgres', format(
+    'INSERT INTO public."employeeType" (name, "companyId", protected, "systemType") VALUES (''Admin'', %L, TRUE, ''Admin'')',
+    co_a));
+  ASSERT NOT EXISTS (SELECT FROM public."employeeType" WHERE "companyId" = co_a
+                     AND "systemType" IS NOT NULL), 'no system type yet';
+
+  -- A type that something gives template rows in the same statement is refused,
+  -- and nothing of it remains.
+  BEGIN
+    CREATE FUNCTION public.saturn_test_template() RETURNS TRIGGER LANGUAGE plpgsql AS $t$
+    BEGIN
+      INSERT INTO public."employeeTypePermission" ("employeeTypeId", module, "view")
+      VALUES (NEW.id, 'Parts', ARRAY[NEW."companyId"]);
+      RETURN NEW;
+    END $t$;
+    CREATE TRIGGER saturn_test_template AFTER INSERT ON public."employeeType"
+      FOR EACH ROW EXECUTE FUNCTION public.saturn_test_template();
+    PERFORM pg_temp.ensure_type('postgres', co_a, 'Admin');
+    RAISE EXCEPTION 'a type with template rows was created';
+  EXCEPTION WHEN insufficient_privilege THEN
+    ASSERT SQLERRM LIKE 'Carbon permissions are managed by HQ:%', SQLERRM;
+  END;
+  RESET SESSION AUTHORIZATION;
+  ASSERT to_regprocedure('public.saturn_test_template()') IS NULL, 'the mutation is gone';
+  ASSERT NOT EXISTS (SELECT FROM public."employeeType" WHERE "companyId" = co_a
+                     AND "systemType" IS NOT NULL), 'and so is its type';
+
+  -- The writer: protected, named for its system type, no template.
+  admin_id := pg_temp.ensure_type('postgres', co_a, 'Admin');
+  ASSERT EXISTS (SELECT FROM public."employeeType" AS et
+                 WHERE et.id = admin_id AND et."companyId" = co_a AND et.name = 'Admin'
+                   AND et.protected AND et."systemType" = 'Admin'), 'the Admin type';
+  ASSERT NOT EXISTS (SELECT FROM public."employeeTypePermission" WHERE "employeeTypeId" = admin_id),
+    'with no template permissions';
+  ASSERT pg_temp.ensure_type('postgres', co_a, 'Admin') = admin_id, 'idempotent';
+  ASSERT (SELECT count(*) FROM public."employeeType" WHERE "companyId" = co_a
+            AND "systemType" = 'Admin') = 1, 'one Admin type';
+
+  console_id := pg_temp.ensure_type('postgres', co_a, 'Console Operator');
+  ASSERT console_id IS NOT NULL AND console_id <> admin_id
+    AND (SELECT name FROM public."employeeType" WHERE id = console_id) = 'Console Operator',
+    'the Console Operator type';
+
+  -- The flag is down again: the template and the type stay locked.
+  ASSERT NOT EXISTS (SELECT FROM carbon_private.authz_projection_writer), 'flag cleared';
+  PERFORM pg_temp.expect_guard('postgres', format(
+    'INSERT INTO public."employeeTypePermission" ("employeeTypeId", module, "view") VALUES (%L, ''Sales'', ARRAY[%L])',
+    admin_id, co_a));
+  PERFORM pg_temp.expect_guard('postgres', format(
+    'UPDATE public."employeeType" SET name = ''Owner'' WHERE id = %L', admin_id));
+
+  -- Membership can point at it; permissions are untouched.
+  PERFORM pg_temp.expect_ok('postgres', format(
+    'UPDATE public.employee SET "employeeTypeId" = %L WHERE id = %L AND "companyId" = %L',
+    admin_id, emp, co_a));
+  ASSERT pg_temp.permissions(emp) = perms_before, 'userPermission unchanged';
+  ASSERT (SELECT count(*) FROM carbon_private.authz_permission_invalidation) = queued_before,
+    'nothing queued';
+
+  -- Anything but a system type, or no company, is refused.
+  PERFORM pg_temp.expect_error('postgres', format(
+    'SELECT carbon_private.authz_ensure_system_employee_type(%L, ''Ops'')', co_a), '22P02');
+  PERFORM pg_temp.expect_error('postgres',
+    'SELECT carbon_private.authz_ensure_system_employee_type(NULL, ''Admin'')', '22023');
+  PERFORM pg_temp.expect_error('postgres',
+    'SELECT carbon_private.authz_ensure_system_employee_type(''no-such-company'', ''Admin'')', '23503');
+END $$;
+UPDATE carbon_private.authz_projection SET enabled = FALSE WHERE singleton;
 
 SELECT 'saturn-authz-projection: all checks passed' AS result;
 ROLLBACK;

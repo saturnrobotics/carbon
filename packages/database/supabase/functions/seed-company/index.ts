@@ -28,6 +28,11 @@ import {
 import { getSupabaseServiceRole } from "../lib/supabase.ts";
 import { Database } from "../lib/types.ts";
 import { resolveShippingDefault } from "./shipping-default.ts";
+import {
+  ensureSystemEmployeeType,
+  getPermissionsManagement,
+  managedInHqMessage,
+} from "../lib/saturn-authz.ts";
 
 const pool = getConnectionPool(1);
 const db = getDatabaseClient<DB>(pool);
@@ -98,7 +103,12 @@ serve(async (req: Request) => {
       companyGroupId = parent.data.companyGroupId;
     }
 
-    await db.transaction().execute(async (trx) => {
+    const authz = await db.transaction().execute(async (trx) => {
+      // Saturn fork (HQ plan 0006B): while HQ manages Carbon's permissions the
+      // seed writes membership only, never employeeTypePermission or
+      // userPermission (../lib/saturn-authz.ts).
+      const permissions = await getPermissionsManagement(trx);
+
       // If no companyGroupId, create a new company group and assign it
       if (isNewGroup) {
         const companyGroupResult = await trx
@@ -173,7 +183,9 @@ serve(async (req: Request) => {
         )
         .execute();
 
-      const employeeTypes = await trx
+      const employeeTypes = permissions.managed
+        ? [{ id: await ensureSystemEmployeeType(trx, companyId, "Admin") }]
+        : await trx
         .insertInto("employeeType")
         .values([
           {
@@ -212,10 +224,12 @@ serve(async (req: Request) => {
       }, []);
 
       // insert employee type permissions
-      await trx
-        .insertInto("employeeTypePermission")
-        .values(employeeTypePermissions)
-        .execute();
+      if (!permissions.managed) {
+        await trx
+          .insertInto("employeeTypePermission")
+          .values(employeeTypePermissions)
+          .execute();
+      }
 
       // insert employee
       await trx
@@ -480,6 +494,9 @@ serve(async (req: Request) => {
         .execute();
       } // end if (!identityOnly)
 
+      // Saturn fork: the creator's access comes from HQ while it manages
+      // permissions, so the grant below is skipped.
+      if (!permissions.managed) {
       const user = await client
         .from("userPermission")
         .select("permissions")
@@ -524,6 +541,7 @@ serve(async (req: Request) => {
         .update({ permissions: newPermissions })
         .eq("id", userId);
       if (error) throw new Error(error.message);
+      } // end if (!permissions.managed)
 
       // For subsidiaries: set companyGroupId + parentCompanyId now that the
       // reference data (including the supplier/customer sequences) has been
@@ -596,9 +614,15 @@ serve(async (req: Request) => {
           }
         }
       }
+
+      return permissions;
     });
 
-    return jsonResponse({ success: true });
+    return jsonResponse(
+      authz.managed
+        ? { success: true, permissions: "managed-in-hq", message: managedInHqMessage(authz.accessUrl) }
+        : { success: true }
+    );
   } catch (err) {
     return errorResponse(err, 500);
   }
