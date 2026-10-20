@@ -49,6 +49,19 @@ FOR SELECT policies for HQ's `hq_api` on six tables, EXECUTE on the three RLS
 helpers Carbon's own SELECT policies call, and USAGE on `public` for `hq_owner`.
 It touches no shared upstream file.
 
+On 2026-10-19, fork migration `20261020030112_saturn-hq-feeds-usage` completed
+that contract with USAGE on `public` for `hq_api`, under the same guard. The first
+migration relied on PUBLIC's USAGE, which a database can lack (only named roles
+such as `anon`, `authenticated`, `service_role` and `postgres` then hold it), and
+there every HQ feed read failed with "permission denied for schema public". USAGE
+only lets `hq_api` name objects in `public`: it still reads only the 21 money-free
+columns through the row policies. It can also call the functions in `public` that
+grant EXECUTE to PUBLIC (35 on a fresh stack, 3 of them SECURITY DEFINER), the
+same surface `anon` has through the API; `hq_api` sends no JWT claims. The
+regression test now revokes PUBLIC's USAGE on `public` inside its transaction and
+shows reads failing without the grant and filtered by policy with it. It touches
+no shared upstream file.
+
 ## (a) Fork-owned additions — files upstream never touches
 
 These cannot conflict on a sync. They only cost when a shared file they depend on

@@ -58,6 +58,29 @@ SQL for databases where HQ's roles or `authz` appear after this migration ran.
 - [ ] HQ: the same block in `deploy/data/tenants.sql`, the views (HQ migration
       `0004_feed_views`) and the routes (HQ plan 0012 Step 5).
 
+## Follow-up: USAGE on `public` for `hq_api` (2026-10-19)
+
+On a database where PUBLIC holds no USAGE on `public` (only named roles do), HQ's
+invoker functions failed as `hq_api` with "permission denied for schema public":
+Postgres checks schema USAGE before any column grant or row policy, and the block
+above granted USAGE to `hq_owner` only. Carbon's local stack still grants PUBLIC
+USAGE on `public`, so the regression test passed anyway.
+
+- [x] Migration `20261020030112_saturn-hq-feeds-usage.sql`: the same guard, then
+      `GRANT USAGE ON SCHEMA public TO hq_api`. The applied migration is unchanged.
+- [x] The test revokes PUBLIC's USAGE on `public` in its transaction, shows the
+      first migration alone leaving every `hq_api` read denied, and shows the
+      follow-up's reads filtered by the policies; `hq_api` holds exactly USAGE
+      (no CREATE). Mutations (no grant, guard removed, CREATE added) each fail it.
+- [x] Generated types unchanged.
+- [x] HQ: the same line in `deploy/data/tenants.sql` section 8 (HQ branch
+      `fix/feed-public-usage`), reported by `tenants-check.sql` when missing.
+
+Impact: USAGE lets `hq_api` name objects in `public`; tables stay limited to the
+21 columns and the row policies. It also lets `hq_api` run the functions in
+`public` that grant EXECUTE to PUBLIC (35 on a fresh stack, 3 SECURITY DEFINER),
+the surface `anon` already has through the API; `hq_api` sends no JWT claims.
+
 ## Not in this change
 
 Any Carbon UI, API or permission change; kanban's feed (HQ plan 0012 Step 6);
