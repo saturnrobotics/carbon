@@ -22,6 +22,7 @@ import invoice_inference
 import portal_receiver
 import hq_sign_in
 import authz_api_claim
+import docker_prune
 import release_plan
 import prepare_release
 import verify_source
@@ -104,13 +105,14 @@ def private_json(path):
 
 
 def validate(config, secrets):
-    if set(config) - CONFIG_KEYS - private_postgres.OPTIONAL_KEYS - payment_sync.CONFIG_KEYS - invoice_inference.CONFIG_KEYS - portal_receiver.CONFIG_KEYS - private_lb.CONFIG_KEYS - hq_sign_in.CONFIG_KEYS - authz_api_claim.CONFIG_KEYS or set(secrets) - SECRET_KEYS - payment_sync.SECRET_KEYS - portal_receiver.SECRET_KEYS - hq_sign_in.SECRET_KEYS:
+    if set(config) - CONFIG_KEYS - private_postgres.OPTIONAL_KEYS - payment_sync.CONFIG_KEYS - invoice_inference.CONFIG_KEYS - portal_receiver.CONFIG_KEYS - private_lb.CONFIG_KEYS - hq_sign_in.CONFIG_KEYS - authz_api_claim.CONFIG_KEYS - docker_prune.CONFIG_KEYS or set(secrets) - SECRET_KEYS - payment_sync.SECRET_KEYS - portal_receiver.SECRET_KEYS - hq_sign_in.SECRET_KEYS:
         raise ValueError("Unknown configuration keys; see config.example.json and secrets.example.json")
     private_postgres.validate(config)
     payment_sync.validate({**config, **secrets})
     portal_receiver.validate({**config, **secrets})
     hq_sign_in.validate({**config, **secrets})
     authz_api_claim.validate({**config, **secrets})
+    docker_prune.validate(config)
     invoice_inference.validate(config, project=config.get("PROJECT_ID"))
     for key in private_lb.required_keys(CONFIG_KEYS, config):
         if key not in config:
@@ -536,12 +538,19 @@ def deploy(config, desired_release=None, *, maintenance=False, prepared_release=
         cloud.check_vm()
         cloud.check_firewall()
         cloud.ssh("sudo", "bash", script, "/var/lib/carbon/config.json", release, "check")
-    # This is the last remote action: failed verification or staging cleanup
+    # This is the last release action: failed verification or staging cleanup
     # leaves the previous successful manifest intact, even if apps were applied.
     cloud.ssh("sudo", "bash", script, "/var/lib/carbon/config.json", release, "finalize")
     print("Deployed commit", rev)
     print("Through the private load balancer:" if private_lb.enabled(config) else "From a Tailscale device:",
           "https://" + config["ERP_HOST"], "https://" + config["MES_HOST"])
+    # Housekeeping only after a published receipt, so it never runs for a failed
+    # or unfinished release, and its own failure does not undo this success.
+    try:
+        cloud.ssh("sudo", "bash", script, "/var/lib/carbon/config.json", release, "prune")
+    except (OSError, subprocess.CalledProcessError):
+        print("Warning: deployed, but Docker image pruning did not finish; run the prune action on the VM "
+              "(README: Disk usage and pruning).", file=sys.stderr)
 
 
 def main():

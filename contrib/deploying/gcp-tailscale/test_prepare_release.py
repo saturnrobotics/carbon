@@ -66,6 +66,12 @@ class PreparationTests(unittest.TestCase):
         self.assertEqual(set(prepare.plan_release(changed, observed["manifest"])["deploy"]), {"erp"})
         self.assertFalse(changed["maintenance_required"])
 
+    def test_docker_pruning_settings_change_no_release_input(self):
+        base = self.generate()
+        tuned = self.generate(config={**CONFIG, "DOCKER_KEEP_RELEASES": 3, "DOCKER_BUILD_MIN_FREE_GB": 30})
+        self.assertEqual(base["maintenance_fingerprint"], tuned["maintenance_fingerprint"])
+        self.assertEqual(base["services"], tuned["services"])
+
     def test_portal_receiver_inputs_reconfigure_only_erp_and_pin_the_registry(self):
         initial = self.generate()
         observed = observation()

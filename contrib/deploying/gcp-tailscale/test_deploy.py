@@ -162,6 +162,14 @@ class ValidationTests(unittest.TestCase):
             with self.subTest(config=config), self.assertRaisesRegex(ValueError, "AUTHZ_API_CLAIM_REQUIRED"):
                 deploy.validate(config, {**SECRETS, **hq_secret})
 
+    def test_optional_docker_pruning_settings(self):
+        config = {**fixture(), "DOCKER_KEEP_RELEASES": 3, "DOCKER_BUILD_MIN_FREE_GB": 20}
+        self.assertEqual(deploy.validate(config, SECRETS)["DOCKER_KEEP_RELEASES"], 3)
+        for key, value in (("DOCKER_KEEP_RELEASES", 0), ("DOCKER_KEEP_RELEASES", True),
+                           ("DOCKER_BUILD_MIN_FREE_GB", "15"), ("DOCKER_BUILD_MIN_FREE_GB", 0)):
+            with self.subTest(key=key, value=value), self.assertRaisesRegex(ValueError, key):
+                deploy.validate({**fixture(), key: value}, SECRETS)
+
     def test_optional_private_postgres_configuration(self):
         config = {**fixture(), "POSTGRES_PRIVATE_IP": "10.73.0.2", "POSTGRES_CLIENT_CIDRS": ["10.81.0.0/26"]}
         self.assertEqual(deploy.validate(config, SECRETS)["POSTGRES_CLIENT_CIDRS"], ["10.81.0.0/26"])

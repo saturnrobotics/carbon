@@ -103,6 +103,10 @@ else:
                 env=env,
             )
             after = manifest_path.read_bytes()
+            self.history = {
+                path.name: json.loads(path.read_text())
+                for path in sorted((root / "release-history").glob("*"))
+            }
             return result, before, after, planned
 
     def test_verified_live_images_publish_the_final_receipt_and_ownership(self):
@@ -120,11 +124,37 @@ else:
         ):
             self.assertEqual(saved[key], plan[key])
 
+    def test_success_records_this_release_and_the_one_it_replaces(self):
+        result, before, after, plan = self.invoke()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        identity = "sha256:" + "a" * 64
+        self.assertEqual(
+            self.history,
+            {
+                "00000004.json": {
+                    "generation": 4,
+                    "revision": "",
+                    "images": [],
+                    "services": {"erp": {"source_commit": "c" * 40}},
+                },
+                "00000005.json": {
+                    "generation": 5,
+                    "revision": "d" * 40,
+                    "images": [identity],
+                    "services": {
+                        name: {"image_digest": identity, "source_commit": "d" * 40}
+                        for name in ("erp", "mes")
+                    },
+                },
+            },
+        )
+
     def test_stale_generation_keeps_last_successful_manifest_byte_identical(self):
         result, before, after, plan = self.invoke(generation=6)
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("generation", result.stderr)
         self.assertEqual(before, after)
+        self.assertEqual(self.history, {})
 
     def test_image_or_health_drift_cannot_publish_a_successful_receipt(self):
         for condition in (
@@ -138,6 +168,7 @@ else:
                 result, before, after, plan = self.invoke(**condition)
                 self.assertNotEqual(result.returncode, 0)
                 self.assertEqual(before, after)
+                self.assertEqual(self.history, {})
                 self.assertIn("erp", result.stderr)
 
 
