@@ -25,6 +25,7 @@ import payment_sync
 import invoice_inference
 import portal_receiver
 import hq_sign_in
+import authz_api_claim
 import wal_g
 
 
@@ -106,6 +107,7 @@ def render(config, repo, output, state=Path("/var/lib/carbon"), *, materialize=T
     portal_receiver.validate(config)
     private_lb.validate(config)
     hq_sign_in.validate(config)
+    authz_api_claim.validate(config)
     repo, output = repo.resolve(), output.resolve()
     names = ("ERP_HOST", "MES_HOST", "SUPABASE_HOST", "AUTH_ALLOWED_GOOGLE_DOMAIN")
     for key in names:
@@ -283,6 +285,7 @@ request.on('error', () => process.exit(1));
     }
     gateway = yaml.safe_load((repo / "packages/dev/docker/kong.yml").read_text())
     gateway["services"] = [service for service in gateway["services"] if service["name"] not in ("meta", "auth-v1-sso")]
+    authz_api_claim.configure(config, gateway, services["kong"], repo)
     emit(output / "kong.yml", yaml.safe_dump(gateway, sort_keys=False))
     services["kong"]["volumes"][0]["source"] = str(output / "kong.yml")
     proxy = services["caddy"]

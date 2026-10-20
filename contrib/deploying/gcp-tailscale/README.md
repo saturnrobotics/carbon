@@ -633,8 +633,12 @@ prints a warning while both are enabled. With HQ enabled, GoTrue also applies
 HQ's session limits to every session (`GOTRUE_SESSIONS_TIMEBOX=12h`,
 `GOTRUE_SESSIONS_INACTIVITY_TIMEOUT=2h`), so a revocation in HQ reaches Carbon
 within the 2-hour inactivity timeout, or 12 hours after sign-in at most, plus up
-to one hour for the last access token. `hq_capabilities` from HQ is never used
-for authorization in Carbon; Carbon's roles and RLS stay authoritative.
+to 15 minutes for the last access token: access tokens live 15 minutes instead
+of an hour (`GOTRUE_JWT_EXP=900`, HQ plan 0006B). They cannot be shorter while
+ERP and MES refresh a token once 10 minutes or less remain; at 10 minutes every
+request would refresh and every page load would redirect to itself.
+`hq_capabilities` from HQ is never used for authorization in Carbon; Carbon's
+roles and RLS stay authoritative.
 
 Private inputs, all optional and off by default:
 
@@ -681,6 +685,69 @@ Rollout:
    deploy. Setting `HQ_SIGN_IN_ENABLED` to `"false"` returns the stack to
    Google-only exactly as before.
 
+## API access managed by HQ (optional)
+
+Once HQ's authz service manages Carbon's permissions (see
+[Permissions managed by HQ](auth/README.md#permissions-managed-by-hq)), the token
+hook puts a top-level `authz_api` claim in every access token GoTrue issues: the
+`api:` resources authz grants that person, never anything from user metadata.
+With `AUTHZ_API_CLAIM_REQUIRED` set to `"true"` in `.local/config.json` (it
+requires `HQ_SIGN_IN_ENABLED`), Kong answers 403 to such a token unless it lists
+the resource its route needs:
+
+| Route | Upstream | Needs |
+| --- | --- | --- |
+| `/rest/v1/` | PostgREST | `api:supabase.rest` |
+| `/storage/v1/` | Storage | `api:supabase.storage` |
+| `/realtime/v1/` (socket) and `/realtime/v1/api` | Realtime | `api:supabase.realtime` |
+| `/functions/v1/` | edge runtime | `api:supabase.functions` |
+| `/auth/v1/` and `/verify` | GoTrue | nothing: they issue and refresh the tokens |
+
+- Kong checks the `Authorization` bearer, the `apikey` and `x-api-key` headers
+  and the `apikey` query argument, every value of each. A credential that is not
+  a JWT gets 401.
+- anon and service_role tokens keep today's routes. So do the five-minute
+  user-scoped tokens Carbon's own server signs (`getUserScopedClient`: MCP,
+  `/api/v1` workforce calls, download links, workflows and Inngest dispatch),
+  which carry no `session_id` and never leave that server; RLS still applies to
+  them. Requests without a credential, such as public objects and image
+  uploads, pass as before.
+- Kong decodes tokens but holds no secret and verifies nothing: PostgREST,
+  Storage, Realtime and the edge dispatcher verify every signature, so a token
+  with an edited claim fails there.
+- Routes are classified by the upstream they forward to. Rendering fails if
+  `packages/dev/docker/kong.yml` gains an upstream the module does not classify,
+  or a `pre-function` that would override the check.
+- The check is a sandboxed `pre-function`, bundled with the pinned Kong 2.8.1,
+  running [`auth/kong-authz-api.lua`](auth/kong-authz-api.lua); only Kong's
+  `cjson.safe` is allowed into the sandbox.
+
+Off (the default), the rendered stack is unchanged. Changing the setting
+reconfigures Kong, which is platform state, so `make deploy` selects coordinated
+maintenance.
+
+Limits: Realtime's socket carries the person's token inside the socket
+(`phx_join`), where Kong cannot see it, so channels stay gated by RLS alone. A
+grant or revoke reaches Kong at the person's next token refresh, within one
+access-token lifetime (15 minutes).
+
+Rollout, after HQ's seed gate passes:
+
+1. Turn on the projection (`carbon_private.authz_projection.enabled`, see
+   [Permissions managed by HQ](auth/README.md#permissions-managed-by-hq)), then
+   wait at least 15 minutes, one access-token lifetime, so every live token was
+   issued with the claim. Kong cannot read that switch: enabling the check first
+   refuses every signed-in browser request.
+2. Set `AUTHZ_API_CLAIM_REQUIRED` to `"true"` and run `make deploy`. Its
+   readiness check proves from the ERP container that Kong refuses a synthetic
+   GoTrue-shaped token without the claim and passes one with it.
+3. Verify from a tailnet device: a person without `api:supabase.storage` gets
+   403 from `https://<SUPABASE_HOST>/storage/v1/`, and reaches Storage once HQ
+   grants it and their session refreshes; ERP and MES pages, uploads and live
+   updates still work for a person holding all four.
+4. To roll back, set `AUTHZ_API_CLAIM_REQUIRED` to `"false"` and run
+   `make deploy` again.
+
 ## Private-network limitations
 
 External webhook senders cannot reach this installation. Payment, accounting,
@@ -703,6 +770,7 @@ repository's pinned pnpm dependencies. These do not operate the developer databa
 
 ```bash
 python3 -m unittest discover -s contrib/deploying/gcp-tailscale -p 'test_*.py'
+python3 -m unittest discover -s contrib/deploying/gcp-tailscale/auth -p 'test_kong_authz_api.py'
 bash -n contrib/deploying/gcp-tailscale/bootstrap.sh
 bash -n contrib/deploying/gcp-tailscale/certificates.sh
 bash -n contrib/deploying/gcp-tailscale/host-deploy.sh

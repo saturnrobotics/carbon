@@ -95,6 +95,14 @@ operation's input, for `settings_updateConsoleSetting`) and the
 or loads the locked tables, which `packages/jobs/src/saturn-authz/restore.test.ts`
 pins.
 
+On 2026-10-20, Kong's `authz_api` claim check (HQ plan 0006B Step 7) was added,
+off until the operator sets `AUTHZ_API_CLAIM_REQUIRED`, and HQ sign-in now lowers
+GoTrue's access-token lifetime to 15 minutes. Both live in fork-owned deployment
+tooling (`contrib/deploying/gcp-tailscale/authz_api_claim.py`, `hq_sign_in.py`,
+`auth/kong-authz-api.lua`): the renderer still starts from upstream's
+`packages/dev/docker/kong.yml` and `docker-compose.prod.yml`, which are
+unchanged. It touches no shared upstream file.
+
 ## (a) Fork-owned additions — files upstream never touches
 
 These cannot conflict on a sync. They only cost when a shared file they depend on

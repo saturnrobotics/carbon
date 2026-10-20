@@ -5,6 +5,7 @@ import importlib.util
 import io
 import json
 import os
+import re
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import threading
 from pathlib import Path
@@ -148,6 +149,8 @@ class PrivateStackTests(unittest.TestCase):
             self.assertEqual(self.stack["services"][app]["environment"]["AUTH_PROVIDERS"], "google")
         for name in ("gotrue", "gotrue-bootstrap"):
             self.assertFalse([key for key in self.stack["services"][name]["environment"] if "KEYCLOAK" in key or "SESSIONS" in key])
+            # The template's hour-long access tokens are kept until HQ is on.
+            self.assertEqual(self.stack["services"][name]["environment"]["GOTRUE_JWT_EXP"], "3600")
         self.assertNotIn("hq_oidc_carbon_secret", self.stack["secrets"])
         staged = {**self.config, **self.HQ, "HQ_SIGN_IN_ENABLED": "false"}
         warnings = io.StringIO()
@@ -168,7 +171,9 @@ class PrivateStackTests(unittest.TestCase):
         self.assertEqual(files.pop(secret), self.HQ["HQ_OIDC_CARBON_SECRET"])
         self.assertNotIn(self.HQ["HQ_OIDC_CARBON_SECRET"], json.dumps(stack))
         auth, baseline_auth = stack["services"]["gotrue"], self.stack["services"]["gotrue"]
-        self.assertEqual({key: auth["environment"].pop(key) for key in list(auth["environment"]) if "KEYCLOAK" in key or "SESSIONS" in key}, {
+        self.assertEqual(baseline_auth["environment"].pop("GOTRUE_JWT_EXP"), "3600")
+        self.assertEqual({key: auth["environment"].pop(key) for key in list(auth["environment"])
+                          if "KEYCLOAK" in key or "SESSIONS" in key or key == "GOTRUE_JWT_EXP"}, {
             "GOTRUE_EXTERNAL_KEYCLOAK_ENABLED": "true",
             "GOTRUE_EXTERNAL_KEYCLOAK_CLIENT_ID": "carbon",
             "GOTRUE_EXTERNAL_KEYCLOAK_SECRET": "__HQ_OIDC_CARBON_SECRET__",
@@ -177,6 +182,8 @@ class PrivateStackTests(unittest.TestCase):
             # HQ revocation reaches Carbon: refreshes stop after these limits.
             "GOTRUE_SESSIONS_TIMEBOX": "12h",
             "GOTRUE_SESSIONS_INACTIVITY_TIMEOUT": "2h",
+            # HQ plan 0006B (B6, Q6): API access ends within one 15-minute token.
+            "GOTRUE_JWT_EXP": "900",
         })
         self.assertEqual(auth["environment"]["GOTRUE_EXTERNAL_GOOGLE_ENABLED"], "true")
         self.assertEqual(auth["secrets"], baseline_auth["secrets"] + ["hq_oidc_carbon_secret"])
@@ -200,12 +207,14 @@ class PrivateStackTests(unittest.TestCase):
         self.assertEqual(auth["environment"]["GOTRUE_EXTERNAL_KEYCLOAK_ENABLED"], "true")
         self.assertEqual(auth["environment"]["GOTRUE_SESSIONS_TIMEBOX"], "12h")
         self.assertEqual(auth["environment"]["GOTRUE_SESSIONS_INACTIVITY_TIMEOUT"], "2h")
+        self.assertEqual(auth["environment"]["GOTRUE_JWT_EXP"], "900")
         self.assertIn("google_client_secret", auth["secrets"])
         for app in ("erp", "mes"):
             self.assertEqual(stack["services"][app]["environment"]["AUTH_PROVIDERS"], "hq")
             self.assertNotIn("hq_oidc_carbon_secret", stack["services"][app].get("secrets", []))
         bootstrap = stack["services"]["gotrue-bootstrap"]
         self.assertEqual(bootstrap["environment"]["GOTRUE_EXTERNAL_GOOGLE_ENABLED"], "false")
+        self.assertEqual(bootstrap["environment"]["GOTRUE_JWT_EXP"], "3600")
         self.assertFalse([key for key in bootstrap["environment"] if "KEYCLOAK" in key or "SESSIONS" in key])
         self.assertNotIn("hq_oidc_carbon_secret", bootstrap["secrets"])
         self.assertEqual([name for name, service in stack["services"].items() if "hq_oidc_carbon_secret" in service.get("secrets", [])], ["gotrue"])
@@ -214,6 +223,25 @@ class PrivateStackTests(unittest.TestCase):
         self.assertEqual(path.stat().st_mode & 0o777, 0o444)
         self.assertNotIn(self.HQ["HQ_OIDC_CARBON_SECRET"], (self.output / "compose.json").read_text())
         subprocess.run(["docker", "compose", "--file", str(self.output / "compose.json"), "config", "--quiet"], check=True)
+
+    def test_hq_access_token_lifetime_leaves_carbons_refresh_window_room(self):
+        # ERP and MES refresh a token once REFRESH_ACCESS_TOKEN_THRESHOLD seconds
+        # or less remain (server), and the browser provider at its own hard-coded
+        # ten minutes. A lifetime at or under either would refresh on every
+        # request and redirect every page load to itself.
+        def seconds(path, pattern):
+            match = re.search(pattern, (REPO / path).read_text())
+            self.assertIsNotNone(match, f"{path} no longer declares its refresh threshold")
+            return eval(match[1], {"__builtins__": {}})  # a literal such as 60 * 10
+
+        thresholds = [
+            seconds("packages/env/src/index.ts", r"export const REFRESH_ACCESS_TOKEN_THRESHOLD = ([0-9 *]+);"),
+            seconds("packages/auth/src/lib/supabase/provider.tsx", r"const shouldRefresh = expiresAt - ([0-9 *]+) < Date\.now\(\) / 1000;"),
+        ]
+        lifetime = int(module.hq_sign_in.ACCESS_TOKEN_LIFETIME)
+        self.assertEqual(lifetime, 900)
+        for threshold in thresholds:
+            self.assertGreaterEqual(lifetime - threshold, 300, "keep at least five minutes between refreshes")
 
     def test_hq_sign_in_inputs_fail_closed_without_echoing_the_secret(self):
         cases = [
@@ -234,6 +262,110 @@ class PrivateStackTests(unittest.TestCase):
                         module.render({**self.config, **self.HQ, **changes}, REPO, self.output, self.state)
                     initialize.assert_not_called()
                 self.assertNotIn("synthetic-hq-client-secret", str(raised.exception))
+
+    CLAIM = {"AUTHZ_API_CLAIM_REQUIRED": "true"}
+    GATED_PATHS = {"/rest/v1/": "api:supabase.rest", "/storage/v1/": "api:supabase.storage",
+                   "/realtime/v1/": "api:supabase.realtime", "/realtime/v1/api": "api:supabase.realtime",
+                   "/functions/v1/": "api:supabase.functions"}
+    OPEN_PATHS = {"/verify", "/auth/v1/verify", "/auth/v1/callback", "/auth/v1/authorize", "/auth/v1/"}
+
+    def render_quietly(self, config):
+        with contextlib.redirect_stderr(io.StringIO()):
+            return module.render(config, REPO, self.output, self.state, materialize=False)
+
+    def test_authz_api_claim_is_off_by_default_and_its_staged_input_changes_nothing(self):
+        gateway = (self.output / "kong.yml").read_text()
+        self.assertNotIn("pre-function", gateway)
+        self.assertNotIn("authz_api", gateway)
+        self.assertEqual(self.stack["services"]["kong"]["environment"]["KONG_PLUGINS"], "request-transformer,cors,key-auth,acl,basic-auth")
+        self.assertFalse([key for key in self.stack["services"]["kong"]["environment"] if "UNTRUSTED" in key])
+        for config in (self.config, {**self.config, **self.HQ}):
+            with self.subTest(hq=config is not self.config):
+                baseline = self.render_quietly(config)
+                self.assertEqual(self.render_quietly({**config, "AUTHZ_API_CLAIM_REQUIRED": "false"}), baseline)
+
+    def test_authz_api_claim_needs_hq_sign_in_and_fails_closed(self):
+        for changes in ({"AUTHZ_API_CLAIM_REQUIRED": "true"}, {**self.HQ, "AUTHZ_API_CLAIM_REQUIRED": True},
+                        {**self.HQ, "AUTHZ_API_CLAIM_REQUIRED": "1"}, {**self.HQ, "AUTHZ_API_CLAIM_REQUIRED": "yes"},
+                        {**self.HQ, "HQ_SIGN_IN_ENABLED": "false", "AUTHZ_API_CLAIM_REQUIRED": "true"}):
+            with self.subTest(changes=changes):
+                with patch.object(module, "initialize_secrets") as initialize:
+                    with self.assertRaisesRegex(ValueError, "AUTHZ_API_CLAIM_REQUIRED") as raised:
+                        module.render({**self.config, **changes}, REPO, self.output, self.state)
+                    initialize.assert_not_called()
+                self.assertNotIn("synthetic-hq-client-secret", str(raised.exception))
+
+    def test_authz_api_claim_gates_every_api_route_and_changes_only_the_gateway(self):
+        baseline, baseline_files = self.render_quietly({**self.config, **self.HQ})
+        stack, files = self.render_quietly({**self.config, **self.HQ, **self.CLAIM})
+        path = str(self.output.resolve() / "kong.yml")
+        gateway = yaml.safe_load(files.pop(path))
+        source = (HERE / "auth/kong-authz-api.lua").read_text()
+        required = {}
+        for service in gateway["services"]:
+            checks = [plugin for plugin in service.get("plugins", []) if plugin["name"] == "pre-function"]
+            for route in service["routes"]:
+                self.assertNotIn("plugins", route)
+                for prefix in route["paths"]:
+                    required[prefix] = checks
+        self.assertEqual(set(required), set(self.GATED_PATHS) | self.OPEN_PATHS)
+        for prefix in self.OPEN_PATHS:  # GoTrue issues and refreshes the tokens
+            self.assertEqual(required[prefix], [], prefix)
+        for prefix, resource in self.GATED_PATHS.items():
+            with self.subTest(prefix=prefix):
+                self.assertEqual(required[prefix], [{"name": "pre-function", "config": {
+                    "access": ['local REQUIRED = "' + resource + '"\n' + source]}}])
+        # Without the plugins the gateway is upstream's routing, unchanged.
+        for service in gateway["services"]:
+            kept = [plugin for plugin in service.pop("plugins", []) if plugin["name"] != "pre-function"]
+            if kept:
+                service["plugins"] = kept
+        self.assertEqual(gateway, yaml.safe_load(baseline_files.pop(path)))
+        self.assertEqual(files, baseline_files)
+        kong = stack["services"]["kong"]["environment"]
+        self.assertEqual({key: kong.pop(key) for key in ("KONG_PLUGINS", "KONG_UNTRUSTED_LUA", "KONG_UNTRUSTED_LUA_SANDBOX_REQUIRES")}, {
+            "KONG_PLUGINS": "request-transformer,cors,key-auth,acl,basic-auth,pre-function",
+            "KONG_UNTRUSTED_LUA": "sandbox",
+            # Only Kong's JSON decoder enters the sandbox: no I/O, no secret.
+            "KONG_UNTRUSTED_LUA_SANDBOX_REQUIRES": "cjson.safe",
+        })
+        baseline["services"]["kong"]["environment"].pop("KONG_PLUGINS")
+        self.assertEqual(stack, baseline)
+        self.assertNotIn("jwt_secret", stack["services"]["kong"].get("secrets", []))
+        self.assertNotIn(self.HQ["HQ_OIDC_CARBON_SECRET"], json.dumps(gateway))
+
+    def test_authz_api_claim_refuses_a_gateway_it_cannot_classify(self):
+        claim = module.authz_api_claim
+        config = {**self.HQ, "AUTHZ_API_CLAIM_REQUIRED": "true"}
+        rendered = yaml.safe_load((self.output / "kong.yml").read_text())
+        check = {"name": "pre-function", "config": {"access": ["return"]}}
+
+        def changed(edit):
+            copy = json.loads(json.dumps(rendered))
+            edit(copy)
+            return copy
+
+        def rest(gateway):
+            return next(service for service in gateway["services"] if service["name"] == "rest-v1")
+
+        claim.configure(config, changed(lambda g: None), {"environment": {"KONG_PLUGINS": "cors"}}, REPO)
+        cases = {
+            # An upstream added later (here the admin API) has no rule yet.
+            "unclassified upstream": changed(lambda g: g["services"].append({"name": "pg-meta", "url": "http://meta:8080/", "routes": []})),
+            "service without url": changed(lambda g: g["services"].append({"name": "rest-v2", "host": "postgrest", "routes": []})),
+            # A more specific (route) or second configuration would replace the check.
+            "route-level override": changed(lambda g: rest(g)["routes"][0].setdefault("plugins", []).append(check)),
+            "service-level override": changed(lambda g: rest(g).setdefault("plugins", []).append(check)),
+            "global override": changed(lambda g: g.setdefault("plugins", []).append(check)),
+        }
+        for label, candidate in cases.items():
+            with self.subTest(label), self.assertRaises(ValueError):
+                claim.configure(config, candidate, {"environment": {"KONG_PLUGINS": "cors"}}, REPO)
+        gateway, kong = changed(lambda g: None), {"environment": {"KONG_PLUGINS": "cors"}}
+        claim.configure({**config, "AUTHZ_API_CLAIM_REQUIRED": "false"}, gateway, kong, REPO)
+        self.assertEqual((gateway, kong), (rendered, {"environment": {"KONG_PLUGINS": "cors"}}))
+        with self.assertRaises(ValueError):
+            claim.function('api:supabase.rest" .. os.exit() .. "', "")
 
     def test_only_tailnet_https_is_published(self):
         published = [(name, svc["ports"]) for name, svc in self.stack["services"].items() if "ports" in svc]

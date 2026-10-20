@@ -34,6 +34,14 @@ PY
 )
 [[ "$INGRESS_MODE" =~ ^(tailscale|private-lb)$ ]] || fail "Invalid ingress mode."
 readonly INGRESS_MODE
+AUTHZ_API_CLAIM_REQUIRED=$(python3 - "$CONFIG" <<'PY'
+import json, sys
+with open(sys.argv[1]) as stream:
+    print(json.load(stream).get("AUTHZ_API_CLAIM_REQUIRED", "false"))
+PY
+)
+[[ "$AUTHZ_API_CLAIM_REQUIRED" =~ ^(true|false)$ ]] || fail "Invalid AUTHZ_API_CLAIM_REQUIRED."
+readonly AUTHZ_API_CLAIM_REQUIRED
 readonly PREPARED="$STATE/prepared/$REVISION"
 
 compose() { docker compose --project-name carbon --file "$CURRENT" "$@"; }
@@ -258,6 +266,31 @@ check_stack() {
     });
     if (!response.ok) throw new Error("Local event wake failed: " + response.status);
   '
+  if [ "$AUTHZ_API_CLAIM_REQUIRED" = true ]; then
+    # HQ plan 0006B Step 7: Kong refuses a GoTrue-shaped user token without the
+    # authz_api claim and passes one with it. Both name no user, live 60 s, and
+    # are signed and used inside the ERP container, which holds the JWT secret.
+    compose exec -T erp /usr/local/bin/carbon-secrets-entrypoint.sh node --input-type=module -e '
+      import { createHmac } from "node:crypto";
+      const encode = (value) => Buffer.from(JSON.stringify(value)).toString("base64url");
+      const sign = (claims) => {
+        const unsigned = encode({ alg: "HS256", typ: "JWT" }) + "." + encode(claims);
+        return unsigned + "." + createHmac("sha256", process.env.SUPABASE_JWT_SECRET).update(unsigned).digest("base64url");
+      };
+      const now = Math.floor(Date.now() / 1000);
+      const nobody = "00000000-0000-0000-0000-000000000000";
+      const claims = { sub: nobody, session_id: nobody, aud: "authenticated", role: "authenticated", iat: now, exp: now + 60 };
+      for (const [extra, denied] of [[{}, true], [{ authz_api: ["api:supabase.rest"] }, false]]) {
+        const response = await fetch("http://kong:8000/rest/v1/", {
+          headers: { apikey: process.env.SUPABASE_ANON_KEY, Authorization: "Bearer " + sign({ ...claims, ...extra }) },
+          redirect: "error", signal: AbortSignal.timeout(10000)
+        });
+        if (denied ? response.status !== 403 : [401, 403].includes(response.status)) {
+          throw new Error("Kong authz_api check failed: " + response.status);
+        }
+      }
+    '
+  fi
   printf '%s\n' "Private ERP, MES, Supabase and event processing passed readiness checks."
 }
 

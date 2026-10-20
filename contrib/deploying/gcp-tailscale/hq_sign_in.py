@@ -16,6 +16,12 @@ Google. With HQ disabled the rendered stack is unchanged.
 With HQ enabled, GoTrue also adopts HQ's session limits, so revoking someone in
 HQ reaches Carbon: GoTrue refuses to refresh a session after the inactivity
 timeout or the timebox, and Carbon then sends the person back through HQ.
+Access tokens then live 15 minutes instead of an hour (HQ plan 0006B, B6 and
+Q6), so once refreshes stop, or the token hook refuses a person authz has
+disabled, API access ends within that lifetime. It cannot be shorter while
+Carbon refreshes a token once 10 minutes or less remain
+(``REFRESH_ACCESS_TOKEN_THRESHOLD`` and the browser's provider): at 10 minutes
+every request would refresh and every page load would redirect to itself.
 
 GoTrue copies HQ's userinfo claims, including ``hq_capabilities``, into user
 metadata, which users can edit themselves. Those claims must never drive
@@ -35,6 +41,9 @@ MIN_SECRET_LENGTH = 32
 # HQ's own session limits, as GoTrue v2.189.0 durations (GOTRUE_SESSIONS_*).
 SESSION_TIMEBOX = "12h"
 SESSION_INACTIVITY_TIMEOUT = "2h"
+# GoTrue's access-token lifetime in seconds (GOTRUE_JWT_EXP; the template's is
+# 3600). Carbon refreshes with 600 s left, so this leaves 300 s between refreshes.
+ACCESS_TOKEN_LIFETIME = "900"
 GATING_WARNING = (
     "Warning: HQ and Google sign-in are both enabled. HQ's app gating applies only once "
     "Google sign-in is off (cutover); until then a person HQ denies can still sign in with Google."
@@ -106,4 +115,6 @@ def configure(config, auth, directory, write_private):
         # a refresh past either limit is refused and the person signs in again.
         "GOTRUE_SESSIONS_TIMEBOX": SESSION_TIMEBOX,
         "GOTRUE_SESSIONS_INACTIVITY_TIMEOUT": SESSION_INACTIVITY_TIMEOUT,
+        # Revocation reaches the API within one access-token lifetime.
+        "GOTRUE_JWT_EXP": ACCESS_TOKEN_LIFETIME,
     })
