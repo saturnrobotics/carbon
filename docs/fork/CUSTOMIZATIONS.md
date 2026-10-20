@@ -71,6 +71,30 @@ the column grant HQ used before read zero rows. Its regression test is
 `packages/database/supabase/tests/saturn-authz-identities.test.sql`; the #84 test
 now counts the reader. It touches no shared upstream file.
 
+On 2026-10-20, the flows that create or end membership were made safe for the
+permission lock (HQ plan 0006B B7). While `carbon_private.authz_projection.enabled`
+is true they write membership only and report that permissions are managed in
+HQ; while it is off they behave as upstream. Fork migration
+`20261020190000_saturn-authz-membership-only` adds
+`carbon_private.authz_ensure_system_employee_type`, which creates a company's
+Admin or Console Operator employee type with no template permissions (EXECUTE:
+`postgres` only), because `employee."employeeTypeId"` is NOT NULL. The behaviour
+lives in `packages/auth/src/saturn/authz.server.ts`,
+`packages/database/supabase/functions/lib/saturn-authz.ts` and
+`apps/erp/app/modules/saturn/`. Shared files gain hooks (**Auth / session**):
+`packages/database/supabase/functions/seed-company/index.ts` (company creation
+and onboarding's restore from a backup: the Admin type through the writer, no
+template, no `userPermission` grant), the three `deactivate*` functions in
+`packages/auth/src/services/users.server.ts` (no `userPermission` strip),
+`migrateUserToSso` in `packages/ee/src/sso/provisioning.server.ts` (no invite
+permission merge), `apps/erp/app/routes/x+/settings+/people.tsx` (console mode
+creates its type first), one more call in the API gate in
+`routes/api+/v1+/lib/base.server.ts` (after its authorization checks, with the
+operation's input, for `settings_updateConsoleSetting`) and the
+`./saturn/authz.server` export in `packages/auth/package.json`. Company restore needed no change: it never wipes
+or loads the locked tables, which `packages/jobs/src/saturn-authz/restore.test.ts`
+pins.
+
 ## (a) Fork-owned additions — files upstream never touches
 
 These cannot conflict on a sync. They only cost when a shared file they depend on

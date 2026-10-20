@@ -4,6 +4,11 @@ import { getLogger } from "@carbon/logger";
 import { oncePerRead } from "@carbon/logger/middleware.server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getCarbonServiceRole } from "../lib/supabase/client.server";
+import {
+  getPermissionsManagement,
+  skippedPermissionWrite,
+  withPermissionsNotice
+} from "../saturn/authz.server";
 import type { Permission, Result } from "../types";
 import { error, success } from "../utils/result";
 import { logRoleChange } from "./auth-events.server";
@@ -118,6 +123,8 @@ export async function deactivateCustomer(
   actorId?: string,
   ip?: string
 ): Promise<Result> {
+  // Saturn fork (HQ plan 0006B): membership only while HQ manages permissions.
+  const authz = await getPermissionsManagement();
   const currentPermissions = await serviceRole
     .from("userPermission")
     .select("*")
@@ -149,10 +156,11 @@ export async function deactivateCustomer(
 
   const [updatePermissions, userToCompanyDelete, customerAccountDelete] =
     await Promise.all([
-      serviceRole
-        .from("userPermission")
-        .update({ permissions })
-        .eq("id", userId),
+      skippedPermissionWrite(authz) ??
+        serviceRole
+          .from("userPermission")
+          .update({ permissions })
+          .eq("id", userId),
       serviceRole
         .from("userToCompany")
         .delete()
@@ -199,12 +207,14 @@ export async function deactivateCustomer(
     beforeRole: "customer",
     afterRole: null,
     before,
-    after: permissions,
+    after: authz.managed ? before : permissions,
     ip,
     reason: "deactivate"
   });
 
-  return success("Sucessfully deactivated customer");
+  return success(
+    withPermissionsNotice("Sucessfully deactivated customer", authz)
+  );
 }
 
 export async function deactivateEmployee(
@@ -214,6 +224,8 @@ export async function deactivateEmployee(
   actorId?: string,
   ip?: string
 ): Promise<Result> {
+  // Saturn fork (HQ plan 0006B): membership only while HQ manages permissions.
+  const authz = await getPermissionsManagement();
   const currentPermissions = await serviceRole
     .from("userPermission")
     .select("*")
@@ -245,10 +257,11 @@ export async function deactivateEmployee(
 
   const [updatePermissions, userToCompanyDelete, employeeDeactivate] =
     await Promise.all([
-      serviceRole
-        .from("userPermission")
-        .update({ permissions })
-        .eq("id", userId),
+      skippedPermissionWrite(authz) ??
+        serviceRole
+          .from("userPermission")
+          .update({ permissions })
+          .eq("id", userId),
       serviceRole
         .from("userToCompany")
         .delete()
@@ -297,12 +310,14 @@ export async function deactivateEmployee(
     beforeRole: "employee",
     afterRole: null,
     before,
-    after: permissions,
+    after: authz.managed ? before : permissions,
     ip,
     reason: "deactivate"
   });
 
-  return success("Sucessfully deactivated employee");
+  return success(
+    withPermissionsNotice("Sucessfully deactivated employee", authz)
+  );
 }
 
 export async function deactivateUser(
@@ -434,6 +449,8 @@ export async function deactivateSupplier(
   actorId?: string,
   ip?: string
 ): Promise<Result> {
+  // Saturn fork (HQ plan 0006B): membership only while HQ manages permissions.
+  const authz = await getPermissionsManagement();
   const currentPermissions = await serviceRole
     .from("userPermission")
     .select("*")
@@ -465,10 +482,11 @@ export async function deactivateSupplier(
 
   const [updatePermissions, userToCompanyDelete, supplierAccountDelete] =
     await Promise.all([
-      serviceRole
-        .from("userPermission")
-        .update({ permissions })
-        .eq("id", userId),
+      skippedPermissionWrite(authz) ??
+        serviceRole
+          .from("userPermission")
+          .update({ permissions })
+          .eq("id", userId),
       serviceRole
         .from("userToCompany")
         .delete()
@@ -515,10 +533,12 @@ export async function deactivateSupplier(
     beforeRole: "supplier",
     afterRole: null,
     before,
-    after: permissions,
+    after: authz.managed ? before : permissions,
     ip,
     reason: "deactivate"
   });
 
-  return success("Sucessfully deactivated supplier");
+  return success(
+    withPermissionsNotice("Sucessfully deactivated supplier", authz)
+  );
 }

@@ -1,5 +1,6 @@
 // Test helper: a Kysely database that answers carbon_private's status function
-// from a mutable value and records what was asked.
+// from a mutable value and records what was asked. It answers the system
+// employee type writer with `employeeTypeId` and records its parameters.
 import {
   type CompiledQuery,
   type DatabaseConnection,
@@ -16,12 +17,18 @@ export type StatusRow = { enabled: boolean; access_url: string | null };
 export function fakeStatusDatabase() {
   const state = {
     status: { enabled: false, access_url: null } as StatusRow | Error,
-    queries: [] as string[]
+    queries: [] as string[],
+    employeeTypeId: "et_system",
+    parameters: [] as unknown[][]
   };
   const connection: DatabaseConnection = {
     async executeQuery<R>(query: CompiledQuery): Promise<QueryResult<R>> {
       state.queries.push(query.sql);
       if (state.status instanceof Error) throw state.status;
+      if (query.sql.includes("authz_ensure_system_employee_type")) {
+        state.parameters.push([...query.parameters]);
+        return { rows: [{ id: state.employeeTypeId }] as R[] };
+      }
       return { rows: [state.status] as R[] };
     },
     streamQuery() {

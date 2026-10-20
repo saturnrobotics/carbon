@@ -11,7 +11,10 @@ import {
   isPortalOperation,
   portalCapabilityFor
 } from "~/modules/portal/portal.server";
-import { refuseLockedAuthzOperation } from "~/modules/saturn/saturn.server";
+import {
+  prepareOperationWhileAuthzManaged,
+  refuseLockedAuthzOperation
+} from "~/modules/saturn/saturn.server";
 import { isMcpBlockedTool } from "../../mcp+/lib/mcp-blocked-tools";
 
 /**
@@ -125,7 +128,7 @@ export function assertWorkforceAuthorization(
  *  same rule keeps those operations out of MCP discovery and the public OpenAPI
  *  document (`isDisclosedOperation` in operations.server.ts). */
 export const gate = (meta: ManifestEntry) =>
-  base.middleware(async ({ context, next }) => {
+  base.middleware(async ({ context, next }, input) => {
     if (isMcpBlockedTool(meta.name)) throw new ORPCError("NOT_FOUND");
     await refuseLockedAuthzOperation(meta.name);
     if (isPortalOperation(meta) && context.authKind !== "workforce") {
@@ -136,6 +139,11 @@ export const gate = (meta: ManifestEntry) =>
     } else if (context.authKind === "workforce") {
       assertWorkforceAuthorization(context, meta);
     }
+    await prepareOperationWhileAuthzManaged(
+      meta.name,
+      context.companyId,
+      input
+    );
     return next();
   });
 
