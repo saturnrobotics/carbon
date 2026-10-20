@@ -30,3 +30,24 @@ export async function getAuthzManagement(
     return authzNotManaged;
   }
 }
+
+/**
+ * The company's system employee type, created with no template permissions if
+ * missing. While HQ manages permissions the lock refuses every other employeeType
+ * write, but employee."employeeTypeId" is NOT NULL, so membership still needs a
+ * type (migration *_saturn-authz-membership-only.sql).
+ */
+export async function ensureSystemEmployeeType(
+  db: Kysely<KyselyDatabase>,
+  companyId: string,
+  systemType: "Admin" | "Console Operator"
+): Promise<string> {
+  const { rows } = await sql<{
+    id: string | null;
+  }>`SELECT carbon_private.authz_ensure_system_employee_type(${companyId}, ${systemType}) AS id`.execute(
+    db
+  );
+  const id = rows[0]?.id;
+  if (!id) throw new Error(`Failed to ensure the ${systemType} employee type`);
+  return id;
+}

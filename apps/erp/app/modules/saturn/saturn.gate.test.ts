@@ -22,6 +22,9 @@ const h = vi.hoisted(() => ({
     })),
     deleteEmployeeType: vi.fn(async () => ({ data: null, error: null })),
     getEmployeeTypes: vi.fn(async () => ({ data: [], count: 0, error: null }))
+  },
+  settings: {
+    updateConsoleSetting: vi.fn(async () => ({ data: null, error: null }))
   }
 }));
 
@@ -40,7 +43,7 @@ vi.mock("~/modules/purchasing/purchasing.service", () => ({}));
 vi.mock("~/modules/quality/quality.service", () => ({}));
 vi.mock("~/modules/resources/resources.service", () => ({}));
 vi.mock("~/modules/sales/sales.service", () => ({}));
-vi.mock("~/modules/settings/settings.service", () => ({}));
+vi.mock("~/modules/settings/settings.service", () => h.settings);
 vi.mock("~/modules/shared/shared.service", () => ({}));
 vi.mock("~/modules/users/users.service", () => h.users);
 vi.mock("~/services/database.server", () => ({
@@ -85,6 +88,7 @@ beforeEach(() => {
   fake = fakeStatusDatabase();
   h.database = fake.db;
   for (const fn of Object.values(h.users)) fn.mockClear();
+  h.settings.updateConsoleSetting.mockClear();
 });
 
 const serviceCalls = () =>
@@ -139,5 +143,60 @@ describe("MCP and API permission tools", () => {
     expect(result).toMatchObject({ success: true });
     expect(h.users.getEmployeeTypes).toHaveBeenCalledTimes(1);
     expect(fake.state.queries).toEqual([]);
+  });
+});
+
+describe("console mode through MCP and the API", () => {
+  /** What the writer had been asked when the service ran. */
+  let askedBeforeService: unknown[][] | undefined;
+  beforeEach(() => {
+    askedBeforeService = undefined;
+    h.settings.updateConsoleSetting.mockImplementationOnce(async () => {
+      askedBeforeService = [...fake.state.parameters];
+      return { data: null, error: null };
+    });
+  });
+
+  it("creates the Console Operator type first, without permissions, while managed", async () => {
+    fake.state.status = MANAGED;
+    const result = await callOperation(
+      "settings_updateConsoleSetting",
+      context(),
+      { consoleEnabled: true }
+    );
+    expect(result).toMatchObject({ success: true });
+    expect(h.settings.updateConsoleSetting).toHaveBeenCalledTimes(1);
+    expect(askedBeforeService).toEqual([[COMPANY, "Console Operator"]]);
+  });
+
+  it("asks for nothing when console mode is turned off", async () => {
+    fake.state.status = MANAGED;
+    await callOperation("settings_updateConsoleSetting", context(), {
+      consoleEnabled: false
+    });
+    expect(h.settings.updateConsoleSetting).toHaveBeenCalledTimes(1);
+    expect(fake.state.queries).toEqual([]);
+  });
+
+  it("writes nothing for a caller not authorized to change settings", async () => {
+    fake.state.status = MANAGED;
+    // The API key holds users_* scopes only.
+    const error = await call(
+      router.settings!.updateConsoleSetting!,
+      { consoleEnabled: true },
+      { context: context("api-key") }
+    ).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(ORPCError);
+    expect((error as ORPCError<string, unknown>).code).toBe("FORBIDDEN");
+    expect(fake.state.parameters).toEqual([]);
+    expect(h.settings.updateConsoleSetting).not.toHaveBeenCalled();
+  });
+
+  it("leaves upstream's service alone before cutover", async () => {
+    await callOperation("settings_updateConsoleSetting", context(), {
+      consoleEnabled: true
+    });
+    expect(h.settings.updateConsoleSetting).toHaveBeenCalledTimes(1);
+    expect(fake.state.parameters).toEqual([]);
   });
 });

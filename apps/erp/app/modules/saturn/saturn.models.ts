@@ -25,3 +25,10 @@ export const authzLockedOperations: ReadonlySet<string> = new Set([
 export function authzManagedMessage(accessUrl: string) {
   return `Carbon permissions are managed in HQ. Change access at ${accessUrl}`;
 }
+
+/** Appends the HQ outcome to a flow's message when it skipped a permission step. */
+export function withAuthzNotice(message: string, authz: AuthzManagement) {
+  return authz.managed
+    ? `${message}. ${authzManagedMessage(authz.accessUrl)}`
+    : message;
+}

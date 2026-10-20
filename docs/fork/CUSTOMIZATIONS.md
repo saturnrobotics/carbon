@@ -62,6 +62,39 @@ regression test now revokes PUBLIC's USAGE on `public` inside its transaction an
 shows reads failing without the grant and filtered by policy with it. It touches
 no shared upstream file.
 
+On 2026-10-20, fork migration `20261020154924_saturn-authz-identities` added
+`carbon_private.authz_identities()`, the reader HQ's authz service uses for
+GoTrue's `google` and `keycloak` identities (user id, provider and `provider_id`
+only), with EXECUTE for HQ's `authz_owner` alone, under a guard like the feed
+contract's. GoTrue's `auth.identities` has row level security on and no policy, so
+the column grant HQ used before read zero rows. Its regression test is
+`packages/database/supabase/tests/saturn-authz-identities.test.sql`; the #84 test
+now counts the reader. It touches no shared upstream file.
+
+On 2026-10-20, the flows that create or end membership were made safe for the
+permission lock (HQ plan 0006B B7). While `carbon_private.authz_projection.enabled`
+is true they write membership only and report that permissions are managed in
+HQ; while it is off they behave as upstream. Fork migration
+`20261020190000_saturn-authz-membership-only` adds
+`carbon_private.authz_ensure_system_employee_type`, which creates a company's
+Admin or Console Operator employee type with no template permissions (EXECUTE:
+`postgres` only), because `employee."employeeTypeId"` is NOT NULL. The behaviour
+lives in `packages/auth/src/saturn/authz.server.ts`,
+`packages/database/supabase/functions/lib/saturn-authz.ts` and
+`apps/erp/app/modules/saturn/`. Shared files gain hooks (**Auth / session**):
+`packages/database/supabase/functions/seed-company/index.ts` (company creation
+and onboarding's restore from a backup: the Admin type through the writer, no
+template, no `userPermission` grant), the three `deactivate*` functions in
+`packages/auth/src/services/users.server.ts` (no `userPermission` strip),
+`migrateUserToSso` in `packages/ee/src/sso/provisioning.server.ts` (no invite
+permission merge), `apps/erp/app/routes/x+/settings+/people.tsx` (console mode
+creates its type first), one more call in the API gate in
+`routes/api+/v1+/lib/base.server.ts` (after its authorization checks, with the
+operation's input, for `settings_updateConsoleSetting`) and the
+`./saturn/authz.server` export in `packages/auth/package.json`. Company restore needed no change: it never wipes
+or loads the locked tables, which `packages/jobs/src/saturn-authz/restore.test.ts`
+pins.
+
 On 2026-10-20, Kong's `authz_api` claim check (HQ plan 0006B Step 7) was added,
 off until the operator sets `AUTHZ_API_CLAIM_REQUIRED`, and HQ sign-in now lowers
 GoTrue's access-token lifetime to 15 minutes. Both live in fork-owned deployment

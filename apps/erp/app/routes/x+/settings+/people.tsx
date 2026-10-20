@@ -31,6 +31,10 @@ import { useCallback, useEffect, useState } from "react";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 import { redirect, useFetcher, useLoaderData } from "react-router";
 import {
+  prepareConsoleMode,
+  withAuthzNotice
+} from "~/modules/saturn/saturn.server";
+import {
   getCompanySettings,
   updateConsoleSetting,
   updateTimeCardSetting
@@ -77,6 +81,7 @@ export async function action({ request }: ActionFunctionArgs) {
   }
 
   if (intent === "console") {
+    const authz = await prepareConsoleMode(companyId, enabled);
     const update = await updateConsoleSetting(
       client,
       companyId,
@@ -99,13 +104,16 @@ export async function action({ request }: ActionFunctionArgs) {
       if (pin) {
         return {
           success: true,
-          message: "Console mode enabled",
+          message: withAuthzNotice("Console mode enabled", authz),
           pin
         };
       }
     }
 
-    return { success: true, message: "Console mode settings updated" };
+    return {
+      success: true,
+      message: withAuthzNotice("Console mode settings updated", authz)
+    };
   }
 
   return { success: false, message: "Unknown intent" };

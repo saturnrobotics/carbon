@@ -70,11 +70,44 @@ gate passes.
 - [ ] Draft PR into `saturn/main` after #82; operator review.
 - [ ] HQ: `authz` schema, the grants in the migration header (also in HQ's
       tenant provisioning), seed and C3 gate (HQ plan 0006B steps 1-3).
-- [ ] Before enabling: make company creation, the seed's identity layer,
+- [x] Before enabling: make company creation, the seed's identity layer,
       employee deactivation, console mode, company restore and SSO provisioning
       write membership only (each fails with the guard's error while enabled).
+      Done in `2026-10-20-saturn-authz-membership-only.md`.
 - [ ] Enable, then verify on the tailnet: a grant at HQ reaches `get_claims`
       within a minute and a revoke removes it (HQ plan 0006B step 6).
+
+## Follow-up: an identities reader for authz (2026-10-20)
+
+HQ's seed read `auth.identities` through a column grant to `authz_owner`, and
+`authz.subject_of_auth_user` did the same. GoTrue's `auth.identities` has row
+level security on and no policy, so both read zero rows without an error: on HQ's
+shared database the seed skipped every Carbon user (each has a `google`
+identity), and once enabled `authz_projection_for` would have given every person
+`{}`.
+
+- [x] Migration `20261020154924_saturn-authz-identities.sql`:
+      `carbon_private.authz_identities() -> (user_id, provider, provider_id)`, the
+      `google` and `keycloak` identities only, ordered; SECURITY DEFINER, STABLE,
+      `search_path=''`, owned by the administrator (section 0 as above), no PUBLIC
+      EXECUTE. A guarded block grants EXECUTE (and USAGE on `carbon_private`) to
+      `authz_owner` alone; HQ's `deploy/data/tenants.sql` carries it verbatim.
+      Idempotent; the applied migrations are unchanged.
+- [x] Regression test `packages/database/supabase/tests/saturn-authz-identities.test.sql`:
+      the exact signature and shape; only the owner holds EXECUTE without HQ's
+      roles; with stand-ins, the re-run grants `authz_owner` (and its member
+      `authz_migrator`) and refuses `authz_api`, `anon`, `authenticated`,
+      `service_role`, `postgres`, `supabase_auth_admin` and the applier; under
+      forced row level security a column grant reads nothing while the reader
+      returns the rows. Mutations (invoker, no provider filter, no revoke,
+      `authz_api` granted, guard removed, no `search_path`, an extra column,
+      unordered) each fail it. The #84 test counts 19 functions and lists the
+      reader in its matrices.
+- [x] Generated types unchanged.
+- [x] HQ: the seed reads identities only through the reader (a `google` or
+      `keycloak` identity, which must agree when both exist), authz migration
+      `0002` makes `authz.subject_of_auth_user` call it, and `tenants.sql` revokes
+      the retired column grant (HQ branch `fix/authz-identities-reader`).
 
 ## Not in this change
 
