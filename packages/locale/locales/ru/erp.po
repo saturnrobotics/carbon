@@ -20522,6 +20522,9 @@ msgstr "Вы самостоятельно настраиваете Carbon в у�
 msgid "You've been clocked in for {hoursElapsed} hours. Did you forget to clock out?"
 msgstr "Вы в работе уже {hoursElapsed} часов. Вы забыли об окончании работы?"
 
+msgid "Your access in Carbon is managed in HQ. After you join, it may take a minute to appear."
+msgstr "Ваш доступ в Carbon управляется в HQ. После присоединения он может появиться в течение минуты."
+
 msgid "Your account stays safe even if your login is stolen"
 msgstr "Ваша учетная запись остается в безопасности, даже если ваше имя входа украдено"
 

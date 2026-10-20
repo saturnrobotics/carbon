@@ -95,6 +95,25 @@ operation's input, for `settings_updateConsoleSetting`) and the
 or loads the locked tables, which `packages/jobs/src/saturn-authz/restore.test.ts`
 pins.
 
+On 2026-10-20, invite acceptance was made safe for the permission lock as well
+(HQ plan 0006B). While the lock is on, `acceptInvite` in
+`apps/erp/app/modules/users/users.server.ts` (**Auth / session**) writes
+membership only: it sends no `userPermission` request, so a row the projection
+has not synced yet can no longer make the guard refuse the invite's permission
+merge and roll the invite back. While the lock is off it behaves as upstream. The
+hook is one read of `getPermissionsManagement()` and `skippedPermissionWrite(authz) ??`
+in front of upstream's `setUserPermissions` call. It cannot live in a fork-owned
+file because the merge runs inside upstream's `Promise.all` with the membership
+writes, and the rollback reads its result. The invite page
+`apps/erp/app/routes/_public+/invite.$code.tsx` (**Login / public pages**) gains
+one loader field (`authzManaged`) and one render line for
+`apps/erp/app/modules/saturn/ui/AuthzInviteNotice.tsx`, which tells the invitee,
+before they join, that access is managed in HQ and may take a minute to appear.
+The route owns its loader and layout, and its success redirect already sets the
+session cookie, so a flash message there would add a second `Set-Cookie` for the
+same cookie and one of them would be lost. The page is public, so it never shows
+HQ's access URL. One message was added to the 13 ERP catalogs.
+
 On 2026-10-20, Kong's `authz_api` claim check (HQ plan 0006B Step 7) was added,
 off until the operator sets `AUTHZ_API_CLAIM_REQUIRED`, and HQ sign-in now lowers
 GoTrue's access-token lifetime to 15 minutes. Both live in fork-owned deployment
@@ -138,8 +157,8 @@ changes shape.
 | **Invoice intake wiring** | `apps/erp/app/modules/purchasing/purchasing.service.ts`, `items/items.server.ts`, `items/items.service.ts`, `invoicing/invoicing.models.ts`, `invoicing/invoicing.service.ts`, `invoicing/ui/PurchaseInvoice/*` (3), `routes/x+/purchase-invoice+/{new,$invoiceId}.tsx`, `routes/api+/purchase-invoice.$invoiceId.map-lines.ts`, `routes/api+/document-extraction.ts`, `components/Form/PdfExtractor.tsx`, `modules/purchasing/ui/SupplierInteraction/SupplierInteractionDocuments.tsx`, `modules/documents/documents.service.ts`, `packages/jobs/src/inngest/functions/extraction/extract-document.ts`, `packages/jobs/src/inngest/functions/tasks/company-backup.transforms.ts`, `packages/database/src/audit.config.ts`, `packages/lib/src/events.ts` (~20) | **extension point.** The intake feature edits upstream's invoicing/purchasing services and UI directly. Most of it could move under `modules/saturn/` behind a small set of hooks (a document-review slot on the purchase-invoice page, an `onExtracted` event), leaving one-line registrations in the shared files. Highest merge-cost group. |
 | **Item forms: extra fields** | `modules/items/ui/{Parts/PartForm,Tools/ToolForm,Materials/MaterialForm,Services/ServiceForm,Consumables/ConsumableForm}.tsx`, `components/Form/{UnitOfMeasure,SupplierType,Substance,Shape,MaterialType,MaterialGrade}.tsx` (11) | **extension point / upstream.** Repeated small edits to every item form and combobox. A single "additional item fields" slot upstream would remove all eleven; alternatively the field changes themselves may be generic enough to upstream. |
 | **Inngest / event dispatch hooks** | `packages/jobs/src/inngest/index.ts`, `apps/erp/app/routes/api+/inngest.ts`, `packages/lib/src/events.ts` (3) | **extension point.** Registers the fork's functions and dispatch setters. Upstream already has a function list; a registration array the fork appends to would reduce this to one line each. |
-| **Login / public pages** | `apps/erp/app/routes/_public+/{login,verify}.tsx`, `apps/erp/app/routes/_public+/invite.$code.tsx`, `apps/mes/app/routes/_public+/login.tsx`, `apps/erp/app/root.tsx`, `apps/mes/app/root.tsx` (6) | **upstream.** `SOURCE_CODE_URL` "Source code" link (AGPL §13 source offer) and Google-domain sign-in restrictions. The source-link is generic to any self-hosted install and is the strongest upstream candidate; the domain restriction is a common self-host need too. |
-| **Auth / session** | `packages/auth/src/services/session.server.ts`, `apps/erp/app/routes/api+/v1+/lib/{base,authenticate}.server.ts`, `packages/database/supabase/functions/lib/supabase.ts` (4) | **inherent / upstream.** Session and API-key handling for the deployment's auth model; review whether the API changes are generic fixes. |
+| **Login / public pages** | `apps/erp/app/routes/_public+/{login,verify}.tsx`, `apps/erp/app/routes/_public+/invite.$code.tsx`, `apps/mes/app/routes/_public+/login.tsx`, `apps/erp/app/root.tsx`, `apps/mes/app/root.tsx` (6) | **upstream.** `SOURCE_CODE_URL` "Source code" link (AGPL §13 source offer) and Google-domain sign-in restrictions. The source-link is generic to any self-hosted install and is the strongest upstream candidate; the domain restriction is a common self-host need too. The invite page's HQ permissions notice (HQ plan 0006B) is **inherent**. |
+| **Auth / session** | `packages/auth/src/services/session.server.ts`, `apps/erp/app/routes/api+/v1+/lib/{base,authenticate}.server.ts`, `packages/database/supabase/functions/lib/supabase.ts`, `apps/erp/app/modules/users/users.server.ts` (5) | **inherent / upstream.** Session and API-key handling for the deployment's auth model; review whether the API changes are generic fixes. |
 | **Environment schema** | `packages/env/src/index.ts` (1) | **inherent** while the features are fork-only; shrinks as they move behind hooks (fork-owned code can read its own env). |
 | **Accounting: post-payment FX** | `packages/database/supabase/functions/post-payment/{index.ts,build-payment-journal.ts,post-payment.test.ts}`, `functions/lib/utils.ts`, `.claude/rules/numeric-precision.md` (5) | **upstream.** Resolutions from the last upstream merge; the journal-type/pool-runtime separation is a generic fix. |
 | **Seed data** | `packages/database/supabase/functions/lib/seed.data.ts` (1, 1,363 lines) | **upstream or drop.** Merge resolution debris rather than intent; re-resolve toward upstream on the next sync. |

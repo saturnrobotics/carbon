@@ -20522,6 +20522,9 @@ msgstr "귀사가 원하는 속도로 직접 Carbon을 설정합니다"
 msgid "You've been clocked in for {hoursElapsed} hours. Did you forget to clock out?"
 msgstr "{hoursElapsed}시간 동안 작업이 진행 중입니다. 작업 종료를 잊으셨습니까?"
 
+msgid "Your access in Carbon is managed in HQ. After you join, it may take a minute to appear."
+msgstr "Carbon 접근 권한은 HQ에서 관리됩니다. 참여 후 표시되기까지 1분 정도 걸릴 수 있습니다."
+
 msgid "Your account stays safe even if your login is stolen"
 msgstr "로그인이 도난당해도 계정은 안전하게 유지됩니다"
 
