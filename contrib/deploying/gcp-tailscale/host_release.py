@@ -14,6 +14,28 @@ import subprocess
 import sys
 import tempfile
 
+# runtime/release-history/<generation>.json: one record per successful release,
+# so image pruning (docker_prune.py) can keep the last few releases' images.
+HISTORY = "release-history"
+
+
+def history_path(runtime, generation):
+    return runtime / HISTORY / f"{generation:08d}.json"
+
+
+def release_record(generation, revision, services, images=()):
+    """The images a successful release used, without its configuration."""
+    return {
+        "generation": generation,
+        "revision": revision,
+        "services": {
+            name: {key: service[key] for key in ("image_digest", "source_commit") if key in service}
+            for name, service in services.items()
+            if isinstance(service, dict)
+        },
+        "images": sorted(set(images)),
+    }
+
 
 def write_atomic(path, value, *, encode_json=True):
     fd, temporary = tempfile.mkstemp(dir=path.parent, prefix=".release-")
@@ -195,6 +217,31 @@ def finalize(config_path, compose_path, manifest_path):
         revision = config["DEPLOY_REVISION"]
         if not isinstance(revision, str) or not re.fullmatch(r"[a-f0-9]{40}", revision):
             raise ValueError("Final source revision must be immutable")
+        # History precedes the receipt: a failure here leaves the previous
+        # receipt published, and a record without a receipt only keeps images.
+        runtime = manifest_path.parent
+        (runtime / HISTORY).mkdir(mode=0o700, exist_ok=True)
+        prior = previous.get("generation")
+        if isinstance(prior, int) and prior > 0 and not history_path(runtime, prior).exists():
+            # The first release with history also records the one it replaces.
+            pointer = runtime / "revision"
+            prior_revision = pointer.read_text().strip() if pointer.exists() else ""
+            if not re.fullmatch(r"[a-f0-9]{40}", prior_revision):
+                prior_revision = ""
+            services = previous.get("services")
+            write_atomic(
+                history_path(runtime, prior),
+                release_record(prior, prior_revision, services if isinstance(services, dict) else {}),
+            )
+        images = [
+            service["image"]
+            for service in compose.get("services", {}).values()
+            if isinstance(service, dict) and isinstance(service.get("image"), str)
+        ]
+        write_atomic(
+            history_path(runtime, plan["generation"]),
+            release_record(plan["generation"], revision, plan["services"], images),
+        )
         # Preserve the operator-facing source pointer. The manifest remains the
         # sole successful baseline and is published last.
         write_atomic(manifest_path.parent / "revision", revision, encode_json=False)

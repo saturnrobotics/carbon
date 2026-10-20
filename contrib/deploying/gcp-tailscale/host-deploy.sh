@@ -7,7 +7,7 @@ umask 077
 readonly STATE=/var/lib/carbon
 readonly CONFIG=${1:?Usage: host-deploy.sh CONFIG_JSON REPO_PATH COMMAND}
 readonly REPO=${2:?Usage: host-deploy.sh CONFIG_JSON REPO_PATH COMMAND}
-readonly ACTION=${3:?Expected prepare, quiesce, routine-migrate, routine-apply, maintenance-apply, finalize, start, check, or adopt}
+readonly ACTION=${3:?Expected prepare, quiesce, routine-migrate, routine-apply, maintenance-apply, finalize, start, check, adopt, prune, or prune-plan}
 readonly HERE="$REPO/contrib/deploying/gcp-tailscale"
 readonly CURRENT="$STATE/runtime/compose.json"
 
@@ -299,11 +299,19 @@ case "$ACTION" in
     verify_ingress
     [ -f "$STATE/tls/live/carbon/fullchain.pem" ] && [ -f "$STATE/tls/live/carbon/privkey.pem" ] \
       || fail "Obtain the private deployment's DNS-validated certificate first."
+    targets=$(plan_services build)
+    build_ops=false
+    if [ "$(config_value RELEASE_MAINTENANCE)" = True ] || [ -n "$(plan_services migrate)" ]; then
+      build_ops=true
+    fi
+    if [ "$build_ops" = true ] || [ -n "$targets" ]; then
+      # Docker shares the data disk with PostgreSQL; a build must never fill it.
+      python3 "$HERE/docker_prune.py" guard "$CONFIG" "$STATE"
+    fi
     mkdir -p "$PREPARED"
     python3 "$HERE/render.py" "$CONFIG" "$REPO" "$PREPARED"
     docker compose --project-name carbon --file "$PREPARED/compose.json" config --quiet
-    targets=$(plan_services build)
-    if [ "$(config_value RELEASE_MAINTENANCE)" = True ] || [ -n "$(plan_services migrate)" ]; then
+    if [ "$build_ops" = true ]; then
       build_image --target ops --tag "carbon/ops:$REVISION"
     fi
     for target in $targets; do build_image --build-arg "APP=$target" --tag "carbon/$target:$REVISION"; done
@@ -407,5 +415,14 @@ case "$ACTION" in
       || fail "Carbon containers remain after adoption; inspect them before deploying."
     printf '%s\n' "Adopted the copied data disk; nothing was started."
     ;;
-  *) fail "Expected prepare, quiesce, routine-migrate, routine-apply, maintenance-apply, finalize, start, check, or adopt." ;;
+  prune)
+    # After a successful release, and on demand: images that no container, kept
+    # release or runtime/prepared Compose definition names, and build cache
+    # unused for 72 hours. Never volumes or containers.
+    python3 "$HERE/docker_prune.py" prune "$CONFIG" "$STATE"
+    ;;
+  prune-plan)
+    python3 "$HERE/docker_prune.py" plan "$CONFIG" "$STATE"
+    ;;
+  *) fail "Expected prepare, quiesce, routine-migrate, routine-apply, maintenance-apply, finalize, start, check, adopt, prune, or prune-plan." ;;
 esac

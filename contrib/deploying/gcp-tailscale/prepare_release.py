@@ -11,6 +11,7 @@ import re
 import subprocess
 import tempfile
 
+import docker_prune
 import invoice_inference
 import portal_receiver
 import payment_sync
@@ -32,8 +33,9 @@ APP_CONFIG = (COMMON_CONFIG | payment_sync.CONFIG_KEYS | invoice_inference.CONFI
               | payment_sync.SECRET_KEYS | portal_receiver.SECRET_KEYS | {"RESEND_API_KEY"})
 # ERP-only secrets supplied through the private files; pinned by content hash like the host-generated set.
 ERP_SUPPLIED_SECRETS = payment_sync.SECRET_KEYS | portal_receiver.SECRET_KEYS
-# Cloudflare/Tailscale enrollment credentials do not describe an app release.
-OPERATOR_ONLY = {"CLOUDFLARE_API_TOKEN", "TAILSCALE_AUTH_KEY", "SOURCE_REPO_URL"}
+# Cloudflare/Tailscale enrollment credentials do not describe an app release,
+# nor do the host's Docker pruning settings.
+OPERATOR_ONLY = {"CLOUDFLARE_API_TOKEN", "TAILSCALE_AUTH_KEY", "SOURCE_REPO_URL"} | docker_prune.CONFIG_KEYS
 BASE_DEFAULTS = {"NODE_IMAGE": "node:22", "NODE_SLIM_IMAGE": "node:22-slim"}
 
 # Run on the VM as root. Only the manifest and content hashes leave the host;

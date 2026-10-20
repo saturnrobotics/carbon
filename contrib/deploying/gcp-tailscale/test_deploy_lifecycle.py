@@ -1,5 +1,5 @@
 """Exercise deployment orchestration offline, including automatic maintenance."""
-from contextlib import ExitStack, redirect_stdout
+from contextlib import ExitStack, redirect_stderr, redirect_stdout
 import importlib.util
 import io
 import json
@@ -30,7 +30,8 @@ def plan(generation=3, *, changed=True, maintenance_required=False):
 
 
 class DeployLifecycleTests(unittest.TestCase):
-    def run_release(self, planned, *, snapshot_error=None, events=None, final_check_error=None, fail_at=None, config=None):
+    def run_release(self, planned, *, snapshot_error=None, events=None, final_check_error=None, fail_at=None, config=None,
+                    prune_error=None):
         if config is None:
             config = json.loads((HERE / "config.example.json").read_text())
             config.update(PROJECT_ID="example-project", CLOUDFLARE_API_TOKEN="synthetic-token")
@@ -51,6 +52,8 @@ class DeployLifecycleTests(unittest.TestCase):
                 events.append(args[-1])
                 if args[-1] == "check" and final_check_error is not None:
                     raise final_check_error
+                if args[-1] == "prune" and prune_error is not None:
+                    raise prune_error
             elif args[:3] == ("sudo", "systemctl", "stop"):
                 self.assertEqual(args[3:], ("docker.service", "docker.socket"))
                 events.append("docker-stop")
@@ -83,8 +86,10 @@ class DeployLifecycleTests(unittest.TestCase):
             cloud.check_vm.side_effect = subprocess.CalledProcessError(1, ["synthetic-vm-check"])
         if fail_at == "firewall":
             cloud.check_firewall.side_effect = subprocess.CalledProcessError(1, ["synthetic-firewall-check"])
+        self.errors = io.StringIO()
         with ExitStack() as stack:
             stack.enter_context(redirect_stdout(io.StringIO()))
+            stack.enter_context(redirect_stderr(self.errors))
             stack.enter_context(patch.object(deploy, "revision", return_value=REVISION))
             verification = stack.enter_context(patch.object(deploy.verify_source, "require_verified"))
             publish = stack.enter_context(patch.object(deploy, "publish_source"))
@@ -107,7 +112,7 @@ class DeployLifecycleTests(unittest.TestCase):
     def assert_maintenance(self, planned):
         events, uploaded, cloud, publish, _, _, inference = self.run_release(planned)
         self.assertEqual(events, ["bootstrap:" + REVISION, "tailscale-ip", "prepare", "quiesce", "docker-stop", "snapshot",
-                                  "docker-start", "maintenance-apply", "check", "finalize"])
+                                  "docker-start", "maintenance-apply", "check", "finalize", "prune"])
         publish.assert_called_once()
         cloud.provision.assert_called_once()
         inference.assert_called_once_with(cloud)
@@ -138,7 +143,8 @@ class DeployLifecycleTests(unittest.TestCase):
     def test_erp_only_release_stays_routine_without_snapshot_or_quiesce(self):
         planned = plan()
         events, uploaded, cloud, publish, _, _, _ = self.run_release(planned)
-        self.assertEqual(events, ["bootstrap:" + REVISION, "tailscale-ip", "prepare", "routine-apply", "check", "finalize"])
+        self.assertEqual(events, ["bootstrap:" + REVISION, "tailscale-ip", "prepare", "routine-apply", "check", "finalize",
+                                  "prune"])
         cloud.call.assert_not_called()
         publish.assert_called_once()
         self.assertEqual(len(uploaded), 1)
@@ -156,6 +162,7 @@ class DeployLifecycleTests(unittest.TestCase):
                                      final_check_error=failure)
                 self.assertIn("check", events)
                 self.assertNotIn("finalize", events)
+                self.assertNotIn("prune", events)
 
     def test_cloud_check_or_cleanup_failure_never_finalizes_the_release(self):
         for maintenance in (False, True):
@@ -165,12 +172,23 @@ class DeployLifecycleTests(unittest.TestCase):
                     with self.assertRaises(subprocess.CalledProcessError):
                         self.run_release(plan(maintenance_required=maintenance), events=events, fail_at=boundary)
                     self.assertNotIn("finalize", events)
+                    self.assertNotIn("prune", events)
 
-    def test_finalization_is_the_last_remote_action_after_cleanup(self):
+    def test_finalization_is_the_last_release_action_after_cleanup_and_only_pruning_follows(self):
         events, uploaded, cloud, publish, factory, dns, inference = self.run_release(plan())
         calls = [call.args for call in cloud.ssh.call_args_list]
-        self.assertEqual(calls[-1][-1], "finalize")
-        self.assertEqual(calls[-2][:3], ("rm", "-rf", "--"))
+        self.assertEqual(calls[-1][-1], "prune")
+        self.assertEqual(calls[-2][-1], "finalize")
+        self.assertEqual(calls[-3][:3], ("rm", "-rf", "--"))
+
+    def test_pruning_failure_warns_without_failing_the_published_release(self):
+        for maintenance in (False, True):
+            with self.subTest(maintenance=maintenance):
+                events = []
+                self.run_release(plan(maintenance_required=maintenance), events=events,
+                                 prune_error=subprocess.CalledProcessError(1, ["synthetic-prune"]))
+                self.assertEqual(events[-2:], ["finalize", "prune"])
+                self.assertIn("Docker image pruning did not finish", self.errors.getvalue())
 
     def test_unchanged_release_does_not_publish_or_provision(self):
         events, uploaded, cloud, publish, factory, dns, inference = self.run_release(plan(changed=False))
@@ -195,7 +213,7 @@ class DeployLifecycleTests(unittest.TestCase):
                 events, uploaded, cloud, publish, _, dns, _ = self.run_release(planned, config=self.private_lb_config())
                 self.assertEqual(events[0], "bootstrap:" + REVISION + ",private-lb")
                 self.assertNotIn("tailscale-ip", events)
-                self.assertEqual(events[-2:], ["check", "finalize"])
+                self.assertEqual(events[-3:], ["check", "finalize", "prune"])
                 dns.return_value.zone.assert_called_once()
                 dns.return_value.update.assert_not_called()
                 self.assertEqual(uploaded[0]["INGRESS_MODE"], "private-lb")

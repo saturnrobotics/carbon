@@ -335,10 +335,12 @@ The optional [managed cold backups](backups/README.md) add 90 days of daily
 recovery points, monthly points for one year, external attachment bucket coverage,
 and failure/overdue monitoring. Configure ignored `.local/backups.json` once;
 subsequent `make deploy` runs maintain that setup independently of app releases.
-Pre-deployment snapshots are retained until you deliberately remove them. Neither
-images nor old source releases are pruned automatically. Monitor disk space,
-certificate renewals, snapshots and costs. The VM and data disk have deletion
-protection/retention; the script provides no destructive uninstall command.
+Pre-deployment snapshots are retained until you deliberately remove them. Docker
+images and build cache are pruned after each successful release (see
+[disk usage and pruning](#disk-usage-and-pruning)); old source releases are not.
+Monitor disk space, certificate renewals, snapshots and costs. The VM and data
+disk have deletion protection/retention; the script provides no destructive
+uninstall command.
 
 If a maintenance deployment fails after migration starts, it reports failure
 rather than automatically running old code against a changed schema. Inspect
@@ -350,6 +352,68 @@ to a new retained disk and boot the matching source release. Restore database,
 files and secrets together; do not downgrade the schema by rerunning old
 migrations. Never run the old and recovered Tailscale identities concurrently.
 Practice this recovery on a separate isolated VM before relying on it.
+
+### Disk usage and pruning
+
+Docker's data-root, `/var/lib/carbon/docker`, is on the data disk PostgreSQL
+writes to, and every release builds its ERP, MES and `ops` images on the VM.
+Without pruning, images and build cache grow with every deployment until the
+disk is full.
+
+After `finalize` publishes a successful release, `make deploy` runs the host
+action `prune`. It removes every Docker image except those named by:
+
+- a container, running or stopped;
+- the last `DOCKER_KEEP_RELEASES` successful releases (default 2: the current
+  one and the one before), so the previous release can roll back without a
+  rebuild;
+- the active and previous Compose definitions in `/var/lib/carbon/runtime/`,
+  which routine and maintenance rollback start from;
+- a prepared Compose definition in `/var/lib/carbon/prepared/` written after the
+  last successful release: a deployment in progress, or one that failed and
+  awaits recovery. A later successful release makes its images removable.
+
+Images are removed by ID and never forced, so Docker still refuses any image a
+container uses. Build cache unused for 72 hours is then removed. A release that
+built has just touched the dependency layers and package cache its successor
+reuses, so only superseded builds' entries go; after three days without a build,
+the next build starts cold (slower, never wrong). The age filter works on every
+Docker version, unlike the size caps whose flags buildx has renamed. Volumes are
+never touched. A failed, unverified or no-op deployment prunes nothing, and a
+pruning failure is reported as a warning without failing the deployment it
+follows. Disk snapshots taken before a prune include every image, so whole-disk
+recovery is unaffected.
+
+`finalize` records each successful release's images in
+`/var/lib/carbon/runtime/release-history/`. The first release with this record
+also records the one it replaces. Before that, the runtime Compose definitions
+stand in for the previous release.
+
+Before building, `prepare` refuses to start when the data disk has less than
+`DOCKER_BUILD_MIN_FREE_GB` (default 15; 1 GB is 2^30 bytes, as `df -h` counts)
+available to unprivileged writers such as PostgreSQL. Nothing is built or
+stopped; prune, then deploy again. A release that builds nothing is not checked.
+
+Both settings are optional integers in `.local/config.json`
+(`DOCKER_KEEP_RELEASES` 1–20, `DOCKER_BUILD_MIN_FREE_GB` 1–10000). Changing them
+selects no maintenance.
+
+To prune on demand, run the last successful release's host tooling on the VM
+(through `gcloud compute ssh ... --tunnel-through-iap`). `prune-plan` prints what
+`prune` would remove and removes nothing:
+
+```bash
+sudo -i
+release=/var/lib/carbon/releases/$(cat /var/lib/carbon/runtime/revision)
+bash "$release/contrib/deploying/gcp-tailscale/host-deploy.sh" /var/lib/carbon/config.json "$release" prune-plan
+bash "$release/contrib/deploying/gcp-tailscale/host-deploy.sh" /var/lib/carbon/config.json "$release" prune
+```
+
+`prune` exits non-zero when Docker refused to remove an image (its message names
+the image) or the build cache prune failed. It refuses to run without a successful
+release, and stops before removing anything when Docker or a release record
+gives an unexpected answer. Source releases in `/var/lib/carbon/releases/` and
+`prepared/` are never pruned; recovery boots from them.
 
 ## Private database clients
 
