@@ -1,16 +1,30 @@
--- Regression test for 20261019070224_saturn-hq-feeds.sql (HQ plan 0012 Step 5):
--- the guard, the money-free column grants to hq_api, the row policies TO hq_api,
--- and that Carbon's own roles see exactly what they saw before.
+-- Regression test for 20261019070224_saturn-hq-feeds.sql and its follow-up
+-- 20261020030112_saturn-hq-feeds-usage.sql (HQ plan 0012 Step 5): the guard, the
+-- money-free column grants to hq_api, its USAGE on public, the row policies TO
+-- hq_api, and that Carbon's own roles see exactly what they saw before.
 --
 -- Run against a local database migrated to head, as a superuser, on a database
 -- without HQ's roles and schema authz (both are stubbed below), for example:
 --   psql "postgresql://supabase_admin:postgres@localhost:$PORT_DB/postgres" -X \
 --     -v ON_ERROR_STOP=1 -f packages/database/supabase/tests/saturn-hq-feeds.test.sql
--- The migration is idempotent, so the test runs it again with \ir once each
+-- The migrations are idempotent, so the test runs them again with \ir once each
 -- stand-in exists. Everything runs in one transaction that is rolled back;
 -- nothing persists.
 BEGIN;
 SET LOCAL search_path = public;
+
+-- Schema public as on a database where PUBLIC holds no USAGE there and only
+-- named roles do. Carbon's local stack still grants it to PUBLIC, which hid that
+-- the first migration never granted hq_api USAGE: on such a database every HQ
+-- read failed with "permission denied for schema public".
+REVOKE USAGE ON SCHEMA public FROM PUBLIC;
+DO $$
+BEGIN
+  ASSERT has_schema_privilege('anon', 'public', 'USAGE')
+    AND has_schema_privilege('authenticated', 'public', 'USAGE')
+    AND has_schema_privilege('service_role', 'public', 'USAGE'),
+    'Carbon''s API roles hold USAGE on public by name, not through PUBLIC';
+END $$;
 
 -- Helpers. Each runs one query in this transaction as one role, with HQ's
 -- authz.subject and (optionally) Carbon's request.jwt.claims set, and returns its
@@ -33,7 +47,8 @@ BEGIN
   RETURN v_result;
 END $$;
 
-CREATE FUNCTION pg_temp.expect_denied(p_role TEXT, p_statement TEXT) RETURNS VOID
+-- Returns the permission error's message.
+CREATE FUNCTION pg_temp.expect_denied(p_role TEXT, p_statement TEXT) RETURNS TEXT
 LANGUAGE plpgsql AS $$
 BEGIN
   BEGIN
@@ -41,7 +56,7 @@ BEGIN
     EXECUTE p_statement;
   EXCEPTION WHEN insufficient_privilege THEN
     RESET ROLE;
-    RETURN;
+    RETURN SQLERRM;
   END;
   RAISE EXCEPTION 'expected permission denied as %, but it ran: %', p_role, p_statement;
 END $$;
@@ -58,7 +73,12 @@ LANGUAGE sql AS $$
        JOIN pg_attribute AS a ON a.attrelid = c.oid AND a.attnum > 0 AND NOT a.attisdropped
       WHERE c.relnamespace = 'public'::REGNAMESPACE
         AND EXISTS (SELECT FROM pg_roles WHERE rolname = 'hq_api')
-        AND has_column_privilege('hq_api', c.oid, a.attnum, 'SELECT')))
+        AND has_column_privilege('hq_api', c.oid, a.attnum, 'SELECT')),
+    (SELECT string_agg(a.grantee::REGROLE::TEXT || '=' || a.privilege_type, ', '
+                       ORDER BY a.grantee::REGROLE::TEXT, a.privilege_type)
+       FROM pg_namespace AS n, aclexplode(n.nspacl) AS a
+      WHERE n.nspname = 'public'
+        AND a.grantee IN (SELECT oid FROM pg_roles WHERE rolname IN ('hq_api', 'hq_owner'))))
 $$;
 
 -- 1. The guard: on Carbon's own stack the migration did nothing --------------------
@@ -78,13 +98,14 @@ END $$;
 CREATE ROLE hq_api NOLOGIN NOINHERIT;
 CREATE ROLE hq_owner NOLOGIN NOINHERIT;
 \ir ../migrations/20261019070224_saturn-hq-feeds.sql
+\ir ../migrations/20261020030112_saturn-hq-feeds-usage.sql
 DO $$
 BEGIN
   ASSERT pg_temp.feed_state() = '', 'roles without authz: no grant and no policy';
   ASSERT NOT EXISTS (
     SELECT FROM pg_namespace AS n, aclexplode(n.nspacl) AS a
-     WHERE n.nspname = 'public' AND a.grantee = 'hq_owner'::REGROLE
-  ), 'roles without authz: no USAGE granted to hq_owner';
+     WHERE n.nspname = 'public' AND a.grantee IN ('hq_owner'::REGROLE, 'hq_api'::REGROLE)
+  ), 'roles without authz: no USAGE granted to hq_owner or hq_api';
   ASSERT NOT EXISTS (
     SELECT FROM pg_proc AS p, aclexplode(p.proacl) AS a
      WHERE p.pronamespace = 'public'::REGNAMESPACE AND a.grantee = 'hq_api'::REGROLE
@@ -131,15 +152,36 @@ REVOKE ALL ON ALL FUNCTIONS IN SCHEMA authz FROM PUBLIC;
 GRANT USAGE ON SCHEMA authz TO hq_api;
 GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA authz TO hq_api;
 
--- With HQ's roles and authz present, the migration applies; a second run changes nothing.
-\ir ../migrations/20261019070224_saturn-hq-feeds.sql
-DO $$ BEGIN PERFORM set_config('test.feed_state', pg_temp.feed_state(), true); END $$;
+-- With HQ's roles and authz present, the first migration alone grants the
+-- columns and creates the policies but gives hq_api no USAGE on public, so every
+-- read as hq_api fails before a grant or policy is consulted.
 \ir ../migrations/20261019070224_saturn-hq-feeds.sql
 DO $$
+DECLARE
+  t TEXT;
 BEGIN
-  ASSERT pg_temp.feed_state() = current_setting('test.feed_state'), 'the block is idempotent';
+  ASSERT NOT has_schema_privilege('hq_api', 'public', 'USAGE'),
+    'first migration alone: hq_api lacks USAGE on public';
+  FOREACH t IN ARRAY ARRAY['"salesOrder"', '"salesOrderLine"', '"purchaseOrder"',
+                           '"purchaseOrderLine"', 'job', 'company']
+  LOOP
+    ASSERT pg_temp.expect_denied('hq_api', format('SELECT 1 FROM public.%s', t))
+      = 'permission denied for schema public', format('first migration alone: %s denied', t);
+  END LOOP;
+END $$;
+
+-- The follow-up grants it; running both again changes nothing.
+\ir ../migrations/20261020030112_saturn-hq-feeds-usage.sql
+DO $$ BEGIN PERFORM set_config('test.feed_state', pg_temp.feed_state(), true); END $$;
+\ir ../migrations/20261019070224_saturn-hq-feeds.sql
+\ir ../migrations/20261020030112_saturn-hq-feeds-usage.sql
+DO $$
+BEGIN
+  ASSERT pg_temp.feed_state() = current_setting('test.feed_state'), 'the blocks are idempotent';
   ASSERT (SELECT count(*) FROM pg_policy WHERE polname LIKE 'hq\_api\_feed%') = 12,
     'two policies on each of six tables';
+  ASSERT split_part(pg_temp.feed_state(), ' | ', 3) = 'hq_api=USAGE, hq_owner=USAGE',
+    'hq_api and hq_owner hold exactly USAGE on public, by their own grants';
 END $$;
 
 -- 2. Fixture -----------------------------------------------------------------------
@@ -214,6 +256,21 @@ BEGIN
 END $fixture$;
 
 -- 3. Row filtering for hq_api ------------------------------------------------------
+
+-- hq_api's own USAGE on public is load-bearing: without it (PUBLIC holds none
+-- here) the read fails before any policy runs; with it, the policies filter rows.
+DO $$
+DECLARE
+  so TEXT := 'SELECT "salesOrderId" FROM public."salesOrder" WHERE id LIKE ''hqf-%''';
+BEGIN
+  REVOKE USAGE ON SCHEMA public FROM hq_api;
+  ASSERT pg_temp.expect_denied('hq_api', so) = 'permission denied for schema public',
+    'no USAGE on public: the read fails';
+  GRANT USAGE ON SCHEMA public TO hq_api;
+  ASSERT pg_temp.ids('hq_api', 'user:sales', so) = '{SO-HQF-1,SO-HQF-3}',
+    'USAGE on public: the rows authz allows';
+  ASSERT pg_temp.ids('hq_api', 'user:nobody', so) = '{}', 'USAGE on public: no grant, no row';
+END $$;
 
 DO $$
 DECLARE
@@ -320,6 +377,9 @@ BEGIN
     AND has_function_privilege('hq_api', 'public.get_company_groups_for_employee()', 'EXECUTE'),
     'hq_api may run the helpers Carbon''s own SELECT policies call';
   ASSERT has_schema_privilege('hq_owner', 'public', 'USAGE'), 'hq_owner may name public';
+  ASSERT has_schema_privilege('hq_api', 'public', 'USAGE')
+    AND NOT has_schema_privilege('hq_api', 'public', 'CREATE'),
+    'hq_api may name public and create nothing there';
   ASSERT NOT EXISTS (
     SELECT FROM pg_class AS c
      WHERE c.relnamespace = 'public'::REGNAMESPACE
@@ -333,6 +393,7 @@ BEGIN
   PERFORM pg_temp.expect_denied('hq_api', 'SELECT * FROM public."customer"');
   PERFORM pg_temp.expect_denied('hq_api', 'UPDATE public."salesOrder" SET status = ''Closed''');
   PERFORM pg_temp.expect_denied('hq_api', 'DELETE FROM public.job');
+  PERFORM pg_temp.expect_denied('hq_api', 'CREATE TABLE public.hq_feeds_probe (id INT)');
 END $$;
 
 -- 6. Carbon's own roles are unchanged ---------------------------------------------
