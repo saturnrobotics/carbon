@@ -10,6 +10,7 @@ Run explicitly: python3 -m unittest discover -s contrib/deploying/gcp-tailscale/
 """
 
 import base64
+import concurrent.futures
 import http.cookiejar
 import importlib.util
 import json
@@ -262,8 +263,8 @@ createServer((req, res) => {
 """
 
 
-class HqSignInTests(GoTrueStack):
-    """HQ sign-in with Google kept as break-glass, through the production hook."""
+class HqSignInStack(GoTrueStack):
+    """The rendered GoTrue with HQ sign-in on, a synthetic HQ provider and the hook."""
 
     CHANGES = {"HQ_SIGN_IN_ENABLED": "true", "HQ_ISSUER": "https://hq.example.com", "HQ_OIDC_CARBON_SECRET": HQ_SECRET}
     PROVIDER = "http://hq-provider:8080/oidc/keycloak"
@@ -342,6 +343,22 @@ class HqSignInTests(GoTrueStack):
         payload = token.split(".")[1]
         return json.loads(base64.urlsafe_b64decode(payload + "=" * (-len(payload) % 4)))
 
+    def refresh(self, token):
+        request = urllib.request.Request(
+            self.url + "/token?grant_type=refresh_token", method="POST",
+            data=json.dumps({"refresh_token": token}).encode(), headers={"Content-Type": "application/json"},
+        )
+        try:
+            with urllib.request.build_opener(urllib.request.ProxyHandler({})).open(request, timeout=10) as response:
+                return response.status, json.load(response)
+        except urllib.error.HTTPError as error:
+            with error:
+                return error.code, json.load(error)
+
+
+class HqSignInTests(HqSignInStack):
+    """HQ sign-in with Google kept as break-glass, through the production hook."""
+
     def test_authorize_redirects_the_browser_to_hq_with_the_carbon_client(self):
         authorization, state = self.authorize("keycloak", self.CALLBACK, scopes="profile email")
         parsed = urllib.parse.urlsplit(authorization)
@@ -399,18 +416,6 @@ class HqSignInTests(GoTrueStack):
         self.assertEqual(self.sql(f"SELECT string_agg(provider, ',' ORDER BY provider) FROM auth.identities WHERE user_id = '{LINKED_USER}';"), "google,keycloak")
         self.assertEqual(self.sql("SELECT count(*) FROM auth.users WHERE email = 'linked.employee@example.com';"), "1")
 
-    def refresh(self, token):
-        request = urllib.request.Request(
-            self.url + "/token?grant_type=refresh_token", method="POST",
-            data=json.dumps({"refresh_token": token}).encode(), headers={"Content-Type": "application/json"},
-        )
-        try:
-            with urllib.request.build_opener(urllib.request.ProxyHandler({})).open(request, timeout=10) as response:
-                return response.status, json.load(response)
-        except urllib.error.HTTPError as error:
-            with error:
-                return error.code, json.load(error)
-
     def test_hq_session_limits_end_refresh_so_revocation_reaches_carbon(self):
         # A fresh session refreshes; one past the 12 h timebox or idle past the
         # 2 h inactivity timeout is refused, and Carbon sends the person to HQ.
@@ -432,6 +437,27 @@ class HqSignInTests(GoTrueStack):
                     self.assertIn("access_token", body)
                 else:
                     self.assertEqual((status, body.get("error_code"), body.get("msg")), (400, "session_expired", expected))
+
+    def test_access_tokens_live_fifteen_minutes_and_parallel_refreshes_agree(self):
+        # HQ plan 0006B (B6, Q6): GOTRUE_JWT_EXP=900 with HQ sign-in on. Carbon
+        # refreshes once 600 s or less remain, so tokens rotate about every five
+        # minutes; parallel loaders may refresh with the same token at once.
+        result, _ = self.sign_in("new-employee")
+        self.assertEqual(result["expires_in"], ["900"])
+        claims = self.claims(result["access_token"][0])
+        self.assertEqual(claims["exp"] - claims["iat"], 900)
+        with concurrent.futures.ThreadPoolExecutor(2) as pool:
+            answers = list(pool.map(self.refresh, [result["refresh_token"][0]] * 2))
+        for status, body in answers:
+            self.assertEqual(status, 200, body)
+            self.assertEqual(body["expires_in"], 900)
+            refreshed = self.claims(body["access_token"])
+            self.assertEqual(refreshed["exp"] - refreshed["iat"], 900)
+            self.assertEqual(refreshed["session_id"], claims["session_id"])
+        # Both callers continue on one refresh token, so neither cookie is stale.
+        self.assertEqual(answers[0][1]["refresh_token"], answers[1][1]["refresh_token"])
+        status, body = self.refresh(answers[0][1]["refresh_token"])
+        self.assertEqual(status, 200, body)
 
     def test_other_workspace_and_unverified_email_get_no_session(self):
         for code, reason in (("other-workspace", "Sign in with an authorized Google Workspace account."),

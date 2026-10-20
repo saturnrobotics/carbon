@@ -1,5 +1,5 @@
 """Offline preparation tests: no real credentials or cloud mutations."""
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 import copy
 import io
 import json
@@ -181,6 +181,25 @@ class PreparationTests(unittest.TestCase):
                     self.assertNotEqual(changed["services"][app]["runtime_config"], first["services"][app]["runtime_config"])
                 self.assertNotIn("synthetic-hq-client-secret", json.dumps(changed))
                 self.assertNotIn("hq.example.com", json.dumps(changed))
+
+    def test_authz_api_claim_switch_reconfigures_only_the_gateway_under_maintenance(self):
+        hq = {"HQ_SIGN_IN_ENABLED": "true", "HQ_ISSUER": "https://hq.example.com",
+              "HQ_OIDC_CARBON_SECRET": "synthetic-hq-client-secret-" + "x" * 16}
+        with redirect_stderr(io.StringIO()):
+            first = self.generate(config={**CONFIG, **hq})
+            observed = observation()
+            observed["manifest"]["maintenance_fingerprint"] = first["maintenance_fingerprint"]
+            observed["manifest"]["maintenance_inputs"] = first["maintenance_inputs"]
+            changed = self.generate(config={**CONFIG, **hq, "AUTHZ_API_CLAIM_REQUIRED": "true"}, observed=observed)
+        # Kong is platform state: the switch uses coordinated maintenance and
+        # leaves both applications' runtime configuration as it was.
+        self.assertTrue(changed["maintenance_required"])
+        self.assertEqual(sorted(changed["maintenance_reasons"]), [
+            "Maintenance input added: configuration/AUTHZ_API_CLAIM_REQUIRED",
+            "Maintenance input changed: platform/kong",
+        ])
+        for app in ("erp", "mes"):
+            self.assertEqual(changed["services"][app]["runtime_config"], first["services"][app]["runtime_config"])
 
     def test_routing_and_domain_changes_require_maintenance(self):
         first = self.generate()

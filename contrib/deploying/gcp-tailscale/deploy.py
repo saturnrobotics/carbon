@@ -21,6 +21,7 @@ import payment_sync
 import invoice_inference
 import portal_receiver
 import hq_sign_in
+import authz_api_claim
 import release_plan
 import prepare_release
 import verify_source
@@ -103,12 +104,13 @@ def private_json(path):
 
 
 def validate(config, secrets):
-    if set(config) - CONFIG_KEYS - private_postgres.OPTIONAL_KEYS - payment_sync.CONFIG_KEYS - invoice_inference.CONFIG_KEYS - portal_receiver.CONFIG_KEYS - private_lb.CONFIG_KEYS - hq_sign_in.CONFIG_KEYS or set(secrets) - SECRET_KEYS - payment_sync.SECRET_KEYS - portal_receiver.SECRET_KEYS - hq_sign_in.SECRET_KEYS:
+    if set(config) - CONFIG_KEYS - private_postgres.OPTIONAL_KEYS - payment_sync.CONFIG_KEYS - invoice_inference.CONFIG_KEYS - portal_receiver.CONFIG_KEYS - private_lb.CONFIG_KEYS - hq_sign_in.CONFIG_KEYS - authz_api_claim.CONFIG_KEYS or set(secrets) - SECRET_KEYS - payment_sync.SECRET_KEYS - portal_receiver.SECRET_KEYS - hq_sign_in.SECRET_KEYS:
         raise ValueError("Unknown configuration keys; see config.example.json and secrets.example.json")
     private_postgres.validate(config)
     payment_sync.validate({**config, **secrets})
     portal_receiver.validate({**config, **secrets})
     hq_sign_in.validate({**config, **secrets})
+    authz_api_claim.validate({**config, **secrets})
     invoice_inference.validate(config, project=config.get("PROJECT_ID"))
     for key in private_lb.required_keys(CONFIG_KEYS, config):
         if key not in config:

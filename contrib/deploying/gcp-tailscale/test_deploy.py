@@ -149,6 +149,19 @@ class ValidationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Unknown configuration keys"):
             deploy.validate({**enabled, **hq_secret}, SECRETS)
 
+    def test_optional_authz_api_claim_input(self):
+        hq = {"HQ_SIGN_IN_ENABLED": "true"}
+        hq_secret = {"HQ_OIDC_CARBON_SECRET": "synthetic-hq-client-secret-" + "x" * 16}
+        self.assertEqual(fixture()["AUTHZ_API_CLAIM_REQUIRED"], "false")
+        deploy.validate(fixture(), SECRETS)
+        self.assertEqual(deploy.validate({**fixture(), **hq, "AUTHZ_API_CLAIM_REQUIRED": "true"},
+                                         {**SECRETS, **hq_secret})["AUTHZ_API_CLAIM_REQUIRED"], "true")
+        for config in ({**fixture(), "AUTHZ_API_CLAIM_REQUIRED": "true"},
+                       {**fixture(), **hq, "AUTHZ_API_CLAIM_REQUIRED": "yes"},
+                       {**fixture(), **hq, "AUTHZ_API_CLAIM_REQUIRED": True}):
+            with self.subTest(config=config), self.assertRaisesRegex(ValueError, "AUTHZ_API_CLAIM_REQUIRED"):
+                deploy.validate(config, {**SECRETS, **hq_secret})
+
     def test_optional_private_postgres_configuration(self):
         config = {**fixture(), "POSTGRES_PRIVATE_IP": "10.73.0.2", "POSTGRES_CLIENT_CIDRS": ["10.81.0.0/26"]}
         self.assertEqual(deploy.validate(config, SECRETS)["POSTGRES_CLIENT_CIDRS"], ["10.81.0.0/26"])

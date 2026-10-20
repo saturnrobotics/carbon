@@ -110,7 +110,9 @@ older than 12 hours or idle (unrefreshed) for 2 hours, and Carbon then clears it
 cookie and sends the person back through `/login`, where HQ decides again. A
 revocation in HQ therefore reaches Carbon within the 2-hour inactivity timeout
 for an idle person, and at most 12 hours after sign-in for an active one, plus
-the remaining life of the last access token (up to `GOTRUE_JWT_EXP`, one hour).
+the remaining life of the last access token (up to `GOTRUE_JWT_EXP`, which HQ
+sign-in lowers from one hour to 15 minutes; ERP and MES refresh a token once 10
+minutes or less remain, so it cannot be shorter).
 Enabling HQ also ends existing sessions older than 12 hours at their next
 refresh.
 
@@ -198,6 +200,11 @@ Once on:
 - This hook adds a top-level `authz_api` claim (the `api:` resources authz
   grants, from `authz.capabilities(subject, 'api')`, never from user metadata)
   and refuses a token for a person authz does not know or has disabled.
+- Once every live token carries the claim (one access-token lifetime after
+  enabling), the deployment's `AUTHZ_API_CLAIM_REQUIRED` makes Kong require it
+  per route: `api:supabase.rest`, `.storage`, `.realtime` and `.functions` for
+  `/rest/v1/`, `/storage/v1/`, `/realtime/v1/` and `/functions/v1/`. See
+  [API access managed by HQ](../README.md#api-access-managed-by-hq-optional).
 
 HQ grants `carbon_authz_applier` EXECUTE (and USAGE on schema `authz`) on
 `authz.subject_of_auth_user(uuid)`, `authz.carbon_permissions(text)` and
@@ -207,7 +214,13 @@ and `authz.capabilities(text, text)`. Carbon grants authz's roles the
 
 `packages/database/supabase/tests/saturn-authz-projection.test.sql` covers the
 receiver, the lock and the grants on a migrated local database; this
-directory's hook suite covers the claim.
+directory's hook suite covers the claim. `test_kong_authz_api.py` (Docker and
+PyYAML) runs the rendered Kong in front of the rendered GoTrue, the real hook and
+synthetic `authz` functions: storage answers 403 without `api:supabase.storage`
+and is reached with it; grants and revokes take effect at the next refresh;
+`authz_api` written into user metadata changes nothing; a disabled person cannot
+refresh; anon, service_role and server-signed tokens keep their routes; every
+credential location is checked; denials keep CORS headers.
 
 ## Edge function boundary
 
