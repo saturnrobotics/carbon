@@ -203,11 +203,17 @@ HQ grants `carbon_authz_applier` EXECUTE (and USAGE on schema `authz`) on
 `authz.subject_of_auth_user(uuid)`, `authz.carbon_permissions(text)` and
 `authz.epoch()`, and `supabase_auth_admin` on `authz.subject_of_auth_user(uuid)`
 and `authz.capabilities(text, text)`. Carbon grants authz's roles the
-`carbon_private` functions listed in the migration's header.
+`carbon_private` functions listed in the migration's header, and `authz_owner`
+alone `carbon_private.authz_identities()` (migration
+`20261020154924_saturn-authz-identities`): `authz.subject_of_auth_user` reads a
+user's `google` and `keycloak` identities through it, because GoTrue's
+`auth.identities` has row level security on and no policy, so a grant on the
+table reads nothing.
 
 `packages/database/supabase/tests/saturn-authz-projection.test.sql` covers the
-receiver, the lock and the grants on a migrated local database; this
-directory's hook suite covers the claim.
+receiver, the lock and the grants on a migrated local database,
+`saturn-authz-identities.test.sql` the identities reader; this directory's hook
+suite covers the claim.
 
 ## Edge function boundary
 

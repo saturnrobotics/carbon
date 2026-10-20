@@ -62,6 +62,15 @@ regression test now revokes PUBLIC's USAGE on `public` inside its transaction an
 shows reads failing without the grant and filtered by policy with it. It touches
 no shared upstream file.
 
+On 2026-10-20, fork migration `20261020154924_saturn-authz-identities` added
+`carbon_private.authz_identities()`, the reader HQ's authz service uses for
+GoTrue's `google` and `keycloak` identities (user id, provider and `provider_id`
+only), with EXECUTE for HQ's `authz_owner` alone, under a guard like the feed
+contract's. GoTrue's `auth.identities` has row level security on and no policy, so
+the column grant HQ used before read zero rows. Its regression test is
+`packages/database/supabase/tests/saturn-authz-identities.test.sql`; the #84 test
+now counts the reader. It touches no shared upstream file.
+
 ## (a) Fork-owned additions — files upstream never touches
 
 These cannot conflict on a sync. They only cost when a shared file they depend on
