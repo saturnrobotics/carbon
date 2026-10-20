@@ -438,6 +438,8 @@ BEGIN
     ('authz_memberships()', ARRAY[]::TEXT[]),
     ('authz_user_permissions()', ARRAY[]::TEXT[]),
     ('authz_employee_type_permissions()', ARRAY[]::TEXT[]),
+    -- 20261020154924_saturn-authz-identities; tested in saturn-authz-identities.test.sql.
+    ('authz_identities()', ARRAY[]::TEXT[]),
     ('authz_is_workforce_user(text)', ARRAY['carbon_authz_applier']),
     ('authz_workforce_users()', ARRAY['carbon_authz_applier']),
     ('authz_canonical_permissions(jsonb)', ARRAY['carbon_authz_applier']),
@@ -473,7 +475,7 @@ BEGIN
          OR p.proconfig IS NULL OR NOT ('search_path=""' = ANY (p.proconfig)));
   ASSERT bad IS NULL, format('PUBLIC EXECUTE or a search_path other than '''': %s', bad);
   ASSERT (SELECT count(*) FROM pg_proc AS p
-          WHERE p.pronamespace = 'carbon_private'::REGNAMESPACE AND p.proname LIKE 'authz\_%') = 19,
+          WHERE p.pronamespace = 'carbon_private'::REGNAMESPACE AND p.proname LIKE 'authz\_%') = 20,
     'every function is covered above';
 
   ASSERT (SELECT array_agg(p.proname::TEXT ORDER BY p.proname) FROM pg_proc AS p
@@ -602,7 +604,7 @@ DECLARE
   r TEXT;
   owner_can TEXT[] := ARRAY['authz_modules()', 'authz_memberships()',
     'authz_user_permissions()', 'authz_employee_type_permissions()',
-    'authz_projection_status()', 'authz_apply_projection(text)'];
+    'authz_projection_status()', 'authz_apply_projection(text)', 'authz_identities()'];
   api_can TEXT[] := ARRAY['authz_memberships()', 'authz_projection_status()'];
 BEGIN
   -- Exact signatures: hq-authz depends on them.
