@@ -20526,6 +20526,9 @@ msgstr "आप Carbon को स्वयं सेट अप कर रहे �
 msgid "You've been clocked in for {hoursElapsed} hours. Did you forget to clock out?"
 msgstr "आप {hoursElapsed} घंटे से साइन इन हैं। क्या आप कार्य समाप्त करना भूल गए?"
 
+msgid "Your access in Carbon is managed in HQ. After you join, it may take a minute to appear."
+msgstr "Carbon में आपकी पहुंच HQ में प्रबंधित होती है। शामिल होने के बाद, इसे दिखाई देने में एक मिनट लग सकता है।"
+
 msgid "Your account stays safe even if your login is stolen"
 msgstr "यहां तक कि अगर आपका लॉगिन चोरी हो जाता है तो आपका खाता सुरक्षित रहता है"
 

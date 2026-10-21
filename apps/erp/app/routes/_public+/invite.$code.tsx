@@ -10,6 +10,7 @@ import {
 } from "@carbon/auth";
 import { getCarbonServiceRole } from "@carbon/auth/client.server";
 import { setCompanyId } from "@carbon/auth/company.server";
+import { getPermissionsManagement } from "@carbon/auth/saturn/authz.server";
 import {
   flash,
   getAuthSession,
@@ -33,6 +34,7 @@ import type {
   MetaFunction
 } from "react-router";
 import { Form, Link, redirect, useLoaderData } from "react-router";
+import { AuthzInviteNotice } from "~/modules/saturn";
 import {
   acceptInvite,
   isControlledInviteExpired
@@ -70,6 +72,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
     success: true,
     expired: false,
     company: invite.data.company,
+    authzManaged: (await getPermissionsManagement()).managed,
     controlledEnvironment: CONTROLLED_ENVIRONMENT
   };
 }
@@ -426,6 +429,7 @@ export default function Invite() {
             </Trans>
           </p>
         ) : null}
+        {"authzManaged" in data && data.authzManaged && <AuthzInviteNotice />}
       </VStack>
 
       <p className="text-xs text-muted-foreground  text-center">

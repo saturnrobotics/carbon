@@ -68,7 +68,8 @@ permissions are managed in HQ, and behaves exactly as upstream while it is off.
 - Invite acceptance (`acceptInvite` → `setUserPermissions`, ERP users module)
   upserts the invite's permissions. The guard turns a synced row into a no-op, so
   it passes silently, but it fails and rolls the invite back when the row is not
-  yet the projection (within a sync interval of an HQ change).
+  yet the projection (within a sync interval of an HQ change). Done in
+  `2026-10-20-saturn-authz-invite-accept.md`: membership only while managed.
 - Customers, suppliers and SAML SSO users have no `google`/`keycloak` identity,
   so they are never projected: under the lock their permissions cannot change.
 - Deactivation leaves HQ's grant in `userPermission` until HQ revokes it. The

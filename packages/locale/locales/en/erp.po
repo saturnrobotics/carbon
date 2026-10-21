@@ -20526,6 +20526,9 @@ msgstr "You're setting Carbon up yourself, at your own pace"
 msgid "You've been clocked in for {hoursElapsed} hours. Did you forget to clock out?"
 msgstr "You've been clocked in for {hoursElapsed} hours. Did you forget to clock out?"
 
+msgid "Your access in Carbon is managed in HQ. After you join, it may take a minute to appear."
+msgstr "Your access in Carbon is managed in HQ. After you join, it may take a minute to appear."
+
 msgid "Your account stays safe even if your login is stolen"
 msgstr "Your account stays safe even if your login is stolen"
 
