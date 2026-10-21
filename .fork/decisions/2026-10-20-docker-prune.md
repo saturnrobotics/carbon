@@ -1,5 +1,8 @@
 # Docker image and build-cache pruning on the data disk
 
+Removal by ID and build cache by age are replaced by removal by tag and a size
+bound: see [2026-10-20-docker-prune-tags-and-cache-size.md](2026-10-20-docker-prune-tags-and-cache-size.md).
+
 Base: `saturn/main` at `91249d344e`. Every file is fork-owned under
 `contrib/deploying/gcp-tailscale/`; no upstream file is touched.
 

@@ -33,6 +33,8 @@ def respond(world, args):
             return 1, "", "Cannot connect to the Docker daemon"
         return 0, "".join(key + "\n" for key, image in images.items() for _ in image["tags"] or [None]), ""
     if args[:4] == ["image", "inspect", "--format", "{{.Id}}"]:
+        if args[4] in world.get("moved", {}):
+            return 0, world["moved"][args[4]] + "\n", ""
         for key, image in images.items():
             if args[4] in (key, *image["tags"]):
                 return 0, key + "\n", ""
@@ -45,13 +47,38 @@ def respond(world, args):
         return 0, "".join(key + "\n" for key in containers), ""
     if args[:4] == ["container", "inspect", "--format", "{{.Image}}"]:
         return 0, "".join(containers[key] + "\n" for key in args[4:]), ""
-    if args[:2] == ["image", "rm"] and len(args) == 3 and args[2] in images:
-        if args[2] in containers.values() or args[2] in world.get("refuse", []):
-            return 1, "", "Error response from daemon: conflict: unable to delete " + args[2][7:19] + " (must be forced)"
-        del images[args[2]]
-        return 0, "Deleted: " + args[2] + "\n", ""
-    if args == ["builder", "prune", "--force", "--filter", "until=72h"]:
-        return 0, "ID\tRECLAIMABLE\tSIZE\tLAST ACCESSED\nTotal:\t1.5GB\n", ""
+    if args[:2] == ["image", "rm"] and len(args) == 3:
+        # As dockerd answers without --force: by ID, only an image with at most
+        # one tag and no container; by tag, it untags, refuses the last tag of a
+        # container's image, and deletes the image with its last tag.
+        named = [key for key, image in images.items() if args[2] == key or args[2] in image["tags"]]
+        key = named[0] if named else None
+        if key is None:
+            return 1, "", "Error response from daemon: No such image: " + args[2]
+        tags, conflict = images[key]["tags"], "Error response from daemon: conflict: unable to delete " + key[7:19]
+        if key in world.get("refuse", []):
+            return 1, "", conflict + " (cannot be forced) - synthetic refusal"
+        if key == args[2]:
+            if len(tags) > 1:
+                return 1, "", conflict + " (must be forced) - image is referenced in multiple repositories"
+            if key in containers.values():
+                return 1, "", conflict + " (must be forced) - image is being used by stopped container"
+            del images[key]
+            return 0, "Deleted: " + key + "\n", ""
+        if tags == [args[2]] and key in containers.values():
+            return 1, "", ('Error response from daemon: conflict: unable to remove repository reference "' + args[2]
+                           + '" (must force) - container is using its referenced image ' + key[7:19])
+        tags.remove(args[2])
+        if tags:
+            return 0, "Untagged: " + args[2] + "\n", ""
+        del images[key]
+        return 0, "Untagged: " + args[2] + "\nDeleted: " + key + "\n", ""
+    if args[:4] == ["builder", "prune", "--force", "--keep-storage"] and len(args) == 5:
+        if world.get("cache_error"):
+            return 1, "", "ERROR: synthetic build cache failure"
+        # buildx prints its deprecation notice for --keep-storage on stdout.
+        return 0, ("Flag --keep-storage has been deprecated, keep-storage flag has been changed to reserved-space\n"
+                   "ID\tRECLAIMABLE\tSIZE\tLAST ACCESSED\nTotal:\t1.5GB\n"), ""
     return 99, "", "unexpected docker call: " + " ".join(args)
 
 
@@ -72,6 +99,10 @@ exec(compile(DOCKER_STUB, "docker-stub", "exec"), STUB)
 
 def image(number):
     return "sha256:" + format(number, "064x")
+
+
+def short(identity):
+    return identity[7:19]
 
 
 def commit(character):
@@ -131,7 +162,7 @@ class Host:
                 record = host_release.release_record(generation, revision, services(generation))
                 host_release.write_atomic(host_release.history_path(runtime, generation), record)
         self.world = {
-            "images": {identity: {"tags": tags} for identity, tags in IMAGES.values()},
+            "images": {identity: {"tags": list(tags)} for identity, tags in IMAGES.values()},
             "containers": {"c" * 64: ID["running"], "d" * 64: ID["stopped"]},
         }
 
@@ -161,6 +192,9 @@ class Host:
     def removals(self):
         return [call for call in self.world.get("log", []) if call[:2] == ["image", "rm"]]
 
+    def cache_prunes(self):
+        return [call for call in self.world.get("log", []) if call[0] == "builder"]
+
 
 class KeepSetTests(unittest.TestCase):
     def setUp(self):
@@ -173,14 +207,16 @@ class KeepSetTests(unittest.TestCase):
         refused, output, errors = host.prune()
         self.assertEqual(refused, 0, errors)
         self.assertEqual(ID.keys() - host.remaining(), {"e1", "m1", "o1", "old-proxy", "dangling", "superseded"})
-        # By ID, never forced, never a volume or container; then old build cache.
-        for call in host.removals():
-            self.assertEqual(len(call), 3)
-            self.assertRegex(call[2], r"^sha256:[a-f0-9]{64}$")
+        # By tag (an untagged image by ID), never forced, never a volume or
+        # container; then build cache down to its size bound.
+        self.assertEqual(sorted(call[2] for call in host.removals()), sorted(
+            ["carbon/erp:" + R1, "carbon/mes:" + R1, "carbon/ops:" + R1, "caddy:2.7-alpine", ID["dangling"],
+             "carbon/erp:" + SUPERSEDED]))
         self.assertFalse([call for call in host.world["log"] if {"volume", "-f", "--force"} & set(call) and call[0] != "builder"])
-        self.assertEqual(host.world["log"][-1], ["builder", "prune", "--force", "--filter", "until=72h"])
-        self.assertIn("Total:\t1.5GB", output)
-        self.assertIn("Removing " + ID["e1"][7:19] + " carbon/erp:" + R1, output)
+        self.assertEqual(host.cache_prunes(), [["builder", "prune", "--force", "--keep-storage", "20GB"]])
+        self.assertEqual(host.world["log"][-1][0], "builder")
+        self.assertIn("Build cache cut to 20 GB (DOCKER_BUILD_CACHE_KEEP_GB): 1.5GB removed.", output)
+        self.assertIn("Removing " + short(ID["e1"]) + " carbon/erp:" + R1, output)
 
     def test_keep_count_is_configurable(self):
         for keep, removed in ((3, {"old-proxy", "dangling", "superseded"}),
@@ -228,20 +264,93 @@ class KeepSetTests(unittest.TestCase):
         self.assertEqual(refused, 0)
         self.assertEqual(host.remaining(), set(ID))
         self.assertEqual(host.removals(), [])
-        self.assertNotIn(["builder", "prune", "--force", "--filter", "until=72h"], host.world["log"])
-        self.assertIn("Would remove " + ID["e1"][7:19], output)
+        self.assertEqual(host.cache_prunes(), [])
+        self.assertIn("Would remove " + short(ID["e1"]), output)
         self.assertIn("6 images to remove", output)
+        self.assertIn("cuts build cache to 20 GB", output)
 
-    def test_a_refused_image_is_kept_and_reported_while_the_rest_continue(self):
+    def test_images_go_tag_by_tag_and_kept_images_lose_only_unnamed_tags(self):
+        host = Host(self.root)
+        images, twin = host.world["images"], image(0x15)
+        stale = ["carbon/erp:" + commit(character) for character in "abc"]
+        # One build tagged for two commits nothing keeps: Docker refuses its ID
+        # without force, and deletes it with its last tag.
+        images[twin] = {"tags": stale[:2]}
+        # The current release's image, also tagged for a commit nothing keeps.
+        images[ID["e3"]]["tags"].append(stale[2])
+        # A running container's image: Compose names redis:7, nothing names latest.
+        images[ID["running"]]["tags"].append("redis:latest")
+        # A stopped container's image with two tags nothing names: both stay.
+        images[ID["stopped"]]["tags"].append("synthetic/tool:latest")
+        _, plan, _ = host.prune(dry_run=True)
+        self.assertIn("7 images to remove", plan)
+        self.assertIn("Would untag " + stale[2] + " from kept image " + short(ID["e3"]), plan)
+        refused, output, errors = host.prune()
+        self.assertEqual(refused, 0, errors)
+        self.assertNotIn(twin, images)
+        self.assertEqual(ID.keys() - host.remaining(), {"e1", "m1", "o1", "old-proxy", "dangling", "superseded"})
+        self.assertEqual(images[ID["e3"]]["tags"], ["carbon/erp:" + R3])
+        self.assertEqual(images[ID["running"]]["tags"], ["redis:7"])
+        self.assertEqual(images[ID["stopped"]]["tags"], ["synthetic/tool:1", "synthetic/tool:latest"])
+        removed = [call[2] for call in host.removals()]
+        self.assertTrue({*stale, "redis:latest"} <= set(removed))
+        # Only the untagged image goes by ID.
+        self.assertEqual([reference for reference in removed if reference.startswith("sha256:")], [ID["dangling"]])
+        self.assertIn("Untagging " + stale[2] + " from kept image " + short(ID["e3"]), output)
+
+    def test_a_tag_that_moved_to_a_newer_build_is_left_alone(self):
+        host = Host(self.root)
+        # carbon/erp:R1 now names an image built after listing.
+        host.world["moved"] = {"carbon/erp:" + R1: image(0x71)}
+        refused, _, errors = host.prune()
+        self.assertEqual(refused, 1)
+        self.assertNotIn(["image", "rm", "carbon/erp:" + R1], host.removals())
+        self.assertIn("Kept carbon/erp:" + R1 + " (" + short(ID["e1"]) + "): the tag no longer names this image",
+                      errors)
+        self.assertIn("e1", host.remaining())
+
+    def test_build_cache_is_cut_to_its_configured_size(self):
+        for config, flag in (({}, "20GB"), ({"DOCKER_BUILD_CACHE_KEEP_GB": 50}, "50GB")):
+            with self.subTest(flag=flag):
+                host = Host(self.root / flag)
+                refused, output, errors = host.prune(config)
+                self.assertEqual(refused, 0, errors)
+                # One size-bounded prune, after every image removal.
+                self.assertEqual(host.cache_prunes(), [["builder", "prune", "--force", "--keep-storage", flag]])
+                self.assertEqual(host.world["log"][-1], host.cache_prunes()[0])
+                self.assertIn(f"Build cache cut to {flag[:-2]} GB", output)
+
+    def test_reports_the_space_freed_and_warns_while_little_remains(self):
+        gb = docker_prune.GB
+        # The live first run freed nothing: 29.3 GB before and after.
+        for label, config, before, after, twice in (("low", {}, 29.3, 29.3, 30), ("enough", {}, 29.3, 84.6, None),
+                                                    ("tuned", {"DOCKER_BUILD_MIN_FREE_GB": 25}, 10.0, 45.5, 50)):
+            with self.subTest(label), patch.object(docker_prune, "free_bytes", side_effect=[before * gb, after * gb]):
+                refused, output, errors = Host(self.root / label).prune(config)
+                self.assertEqual(refused, 0, errors)
+                self.assertIn(f"Free on the data disk: {before:.1f} GB before, {after:.1f} GB after; "
+                              f"{after - before:.1f} GB freed.", output)
+                if twice:
+                    self.assertIn(f"Warning: only {after:.1f} GB is free on the data disk, less than twice "
+                                  f"DOCKER_BUILD_MIN_FREE_GB ({twice} GB)", errors)
+                else:
+                    self.assertNotIn("Warning", errors)
+
+    def test_failures_are_reported_while_the_rest_continue(self):
         host = Host(self.root)
         host.world["refuse"] = [ID["old-proxy"]]
-        refused, _, errors = host.prune()
+        host.world["cache_error"] = True
+        refused, output, errors = host.prune()
         # A tag no image has any longer (carbon/ops of the failed deployment) is
-        # simply absent; a refusal is reported and the rest continue.
-        self.assertEqual(refused, 1)
-        self.assertIn("Docker kept " + ID["old-proxy"][7:19] + " caddy:2.7-alpine", errors)
+        # simply absent; a refusal or a failed cache prune is reported, the rest
+        # continue, and the free-space report still follows.
+        self.assertEqual(refused, 2)
+        self.assertIn("Kept caddy:2.7-alpine (" + short(ID["old-proxy"]) + "): Error response from daemon", errors)
+        self.assertIn("Build cache was not pruned: docker builder prune failed: ERROR: synthetic build cache failure",
+                      errors)
         self.assertEqual(ID.keys() - host.remaining(), {"e1", "m1", "o1", "dangling", "superseded"})
-        self.assertEqual(host.world["log"][-1][:2], ["builder", "prune"])
+        self.assertEqual(len(host.cache_prunes()), 1)
+        self.assertIn("Free on the data disk", output)
 
     def test_unexpected_state_or_docker_answers_remove_nothing(self):
         def corrupt_history(host):
@@ -291,11 +400,13 @@ class GuardTests(unittest.TestCase):
 
     def test_settings_are_validated(self):
         docker_prune.validate({})
-        docker_prune.validate({"DOCKER_KEEP_RELEASES": 1, "DOCKER_BUILD_MIN_FREE_GB": 10000})
+        docker_prune.validate({"DOCKER_KEEP_RELEASES": 1, "DOCKER_BUILD_MIN_FREE_GB": 10000,
+                               "DOCKER_BUILD_CACHE_KEEP_GB": 1})
         for key, value in (("DOCKER_KEEP_RELEASES", 0), ("DOCKER_KEEP_RELEASES", 21), ("DOCKER_KEEP_RELEASES", "2"),
                            ("DOCKER_KEEP_RELEASES", True), ("DOCKER_KEEP_RELEASES", 2.0),
                            ("DOCKER_BUILD_MIN_FREE_GB", 0), ("DOCKER_BUILD_MIN_FREE_GB", 10001),
-                           ("DOCKER_BUILD_MIN_FREE_GB", None)):
+                           ("DOCKER_BUILD_MIN_FREE_GB", None), ("DOCKER_BUILD_CACHE_KEEP_GB", 0),
+                           ("DOCKER_BUILD_CACHE_KEEP_GB", 10001), ("DOCKER_BUILD_CACHE_KEEP_GB", "20GB")):
             with self.subTest(key=key, value=value), self.assertRaisesRegex(ValueError, key):
                 docker_prune.validate({key: value})
 
@@ -379,6 +490,18 @@ class HostScriptTests(unittest.TestCase):
                 self.assertEqual(ID.keys() - host.remaining(), {"e1", "m1", "o1", "old-proxy", "dangling", "superseded"})
                 outputs[json.dumps(mode)] = result.stdout.split("Free on the data disk")[0]
         self.assertEqual(len(set(outputs.values())), 1)
+
+    def test_a_failed_prune_step_exits_nonzero_after_the_rest(self):
+        # deploy.py turns this exit status into a warning (test_deploy_lifecycle).
+        with tempfile.TemporaryDirectory() as temporary:
+            host = Host(Path(temporary))
+            host.world.update(refuse=[ID["old-proxy"]], cache_error=True)
+            result, docker = self.run_host("prune", {}, world=host, tls=False)
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("Pruning did not finish: 2 step(s) above failed", result.stderr)
+            host.world = docker
+            self.assertEqual(ID.keys() - host.remaining(), {"e1", "m1", "o1", "dangling", "superseded"})
+            self.assertIn("Free on the data disk", result.stdout)
 
     def test_prune_without_a_release_fails_closed(self):
         result, docker = self.run_host("prune", {}, tls=False)

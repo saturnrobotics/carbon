@@ -373,16 +373,29 @@ action `prune`. It removes every Docker image except those named by:
   last successful release: a deployment in progress, or one that failed and
   awaits recovery. A later successful release makes its images removable.
 
-Images are removed by ID and never forced, so Docker still refuses any image a
-container uses. Build cache unused for 72 hours is then removed. A release that
-built has just touched the dependency layers and package cache its successor
-reuses, so only superseded builds' entries go; after three days without a build,
-the next build starts cold (slower, never wrong). The age filter works on every
-Docker version, unlike the size caps whose flags buildx has renamed. Volumes are
-never touched. A failed, unverified or no-op deployment prunes nothing, and a
-pruning failure is reported as a warning without failing the deployment it
-follows. Disk snapshots taken before a prune include every image, so whole-disk
-recovery is unaffected.
+Images are removed tag by tag and never forced, so Docker still refuses any
+image a container uses. Docker deletes an image with its last tag, while it
+refuses to delete an image with several tags by ID; an untagged image is removed
+by ID. A build whose inputs did not change yields the same image under the new
+commit's tag, so an image can carry tags for several commits. A kept image loses
+the tags nothing names, but only while one that something names remains.
+
+Build cache is then cut to `DOCKER_BUILD_CACHE_KEEP_GB` (default 20) with
+`docker builder prune --keep-storage`, least recently and least often used
+first. Cache an image uses is neither counted nor removed, which is why images
+go first. The next build reuses the last one's ERP and MES dependency installs
+(about 2 GB each) and the pnpm package store. Every build uses them, so they go
+last, and 20 GB keeps them with room to spare. What goes is superseded builds'
+source, build output and `ops` install layers, which no later build matches. A
+much smaller value can make the next build reinstall dependencies; a larger one
+keeps cache no build reuses.
+
+Prune prints the free space before and after, and warns when less than twice
+`DOCKER_BUILD_MIN_FREE_GB` remains, because a build may then soon be refused;
+`docker system df` shows what holds the rest. Volumes are never touched. A
+failed, unverified or no-op deployment prunes nothing, and a pruning failure is
+reported as a warning without failing the deployment it follows. Disk snapshots
+taken before a prune include every image, so whole-disk recovery is unaffected.
 
 `finalize` records each successful release's images in
 `/var/lib/carbon/runtime/release-history/`. The first release with this record
@@ -394,9 +407,9 @@ Before building, `prepare` refuses to start when the data disk has less than
 available to unprivileged writers such as PostgreSQL. Nothing is built or
 stopped; prune, then deploy again. A release that builds nothing is not checked.
 
-Both settings are optional integers in `.local/config.json`
-(`DOCKER_KEEP_RELEASES` 1–20, `DOCKER_BUILD_MIN_FREE_GB` 1–10000). Changing them
-selects no maintenance.
+The settings are optional integers in `.local/config.json`
+(`DOCKER_KEEP_RELEASES` 1–20, `DOCKER_BUILD_MIN_FREE_GB` 1–10000,
+`DOCKER_BUILD_CACHE_KEEP_GB` 1–10000). Changing them selects no maintenance.
 
 To prune on demand, run the last successful release's host tooling on the VM
 (through `gcloud compute ssh ... --tunnel-through-iap`). `prune-plan` prints what
@@ -409,11 +422,13 @@ bash "$release/contrib/deploying/gcp-tailscale/host-deploy.sh" /var/lib/carbon/c
 bash "$release/contrib/deploying/gcp-tailscale/host-deploy.sh" /var/lib/carbon/config.json "$release" prune
 ```
 
-`prune` exits non-zero when Docker refused to remove an image (its message names
-the image) or the build cache prune failed. It refuses to run without a successful
-release, and stops before removing anything when Docker or a release record
-gives an unexpected answer. Source releases in `/var/lib/carbon/releases/` and
-`prepared/` are never pruned; recovery boots from them.
+`prune` exits non-zero when Docker refused to remove an image or tag (its message
+names both), when a tag moved to a newer build after listing (it is left alone),
+or when the build cache prune failed; it still does the rest. It refuses to run
+without a successful release, and stops before removing anything when Docker or
+a release record gives an unexpected answer. Source releases in
+`/var/lib/carbon/releases/` and `prepared/` are never pruned; recovery boots
+from them.
 
 ## Private database clients
 

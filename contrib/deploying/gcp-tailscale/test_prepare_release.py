@@ -68,7 +68,8 @@ class PreparationTests(unittest.TestCase):
 
     def test_docker_pruning_settings_change_no_release_input(self):
         base = self.generate()
-        tuned = self.generate(config={**CONFIG, "DOCKER_KEEP_RELEASES": 3, "DOCKER_BUILD_MIN_FREE_GB": 30})
+        tuned = self.generate(config={**CONFIG, "DOCKER_KEEP_RELEASES": 3, "DOCKER_BUILD_MIN_FREE_GB": 30,
+                                      "DOCKER_BUILD_CACHE_KEEP_GB": 40})
         self.assertEqual(base["maintenance_fingerprint"], tuned["maintenance_fingerprint"])
         self.assertEqual(base["services"], tuned["services"])
 

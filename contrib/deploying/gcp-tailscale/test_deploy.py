@@ -163,10 +163,12 @@ class ValidationTests(unittest.TestCase):
                 deploy.validate(config, {**SECRETS, **hq_secret})
 
     def test_optional_docker_pruning_settings(self):
-        config = {**fixture(), "DOCKER_KEEP_RELEASES": 3, "DOCKER_BUILD_MIN_FREE_GB": 20}
+        config = {**fixture(), "DOCKER_KEEP_RELEASES": 3, "DOCKER_BUILD_MIN_FREE_GB": 20, "DOCKER_BUILD_CACHE_KEEP_GB": 40}
         self.assertEqual(deploy.validate(config, SECRETS)["DOCKER_KEEP_RELEASES"], 3)
+        self.assertEqual(deploy.validate(config, SECRETS)["DOCKER_BUILD_CACHE_KEEP_GB"], 40)
         for key, value in (("DOCKER_KEEP_RELEASES", 0), ("DOCKER_KEEP_RELEASES", True),
-                           ("DOCKER_BUILD_MIN_FREE_GB", "15"), ("DOCKER_BUILD_MIN_FREE_GB", 0)):
+                           ("DOCKER_BUILD_MIN_FREE_GB", "15"), ("DOCKER_BUILD_MIN_FREE_GB", 0),
+                           ("DOCKER_BUILD_CACHE_KEEP_GB", 0), ("DOCKER_BUILD_CACHE_KEEP_GB", "20GB")):
             with self.subTest(key=key, value=value), self.assertRaisesRegex(ValueError, key):
                 deploy.validate({**fixture(), key: value}, SECRETS)
 
