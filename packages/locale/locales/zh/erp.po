@@ -20526,6 +20526,9 @@ msgstr "您正在按照自己的节奏自行设置 Carbon"
 msgid "You've been clocked in for {hoursElapsed} hours. Did you forget to clock out?"
 msgstr "你已打卡{hoursElapsed}小时。你忘记收工了吗?"
 
+msgid "Your access in Carbon is managed in HQ. After you join, it may take a minute to appear."
+msgstr "您在 Carbon 中的访问权限由 HQ 管理。加入后，可能需要一分钟才会显示。"
+
 msgid "Your account stays safe even if your login is stolen"
 msgstr "即使您的登录被盗，您的账户也保持安全"
 

@@ -2,6 +2,10 @@ import { CONTROLLED_ENVIRONMENT, error, success } from "@carbon/auth";
 import { deleteAuthAccount } from "@carbon/auth/auth.server";
 import { logPermissionChange } from "@carbon/auth/auth-events.server";
 import { getCarbonServiceRole } from "@carbon/auth/client.server";
+import {
+  getPermissionsManagement,
+  skippedPermissionWrite
+} from "@carbon/auth/saturn/authz.server";
 import { flash, requireAuthSession } from "@carbon/auth/session.server";
 import {
   deactivateCustomer,
@@ -143,6 +147,8 @@ export async function acceptInvite(
     };
   }
 
+  // Saturn fork (HQ plan 0006B): membership only while HQ manages permissions.
+  const authz = await getPermissionsManagement();
   const [activate, addUser, setPermissions] = await Promise.all([
     activationFunction(serviceRole, {
       userId: user.data.id,
@@ -153,11 +159,12 @@ export async function acceptInvite(
       companyId: invite.data.companyId,
       role: invite.data.role
     }),
-    setUserPermissions(
-      serviceRole,
-      user.data.id,
-      invite.data.permissions as Record<string, string[]>
-    )
+    skippedPermissionWrite(authz) ??
+      setUserPermissions(
+        serviceRole,
+        user.data.id,
+        invite.data.permissions as Record<string, string[]>
+      )
   ]);
 
   if (activate.error) {

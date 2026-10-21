@@ -20522,6 +20522,9 @@ msgstr "Carbon'ı kendiniz kendi hızınızda ayarlıyorsunuz"
 msgid "You've been clocked in for {hoursElapsed} hours. Did you forget to clock out?"
 msgstr "{hoursElapsed} saattir işte idiniz. İş bitişini unuttunuz mu?"
 
+msgid "Your access in Carbon is managed in HQ. After you join, it may take a minute to appear."
+msgstr "Carbon'daki erişiminiz HQ'da yönetilir. Katıldıktan sonra görünmesi bir dakika sürebilir."
+
 msgid "Your account stays safe even if your login is stolen"
 msgstr "Oturum açma bilgileriniz çalınsa bile hesabınız güvenli kalır"
 

@@ -20522,6 +20522,9 @@ msgstr "Estás configurando Carbon por tu cuenta, a tu propio ritmo"
 msgid "You've been clocked in for {hoursElapsed} hours. Did you forget to clock out?"
 msgstr "Has estado fichado durante {hoursElapsed} horas. ¿Olvidaste fichar salida?"
 
+msgid "Your access in Carbon is managed in HQ. After you join, it may take a minute to appear."
+msgstr "Tu acceso en Carbon se gestiona en HQ. Después de unirte, puede tardar un minuto en aparecer."
+
 msgid "Your account stays safe even if your login is stolen"
 msgstr "Tu cuenta permanece segura incluso si tu inicio de sesión es robado"
 
