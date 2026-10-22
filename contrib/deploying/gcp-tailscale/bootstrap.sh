@@ -170,7 +170,9 @@ cat > /usr/local/sbin/carbon-wait-private-ip <<'EOF'
 set -euo pipefail
 address=$(python3 -c 'import ipaddress, json; print(ipaddress.IPv4Address(json.load(open("/var/lib/carbon/config.json"))["POSTGRES_PRIVATE_IP"]))')
 for attempt in {1..60}; do
-  if ip -4 -o address show scope global | grep -qF "inet $address/"; then exit 0; fi
+  # Capture, then match. Piped, grep -q exits at its first match, ip gets
+  # SIGPIPE listing later interfaces, and pipefail fails a present address.
+  if addresses=$(ip -4 -o address show scope global) && grep -qF "inet $address/" <<<"$addresses"; then exit 0; fi
   sleep 2
 done
 echo 'Private address unavailable; Docker startup refused' >&2

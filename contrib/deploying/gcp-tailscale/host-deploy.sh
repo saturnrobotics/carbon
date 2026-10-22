@@ -204,13 +204,16 @@ verify_tailnet() {
 
 # private-lb: no tailnet node; Caddy and PostgreSQL bind the VM's private address.
 verify_private_address() {
-  local expected
+  local expected addresses
   expected=$(config_value POSTGRES_PRIVATE_IP)
   if command -v tailscale >/dev/null || command -v tailscaled >/dev/null; then
     fail "Tailscale must not be installed in private-lb mode."
   fi
   [ ! -e "$STATE/tailscale" ] || fail "A copied Tailscale identity remains on the data disk."
-  ip -4 -o address show scope global | grep -qF "inet $expected/" \
+  # Capture, then match. Piped, grep -q exits at its first match, ip gets
+  # SIGPIPE listing later interfaces, and pipefail fails a present address.
+  addresses=$(ip -4 -o address show scope global) || fail "Cannot list this VM's network addresses."
+  grep -qF "inet $expected/" <<<"$addresses" \
     || fail "Configured private address is not on this VM's network interface."
 }
 

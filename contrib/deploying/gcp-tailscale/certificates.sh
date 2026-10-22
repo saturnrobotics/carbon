@@ -34,6 +34,10 @@ WantedBy=timers.target
 EOF
 systemctl daemon-reload
 systemctl enable --now carbon-certificates.timer
-if [[ -f /var/lib/carbon/runtime/compose.json ]] && docker compose -p carbon -f /var/lib/carbon/runtime/compose.json ps --status running -q caddy | grep -q .; then
+# Capture, then test. Piped, grep -q exits at its first line, compose can get
+# SIGPIPE listing more, and pipefail reads a running Caddy as stopped.
+if [[ -f /var/lib/carbon/runtime/compose.json ]] \
+  && running=$(docker compose -p carbon -f /var/lib/carbon/runtime/compose.json ps --status running -q caddy) \
+  && [[ -n $running ]]; then
   docker compose -p carbon -f /var/lib/carbon/runtime/compose.json exec -T caddy caddy reload --force --config /etc/caddy/Caddyfile
 fi

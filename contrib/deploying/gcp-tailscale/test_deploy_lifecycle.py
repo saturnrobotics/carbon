@@ -29,6 +29,23 @@ def plan(generation=3, *, changed=True, maintenance_required=False):
             "maintenance_required": maintenance_required, "services": {}}
 
 
+def listing_stub(first, count, line):
+    """A /bin/sh stub body printing `first`, then `count` lines of the printf format `line` (given $i).
+
+    grep -q exits at its first match. Thousands of lines exceed what a pipe buffers, so in
+    `stub | grep -q` the stub is always still writing when grep exits, and dies of SIGPIPE;
+    pipefail reports that as a failed check although the match was found.
+    """
+    return (f"printf '%s\\n' '{first}'\n"
+            f"i=0\nwhile [ $i -lt {count} ]; do\n  printf '{line}\\n' $i\n  i=$((i + 1))\ndone")
+
+
+def interfaces_stub(address, bridges=0):
+    """`ip -4 -o address show scope global`: ens4, then Docker bridge networks, which list after it."""
+    return listing_stub(f"2: ens4    inet {address}/32 scope global ens4", bridges,
+                        "9: br-%012d    inet 172.31.0.1/24 scope global br-synthetic")
+
+
 class DeployLifecycleTests(unittest.TestCase):
     def run_release(self, planned, *, snapshot_error=None, events=None, final_check_error=None, fail_at=None, config=None,
                     prune_error=None):
@@ -282,14 +299,14 @@ class DeployLifecycleTests(unittest.TestCase):
 class HostScriptIngressTests(unittest.TestCase):
     """Run host-deploy.sh with stub host commands; nothing touches Docker or the network."""
 
-    def run_host(self, action, mode, *, address="10.73.8.2", running="", tailscale=None):
+    def run_host(self, action, mode, *, address="10.73.8.2", bridges=0, running="", tailscale=None):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             bin_dir = root / "bin"
             bin_dir.mkdir()
             stubs = {
                 "id": "echo 0",
-                "ip": f"printf '2: ens4    inet %s/32 scope global ens4\\n' '{address}'",
+                "ip": interfaces_stub(address, bridges),
                 "docker": f"printf '%s\\n' \"$*\" >> '{root}/docker.log'; if [ \"$1\" = ps ]; then printf '%s' '{running}'; fi",
             }
             if tailscale is not None:
@@ -335,6 +352,15 @@ class HostScriptIngressTests(unittest.TestCase):
         result, _ = self.run_host("prepare", "private-lb", tailscale="echo 100.64.0.10")
         self.assertIn("must not be installed", result.stderr)
 
+    def test_private_address_is_found_however_many_interfaces_follow_it(self):
+        for bridges in (8, 4096):
+            with self.subTest(bridges=bridges):
+                result, _ = self.run_host("prepare", "private-lb", bridges=bridges)
+                self.assertNotIn("not on this VM's network interface", result.stderr)
+                self.assertIn("DNS-validated certificate", result.stderr)
+                result, _ = self.run_host("prepare", "private-lb", address="10.73.8.3", bridges=bridges)
+                self.assertIn("not on this VM's network interface", result.stderr)
+
     def test_tailscale_mode_still_verifies_the_tailnet_address(self):
         for mode in (None, "tailscale"):
             with self.subTest(mode=mode):
@@ -342,6 +368,48 @@ class HostScriptIngressTests(unittest.TestCase):
                 self.assertIn("Configured Tailscale address does not match", result.stderr)
         result, _ = self.run_host("prepare", "public")
         self.assertIn("Invalid ingress mode", result.stderr)
+
+
+class HostListingCheckTests(unittest.TestCase):
+    """The other host checks that look for one line in a listing find it however long the listing runs."""
+
+    def run_script(self, script, stubs):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            for name, body in stubs.items():
+                (root / name).write_text("#!/bin/sh\n" + body.replace("@ROOT@", temporary) + "\n")
+                (root / name).chmod(0o755)
+            for name in ("bash", "grep"):
+                (root / name).symlink_to(shutil.which(name))
+            result = subprocess.run(["bash", "-c", script.replace("@ROOT@", temporary)], env={"PATH": temporary},
+                                    capture_output=True, text=True, timeout=60)
+            log = (root / "docker.log").read_text() if (root / "docker.log").exists() else ""
+        return result, log
+
+    def test_docker_waits_for_the_private_address_among_many_interfaces(self):
+        # bootstrap.sh installs this as Docker's ExecStartPre in private-lb mode.
+        source = (HERE / "bootstrap.sh").read_text()
+        start = source.index("\n", source.index("cat > /usr/local/sbin/carbon-wait-private-ip <<'EOF'")) + 1
+        script = source[start:source.index("\nEOF\n", start)]
+        for address, bridges, expected in (("10.73.8.2", 4096, 0), ("10.73.8.3", 8, 1)):
+            with self.subTest(address=address, bridges=bridges):
+                result, _ = self.run_script(script, {"python3": "echo 10.73.8.2", "sleep": ":",
+                                                     "ip": interfaces_stub(address, bridges)})
+                self.assertEqual(result.returncode, expected, result.stderr)
+                self.assertEqual("Private address unavailable" in result.stderr, bool(expected))
+
+    def test_renewal_reloads_a_running_caddy_whatever_else_compose_lists(self):
+        source = (HERE / "certificates.sh").read_text()
+        block = source[source.index("if [[ -f /var/lib/carbon/runtime/compose.json ]]"):]
+        script = ("set -euo pipefail\nprintf '{}' > @ROOT@/compose.json\n"
+                  + block.replace("/var/lib/carbon/runtime/compose.json", "@ROOT@/compose.json"))
+        for containers in (0, 1, 4096):
+            with self.subTest(containers=containers):
+                listing = listing_stub("c" * 64, containers - 1, "%064d") if containers else ":"
+                docker = f'case "$6" in ps) {listing} ;; exec) printf "%s\\n" "$*" >> @ROOT@/docker.log ;; esac'
+                result, log = self.run_script(script, {"docker": docker})
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual("exec -T caddy caddy reload" in log, containers > 0)
 
 
 if __name__ == "__main__":
