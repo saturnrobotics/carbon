@@ -60,7 +60,7 @@
     "jose": "catalog:",
     "kysely": "catalog:",
     "nanoid": "catalog:",
-    "nodemailer": "9.0.1",
+    "nodemailer": "10.1.7",
     "react": "catalog:",
     "react-icons": "catalog:",
     "react-pdf": "catalog:",
@@ -75,7 +75,6 @@
     "@carbon/config": "workspace:*",
     "@logtape/logtape": "catalog:",
     "@logtape/testing": "catalog:",
-    "@types/nodemailer": "6.4.21",
     "@types/react": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"

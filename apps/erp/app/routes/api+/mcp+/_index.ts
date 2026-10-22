@@ -11,6 +11,7 @@ import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/
 import type { ActionFunctionArgs } from "react-router";
 import { getCompanyTimeZone } from "~/modules/shared/timezone.server";
 import { authenticateApiKey } from "../v1+/lib/authenticate.server";
+import { MCP_TRANSPORT_LIMITS } from "./lib/limits";
 import { createMcpServer } from "./lib/server";
 import type { McpContext } from "./lib/types";
 
@@ -172,9 +173,12 @@ export async function action({ request }: ActionFunctionArgs) {
           .today(await getCompanyTimeZone(ctx.client, ctx.companyId))
           .toString()
       );
+      // resolveAuth above has already run, so only an authenticated caller's
+      // body is read; the transport answers 413 past the cap (lib/limits.ts).
       const transport = new WebStandardStreamableHTTPServerTransport({
         sessionIdGenerator: undefined,
-        enableJsonResponse: true
+        enableJsonResponse: true,
+        ...MCP_TRANSPORT_LIMITS
       });
 
       await server.connect(transport);
