@@ -122,6 +122,19 @@ tooling (`contrib/deploying/gcp-tailscale/authz_api_claim.py`, `hq_sign_in.py`,
 `packages/dev/docker/kong.yml` and `docker-compose.prod.yml`, which are
 unchanged. It touches no shared upstream file.
 
+On 2026-10-21, Storage was moved off storage-api 1.58.4 for GHSA-8rrf-w776-x75g
+(unauthenticated object writes through signed resumable uploads, fixed in 1.80.2)
+and GHSA-67rp-h2mf-ph72 (Iceberg files through the S3 protocol, fixed in 1.80.1).
+Production is fork-owned: `contrib/deploying/gcp-tailscale/storage_api.py` pins
+1.84.17 unless upstream's prod compose pins newer, turns off the S3 protocol,
+Iceberg and vector APIs, and renders `auth/kong-storage-gate.lua` in front of every
+route to Storage (403 for `/storage/v1/s3*` and signed resumable uploads, 401 for
+resumable uploads without a bearer), and `host-deploy.sh` checks both. Upstream's
+`docker-compose.prod.yml` and `kong.yml` are unchanged. The dev stack has no
+extension point, so `packages/dev/docker/docker-compose.dev.yml` carries a
+one-line image bump (§(b) **Dev stack image pins**), and the regenerated database
+types pick up the newer `storage` schema.
+
 ## (a) Fork-owned additions — files upstream never touches
 
 These cannot conflict on a sync. They only cost when a shared file they depend on
@@ -165,6 +178,7 @@ changes shape.
 | **Docs site** | `docs/components/editorial/architecture-diagrams.tsx`, `docs/app/docs/layout.tsx`, `docs/next.config.mjs`, `docs/scripts/generate-agent-kb.ts` (4) | **upstream or drop.** Mostly merge-resolution residue; the generator change is generic. |
 | **Generator hardening** | `scripts/generate-db-types.ts`, `scripts/generate-swagger-docs.ts`, `scripts/generate-mcp.ts`, `scripts/lib/{service-metadata,manifest-digest,validator-to-json-schema}.ts`, `scripts/{model-upload,sales-invoice-report,sandbox}.ts` (9) | **upstream.** Atomic output replacement, local-DB guard, deterministic swagger alias, explicit env configuration instead of embedded values. All generic. |
 | **Build / CI plumbing** | `turbo.json`, `package.json` (`clean` keeps the lockfile; `prepare` runs `setup-git.sh`), `.github/workflows/check.yml` (runs on `saturn/main`), `.github/workflows/deploy.yml`, `contrib/deploying/simple-docker-caddy/deploy.sh` | **inherent** (trunk name, setup hook, explicit `Dockerfile.saturn` selection) / **upstream** (`clean` not deleting the lockfile). Root `Dockerfile` is upstream-owned. |
+| **Dev stack image pins** | `packages/dev/docker/docker-compose.dev.yml` (1) | **upstream.** `supabase/storage-api` v1.58.4 → v1.84.17 for GHSA-8rrf-w776-x75g and GHSA-67rp-h2mf-ph72 (the dev Kong publishes on every host interface). The drift disappears once upstream pins a patched release; production's pin lives in `storage_api.py`. |
 | **Privacy ignore rules** | `.gitignore`, `.dockerignore`, `apps/assembler/Dockerfile.dockerignore`, `packages/database/supabase/functions/thumbnail/index.ts` (4) | **upstream.** Generic protection of `.env*`, Terraform, Docker and secret artifacts, and removal of embedded service values. |
 | **Tests adjusted to upstream changes** | `apps/erp/test/{localized-submodule-ui,i18n-react-macros,mcp-tool-permissions,mcp-tool-metadata,batching-migration-guards,batching-tenant-scope-and-fk-locks}.test.ts`, `routes/x+/job+/$jobId.status.test.ts`, `modules/production/ui/Schedule/Kanban/drag-lifecycle.test.tsx`, `packages/database/src/check-datasets.ts` (9) | **upstream.** Test repairs for upstream refactors; contribute or drop when upstream catches up. |
 | **Agent guidance** | `AGENTS.md`, `.claude/skills/README.md` (2) | **inherent.** Records-policy pointer and the sync-docs router row; kept to a few lines. |
