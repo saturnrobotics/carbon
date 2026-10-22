@@ -189,7 +189,7 @@ services:
       DISABLE_HEALTHCHECK_LOGGING: "true"
 
   storage:
-    image: supabase/storage-api:v1.58.4
+    image: supabase/storage-api:v1.84.17
     restart: unless-stopped
     deploy:
       resources:

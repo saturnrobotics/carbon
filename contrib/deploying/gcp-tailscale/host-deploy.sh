@@ -204,13 +204,16 @@ verify_tailnet() {
 
 # private-lb: no tailnet node; Caddy and PostgreSQL bind the VM's private address.
 verify_private_address() {
-  local expected
+  local expected addresses
   expected=$(config_value POSTGRES_PRIVATE_IP)
   if command -v tailscale >/dev/null || command -v tailscaled >/dev/null; then
     fail "Tailscale must not be installed in private-lb mode."
   fi
   [ ! -e "$STATE/tailscale" ] || fail "A copied Tailscale identity remains on the data disk."
-  ip -4 -o address show scope global | grep -qF "inet $expected/" \
+  # Capture, then match. Piped, grep -q exits at its first match, ip gets
+  # SIGPIPE listing later interfaces, and pipefail fails a present address.
+  addresses=$(ip -4 -o address show scope global) || fail "Cannot list this VM's network addresses."
+  grep -qF "inet $expected/" <<<"$addresses" \
     || fail "Configured private address is not on this VM's network interface."
 }
 
@@ -265,6 +268,34 @@ check_stack() {
       method: "POST", headers: {"Authorization":"Bearer " + process.env.SUPABASE_ANON_KEY,"Content-Type":"application/json"}, body:"{}"
     });
     if (!response.ok) throw new Error("Local event wake failed: " + response.status);
+  '
+  # GHSA-8rrf-w776-x75g, GHSA-67rp-h2mf-ph72 (storage_api.py): Storage runs a
+  # patched release, and Kong refuses Storage's S3 protocol and a resumable
+  # upload without a bearer token before Storage sees either. Neither request
+  # names an object.
+  local patched
+  patched=$(python3 -c 'import sys; sys.path.insert(0, sys.argv[1]); import storage_api; print(".".join(map(str, storage_api.PATCHED)))' "$HERE")
+  compose exec -T -e "STORAGE_PATCHED=$patched" erp /usr/local/bin/carbon-secrets-entrypoint.sh node --input-type=module -e '
+    const call = (method, path, headers = {}) => fetch("http://kong:8000/storage/v1" + path, {
+      method, headers, redirect: "error", signal: AbortSignal.timeout(10000)
+    });
+    const version = (await (await call("GET", "/version")).text()).trim();
+    const parts = (text) => text.split(".").map(Number);
+    const [running, patched] = [parts(version), parts(process.env.STORAGE_PATCHED)];
+    const order = running.map((part, index) => part - patched[index]).find((difference) => difference !== 0) ?? 0;
+    if (running.length !== 3 || running.some(Number.isNaN) || order < 0) {
+      throw new Error("Storage is not a patched release: " + JSON.stringify(version));
+    }
+    for (const [method, path, headers, status, message] of [
+      ["GET", "/s3/", {}, 403, "The S3 protocol is not available"],
+      ["POST", "/upload/resumable", { "Tus-Resumable": "1.0.0", "Upload-Length": "0" }, 401, "Resumable uploads require a bearer token"],
+    ]) {
+      const response = await call(method, path, headers);
+      const body = await response.json().catch(() => ({}));
+      if (response.status !== status || body.message !== message) {
+        throw new Error("Kong storage gate failed: " + method + " " + path + " answered " + response.status);
+      }
+    }
   '
   if [ "$AUTHZ_API_CLAIM_REQUIRED" = true ]; then
     # HQ plan 0006B Step 7: Kong refuses a GoTrue-shaped user token without the

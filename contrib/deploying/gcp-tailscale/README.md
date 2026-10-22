@@ -827,6 +827,50 @@ Rollout, after HQ's seed gate passes:
 4. To roll back, set `AUTHZ_API_CLAIM_REQUIRED` to `"false"` and run
    `make deploy` again.
 
+## Supabase Storage
+
+[`storage_api.py`](storage_api.py) adapts upstream's Storage service and gateway
+for two critical storage-api advisories:
+[GHSA-8rrf-w776-x75g](https://github.com/supabase/storage/security/advisories/GHSA-8rrf-w776-x75g)
+(signed resumable uploads let a caller with no credentials create or overwrite
+objects; fixed in 1.80.2) and
+[GHSA-67rp-h2mf-ph72](https://github.com/supabase/storage/security/advisories/GHSA-67rp-h2mf-ph72)
+(S3 protocol routes reach Iceberg table files; fixed in 1.80.1). Upstream's
+compose file and `kong.yml` stay unchanged.
+
+- Storage runs `storage_api.IMAGE` unless upstream already pins a newer release;
+  a sync never takes it backwards. Its S3 protocol, Iceberg and vector APIs are
+  off: Carbon uses none of them.
+- Kong runs [`auth/kong-storage-gate.lua`](auth/kong-storage-gate.lua) on every
+  route to Storage, in both ingress modes, ahead of the `authz_api` check when
+  that is on. It judges the path Storage would route, fully percent-decoded, and
+  answers 403 to `/storage/v1/s3*` and to signed resumable uploads
+  (`/storage/v1/upload/resumable/sign*`; Carbon uses neither), and 401 to any
+  other resumable (TUS) request without `Authorization: Bearer <JWT>`. Carbon's
+  resumable uploads always send the signed-in user's token; Storage still
+  verifies it. Standard uploads, downloads, signed URLs and the jobs' signed
+  upload URLs are unchanged. Rendering fails if the gateway gains a route to
+  Storage the gate cannot judge.
+- `make deploy`'s readiness check proves from the ERP container that Storage
+  reports a patched release and that Kong refuses both kinds of request.
+
+Storage migrates its own `storage` schema on start. Releases from 1.77 drop the
+single-version unique index `storage.bucketid_objname` that 1.58.x relies on, so
+1.58.x on an upgraded schema reads every object but fails every write (`42P10`).
+The change selects coordinated maintenance, which takes a pre-maintenance
+snapshot. To roll back the image only, recreate the index as
+`supabase_storage_admin` while object versioning is off (no duplicate names), then
+deploy the earlier source release:
+
+```sql
+CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS bucketid_objname
+  ON storage.objects USING btree (bucket_id, name);
+```
+
+Before moving forward again, drop it (`DROP INDEX CONCURRENTLY storage.bucketid_objname`)
+to return to the migrated schema. Restoring the whole pre-maintenance snapshot is
+the alternative; it also discards objects written since.
+
 ## Private-network limitations
 
 External webhook senders cannot reach this installation. Payment, accounting,
@@ -850,6 +894,7 @@ repository's pinned pnpm dependencies. These do not operate the developer databa
 ```bash
 python3 -m unittest discover -s contrib/deploying/gcp-tailscale -p 'test_*.py'
 python3 -m unittest discover -s contrib/deploying/gcp-tailscale/auth -p 'test_kong_authz_api.py'
+python3 -m unittest discover -s contrib/deploying/gcp-tailscale/auth -p 'test_kong_storage_gate.py'
 bash -n contrib/deploying/gcp-tailscale/bootstrap.sh
 bash -n contrib/deploying/gcp-tailscale/certificates.sh
 bash -n contrib/deploying/gcp-tailscale/host-deploy.sh

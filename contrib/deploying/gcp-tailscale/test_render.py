@@ -13,6 +13,7 @@ import subprocess
 import tempfile
 import unittest
 from unittest.mock import patch
+import urllib.parse
 
 import yaml
 
@@ -274,11 +275,14 @@ class PrivateStackTests(unittest.TestCase):
             return module.render(config, REPO, self.output, self.state, materialize=False)
 
     def test_authz_api_claim_is_off_by_default_and_its_staged_input_changes_nothing(self):
-        gateway = (self.output / "kong.yml").read_text()
-        self.assertNotIn("pre-function", gateway)
-        self.assertNotIn("authz_api", gateway)
-        self.assertEqual(self.stack["services"]["kong"]["environment"]["KONG_PLUGINS"], "request-transformer,cors,key-auth,acl,basic-auth")
-        self.assertFalse([key for key in self.stack["services"]["kong"]["environment"] if "UNTRUSTED" in key])
+        gateway = yaml.safe_load((self.output / "kong.yml").read_text())
+        # While the claim is off, the only pre-function is the storage gate.
+        checks = {service["name"]: plugin["config"]["access"] for service in gateway["services"]
+                  for plugin in service.get("plugins", []) if plugin["name"] == "pre-function"}
+        self.assertEqual(checks, {"storage-v1": [(HERE / "auth/kong-storage-gate.lua").read_text()]})
+        kong = self.stack["services"]["kong"]["environment"]
+        self.assertEqual(kong["KONG_PLUGINS"], "request-transformer,cors,key-auth,acl,basic-auth,pre-function")
+        self.assertEqual({key: value for key, value in kong.items() if "UNTRUSTED" in key}, {"KONG_UNTRUSTED_LUA": "sandbox"})
         for config in (self.config, {**self.config, **self.HQ}):
             with self.subTest(hq=config is not self.config):
                 baseline = self.render_quietly(config)
@@ -301,6 +305,7 @@ class PrivateStackTests(unittest.TestCase):
         path = str(self.output.resolve() / "kong.yml")
         gateway = yaml.safe_load(files.pop(path))
         source = (HERE / "auth/kong-authz-api.lua").read_text()
+        gate = (HERE / "auth/kong-storage-gate.lua").read_text()
         required = {}
         for service in gateway["services"]:
             checks = [plugin for plugin in service.get("plugins", []) if plugin["name"] == "pre-function"]
@@ -313,23 +318,27 @@ class PrivateStackTests(unittest.TestCase):
             self.assertEqual(required[prefix], [], prefix)
         for prefix, resource in self.GATED_PATHS.items():
             with self.subTest(prefix=prefix):
+                # Storage's gate (storage_api.py) runs first, in the same plugin.
+                first = [gate] if prefix == "/storage/v1/" else []
                 self.assertEqual(required[prefix], [{"name": "pre-function", "config": {
-                    "access": ['local REQUIRED = "' + resource + '"\n' + source]}}])
-        # Without the plugins the gateway is upstream's routing, unchanged.
+                    "access": first + ['local REQUIRED = "' + resource + '"\n' + source]}}])
+        # Without the claim checks the gateway is the one rendered without the claim.
         for service in gateway["services"]:
-            kept = [plugin for plugin in service.pop("plugins", []) if plugin["name"] != "pre-function"]
-            if kept:
-                service["plugins"] = kept
+            for plugin in service.pop("plugins", []):
+                if plugin["name"] == "pre-function":
+                    plugin["config"]["access"] = [check for check in plugin["config"]["access"] if "local REQUIRED" not in check]
+                    if not plugin["config"]["access"]:
+                        continue
+                service.setdefault("plugins", []).append(plugin)
         self.assertEqual(gateway, yaml.safe_load(baseline_files.pop(path)))
         self.assertEqual(files, baseline_files)
         kong = stack["services"]["kong"]["environment"]
-        self.assertEqual({key: kong.pop(key) for key in ("KONG_PLUGINS", "KONG_UNTRUSTED_LUA", "KONG_UNTRUSTED_LUA_SANDBOX_REQUIRES")}, {
+        self.assertEqual({key: kong[key] for key in ("KONG_PLUGINS", "KONG_UNTRUSTED_LUA")}, {
             "KONG_PLUGINS": "request-transformer,cors,key-auth,acl,basic-auth,pre-function",
             "KONG_UNTRUSTED_LUA": "sandbox",
-            # Only Kong's JSON decoder enters the sandbox: no I/O, no secret.
-            "KONG_UNTRUSTED_LUA_SANDBOX_REQUIRES": "cjson.safe",
         })
-        baseline["services"]["kong"]["environment"].pop("KONG_PLUGINS")
+        # Only Kong's JSON decoder enters the sandbox: no I/O, no secret.
+        self.assertEqual(kong.pop("KONG_UNTRUSTED_LUA_SANDBOX_REQUIRES"), "cjson.safe")
         self.assertEqual(stack, baseline)
         self.assertNotIn("jwt_secret", stack["services"]["kong"].get("secrets", []))
         self.assertNotIn(self.HQ["HQ_OIDC_CARBON_SECRET"], json.dumps(gateway))
@@ -337,7 +346,9 @@ class PrivateStackTests(unittest.TestCase):
     def test_authz_api_claim_refuses_a_gateway_it_cannot_classify(self):
         claim = module.authz_api_claim
         config = {**self.HQ, "AUTHZ_API_CLAIM_REQUIRED": "true"}
-        rendered = yaml.safe_load((self.output / "kong.yml").read_text())
+        # The gateway as render.py hands it to the claim, before the storage gate.
+        rendered = yaml.safe_load((REPO / "packages/dev/docker/kong.yml").read_text())
+        rendered["services"] = [service for service in rendered["services"] if service["name"] not in ("meta", "auth-v1-sso")]
         check = {"name": "pre-function", "config": {"access": ["return"]}}
 
         def changed(edit):
@@ -366,6 +377,75 @@ class PrivateStackTests(unittest.TestCase):
         self.assertEqual((gateway, kong), (rendered, {"environment": {"KONG_PLUGINS": "cors"}}))
         with self.assertRaises(ValueError):
             claim.function('api:supabase.rest" .. os.exit() .. "', "")
+
+    def test_storage_runs_a_patched_release_with_unused_protocols_off(self):
+        # GHSA-8rrf-w776-x75g (fixed in 1.80.2) and GHSA-67rp-h2mf-ph72 (1.80.1).
+        api = module.storage_api
+        storage = self.stack["services"]["storage"]
+        self.assertEqual(api.PATCHED, (1, 80, 2))
+        self.assertEqual(storage["image"], "supabase/storage-api:v1.84.17")
+        self.assertGreaterEqual(api.version(storage["image"]), api.PATCHED)
+        upstream = yaml.safe_load((REPO / "contrib/deploying/simple-docker-caddy/docker-compose.prod.yml").read_text())
+        expected = {**upstream["services"]["storage"]["environment"],
+                    "S3_PROTOCOL_ENABLED": "false", "ICEBERG_ENABLED": "false", "VECTOR_ENABLED": "false"}
+        self.assertEqual(storage["environment"], expected)
+
+    def test_storage_pin_never_moves_backwards_and_unknown_images_fail_closed(self):
+        api = module.storage_api
+        for upstream, expected in (("supabase/storage-api:v1.58.4", api.IMAGE), (api.IMAGE, api.IMAGE),
+                                   ("supabase/storage-api:v1.84.9", api.IMAGE),
+                                   ("supabase/storage-api:v1.90.0", "supabase/storage-api:v1.90.0"),
+                                   ("supabase/storage-api:v2.0.0", "supabase/storage-api:v2.0.0")):
+            with self.subTest(upstream=upstream):
+                storage = {"image": upstream, "environment": {"S3_PROTOCOL_ENABLED": "true"}}
+                api.configure(storage)
+                self.assertEqual(storage, {"image": expected, "environment": api.DISABLED})
+        for image in ("supabase/storage-api:latest", "supabase/storage-api@sha256:" + "a" * 64,
+                      "example.com/storage-api:v9.0.0", "supabase/storage-api:v1.90", None):
+            with self.subTest(image=image), self.assertRaises(ValueError):
+                api.configure({"image": image, "environment": {}})
+
+    def test_storage_gate_is_the_only_change_to_upstreams_gateway(self):
+        gateway = yaml.safe_load((self.output / "kong.yml").read_text())
+        gate = {"name": "pre-function", "config": {"access": [(HERE / "auth/kong-storage-gate.lua").read_text()]}}
+        storage = [service for service in gateway["services"] if urllib.parse.urlsplit(service["url"]).hostname == "storage"]
+        self.assertEqual([service["name"] for service in storage], ["storage-v1"])
+        self.assertEqual(storage[0]["plugins"], [{"name": "cors"}, gate])
+        storage[0]["plugins"].remove(gate)
+        upstream = yaml.safe_load((REPO / "packages/dev/docker/kong.yml").read_text())
+        upstream["services"] = [service for service in upstream["services"] if service["name"] not in ("meta", "auth-v1-sso")]
+        self.assertEqual(gateway, upstream)
+
+    def test_storage_gate_refuses_a_gateway_it_cannot_judge(self):
+        api = module.storage_api
+        upstream = yaml.safe_load((REPO / "packages/dev/docker/kong.yml").read_text())
+        check = {"name": "pre-function", "config": {"access": ["return"]}}
+
+        def storage(gateway):
+            return next(service for service in gateway["services"] if service["name"] == "storage-v1")
+
+        def changed(edit):
+            copy = json.loads(json.dumps(upstream))
+            edit(copy)
+            return copy
+
+        def kong():
+            return {"environment": {"KONG_PLUGINS": "cors"}}
+
+        gateway, environment = changed(lambda g: None), kong()
+        api.configure_gateway(gateway, environment, REPO)
+        self.assertEqual(environment, {"environment": {"KONG_PLUGINS": "cors,pre-function", "KONG_UNTRUSTED_LUA": "sandbox"}})
+        cases = {
+            "no storage service": changed(lambda g: g["services"].remove(storage(g))),
+            "storage named by host": changed(lambda g: (storage(g).pop("url"), storage(g).update(host="storage", port=5000))),
+            "storage under a path": changed(lambda g: storage(g).update(url="http://storage:5000/v1/")),
+            "route-level plugin": changed(lambda g: storage(g)["routes"][0].setdefault("plugins", []).append(check)),
+            "path rewrite": changed(lambda g: storage(g)["plugins"].append({"name": "request-transformer", "config": {"replace": {"uri": "/s3/"}}})),
+            "global pre-function": changed(lambda g: g.setdefault("plugins", []).append(check)),
+        }
+        for label, candidate in cases.items():
+            with self.subTest(label), self.assertRaises(ValueError):
+                api.configure_gateway(candidate, kong(), REPO)
 
     def test_only_tailnet_https_is_published(self):
         published = [(name, svc["ports"]) for name, svc in self.stack["services"].items() if "ports" in svc]
@@ -670,6 +750,15 @@ https://api.example.com {
         self.assertEqual(stack, self.stack)
         self.assertEqual(files[str(self.output.resolve() / "Caddyfile")], (self.output / "Caddyfile").read_text())
         self.assertEqual(before, {str(path.relative_to(self.state)): path.read_bytes() for path in self.state.rglob("*") if path.is_file()})
+
+    def test_storage_is_patched_and_gated_in_this_ingress_mode_too(self):
+        storage = self.stack["services"]["storage"]
+        self.assertEqual(storage["image"], module.storage_api.IMAGE)
+        self.assertEqual({key: storage["environment"][key] for key in module.storage_api.DISABLED}, module.storage_api.DISABLED)
+        gateway = yaml.safe_load((self.output / "kong.yml").read_text())
+        gate = {"name": "pre-function", "config": {"access": [(HERE / "auth/kong-storage-gate.lua").read_text()]}}
+        self.assertIn(gate, next(service for service in gateway["services"] if service["name"] == "storage-v1")["plugins"])
+        self.assertIn("pre-function", self.stack["services"]["kong"]["environment"]["KONG_PLUGINS"].split(","))
 
     def test_release_fingerprints_carry_no_tailnet_address(self):
         runtime_inputs = importlib.import_module("runtime_inputs")

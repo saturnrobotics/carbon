@@ -26,6 +26,7 @@ import invoice_inference
 import portal_receiver
 import hq_sign_in
 import authz_api_claim
+import storage_api
 import wal_g
 
 
@@ -265,6 +266,7 @@ request.on('error', () => process.exit(1));
     # After the copy, so bootstrap never gets the HQ provider or its secret.
     hq_sign_in.configure(config, auth, directory, emit)
 
+    storage_api.configure(services["storage"])
     realtime = services["realtime"]
     realtime["secrets"] += ["realtime_secret_key_base", "realtime_db_enc_key"]
     realtime["environment"].update({"SECRET_KEY_BASE": "__REALTIME_SECRET_KEY_BASE__", "DB_ENC_KEY": "__REALTIME_DB_ENC_KEY__"})
@@ -286,6 +288,7 @@ request.on('error', () => process.exit(1));
     gateway = yaml.safe_load((repo / "packages/dev/docker/kong.yml").read_text())
     gateway["services"] = [service for service in gateway["services"] if service["name"] not in ("meta", "auth-v1-sso")]
     authz_api_claim.configure(config, gateway, services["kong"], repo)
+    storage_api.configure_gateway(gateway, services["kong"], repo)
     emit(output / "kong.yml", yaml.safe_dump(gateway, sort_keys=False))
     services["kong"]["volumes"][0]["source"] = str(output / "kong.yml")
     proxy = services["caddy"]
