@@ -25,6 +25,11 @@ import {
   paginatingSibling
 } from "./describe-format";
 import { getServerInstructions } from "./instructions";
+import {
+  exceedsToolInputElements,
+  MCP_MAX_TOOL_INPUT_ELEMENTS,
+  MCP_SERVER_LIMITS
+} from "./limits";
 
 const logger = getLogger("erp", "mcp");
 
@@ -39,6 +44,7 @@ export function createMcpServer(ctx: McpContext, today: string): McpServer {
     },
     {
       instructions: getServerInstructions(today),
+      ...MCP_SERVER_LIMITS,
     },
   );
 
@@ -133,6 +139,16 @@ export function createMcpServer(ctx: McpContext, today: string): McpServer {
         } catch {
           return {
             content: [{ type: "text" as const, text: "Invalid JSON in call_tool.arguments" }],
+            isError: true
+          };
+        }
+        // The SDK's maxToolInputElements saw one string; count what it parsed to.
+        if (exceedsToolInputElements(args)) {
+          return {
+            content: [{
+              type: "text" as const,
+              text: `call_tool.arguments contains more than ${MCP_MAX_TOOL_INPUT_ELEMENTS} elements`
+            }],
             isError: true
           };
         }

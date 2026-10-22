@@ -26,7 +26,7 @@
     "inngest": "^3.52.7",
     "kysely": "catalog:",
     "nanoid": "catalog:",
-    "nodemailer": "9.0.1",
+    "nodemailer": "10.1.7",
     "pdfjs-dist": "5.4.296",
     "react": "catalog:",
     "react-dom": "catalog:",
@@ -35,12 +35,11 @@
     "sst": "catalog:",
     "supabase": "catalog:",
     "tsup": "catalog:",
-    "undici": "^8.10.0",
+    "undici": "^8.12.2",
     "zod": "catalog:"
   },
   "devDependencies": {
     "@carbon/config": "workspace:*",
-    "@types/nodemailer": "6.4.23",
     "@types/pg": "8.15.6",
     "@types/react": "catalog:",
     "pg": "8.20.0",
