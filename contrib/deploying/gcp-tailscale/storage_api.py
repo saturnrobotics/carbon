@@ -13,8 +13,9 @@ Upstream's ``docker-compose.prod.yml`` and ``kong.yml`` stay unchanged; the
 renderer adapts them here:
 
 1. ``configure`` runs storage-api ``IMAGE`` unless upstream already pins a newer
-   release. Storage migrates its own schema on start and cannot run against a
-   schema migrated by a newer release, so a sync must never take it backwards.
+   release. Storage migrates its own schema on start, and an older release
+   cannot write to a schema a newer one has migrated (README: Supabase Storage),
+   so a sync must never take it backwards.
 2. ``configure`` turns off the S3 protocol, Iceberg and vector APIs, none of
    which Carbon uses.
 3. ``configure_gateway`` puts ``auth/kong-storage-gate.lua`` in front of every
