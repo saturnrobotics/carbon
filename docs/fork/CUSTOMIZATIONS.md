@@ -135,6 +135,15 @@ extension point, so `packages/dev/docker/docker-compose.dev.yml` carries a
 one-line image bump (§(b) **Dev stack image pins**), and the regenerated database
 types pick up the newer `storage` schema.
 
+On 2026-10-22, `contrib/deploying/gcp-tailscale/service_images.py` raised the
+production platform pins past published advisories: `supabase/postgres`
+15.14.1.112 → 15.19.0.006, `supabase/realtime` v2.89.0 → v2.147.1,
+`supabase/edge-runtime` v1.74.0 → v1.77.8, `redis:7-alpine` → `7.4.11-alpine`,
+`caddy:2-alpine` → `2.11.7-alpine`, each only while upstream's prod compose pins
+older. `render.py` no longer runs `browserless/chrome` v1 (Chrome 117, no
+patched release). Upstream's `docker-compose.prod.yml` is unchanged; the dev
+stack keeps upstream's pins.
+
 On 2026-10-21, the fork raised the security pins in two shared files to the
 values upstream `main` already carries (upstream #1940). This covers sharp's
 librsvg advisory (GHSA-wq5f-xc86-pv6w, sharp 0.35.5) and the other critical and

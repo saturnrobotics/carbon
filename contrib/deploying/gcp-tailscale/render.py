@@ -26,6 +26,7 @@ import invoice_inference
 import portal_receiver
 import hq_sign_in
 import authz_api_claim
+import service_images
 import storage_api
 import wal_g
 
@@ -206,7 +207,6 @@ def render(config, repo, output, state=Path("/var/lib/carbon"), *, materialize=T
             "DISABLE_RESEND": "" if config.get("RESEND_API_KEY") else "true", "RESEND_API_KEY": "__RESEND_API_KEY__",
             "RESEND_DOMAIN": config.get("RESEND_DOMAIN", config["AUTH_ALLOWED_GOOGLE_DOMAIN"]),
             "SOURCE_CODE_URL": app_releases[app]["source_url"],
-            "BROWSERLESS_WS_URL": "ws://chrome:3000",
         })
         if "resend_api_key" not in services[app]["secrets"]:
             services[app]["secrets"].append("resend_api_key")
@@ -266,17 +266,20 @@ request.on('error', () => process.exit(1));
     # After the copy, so bootstrap never gets the HQ provider or its secret.
     hq_sign_in.configure(config, auth, directory, emit)
 
+    service_images.configure(services)
     storage_api.configure(services["storage"])
     realtime = services["realtime"]
     realtime["secrets"] += ["realtime_secret_key_base", "realtime_db_enc_key"]
     realtime["environment"].update({"SECRET_KEY_BASE": "__REALTIME_SECRET_KEY_BASE__", "DB_ENC_KEY": "__REALTIME_DB_ENC_KEY__"})
     edge = services["edge-runtime"]
     edge["secrets"].append("inngest_event_key")
-    edge["environment"].update({"INNGEST_BASE_URL": "http://inngest:8288/", "INNGEST_EVENT_KEY": "__INNGEST_EVENT_KEY__", "BROWSERLESS_WS_URL": "ws://chrome:3000", "ERP_URL": values["ERP_URL"], "MES_URL": values["MES_URL"]})
+    edge["environment"].update({"INNGEST_BASE_URL": "http://inngest:8288/", "INNGEST_EVENT_KEY": "__INNGEST_EVENT_KEY__", "ERP_URL": values["ERP_URL"], "MES_URL": values["MES_URL"]})
     edge["volumes"][-1]["source"] = str(repo / "contrib/deploying/gcp-tailscale/auth/edge-main")
     services["inngest"]["command"] = ["inngest", "start", "--sqlite-dir", "/data", "--sdk-url", values["ERP_URL"] + "/api/inngest", "--poll-interval", "30"]
     services["inngest"]["healthcheck"] = {"test": ["CMD", "inngest", "alpha", "doctor", "healthcheck"], "interval": "10s", "timeout": "10s", "retries": 24}
-    services["chrome"] = {"image": "browserless/chrome:1-puppeteer-21.3.6", "restart": "unless-stopped", "networks": ["internal"], "environment": {"TOKEN": "", "CONNECTION_TIMEOUT": "60000"}, "shm_size": "256m", "mem_limit": "1g"}
+    # No browser service: browserless/chrome v1 (Chrome 117, 2023) has no patched
+    # release, and its one caller, the thumbnail function, loads any URL it is
+    # given. Without BROWSERLESS_WS_URL that function answers 500.
     services["ops"] = {
         "image": "carbon/ops:" + revision, "profiles": ["ops"], "networks": ["internal"],
         "entrypoint": ["/usr/local/bin/carbon-secrets-entrypoint.sh"],
