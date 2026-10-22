@@ -228,6 +228,14 @@ and is reached with it; grants and revokes take effect at the next refresh;
 refresh; anon, service_role and server-signed tokens keep their routes; every
 credential location is checked; denials keep CORS headers.
 
+`test_kong_storage_gate.py` (Docker and PyYAML) runs the rendered Kong in front
+of a stub Storage that reports the path it received: Carbon's storage requests
+reach Storage unchanged; the S3 protocol and signed resumable uploads are refused
+in every spelling (percent-encoded, double-encoded, case, dot segments, duplicate
+slashes, absolute-form targets); resumable uploads need a bearer, including an
+OPTIONS request with a method override; denials keep CORS headers and
+preflights pass. With the `authz_api` claim on, the gate runs first.
+
 ## Edge function boundary
 
 The deployment mounts `edge-main/` instead of the development dispatcher. It
