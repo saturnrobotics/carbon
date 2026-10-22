@@ -4,8 +4,8 @@
 # docker build -f Dockerfile.saturn --target ops -t carbon/ops .
 # Review both immutable base-image digests together during security updates.
 ARG APP
-ARG NODE_IMAGE=node:22@sha256:8a34c4ab3ea2c5cd194f07e317b2a8f09461d3c8b05c4e34c8ccd56d56024c4d
-ARG NODE_SLIM_IMAGE=node:22-slim@sha256:83f487e0a63425e5b4d146fb5e5be574bcbe1b7b843d3ebafdd95eaf7767a7e5
+ARG NODE_IMAGE=node:22@sha256:63538dfe497cc29dfafdda25ada09b46db68a3f4cc205abf1f5d6bf0913f3384
+ARG NODE_SLIM_IMAGE=node:22-slim@sha256:de170b39439eb0e5a3444ad7d60b015614a381e10fecae2e30ec9e735122f38d
 
 # Workspace analysis includes the fork apps; only the selected closure is installed.
 FROM ${NODE_IMAGE} AS source
