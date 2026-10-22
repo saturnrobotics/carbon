@@ -871,6 +871,44 @@ Before moving forward again, drop it (`DROP INDEX CONCURRENTLY storage.bucketid_
 to return to the migrated schema. Restoring the whole pre-maintenance snapshot is
 the alternative; it also discards objects written since.
 
+## Patched platform images
+
+[`service_images.py`](service_images.py) raises upstream's platform image pins
+past published advisories (2026-10-22): PostgreSQL 15.14 to 15.19
+(`supabase/postgres:15.19.0.006`, the 15.15–15.19 security releases and
+supautils 3.4.4), Realtime 2.89.0 to 2.147.1 (GHSA-9vjf-j9f7-j42c: forged
+protocol events), edge-runtime 1.74.0 to 1.77.8, and Redis and Caddy from the
+floating `7-alpine` and `2-alpine` to `7.4.11-alpine` and `2.11.7-alpine`.
+Upstream's compose file stays unchanged; a release upstream pins newer is kept,
+so a sync never takes a self-migrating service backwards. The change selects
+coordinated maintenance, which takes a pre-maintenance snapshot of the data
+disk, and `make deploy`'s readiness check proves PostgreSQL reports at least
+`service_images.POSTGRES_PATCHED`.
+
+PostgreSQL keeps its data directory across a minor release. Two things a new
+image does not do on its own, `maintenance-apply` does:
+
+- `/etc/postgresql-custom` is the named volume `pgconfig`, which keeps the files
+  of the image that first filled it. Before PostgreSQL starts, the files the new
+  image ships (`supautils.conf`, `conf.d/`, `extension-custom-scripts/`) are
+  copied over it once per image (stamp `.carbon-image`). The volume also holds
+  `pgsodium_root.key`, on which every Vault secret depends: the copy refuses an
+  image that ships a key and fails if the key's checksum changes.
+- [`extension-updates.sql`](extension-updates.sql) runs `ALTER EXTENSION ...
+  UPDATE` for extensions whose packaged default moved (`pg_net`, `vector`); at
+  the default version it is a no-op.
+
+The readiness check also waits for Realtime's `/healthcheck`. Realtime migrates
+its own schema on start; 2.89.0 still starts on 2.147.1's schema, so a
+Realtime-only rollback needs no snapshot. PostgreSQL's way back is the
+pre-maintenance snapshot.
+
+The stack runs no browser. `browserless/chrome` v1 (Chrome 117, 2023) has no
+patched release, and its one caller, the `thumbnail` edge function, loads any
+URL a signed-in user gives it. Without `BROWSERLESS_WS_URL` that function
+answers 500; 3D-model thumbnails were already failing, since the job calls it
+with the anon key and `edge-main` refuses anon callers.
+
 ## Private-network limitations
 
 External webhook senders cannot reach this installation. Payment, accounting,

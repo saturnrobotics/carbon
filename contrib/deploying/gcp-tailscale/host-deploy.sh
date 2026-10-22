@@ -180,6 +180,33 @@ wait_service() {
   return 1
 }
 
+# service_images.py: a named volume keeps the files of the image that first
+# filled it, so a newer supabase/postgres would run with the old supautils.conf
+# and extension scripts. Copy the image's /etc/postgresql-custom over the volume
+# once per image while PostgreSQL is stopped. The volume also holds the pgsodium
+# root key that every Vault secret depends on: the copy refuses an image that
+# ships one and fails if the key's checksum changes.
+refresh_postgres_config() {
+  local volume image
+  volume=$(docker volume ls --quiet --filter label=com.docker.compose.project=carbon --filter label=com.docker.compose.volume=pgconfig)
+  # A first installation's empty volume is filled from the image on first start.
+  [ -n "$volume" ] || return 0
+  image=$(python3 -c 'import json, sys; print(json.load(open(sys.argv[1]))["services"]["postgres"]["image"])' "$CURRENT")
+  # shellcheck disable=SC2016
+  docker run --rm --network none --user root --entrypoint sh -e "IMAGE=$image" \
+    --volume "$volume:/target" "$image" -c '
+      set -eu
+      [ "$(cat /target/.carbon-image 2>/dev/null || true)" != "$IMAGE" ] || exit 0
+      [ ! -e /etc/postgresql-custom/pgsodium_root.key ] || { echo "The image ships a pgsodium root key; refusing to refresh." >&2; exit 1; }
+      before=$(cksum < /target/pgsodium_root.key 2>/dev/null || true)
+      cp -a /etc/postgresql-custom/. /target/
+      after=$(cksum < /target/pgsodium_root.key 2>/dev/null || true)
+      [ "$before" = "$after" ] || { echo "The pgsodium root key changed during the refresh." >&2; exit 1; }
+      printf "%s\n" "$IMAGE" > /target/.carbon-image
+      echo "Refreshed PostgreSQL configuration from $IMAGE."
+    ' || fail "Could not refresh PostgreSQL configuration from $image."
+}
+
 apply_selected_services() {
   local service
   while IFS= read -r service; do
@@ -297,6 +324,22 @@ check_stack() {
       }
     }
   '
+  # service_images.py: PostgreSQL runs at least the patched minor release.
+  local postgres_patched postgres_running
+  postgres_patched=$(python3 -c 'import sys; sys.path.insert(0, sys.argv[1]); import service_images; print(service_images.POSTGRES_PATCHED)' "$HERE")
+  postgres_running=$(compose exec -T postgres /usr/local/bin/carbon-secrets-entrypoint.sh sh -c \
+    'psql -X -h 127.0.0.1 -U supabase_admin -d postgres -At -c "show server_version_num"')
+  [[ "$postgres_running" =~ ^[0-9]+$ ]] && [ "$postgres_running" -ge "$postgres_patched" ] \
+    || fail "PostgreSQL is not a patched release: $postgres_running"
+  # Realtime has no Compose health probe and migrates its own schema on start.
+  compose exec -T erp node --input-type=module -e '
+    for (let attempt = 1; ; attempt++) {
+      const response = await fetch("http://realtime:4000/healthcheck", { signal: AbortSignal.timeout(5000) }).catch(() => null);
+      if (response?.ok) break;
+      if (attempt === 60) throw new Error("Realtime is not healthy: " + (response ? response.status : "unreachable"));
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+    }
+  '
   if [ "$AUTHZ_API_CLAIM_REQUIRED" = true ]; then
     # HQ plan 0006B Step 7: Kong refuses a GoTrue-shaped user token without the
     # authz_api claim and passes one with it. Both name no user, live 60 s, and
@@ -390,6 +433,7 @@ case "$ACTION" in
     mkdir -p "$STATE/runtime"
     if [ -f "$CURRENT" ]; then cp "$CURRENT" "$STATE/runtime/previous-compose.json"; fi
     cp "$PREPARED/compose.json" "$CURRENT"
+    refresh_postgres_config
     compose --profile bootstrap up -d postgres storage gotrue-bootstrap
     wait_service postgres
     wait_service storage
@@ -409,6 +453,10 @@ case "$ACTION" in
     compose exec -T postgres /usr/local/bin/carbon-secrets-entrypoint.sh sh -c \
       'psql -X -h 127.0.0.1 -U supabase_admin -d postgres -v ON_ERROR_STOP=1 -f -' \
       < "$HERE/private-client-isolation.sql"
+    # shellcheck disable=SC2016
+    compose exec -T postgres /usr/local/bin/carbon-secrets-entrypoint.sh sh -c \
+      'psql -X -h 127.0.0.1 -U supabase_admin -d postgres -v ON_ERROR_STOP=1 -f -' \
+      < "$HERE/extension-updates.sql"
     compose up -d postgrest kong edge-runtime redis
     wait_service kong
     # Only config and plan lookups are upserted. No users, company details, demo

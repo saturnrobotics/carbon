@@ -547,11 +547,13 @@ class PrivateStackTests(unittest.TestCase):
         self.assertEqual((self.state / "secrets/jwt_secret").read_bytes(), original)
         self.assertNotIn("replacement-test-secret", (self.output / "compose.json").read_text())
 
-    def test_background_jobs_and_thumbnails_remain_local(self):
+    def test_background_jobs_remain_local_and_no_browser_runs(self):
         for name in ("erp", "mes", "edge-runtime"):
             env = self.stack["services"][name]["environment"]
             self.assertEqual(env["INNGEST_BASE_URL"], "http://inngest:8288/")
-            self.assertEqual(env["BROWSERLESS_WS_URL"], "ws://chrome:3000")
+            self.assertNotIn("BROWSERLESS_WS_URL", env)
+        self.assertNotIn("chrome", self.stack["services"])
+        self.assertFalse(any("browserless" in str(service.get("image", "")) for service in self.stack["services"].values()))
         self.assertNotIn("http://mes:3000/api/inngest", self.stack["services"]["inngest"]["command"])
         self.assertTrue(self.stack["services"]["edge-runtime"]["volumes"][-1]["source"].endswith("gcp-tailscale/auth/edge-main"))
 
@@ -750,6 +752,11 @@ https://api.example.com {
         self.assertEqual(stack, self.stack)
         self.assertEqual(files[str(self.output.resolve() / "Caddyfile")], (self.output / "Caddyfile").read_text())
         self.assertEqual(before, {str(path.relative_to(self.state)): path.read_bytes() for path in self.state.rglob("*") if path.is_file()})
+
+    def test_platform_images_are_patched_in_this_ingress_mode_too(self):
+        for name, image in module.service_images.IMAGES.items():
+            self.assertEqual(self.stack["services"][name]["image"], image)
+        self.assertNotIn("chrome", self.stack["services"])
 
     def test_storage_is_patched_and_gated_in_this_ingress_mode_too(self):
         storage = self.stack["services"]["storage"]
