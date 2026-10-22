@@ -135,6 +135,17 @@ extension point, so `packages/dev/docker/docker-compose.dev.yml` carries a
 one-line image bump (§(b) **Dev stack image pins**), and the regenerated database
 types pick up the newer `storage` schema.
 
+On 2026-10-21, the fork raised the security pins in two shared files to the
+values upstream `main` already carries (upstream #1940). This covers sharp's
+librsvg advisory (GHSA-wq5f-xc86-pv6w, sharp 0.35.5) and the other critical and
+high audit findings that had a fix. The files are `pnpm-workspace.yaml` (existing
+`overrides` lines and the `axios` catalog entry) and the root `package.json`
+(its `fast-uri` dependency). No override line was added. Other fixes are
+lockfile-only refreshes within existing ranges. On the next sync, take upstream's
+lines, then run `pnpm audit --prod` again: the `regen` driver drops
+lockfile-only refreshes. See
+[the record](../../.fork/decisions/2026-10-21-dependency-security-pins.md).
+
 ## (a) Fork-owned additions — files upstream never touches
 
 These cannot conflict on a sync. They only cost when a shared file they depend on
@@ -177,7 +188,7 @@ changes shape.
 | **Seed data** | `packages/database/supabase/functions/lib/seed.data.ts` (1, 1,363 lines) | **upstream or drop.** Merge resolution debris rather than intent; re-resolve toward upstream on the next sync. |
 | **Docs site** | `docs/components/editorial/architecture-diagrams.tsx`, `docs/app/docs/layout.tsx`, `docs/next.config.mjs`, `docs/scripts/generate-agent-kb.ts` (4) | **upstream or drop.** Mostly merge-resolution residue; the generator change is generic. |
 | **Generator hardening** | `scripts/generate-db-types.ts`, `scripts/generate-swagger-docs.ts`, `scripts/generate-mcp.ts`, `scripts/lib/{service-metadata,manifest-digest,validator-to-json-schema}.ts`, `scripts/{model-upload,sales-invoice-report,sandbox}.ts` (9) | **upstream.** Atomic output replacement, local-DB guard, deterministic swagger alias, explicit env configuration instead of embedded values. All generic. |
-| **Build / CI plumbing** | `turbo.json`, `package.json` (`clean` keeps the lockfile; `prepare` runs `setup-git.sh`), `.github/workflows/check.yml` (runs on `saturn/main`), `.github/workflows/deploy.yml`, `contrib/deploying/simple-docker-caddy/deploy.sh` | **inherent** (trunk name, setup hook, explicit `Dockerfile.saturn` selection) / **upstream** (`clean` not deleting the lockfile). Root `Dockerfile` is upstream-owned. |
+| **Build / CI plumbing** | `turbo.json`, `package.json` (`clean` keeps the lockfile; `prepare` runs `setup-git.sh`; `fast-uri` pin), `pnpm-workspace.yaml` (security-pin values equal to upstream `main`'s, 2026-10-21; take upstream's on sync), `.github/workflows/check.yml` (runs on `saturn/main`), `.github/workflows/deploy.yml`, `contrib/deploying/simple-docker-caddy/deploy.sh` | **inherent** (trunk name, setup hook, explicit `Dockerfile.saturn` selection) / **upstream** (`clean` not deleting the lockfile). Root `Dockerfile` is upstream-owned. |
 | **Dev stack image pins** | `packages/dev/docker/docker-compose.dev.yml` (1) | **upstream.** `supabase/storage-api` v1.58.4 → v1.84.17 for GHSA-8rrf-w776-x75g and GHSA-67rp-h2mf-ph72 (the dev Kong publishes on every host interface). The drift disappears once upstream pins a patched release; production's pin lives in `storage_api.py`. |
 | **Privacy ignore rules** | `.gitignore`, `.dockerignore`, `apps/assembler/Dockerfile.dockerignore`, `packages/database/supabase/functions/thumbnail/index.ts` (4) | **upstream.** Generic protection of `.env*`, Terraform, Docker and secret artifacts, and removal of embedded service values. |
 | **Tests adjusted to upstream changes** | `apps/erp/test/{localized-submodule-ui,i18n-react-macros,mcp-tool-permissions,mcp-tool-metadata,batching-migration-guards,batching-tenant-scope-and-fk-locks}.test.ts`, `routes/x+/job+/$jobId.status.test.ts`, `modules/production/ui/Schedule/Kanban/drag-lifecycle.test.tsx`, `packages/database/src/check-datasets.ts` (9) | **upstream.** Test repairs for upstream refactors; contribute or drop when upstream catches up. |
