@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Carbon (github.com/crbnos/carbon). Modified or adapted versions of this file,
+// including ports, remain AGPLv3; serving them over a network requires releasing their source.
+
 /**
  * Fails the build when a declared moment has no raise site, a raise site names an
  * undeclared moment, the registry disagrees with the database schema, or the
@@ -8,26 +12,27 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import schema from "../packages/database/src/swagger-docs-schema";
-import { WORKFLOW_ACTIONS } from "../packages/workflows/src/catalog/actions";
+import { WORKFLOW_ACTIONS } from "../packages/ee/src/workflows/catalog/actions";
 import {
   WORKFLOW_ACTION_CATALOG,
   WORKFLOW_OPERATION_CATALOG
-} from "../packages/workflows/src/catalog/actions.generated";
-import { buildCatalog, validateCatalogInputs } from "../packages/workflows/src/catalog/build";
-import { WORKFLOW_ENTITY_REGISTRY } from "../packages/workflows/src/catalog/entities";
+} from "../packages/ee/src/workflows/catalog/actions.generated";
+import { buildCatalog, validateCatalogInputs } from "../packages/ee/src/workflows/catalog/build";
+import { WORKFLOW_ENTITY_REGISTRY } from "../packages/ee/src/workflows/catalog/entities";
 import {
   WORKFLOW_ENTITIES,
   WORKFLOW_EVENTS
-} from "../packages/workflows/src/catalog/events.generated";
+} from "../packages/ee/src/workflows/catalog/events.generated";
 // Direct import, unlike labels: this file has no `msg` macro, so plain Node can read it.
-import { WORKFLOW_FIELD_HELP } from "../packages/workflows/src/catalog/help.generated";
-import { WORKFLOW_MOMENTS } from "../packages/workflows/src/catalog/moments";
-import { WORKFLOW_OPERATIONS } from "../packages/workflows/src/catalog/operations";
+import { WORKFLOW_FIELD_HELP } from "../packages/ee/src/workflows/catalog/help.generated";
+import { WORKFLOW_MOMENTS } from "../packages/ee/src/workflows/catalog/moments";
+import { WORKFLOW_OPERATIONS } from "../packages/ee/src/workflows/catalog/operations";
+import { MOMENT_OUTPUT_KEYS } from "../packages/workflows-core/src/moments";
 
 const ROOT = process.cwd();
 const LABELS_FILE = path.join(
   ROOT,
-  "packages/workflows/src/catalog/labels.generated.ts"
+  "packages/ee/src/workflows/catalog/labels.generated.ts"
 );
 const TOOL_METADATA_FILE = path.join(
   ROOT,
@@ -74,7 +79,37 @@ for (const key of Object.keys(WORKFLOW_MOMENTS)) {
 for (const key of raised.keys()) {
   if (!(key in WORKFLOW_MOMENTS)) {
     fail(
-      `raiseMoment("${key}") names a moment that is not declared in packages/workflows/src/catalog/moments.ts.`
+      `raiseMoment("${key}") names a moment that is not declared in packages/ee/src/workflows/catalog/moments.ts.`
+    );
+  }
+}
+
+// The CE leaf `@carbon/workflows-core` mirrors each moment's output KEY NAMES —
+// `MomentPayload<K>` derives from `MOMENT_OUTPUT_KEYS`, and the engine re-exports
+// the leaf's `MomentKey`/`MomentPayload`, so a drift between the two is invisible
+// to the type checker. This is the invariant that keeps them honest.
+const leafMoments = MOMENT_OUTPUT_KEYS as Record<string, readonly string[]>;
+for (const key of Object.keys(WORKFLOW_MOMENTS)) {
+  const engineKeys = Object.keys(
+    WORKFLOW_MOMENTS[key as keyof typeof WORKFLOW_MOMENTS].outputs
+  ).sort();
+  const leafKeys = leafMoments[key];
+  if (!leafKeys) {
+    fail(
+      `Moment "${key}" is in WORKFLOW_MOMENTS but missing from MOMENT_OUTPUT_KEYS in @carbon/workflows-core — add it (with the same output keys) so MomentPayload stays correct.`
+    );
+    continue;
+  }
+  if (engineKeys.join(",") !== [...leafKeys].sort().join(",")) {
+    fail(
+      `Moment "${key}" output keys drifted: WORKFLOW_MOMENTS has [${engineKeys}] but @carbon/workflows-core MOMENT_OUTPUT_KEYS has [${[...leafKeys].sort()}]. Update packages/workflows-core/src/moments.ts to match.`
+    );
+  }
+}
+for (const key of Object.keys(leafMoments)) {
+  if (!(key in WORKFLOW_MOMENTS)) {
+    fail(
+      `Moment "${key}" is in @carbon/workflows-core MOMENT_OUTPUT_KEYS but not declared in WORKFLOW_MOMENTS — remove it from packages/workflows-core/src/moments.ts.`
     );
   }
 }
@@ -93,7 +128,6 @@ for (const problem of validateCatalogInputs(
 
 type ToolMeta = {
   name: string;
-  injectAuth?: string[];
   schema?: { required?: string[]; properties?: Record<string, unknown> };
 };
 
@@ -105,12 +139,9 @@ const tools = new Map<string, ToolMeta>(
   ).tools.map((tool) => [tool.name, tool])
 );
 
-/** A nested `{ input: {...} }` schema describes the wrapper, not the fields the
- * action supplies; unwrap so the required list is comparable. */
+/** An action sends its inputs flat, as the operation's top-level fields. */
 function requiredParamsOf(tool: ToolMeta): string[] {
-  const outer = tool.schema;
-  const inner = outer?.properties?.input as ToolMeta["schema"] | undefined;
-  return (inner?.required ?? outer?.required ?? []) as string[];
+  return tool.schema?.required ?? [];
 }
 
 for (const [id, declaration] of Object.entries(WORKFLOW_ACTIONS)) {
@@ -124,22 +155,32 @@ for (const [id, declaration] of Object.entries(WORKFLOW_ACTIONS)) {
     continue;
   }
 
-  // Only inputs the builder forces are guaranteed to arrive, plus what the dispatcher
-  // stamps. Counting optional ones would repeat the shape of the bug this exists to catch.
+  // Only inputs the builder forces are guaranteed to arrive. Counting optional
+  // ones would repeat the shape of the bug this exists to catch.
   const inputs = (declaration as { inputs: Record<string, { required: boolean }> })
     .inputs;
-  const supplied = new Set([
-    ...Object.entries(inputs)
+  const supplied = new Set(
+    Object.entries(inputs)
       .filter(([, spec]) => spec.required)
-      .map(([name]) => name),
-    ...(tool.injectAuth ?? [])
-  ]);
+      .map(([name]) => name)
+  );
   const missing = requiredParamsOf(tool).filter((p) => !supplied.has(p));
   if (missing.length > 0) {
     fail(
       `Action "${id}" calls "${call}", which requires ${missing
         .map((p) => `"${p}"`)
-        .join(", ")} — not declared as an input and not injected.`
+        .join(", ")} — not declared as an input.`
+    );
+  }
+  // Inputs go out flat, so each must be a top-level field of the operation;
+  // anything else passes validation unread.
+  const fields = tool.schema?.properties ?? {};
+  const unread = Object.keys(inputs).filter((name) => !(name in fields));
+  if (unread.length > 0) {
+    fail(
+      `Action "${id}" calls "${call}", which has no field ${unread
+        .map((p) => `"${p}"`)
+        .join(", ")} — the operation would never read it.`
     );
   }
 }

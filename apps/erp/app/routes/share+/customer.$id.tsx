@@ -1,5 +1,9 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Carbon (github.com/crbnos/carbon). Modified or adapted versions of this file,
+// including ports, remain AGPLv3; serving them over a network requires releasing their source.
+
 import { getCarbonServiceRole } from "@carbon/auth/client.server";
-import { companyHasPlan } from "@carbon/ee/plan.server";
+import { companyHasFeature } from "@carbon/ee/plan.server";
 import { getLogger } from "@carbon/logger";
 import { Avatar } from "@carbon/react";
 import { SCALE_FORMAT } from "@carbon/utils";
@@ -17,7 +21,7 @@ import {
   MethodIcon,
   Table
 } from "~/components";
-import { getJobOperationAttachments } from "~/modules/production";
+import { getJobOperationAttachments } from "~/modules/production/production.service";
 import { salesOrderStatusType } from "~/modules/sales/sales.models";
 import { getExternalSalesOrderLines } from "~/modules/sales/sales.service";
 import {
@@ -65,9 +69,13 @@ export async function loader({ params, request }: LoaderFunctionArgs) {
     throw new Error("Customer not found");
   }
 
-  const hasPlan = await companyHasPlan(serviceRole, customer.data.companyId, {
-    feature: "CUSTOMER_PORTALS"
-  });
+  const hasPlan = await companyHasFeature(
+    serviceRole,
+    customer.data.companyId,
+    {
+      feature: "CUSTOMER_PORTALS"
+    }
+  );
   if (!hasPlan) {
     throw new Response("Not found", { status: 404 });
   }
@@ -196,6 +204,7 @@ export default function CustomerPortal() {
           </div>
         ),
         meta: {
+          mobile: "P1",
           icon: <LuBookMarked />
         }
       },
@@ -218,6 +227,7 @@ export default function CustomerPortal() {
           );
         },
         meta: {
+          mobile: "P2",
           filter: {
             type: "static",
             options: salesOrderStatusType.map((status) => ({
@@ -263,6 +273,7 @@ export default function CustomerPortal() {
       {
         accessorKey: "promisedDate",
         header: "Due Date",
+        meta: { mobile: "P2" },
         cell: ({ row }) => (
           <DateTime
             value={
@@ -277,6 +288,7 @@ export default function CustomerPortal() {
       {
         accessorKey: "readableId",
         header: "Part Number",
+        meta: { mobile: "P3" },
         cell: ({ row }) => row.original.readableId
       },
       {
@@ -379,6 +391,9 @@ export default function CustomerPortal() {
           columns={columns}
           count={count ?? 0}
           compact
+          // Signed out: the export names ids from the signed-in company's
+          // lists, and there is no company here to read them from.
+          withCsvExport={false}
           defaultColumnPinning={defaultColumnPinning}
           sort={<PortalSort columns={sortableColumns} />}
         />

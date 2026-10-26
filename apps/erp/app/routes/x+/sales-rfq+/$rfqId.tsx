@@ -1,24 +1,30 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Carbon (github.com/crbnos/carbon). Modified or adapted versions of this file,
+// including ports, remain AGPLv3; serving them over a network requires releasing their source.
+
 import { error } from "@carbon/auth";
 import { requirePermissions } from "@carbon/auth/auth.server";
 import { getCarbonServiceRole } from "@carbon/auth/client.server";
 import { flash } from "@carbon/auth/session.server";
+import { supportedModelTypes } from "@carbon/files/cad";
+import { getLogger } from "@carbon/logger";
 import type { JSONContent } from "@carbon/react";
-import { VStack } from "@carbon/react";
-import { supportedModelTypes } from "@carbon/utils";
+import { RecordOutlet, VStack } from "@carbon/react";
+import { redirect } from "@carbon/utils";
 import type { DragEndEvent } from "@dnd-kit/core";
 import { DndContext } from "@dnd-kit/core";
 import { msg } from "@lingui/core/macro";
 import type { FileObject } from "@supabase/storage-js";
 import type { LoaderFunctionArgs } from "react-router";
-import { Outlet, redirect, useParams, useSubmit } from "react-router";
+import { useParams, useSubmit } from "react-router";
 import { PanelProvider, ResizablePanels } from "~/components/Layout/Panels";
-import type { SalesRFQLine } from "~/modules/sales";
 import {
   getOpportunity,
   getOpportunityDocuments,
   getSalesRFQ,
   getSalesRFQLines
-} from "~/modules/sales";
+} from "~/modules/sales/sales.service";
+import type { SalesRFQLine } from "~/modules/sales/types";
 import {
   SalesRFQExplorer,
   SalesRFQHeader,
@@ -28,7 +34,13 @@ import { useOptimisticDocumentDrag } from "~/modules/sales/ui/SalesRFQ/useOptimi
 import { detailBreadcrumb, type Handle } from "~/utils/handle";
 import { path } from "~/utils/path";
 
+const logger = getLogger("erp", "sales-rfq");
+
 export const handle: Handle = {
+  realtime: [
+    { table: "salesRfq", column: "id", param: "rfqId" },
+    { table: "salesRfqLine", column: "salesRfqId", param: "rfqId" }
+  ],
   breadcrumb: detailBreadcrumb(
     { breadcrumb: msg`RFQs`, to: path.to.salesRfqs },
     (data) => data?.rfqSummary?.rfqId
@@ -50,6 +62,12 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
     getSalesRFQ(serviceRole, rfqId),
     getSalesRFQLines(serviceRole, rfqId)
   ]);
+
+  // The service role bypasses RLS and rfqId comes from the URL.
+  if (rfqSummary.data && rfqSummary.data.companyId !== companyId) {
+    logger.error("Sales RFQ not found for company", { companyId, rfqId });
+    throw redirect(path.to.salesRfqs);
+  }
 
   const opportunity = await getOpportunity(
     serviceRole,
@@ -177,9 +195,9 @@ export default function SalesRFQRoute() {
               <ResizablePanels
                 explorer={<SalesRFQExplorer />}
                 content={
-                  <div className="bg-muted dark:bg-card h-[calc(100dvh-var(--topbar-height)-var(--header-height)-var(--content-inset))] overflow-y-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-accent w-full">
+                  <div className="bg-card h-[calc(100dvh-var(--topbar-height)-var(--header-height)-var(--content-inset))] overflow-y-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-accent w-full">
                     <VStack spacing={4} className="p-4">
-                      <Outlet />
+                      <RecordOutlet />
                     </VStack>
                   </div>
                 }

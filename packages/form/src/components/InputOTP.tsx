@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Carbon (github.com/crbnos/carbon). Modified or adapted versions of this file,
+// including ports, remain AGPLv3; serving them over a network requires releasing their source.
+
 import {
   FormControl,
   FormErrorMessage,
@@ -92,6 +96,8 @@ const InputOTP = forwardRef<HTMLInputElement, FormInputOTPProps>(
         ) : null}
 
         <InputOTPBase
+          // FormLabel points at FormControl's generated id, not this input.
+          aria-label={typeof label === "string" && label ? label : undefined}
           name={name}
           maxLength={6}
           value={value}

@@ -1,10 +1,15 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Carbon (github.com/crbnos/carbon). Modified or adapted versions of this file,
+// including ports, remain AGPLv3; serving them over a network requires releasing their source.
+
 import { requirePermissions } from "@carbon/auth/auth.server";
 import { KanbanLabelPDF } from "@carbon/documents/pdf";
 import { getLogger } from "@carbon/logger";
+import { getRequestOrigin } from "@carbon/utils";
 import { renderToStream } from "@react-pdf/renderer";
 import type { LoaderFunctionArgs } from "react-router";
-import { getCompany } from "~/modules/settings";
-import { getBase64ImageFromSupabase } from "~/modules/shared";
+import { getCompany } from "~/modules/settings/settings.service";
+import { getBase64ImageFromSupabase } from "~/modules/shared/shared.service";
 
 const logger = getLogger("erp", "labels-action-pdf");
 
@@ -27,7 +32,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 
   const url = new URL(request.url);
   const idsParam = url.searchParams.get("ids");
-  const baseUrl = url.origin;
+  const baseUrl = getRequestOrigin(request) ?? url.origin;
 
   if (!idsParam) {
     return new Response("No kanban IDs provided", { status: 400 });
@@ -96,6 +101,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
         fromStorageUnitName: kanban.fromStorageUnitName,
         supplierName: kanban.supplierName,
         quantity: kanban.quantity ?? 0,
+        replenishmentLevel: kanban.replenishmentLevel,
         unitOfMeasureCode: kanban.purchaseUnitOfMeasureCode,
         thumbnail: thumbnails[kanban.id!] || null
       };

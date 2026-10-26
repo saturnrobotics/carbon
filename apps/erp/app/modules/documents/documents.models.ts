@@ -1,8 +1,12 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Carbon (github.com/crbnos/carbon). Modified or adapted versions of this file,
+// including ports, remain AGPLv3; serving them over a network requires releasing their source.
+
 import type { Database } from "@carbon/database";
 import { getLogger } from "@carbon/logger";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
-import { itemType } from "~/modules/shared";
+import { itemType } from "~/modules/shared/shared.models";
 
 const logger = getLogger("erp", "documents-models");
 
@@ -21,6 +25,8 @@ export const documentSourceTypes = [
   "Sales Return Order",
   "Purchase Return Order",
   "Shipment",
+  "Supplier",
+  "Customer",
   ...itemType
 ] as const;
 
@@ -42,6 +48,19 @@ export const documentLabelsValidator = z.object({
   documentId: z.string().min(20),
   labels: z.array(z.string().min(1).max(50)).optional()
 });
+
+/** A viewer camera direction: model towards camera, in the model's axes (Z up). */
+export const modelViewDirection = z
+  .tuple([z.number(), z.number(), z.number()])
+  .refine((direction) => direction.some((n) => n !== 0), {
+    message: "A view direction cannot be zero"
+  });
+
+export {
+  buildDocumentUploadPath,
+  buildStagedUploadPath,
+  parseStagedUploadPath
+} from "./documents.paths";
 
 // -- PDF document extraction --------------------------------------------------
 //

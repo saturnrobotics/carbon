@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Carbon (github.com/crbnos/carbon). Modified or adapted versions of this file,
+// including ports, remain AGPLv3; serving them over a network requires releasing their source.
+
 import type { Database, Json } from "@carbon/database";
 import { redis } from "@carbon/kv";
 import { getLogger } from "@carbon/logger";
@@ -212,9 +216,20 @@ export async function deactivateCustomer(
     reason: "deactivate"
   });
 
+<<<<<<< HEAD
   return success(
     withPermissionsNotice("Sucessfully deactivated customer", authz)
   );
+||||||| 85d9006e1
+  return success("Sucessfully deactivated customer");
+=======
+  // Same ownership as the employee path below: invalidate here so the
+  // create*Account rollbacks, which call this directly, cannot leave revoked
+  // grants readable from cache.
+  await redis.del(getPermissionCacheKey(userId));
+
+  return success("Sucessfully deactivated customer");
+>>>>>>> 2beccc9789c598823f9d9584cdeecce9c7ffac75
 }
 
 export async function deactivateEmployee(
@@ -272,11 +287,13 @@ export async function deactivateEmployee(
         .update({ active: false })
         .eq("id", userId)
         .eq("companyId", companyId),
-      serviceRole
-        .from("employeeJob")
-        .delete()
-        .eq("id", userId)
-        .eq("companyId", companyId),
+      // "employeeJob" is deliberately left in place. It carries org placement —
+      // title, start date, department, shift, manager, location, tags, custom
+      // fields — none of which grants access; membership ("userToCompany"),
+      // permissions, and "employee".active are what gate it, and all three are
+      // cleared here. Deleting the row made deactivation lossy: nothing in the
+      // re-invite path can reconstruct it, so a revoked employee who was later
+      // re-invited came back with their placement silently blanked.
       ...(groupIds.length > 0
         ? [
             serviceRole
@@ -315,9 +332,22 @@ export async function deactivateEmployee(
     reason: "deactivate"
   });
 
+<<<<<<< HEAD
   return success(
     withPermissionsNotice("Sucessfully deactivated employee", authz)
   );
+||||||| 85d9006e1
+  return success("Sucessfully deactivated employee");
+=======
+  // The permissions this function just revoked are cached in Redis, and
+  // `requirePermissions` reads that cache before the database. Invalidating
+  // here rather than only in `deactivateUser` covers the callers that reach
+  // this function directly — the create*Account rollback paths — which
+  // otherwise left a deactivated user's grants live until the 1h TTL.
+  await redis.del(getPermissionCacheKey(userId));
+
+  return success("Sucessfully deactivated employee");
+>>>>>>> 2beccc9789c598823f9d9584cdeecce9c7ffac75
 }
 
 export async function deactivateUser(
@@ -538,7 +568,16 @@ export async function deactivateSupplier(
     reason: "deactivate"
   });
 
+<<<<<<< HEAD
   return success(
     withPermissionsNotice("Sucessfully deactivated supplier", authz)
   );
+||||||| 85d9006e1
+  return success("Sucessfully deactivated supplier");
+=======
+  // See deactivateEmployee: the direct callers own nothing, this function does.
+  await redis.del(getPermissionCacheKey(userId));
+
+  return success("Sucessfully deactivated supplier");
+>>>>>>> 2beccc9789c598823f9d9584cdeecce9c7ffac75
 }

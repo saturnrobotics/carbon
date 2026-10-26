@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Carbon (github.com/crbnos/carbon). Modified or adapted versions of this file,
+// including ports, remain AGPLv3; serving them over a network requires releasing their source.
+
 import { ValidatedForm } from "@carbon/form";
 import {
   Card,
@@ -32,7 +36,7 @@ import {
   useRouteData,
   useSupplierApprovalRequired
 } from "~/hooks";
-import { purchaseInvoiceValidator } from "~/modules/invoicing";
+import { purchaseInvoiceValidator } from "~/modules/invoicing/invoicing.models";
 import { path } from "~/utils/path";
 import { isPurchaseInvoiceLocked } from "../../invoicing.models";
 import { usePurchaseInvoiceAutoFill } from "./usePurchaseInvoiceAutoFill";
@@ -112,6 +116,7 @@ const PurchaseInvoiceForm = ({ initialValues }: PurchaseInvoiceFormProps) => {
                 />
               )}
               <Supplier
+                autoFocus={!isEditing}
                 name="supplierId"
                 label={t`Supplier`}
                 defaultCurrencyCode={invoiceSupplier.currencyCode}
@@ -200,7 +205,7 @@ const PurchaseInvoiceForm = ({ initialValues }: PurchaseInvoiceFormProps) => {
             label={t`Invoice`}
           />
         </CardContent>
-        <CardFooter>
+        <CardFooter sticky={!isEditing}>
           <Submit
             isDisabled={
               isEditing

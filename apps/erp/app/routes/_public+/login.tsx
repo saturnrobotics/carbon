@@ -1,36 +1,67 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Carbon (github.com/crbnos/carbon). Modified or adapted versions of this file,
+// including ports, remain AGPLv3; serving them over a network requires releasing their source.
+
 import {
   assertIsPost,
   CarbonEdition,
   CONTROLLED_ENVIRONMENT,
   carbonClient,
   error,
+  getRedirectTo,
   isAuthProviderEnabled,
   magicLinkValidator,
   RATE_LIMIT,
+<<<<<<< HEAD
   SOURCE_CODE_URL
+||||||| 85d9006e1
+  RATE_LIMIT
+=======
+  signInCodeValidator
+>>>>>>> 2beccc9789c598823f9d9584cdeecce9c7ffac75
 } from "@carbon/auth";
 import {
+  botProtection,
   getMagicLinkErrorMessage,
   logAuthEvent,
   sendMagicLink,
   signInWithBypassEmail,
-  turnstileSiteKey,
   verifyAuthSession,
-  verifyLoginCaptcha
+  verifyBotProtection
 } from "@carbon/auth/auth.server";
 import { getCarbonServiceRole } from "@carbon/auth/client.server";
 import { HqSignInButton, useHqAutoStart } from "@carbon/auth/saturn/hq-sign-in";
+import {
+  isPlatformSignupDisabled,
+  isSelfSignupBlockedForEmail,
+  PLATFORM_SIGNUP_DISABLED_MESSAGE,
+  SELF_SIGNUP_BLOCKED_MESSAGE
+} from "@carbon/auth/self-signup.server";
 import {
   clearAuthCookies,
   flash,
   getAuthSession,
   setAuthSession
 } from "@carbon/auth/session.server";
+import { markSignInBrowser } from "@carbon/auth/sign-in-browser.server";
 import { getUserByEmail } from "@carbon/auth/users.server";
 import { sendVerificationCode } from "@carbon/auth/verification.server";
 import { isSsoEnabled, isSsoRequiredForEmail } from "@carbon/ee/sso.server";
-import { Hidden, Input, Submit, ValidatedForm, validator } from "@carbon/form";
-import { AccountLockout, Ratelimit, redis } from "@carbon/kv";
+import {
+  Hidden,
+  Input,
+  InputOTP,
+  Submit,
+  ValidatedForm,
+  validator
+} from "@carbon/form";
+import {
+  AccountLockout,
+  maxAttemptsForRateLimit,
+  Ratelimit,
+  redis
+} from "@carbon/kv";
+import { getLogger } from "@carbon/logger";
 import {
   Alert,
   AlertDescription,
@@ -39,12 +70,12 @@ import {
   Heading,
   ItarLoginDisclaimer,
   Separator,
-  TurnstileChallenge,
   toast,
+  useBotProtection,
   useMount,
   VStack
 } from "@carbon/react";
-import { Edition } from "@carbon/utils";
+import { Edition, getClientIp, redirect } from "@carbon/utils";
 import { Trans, useLingui } from "@lingui/react/macro";
 import {
   browserSupportsWebAuthn,
@@ -57,14 +88,9 @@ import type {
   LoaderFunctionArgs,
   MetaFunction
 } from "react-router";
-import {
-  data,
-  redirect,
-  useFetcher,
-  useLoaderData,
-  useSearchParams
-} from "react-router";
+import { data, useFetcher, useLoaderData, useSearchParams } from "react-router";
 import type { Result } from "~/types";
+import { setAppBadge } from "~/utils/app-badge";
 import { path } from "~/utils/path";
 
 export const meta: MetaFunction = () => {
@@ -97,7 +123,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
 
   if (authSession) {
     if (await verifyAuthSession(authSession)) {
-      throw redirect(path.to.authenticatedRoot);
+      throw redirect(getRedirectTo(request));
     }
     const cookieHeaders = await clearAuthCookies(request);
     return data(
@@ -107,10 +133,16 @@ export async function loader({ request }: LoaderFunctionArgs) {
         hasGoogleAuth,
         hasPasskeyAuth,
         hasSsoAuth,
+<<<<<<< HEAD
         autoGoogle,
         hasHqAuth,
         autoHq,
         turnstileSiteKey
+||||||| 85d9006e1
+        turnstileSiteKey
+=======
+        botProtection
+>>>>>>> 2beccc9789c598823f9d9584cdeecce9c7ffac75
       },
       { headers: cookieHeaders }
     );
@@ -122,16 +154,22 @@ export async function loader({ request }: LoaderFunctionArgs) {
     hasGoogleAuth,
     hasPasskeyAuth,
     hasSsoAuth,
+<<<<<<< HEAD
     autoGoogle,
     hasHqAuth,
     autoHq,
     turnstileSiteKey
+||||||| 85d9006e1
+    turnstileSiteKey
+=======
+    botProtection
+>>>>>>> 2beccc9789c598823f9d9584cdeecce9c7ffac75
   };
 }
 
 export async function action({ request }: ActionFunctionArgs) {
   assertIsPost(request);
-  const ip = request.headers.get("x-forwarded-for") ?? "127.0.0.1";
+  const ip = getClientIp(request) ?? "127.0.0.1";
   const ratelimit = new Ratelimit({
     redis,
     limiter: Ratelimit.slidingWindow(RATE_LIMIT, "1 h"),
@@ -159,14 +197,17 @@ export async function action({ request }: ActionFunctionArgs) {
     return error(validation.error, "Invalid email address");
   }
 
-  const { email, turnstileToken } = validation.data;
+  const { email, botToken, redirectTo } = validation.data;
 
   // Per-account lockout (NIST 800-171 3.1.8) — layered ON TOP of the IP limit
   // above. Keyed by the normalized email so an attacker rotating IPs, or
   // hammering one account to spam magic links / probe existence, is bounded per
   // account. The reply is deliberately GENERIC (never reveals whether the
   // account exists) to avoid user enumeration.
-  const lockout = new AccountLockout({ redis });
+  const lockout = new AccountLockout({
+    redis,
+    maxAttempts: maxAttemptsForRateLimit(RATE_LIMIT)
+  });
   const LOCKED_MESSAGE =
     "For your security, sign-in for this account is temporarily paused. Please try again later.";
 
@@ -184,11 +225,15 @@ export async function action({ request }: ActionFunctionArgs) {
     );
   }
 
-  const captchaError = await verifyLoginCaptcha(turnstileToken, ip);
-  if (captchaError) {
+  const botError = await verifyBotProtection({
+    token: botToken,
+    ip,
+    actor: email
+  });
+  if (botError) {
     return data(
-      error(null, captchaError),
-      await flash(request, error(null, captchaError))
+      error(null, botError),
+      await flash(request, error(null, botError))
     );
   }
 
@@ -223,7 +268,7 @@ export async function action({ request }: ActionFunctionArgs) {
       await lockout.reset(email);
       logAuthEvent("login_success", { actor: email, ip, method: "bypass" });
       const sessionCookie = await setAuthSession(request, { authSession });
-      return redirect(path.to.authenticatedRoot, {
+      return redirect(redirectTo || path.to.authenticatedRoot, {
         headers: [["Set-Cookie", sessionCookie]]
       });
     }
@@ -248,7 +293,7 @@ export async function action({ request }: ActionFunctionArgs) {
   }
 
   if (user.data && user.data.active) {
-    const magicLink = await sendMagicLink(email, turnstileToken);
+    const magicLink = await sendMagicLink(email, undefined, redirectTo);
 
     if (magicLink.error) {
       logAuthEvent("login_failed", {
@@ -263,7 +308,11 @@ export async function action({ request }: ActionFunctionArgs) {
       );
     }
     logAuthEvent("magic_link_sent", { actor: email, ip });
-    return { success: true, mode: "login" };
+    // This browser asked: the email's link completes only here.
+    return data(
+      { success: true, mode: "login", email },
+      { headers: { "Set-Cookie": await markSignInBrowser() } }
+    );
   } else if (CarbonEdition === Edition.Enterprise) {
     logAuthEvent("login_failed", {
       actor: email,
@@ -274,20 +323,30 @@ export async function action({ request }: ActionFunctionArgs) {
       { success: false, message: "User record not found" },
       await flash(request, error(null, "Failed to sign in"))
     );
-  } else {
-    // Signup verification codes go out via Resend, never GoTrue.
-    const signupCaptchaError = await verifyLoginCaptcha(
-      turnstileToken,
+  } else if (await isPlatformSignupDisabled()) {
+    // Self-hosted with sign-ups switched off: same refusal as Enterprise,
+    // but named — the person can act on "ask for an invitation".
+    logAuthEvent("login_failed", {
+      actor: email,
       ip,
-      "app"
+      reason: "sign-ups disabled on this instance"
+    });
+    return data(
+      { success: false, message: PLATFORM_SIGNUP_DISABLED_MESSAGE },
+      await flash(request, error(null, PLATFORM_SIGNUP_DISABLED_MESSAGE))
     );
-    if (signupCaptchaError) {
-      return data(
-        error(null, signupCaptchaError),
-        await flash(request, error(null, signupCaptchaError))
-      );
-    }
-
+  } else if (isSelfSignupBlockedForEmail(email)) {
+    // Cloud self-signup rejects consumer email domains (self-signup-blocked-domains.txt).
+    logAuthEvent("login_failed", {
+      actor: email,
+      ip,
+      reason: "self-signup domain blocked"
+    });
+    return data(
+      { success: false, message: SELF_SIGNUP_BLOCKED_MESSAGE },
+      await flash(request, error(null, SELF_SIGNUP_BLOCKED_MESSAGE))
+    );
+  } else {
     // User doesn't exist, send verification code for signup
     const verificationSent = await sendVerificationCode(email);
 
@@ -303,6 +362,18 @@ export async function action({ request }: ActionFunctionArgs) {
 }
 
 export default function LoginRoute() {
+  // A signed-out user lands here however the session ended (sign out, expiry,
+  // a revoked account), so this is where the lists kept on the device go, and
+  // the app icon's unread badge with them.
+  useEffect(() => {
+    setAppBadge(0);
+    import("localforage")
+      .then((storage) => storage.default.clear())
+      .catch((error) =>
+        getLogger("erp", "login").warn("stored lists not cleared", { error })
+      );
+  }, []);
+
   const { t } = useLingui();
   const {
     hasEmailAuth,
@@ -310,10 +381,16 @@ export default function LoginRoute() {
     hasGoogleAuth,
     hasPasskeyAuth,
     hasSsoAuth,
+<<<<<<< HEAD
     autoGoogle,
     hasHqAuth,
     autoHq,
     turnstileSiteKey: siteKey
+||||||| 85d9006e1
+    turnstileSiteKey: siteKey
+=======
+    botProtection
+>>>>>>> 2beccc9789c598823f9d9584cdeecce9c7ffac75
   } = useLoaderData<typeof loader>();
 
   const [searchParams] = useSearchParams();
@@ -321,7 +398,6 @@ export default function LoginRoute() {
   const emailParam = searchParams.get("email") ?? undefined;
   const [mode, setMode] = useState<"login" | "signup" | "verify">("login");
   const [signupEmail, setSignupEmail] = useState<string>("");
-  const [turnstileToken, setTurnstileToken] = useState<string>("");
   const [passkeySupported, setPasskeySupported] = useState(false);
   const [passkeyLoading, setPasskeyLoading] = useState(false);
   const [ssoLoading, setSsoLoading] = useState(false);
@@ -329,7 +405,21 @@ export default function LoginRoute() {
   const conditionalAbortRef = useRef<AbortController | null>(null);
   const autoGoogleStarted = useRef(false);
 
+  // A forced logout (see destroyAuthSession) arrives as a bare 302, leaving the
+  // browser no trace of what went wrong. "no-claims" is almost always a user
+  // with no company membership.
+  const logoutReason = searchParams.get("reason");
+  useEffect(() => {
+    if (logoutReason) {
+      // biome-ignore lint/suspicious/noConsole: surfacing the silent logout is the point
+      console.warn(
+        `[carbon:auth] Session was destroyed server-side (reason: ${logoutReason}). See server logs for the full record.`
+      );
+    }
+  }, [logoutReason]);
+
   const fetcher = useFetcher<Result & { mode?: string; email?: string }>();
+  const bot = useBotProtection("/login", botProtection, fetcher.data);
 
   useEffect(() => {
     if (fetcher.data?.success && fetcher.data.mode) {
@@ -476,7 +566,7 @@ export default function LoginRoute() {
       options: {
         scopes: "email",
         redirectTo: `${window.location.origin}/callback${
-          redirectTo ? `?redirectTo=${redirectTo}` : ""
+          redirectTo ? `?redirectTo=${encodeURIComponent(redirectTo)}` : ""
         }`
       }
     });
@@ -528,7 +618,7 @@ export default function LoginRoute() {
       domain,
       options: {
         redirectTo: `${window.location.origin}/callback${
-          redirectTo ? `?redirectTo=${redirectTo}` : ""
+          redirectTo ? `?redirectTo=${encodeURIComponent(redirectTo)}` : ""
         }`
       }
     });
@@ -578,11 +668,18 @@ export default function LoginRoute() {
               <Heading size="h3">
                 <Trans>Check your email</Trans>
               </Heading>
-              <p className="text-muted-foreground tracking-tight text-sm">
+              <p className="text-muted-foreground tracking-tight text-sm text-center">
                 <Trans>
-                  We've sent you a magic link to sign in to your account.
+                  We've emailed you a sign-in link and a 6-digit code. Follow
+                  the link, or enter the code here.
                 </Trans>
               </p>
+              {fetcher.data.email ? (
+                <SignInCode
+                  email={fetcher.data.email}
+                  redirectTo={redirectTo}
+                />
+              ) : null}
             </VStack>
           </>
         ) : mode === "verify" ? (
@@ -620,7 +717,7 @@ export default function LoginRoute() {
             onSubmit={onSubmitEmail}
           >
             <Hidden name="redirectTo" value={redirectTo} type="hidden" />
-            <Hidden name="turnstileToken" value={turnstileToken} />
+            <Hidden name="botToken" value={bot.token} />
             <VStack spacing={2}>
               {((fetcher.data?.success === false && fetcher.data?.message) ||
                 ssoError) && (
@@ -722,6 +819,61 @@ export default function LoginRoute() {
                   />
                 </>
               )}
+<<<<<<< HEAD
+||||||| 85d9006e1
+
+              <Input
+                name="email"
+                label=""
+                autoFocus
+                placeholder={t`Email Address`}
+                autoComplete={hasPasskeyAuth ? "email webauthn" : "email"}
+              />
+
+              <Submit
+                isDisabled={
+                  fetcher.state !== "idle" ||
+                  ssoLoading ||
+                  (!!siteKey && !turnstileToken)
+                }
+                isLoading={fetcher.state === "submitting" || ssoLoading}
+                hideShortcutKey
+                size="lg"
+                className="w-full"
+                withBlocker={false}
+                variant="secondary"
+              >
+                <Trans>Continue</Trans>
+              </Submit>
+              <TurnstileChallenge
+                siteKey={siteKey ?? undefined}
+                onToken={setTurnstileToken}
+              />
+=======
+
+              <Input
+                name="email"
+                label=""
+                autoFocus
+                placeholder={t`Email Address`}
+                autoComplete={hasPasskeyAuth ? "email webauthn" : "email"}
+              />
+
+              <Submit
+                isDisabled={
+                  fetcher.state !== "idle" || ssoLoading || !bot.ready
+                }
+                isLoading={fetcher.state === "submitting" || ssoLoading}
+                hideShortcutKey
+                size="lg"
+                className="w-full"
+                withBlocker={false}
+                variant="secondary"
+              >
+                <Trans>Continue</Trans>
+              </Submit>
+              {bot.challenge}
+>>>>>>> 2beccc9789c598823f9d9584cdeecce9c7ffac75
             </VStack>
           </ValidatedForm>
         )}
@@ -906,5 +1058,72 @@ function OutlookIcon(props: React.SVGProps<SVGSVGElement>) {
       />
       <path d="M1362.667 255.5h383.25v383.25h-383.25z" fill="#50D9FF" />
     </svg>
+  );
+}
+
+/**
+ * The code from the sign-in email, as an alternative to its link. It is
+ * the link's own one-time token: a mail scanner that only opens the link
+ * leaves it usable, one that presses the link page's button spends both
+ * (the button shows only in the browser that asked). A verified code
+ * yields the same session the link's redirect does, handed to /callback the
+ * same way, so everything after — company, SSO, MFA — is one path for both.
+ */
+function SignInCode({
+  email,
+  redirectTo
+}: {
+  email: string;
+  redirectTo?: string;
+}) {
+  const { t } = useLingui();
+  const code = useFetcher<
+    Result & { refreshToken?: string; userId?: string }
+  >();
+  const callback = useFetcher();
+  const signingIn = callback.state !== "idle";
+
+  useEffect(() => {
+    const { refreshToken, userId } = code.data ?? {};
+    if (!code.data?.success || !refreshToken || !userId) return;
+    const formData = new FormData();
+    formData.append("refreshToken", refreshToken);
+    formData.append("userId", userId);
+    if (redirectTo) formData.append("redirectTo", redirectTo);
+    callback.submit(formData, { method: "post", action: path.to.callback });
+  }, [code.data, redirectTo, callback.submit]);
+
+  return (
+    <ValidatedForm
+      fetcher={code}
+      validator={signInCodeValidator}
+      defaultValues={{ email }}
+      method="post"
+      action={path.to.api.loginVerifyCode}
+      className="w-full"
+    >
+      <Hidden name="email" value={email} />
+      <VStack spacing={3} className="items-center">
+        {code.data?.success === false && code.data.message ? (
+          <Alert variant="destructive">
+            <LuCircleAlert className="w-4 h-4" />
+            <AlertTitle>
+              <Trans>Authentication Error</Trans>
+            </AlertTitle>
+            <AlertDescription>{code.data.message}</AlertDescription>
+          </Alert>
+        ) : null}
+        <InputOTP name="code" label={t`Sign-in code`} autoFocus />
+        <Submit
+          isDisabled={code.state !== "idle" || signingIn}
+          isLoading={code.state !== "idle" || signingIn}
+          hideShortcutKey
+          size="lg"
+          className="w-full"
+        >
+          <Trans>Sign in with code</Trans>
+        </Submit>
+      </VStack>
+    </ValidatedForm>
   );
 }

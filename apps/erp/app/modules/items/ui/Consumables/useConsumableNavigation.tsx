@@ -1,9 +1,14 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Carbon (github.com/crbnos/carbon). Modified or adapted versions of this file,
+// including ports, remain AGPLv3; serving them over a network requires releasing their source.
+
 import { useLingui } from "@lingui/react/macro";
 import {
   LuBox,
   LuChartLine,
   LuClipboardCheck,
   LuFileText,
+  LuReceipt,
   LuShoppingCart,
   LuTags
 } from "react-icons/lu";
@@ -66,6 +71,13 @@ export function useConsumableNavigation() {
       role: ["employee", "supplier"],
       icon: LuBox,
       shortcut: DETAIL_TAB_SHORTCUTS.inventory
+    },
+    {
+      name: t`Sales`,
+      to: path.to.consumableSales(itemId),
+      role: ["employee"],
+      icon: LuReceipt,
+      shortcut: DETAIL_TAB_SHORTCUTS.sales
     },
     {
       name: t`Quality`,

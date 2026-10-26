@@ -1,3 +1,8 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Carbon (github.com/crbnos/carbon). Modified or adapted versions of this file,
+// including ports, remain AGPLv3; serving them over a network requires releasing their source.
+
+import { safeStorageFileName, storage } from "@carbon/files";
 import { getLogger } from "@carbon/logger";
 import { Spinner, useCarbon } from "@carbon/react";
 import { stripSpecialCharacters } from "@carbon/utils";
@@ -8,8 +13,14 @@ import { useFetcher, useNavigate } from "react-router";
 import { FileDropzone } from "~/components";
 import { useUser } from "~/hooks";
 import { useDocumentExtraction } from "~/hooks/useDocumentExtraction";
+<<<<<<< HEAD
 import type { ExtractedDocumentData } from "~/modules/documents";
 import { path } from "~/utils/path";
+||||||| 85d9006e1
+import type { ExtractedDocumentData } from "~/modules/documents";
+=======
+import type { ExtractedDocumentData } from "~/modules/documents/documents.models";
+>>>>>>> 2beccc9789c598823f9d9584cdeecce9c7ffac75
 
 const logger = getLogger("erp", "pdfextractor");
 
@@ -121,10 +132,18 @@ export function PdfExtractor({
     setUploadFailed(false);
     setUploadedFileName(file.name);
     setUploading(true);
+<<<<<<< HEAD
     const storagePath = `${company.id}/extractions/${crypto.randomUUID()}_${stripSpecialCharacters(file.name) || "document.pdf"}`;
+||||||| 85d9006e1
+    const storagePath = `${company.id}/extractions/${Date.now()}_${file.name}`;
+=======
+    // The key is internal (the user sees file.name above); drop the characters
+    // a storage key can't hold so a "#" never shortens it.
+    const storagePath = `${company.id}/extractions/${Date.now()}_${safeStorageFileName(file.name) ?? "document.pdf"}`;
+>>>>>>> 2beccc9789c598823f9d9584cdeecce9c7ffac75
 
-    const { error } = await supabase.storage
-      .from("private")
+    const { error } = await storage(supabase)
+      .company(company.id)
       .upload(storagePath, file);
 
     if (error) {

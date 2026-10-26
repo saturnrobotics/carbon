@@ -1,7 +1,9 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Carbon (github.com/crbnos/carbon). Modified or adapted versions of this file,
+// including ports, remain AGPLv3; serving them over a network requires releasing their source.
+
 // Pure logic behind the batch builder: signatures, per-candidate value sets,
-// duration math, and suggestion scoring. No JSX and no lingui, so vitest can
-// import it directly (the ERP barrels drag lingui macros vitest cannot
-// transform — see apps/erp/test/batching-migration-guards.test.ts).
+// duration math, and suggestion scoring. No JSX and no lingui.
 
 import {
   batchPlanBreakdown as aggregateBatchPlan,
@@ -56,7 +58,14 @@ export function materialSignature(
     const s = lineSignature(m, rules);
     if (s) sigs.add(s);
   }
-  return [...sigs].sort().join(" + ");
+  const parts = [...sigs].sort();
+  // Candidate-level dimension: when the process cares about the produced item,
+  // it splits groups (and shows in the mixed warning) like any other dimension.
+  // Default is "ignore", so an unconfigured process's signature is unchanged.
+  if (rules.producedItem !== "ignore" && candidate.itemReadableId) {
+    parts.push(`→ ${candidate.itemReadableId}`);
+  }
+  return parts.join(" + ");
 }
 
 // The GROUPING key: the material signature, falling back to the produced item
@@ -87,7 +96,10 @@ export function candidateValueSets(candidate: BatchCandidate): MemberValueSets {
     if (m.formName) form.push(m.formName);
     if (m.finishName) finish.push(m.finishName);
   }
-  return { item, substance, grade, dimension, form, finish };
+  const producedItem = candidate.itemReadableId
+    ? [candidate.itemReadableId]
+    : [];
+  return { item, substance, grade, dimension, form, finish, producedItem };
 }
 
 export function setupDurationOf(candidate: BatchCandidate): number {
@@ -443,23 +455,48 @@ export function deriveFacetDimensions(
   return dims;
 }
 
+// The due-date filter: a rolling window ("due within N days", overdue
+// included) or a calendar range picked day to day, both ends inclusive.
+export type DueFilter =
+  | { kind: "window"; days: number }
+  // Either bound may be open: no start is "due on or before", no end is
+  // "due on or after"
+  | { kind: "range"; start: CalendarDate | null; end: CalendarDate | null };
+
+// Every distinct day (YYYY-MM-DD) the candidates are due on — the calendar
+// marks these days so a planner can see where work falls before picking.
+export function dueDatesOf(candidates: BatchCandidate[]): Set<string> {
+  const days = new Set<string>();
+  for (const c of candidates) {
+    const due = dueDateOf(c);
+    if (due) days.add(due);
+  }
+  return days;
+}
+
 // A candidate matches if ANY BOM line satisfies ALL active facets, the search
-// term matches its job/item/op text, and it falls inside the due window. Sorted
-// most-urgent first (due date asc, undated last). `today` is injected so this
-// stays pure and testable.
+// term matches its job/item/op text, and it falls inside the due filter.
+// Sorted most-urgent first (due date asc, undated last). `today` is injected
+// so this stays pure and testable.
 export function filterAndSortCandidates(
   candidates: BatchCandidate[],
   opts: {
     activeFacetKeys: string[];
     facets: Record<string, string[]>;
     search: string;
-    dueWindow: number | null;
+    due: DueFilter | null;
     today: CalendarDate;
   }
 ): BatchCandidate[] {
-  const { activeFacetKeys, facets, search, dueWindow, today } = opts;
+  const { activeFacetKeys, facets, search, due: dueFilter, today } = opts;
   const term = search.trim().toLowerCase();
-  const dueLimit = dueWindow !== null ? today.add({ days: dueWindow }) : null;
+  const dueStart = dueFilter?.kind === "range" ? dueFilter.start : null;
+  const dueEnd =
+    dueFilter?.kind === "range"
+      ? dueFilter.end
+      : dueFilter?.kind === "window"
+        ? today.add({ days: dueFilter.days })
+        : null;
   const matches = candidates.filter((c) => {
     if (activeFacetKeys.length > 0) {
       const anyLineMatches = (c.materials ?? []).some((m) =>
@@ -467,9 +504,12 @@ export function filterAndSortCandidates(
       );
       if (!anyLineMatches) return false;
     }
-    if (dueLimit) {
+    if (dueStart || dueEnd) {
       const due = dueDateOf(c);
-      if (!due || parseDate(due).compare(dueLimit) > 0) return false;
+      if (!due) return false;
+      const dueDay = parseDate(due);
+      if (dueEnd && dueDay.compare(dueEnd) > 0) return false;
+      if (dueStart && dueDay.compare(dueStart) < 0) return false;
     }
     if (term) {
       const haystack = [
@@ -580,7 +620,7 @@ export function computeSelectionDimSets(
 }
 
 // A candidate is LOCKED when adding it to the current selection would leave a
-// "must" dimension with no shared value — the client mirror of the edge fn's
+// "must" dimension with no shared value — the client mirror of the server fn's
 // `assertMaterialCompatible`. Empty selection locks nothing; already-selected
 // candidates are never locked.
 export function computeLockedById(
@@ -610,7 +650,7 @@ export function computeLockedById(
 // row is picked; this is the after-the-fact flag: "this operation is in the
 // batch and its material shares no {dimension} with the rest". Covers every
 // non-"ignore" dimension — a "must" mismatch that slipped in (rules changed,
-// or members drifted) flags here too, and the edge fn still refuses it on
+// or members drifted) flags here too, and the server fn still refuses it on
 // submit. Members with no value for a dimension are never flagged by it.
 export function computeMemberMismatches(
   members: { id: string; sets: MemberValueSets }[],

@@ -1,5 +1,14 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Carbon (github.com/crbnos/carbon). Modified or adapted versions of this file,
+// including ports, remain AGPLv3; serving them over a network requires releasing their source.
+
 import type { Integration } from "@carbon/ee";
-import { isIntegrationWhitelisted } from "@carbon/ee/plan";
+import {
+  isIntegrationComingSoon,
+  isIntegrationWhitelisted
+} from "@carbon/ee/plan";
+import { getLogger } from "@carbon/logger";
+import { useRevalidator } from "@carbon/query";
 import {
   Badge,
   Button,
@@ -9,59 +18,190 @@ import {
   CardHeader,
   CardTitle,
   cn,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+  toast,
+  useEdition,
   useRouteData
 } from "@carbon/react";
-import { Trans } from "@lingui/react/macro";
+import { Trans, useLingui } from "@lingui/react/macro";
+import { useEffect, useState } from "react";
 import { LuLock } from "react-icons/lu";
 import { Link, useFetcher, useNavigate } from "react-router";
 import { usePlanGate } from "~/hooks/usePlanGate";
+import { useUser } from "~/hooks/useUser";
+import { getIntegrationError } from "~/modules/settings/integration-errors";
+import { isOAuthPopupResult } from "~/modules/settings/oauth-popup";
 import { path } from "~/utils/path";
+import { InstallModeDialog } from "./InstallModeDialog";
+
+const logger = getLogger("erp", "settings", "integrations");
+
+/** Mirrors `IntegrationHealthStatus` in settings.server (not importable here). */
+type IntegrationHealthStatus =
+  | "healthy"
+  | "unhealthy"
+  | "inactive"
+  | "sync-off";
 
 export type IntegrationHealth = {
   id: string;
   active: boolean;
-  health: "healthy" | "unhealthy" | "inactive";
+  health: IntegrationHealthStatus;
+  /** Why the last check failed, when the integration says. */
+  healthReason?: string | null;
+  /**
+   * Which install mode this one is in, resolved SERVER-side.
+   *
+   * The id alone, not the metadata it came from — the card needs to pick copy,
+   * not to see credentials.
+   */
+  installMode?: string;
 };
 
 export function IntegrationCard({
   integration,
-  installed
+  installed,
+  hasEarlyAccess
 }: {
   integration: Integration;
   installed: IntegrationHealth | null;
+  hasEarlyAccess: boolean;
 }) {
   const fetcher = useFetcher<{}>();
   const navigate = useNavigate();
-  const routeData = useRouteData<{ state: string }>(path.to.integrations);
+  const revalidator = useRevalidator();
+  const { i18n } = useLingui();
+
+  // The declared mode this install is in, if any. Undefined for every
+  // integration without modes, which then keeps its own description.
+  const installedMode = installed?.installMode
+    ? (
+        integration as unknown as {
+          modes?: Array<{
+            id: string;
+            description: string;
+            shortDescription?: string;
+          }>;
+        }
+      ).modes?.find((m) => m.id === installed.installMode)
+    : undefined;
+  const routeData = useRouteData<{
+    activeRoles: Record<string, string | null>;
+  }>(path.to.integrations);
+  const [showModeDialog, setShowModeDialog] = useState(false);
   const { isGated } = usePlanGate({ feature: "INTEGRATIONS" });
   const isWhitelisted = isIntegrationWhitelisted(integration.id);
   const isStarterPlan = isGated && !isWhitelisted;
+  const edition = useEdition();
+  const user = useUser();
+  // Only an install is withheld: a company where it was installed keeps a
+  // working card.
+  const comingSoon =
+    !installed &&
+    isIntegrationComingSoon(integration, {
+      edition,
+      email: user.email,
+      hasEarlyAccess
+    });
 
-  const getOauthUrl = (integration: Integration) => {
-    if ("oauth" in integration && !!integration.oauth) {
-      const { clientId, redirectUri, scopes } = integration.oauth;
-      const encodedRedirectUri = encodeURIComponent(
-        `${window.location.origin}${redirectUri}`
-      );
-      const encodedScopes = encodeURIComponent(scopes.join(" "));
-      const encodedState = encodeURIComponent(
-        routeData?.state ?? Math.random().toString(36).substring(2, 15)
-      );
+  // At most one ACTIVE integration per provider role, enforced by a database
+  // trigger. Surfacing it here is what keeps a customer from meeting that
+  // refusal as a failed install — and it names the incumbent, so the next step
+  // is obvious.
+  const providerRole = (
+    integration as { providerRole?: "accounting" | "spend" | "oee" }
+  ).providerRole;
+  // Several OEE providers may be active at once (the database exempts the
+  // role), so an active one is never an incumbent.
+  const roleIncumbent =
+    providerRole && providerRole !== "oee"
+      ? (routeData?.activeRoles?.[providerRole] ?? null)
+      : null;
+  const modes =
+    (
+      integration as {
+        modes?: Array<{ id: string; label: string; description: string }>;
+      }
+    ).modes ?? [];
 
-      return `${integration.oauth.authUrl}?client_id=${clientId}&redirect_uri=${encodedRedirectUri}&response_type=code&state=${encodedState}&scope=${encodedScopes}`;
-    }
-    return null;
+  /**
+   * Hand off to the connect route — for EVERY OAuth integration, not just the
+   * ones with modes.
+   *
+   * The card used to build the authorize URL itself and `window.open` it, with a
+   * correlation value from the loader. That had three problems: the scope list was
+   * assembled client-side, the state was neither signed nor browser-bound, and the
+   * popup left the originating tab stale (every callback ends in a `redirect`, so
+   * none of them ever wanted a popup). One server route fixes all three, and the
+   * card stops needing to know anything about OAuth.
+   *
+   * A full navigation, not a popup: the route sets an HttpOnly state cookie that
+   * must accompany the callback.
+   */
+  const startConnect = (mode?: string) => {
+    const url = new URL(
+      `/api/integrations/${integration.id}/connect`,
+      window.location.origin
+    );
+    if (mode) url.searchParams.set("mode", mode);
+    window.location.href = url.toString();
   };
 
-  const handleInstall = async () => {
-    const oauthUrl = getOauthUrl(integration);
+  const conflictsWith =
+    roleIncumbent && roleIncumbent !== integration.id ? roleIncumbent : null;
 
-    if (oauthUrl) {
-      window.open(oauthUrl);
+  // An OAuth callback that ran inside the popup `onClientInstall` opened posts
+  // its outcome here and closes the popup (see oauth-popup.server.ts).
+  useEffect(() => {
+    const onMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      if (!isOAuthPopupResult(event.data)) return;
+      if (event.data.integration !== integration.id) return;
+
+      if (event.data.ok) {
+        revalidator.revalidate();
+        return;
+      }
+
+      const failure = getIntegrationError(integration.id, event.data.error);
+      if (failure) {
+        toast.error(i18n._(failure.title), {
+          id: `${integration.id}:${event.data.error}`,
+          description: i18n._(failure.description)
+        });
+      }
+    };
+
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, [integration.id, revalidator, i18n]);
+
+  const handleInstall = async () => {
+    if ("oauth" in integration && integration.oauth) {
+      // An integration declaring install MODES needs that question answered
+      // before consent, because the mode decides which scopes are requested.
+      // That is the ONLY branch here — where the authorize URL comes from is not
+      // a per-integration decision, it is always the connect route.
+      if (modes.length > 0) {
+        setShowModeDialog(true);
+        return;
+      }
+      startConnect();
+      return;
     } else if (integration.settings.some((setting) => setting.required)) {
       navigate(path.to.integration(integration.id));
     } else if (integration.onClientInstall) {
-      await integration.onClientInstall?.();
+      try {
+        await integration.onClientInstall();
+      } catch (error) {
+        logger.error("Client install failed", {
+          integration: integration.id,
+          error
+        });
+        toast.error(`Couldn't start the ${integration.name} connection`);
+      }
     } else {
       const formData = new FormData();
       fetcher.submit(formData, {
@@ -84,10 +224,14 @@ export function IntegrationCard({
             <Badge className="flex-shrink-0" variant="green">
               <Trans>Installed</Trans>
             </Badge>
+          ) : comingSoon ? (
+            <Badge className="flex-shrink-0" variant="secondary">
+              <Trans>Coming soon</Trans>
+            </Badge>
           ) : null
         ) : (
           <Badge className="flex-shrink-0" variant="secondary">
-            <Trans>Coming soon</Trans>
+            <Trans>Not Configured</Trans>
           </Badge>
         )}
       </div>
@@ -99,7 +243,12 @@ export function IntegrationCard({
         </div>
       </CardHeader>
       <CardContent className="text-sm text-muted-foreground pb-4">
-        {integration.description}
+        {/* An installed integration describes the mode it is actually in. The
+            generic description covers every mode at once, so it is wrong for
+            each of them. */}
+        {installedMode?.shortDescription ??
+          installedMode?.description ??
+          integration.description}
       </CardContent>
       <CardFooter className="flex flex-end flex-row-reverse gap-2">
         {isStarterPlan ? (
@@ -142,7 +291,12 @@ export function IntegrationCard({
               </fetcher.Form>
             ) : (
               <Button
-                isDisabled={!integration.active || fetcher.state !== "idle"}
+                isDisabled={
+                  !integration.active ||
+                  comingSoon ||
+                  !!conflictsWith ||
+                  fetcher.state !== "idle"
+                }
                 isLoading={fetcher.state !== "idle"}
                 onClick={handleInstall}
               >
@@ -151,49 +305,91 @@ export function IntegrationCard({
             )}
           </>
         )}
+        {conflictsWith && !installed && (
+          <span className="text-xs text-muted-foreground mr-auto">
+            <Trans>Uninstall {conflictsWith} first</Trans>
+          </span>
+        )}
         {installed && integration.active && (
-          <StatusBadge status={installed.health} />
+          <StatusBadge
+            status={installed.health}
+            reason={installed.healthReason}
+          />
         )}
       </CardFooter>
+      {showModeDialog && (
+        <InstallModeDialog
+          integrationName={integration.name}
+          modes={modes}
+          onClose={() => setShowModeDialog(false)}
+          onChoose={(mode) => startConnect(mode)}
+        />
+      )}
     </Card>
   );
 }
 
 const StatusBadge = ({
-  status
+  status,
+  reason
 }: {
-  status: "healthy" | "unhealthy" | "inactive";
+  status: IntegrationHealthStatus;
+  reason?: string | null;
 }) => {
+  const { t } = useLingui();
+
   const colors = {
     healthy: "bg-green-500",
     unhealthy: "bg-red-500",
-    inactive: "bg-gray-400"
+    inactive: "bg-gray-400",
+    "sync-off": "bg-orange-500"
   } as const;
 
   const badgeVariants = {
     healthy: "green",
     unhealthy: "red",
-    inactive: "gray"
+    inactive: "gray",
+    "sync-off": "orange"
+  } as const;
+
+  const labels = {
+    healthy: t`Healthy`,
+    unhealthy: t`Unhealthy`,
+    inactive: t`Inactive`,
+    // Connected, but the accounting sync switch is off — a new connection
+    // still being set up, or one switched off since.
+    "sync-off": t`Sync Off`
   } as const;
 
   const ping = colors[status] || "text-gray-400";
-  return (
+  const badge = (
     <Badge
       variant={badgeVariants[status]}
       className="flex items-center mr-auto gap-x-2 py-0.5"
     >
       <span className="relative flex size-2">
-        <span
-          className={cn(
-            "absolute inline-flex h-full w-full animate-ping rounded-full opacity-75",
-            ping
-          )}
-        />
+        {/* Nothing is moving while sync is off, so the dot holds still. */}
+        {status !== "sync-off" && (
+          <span
+            className={cn(
+              "absolute inline-flex h-full w-full animate-ping rounded-full opacity-75",
+              ping
+            )}
+          />
+        )}
         <span
           className={cn("relative inline-flex size-2 rounded-full", ping)}
         />
       </span>
-      {status}
+      {labels[status]}
     </Badge>
+  );
+
+  if (!reason) return badge;
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{badge}</TooltipTrigger>
+      <TooltipContent className="max-w-xs">{reason}</TooltipContent>
+    </Tooltip>
   );
 };

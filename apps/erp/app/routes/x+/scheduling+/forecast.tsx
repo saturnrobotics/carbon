@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Carbon (github.com/crbnos/carbon). Modified or adapted versions of this file,
+// including ports, remain AGPLv3; serving them over a network requires releasing their source.
+
 import { requirePermissions } from "@carbon/auth/auth.server";
 import { Badge, Button, ClientOnly, cn, useDebounce } from "@carbon/react";
 import { datetime, formatDate } from "@carbon/utils";
@@ -23,17 +27,24 @@ import { Empty } from "~/components";
 import { Gantt } from "~/components/Gantt";
 import { usePlanGate } from "~/hooks/usePlanGate";
 import { useReplaceLocation } from "~/hooks/useReplaceLocation";
-import { getDepartmentsList, getShiftsWithTimes } from "~/modules/people";
+import {
+  getDepartmentsList,
+  getShiftsWithTimes
+} from "~/modules/people/people.service";
 import {
   getCapacityReservationsForResources,
+  getForecastNonWorkingIntervals,
   getMaintenanceDowntimeForResources
-} from "~/modules/production";
-import { getForecastNonWorkingIntervals } from "~/modules/production/forecast.server";
+} from "~/modules/production/production.service";
 import ForecastUpgradeOverlay from "~/modules/production/ui/ForecastUpgradeOverlay";
-import type { ForecastRange } from "~/modules/production/ui/Schedule/ForecastHeader";
+import type {
+  ForecastRange,
+  ForecastView
+} from "~/modules/production/ui/Schedule/ForecastHeader";
 import { ForecastHeader } from "~/modules/production/ui/Schedule/ForecastHeader";
 import {
   buildResourceTimeline,
+  collapseToLanes,
   workCenterIdFromLaneId
 } from "~/modules/production/ui/Schedule/resourceTimeline";
 import { TimelineDetail } from "~/modules/production/ui/Schedule/TimelineDetail";
@@ -43,9 +54,11 @@ import type {
   WorkCenterAvailability
 } from "~/modules/production/ui/Schedule/WorkCenterAvailabilityPopover";
 import { WorkCenterAvailabilityPopover } from "~/modules/production/ui/Schedule/WorkCenterAvailabilityPopover";
-import { getWorkCentersByLocation } from "~/modules/resources";
-import { resolveLocationId } from "~/modules/shared/location.server";
-import { getLocationTimeZone } from "~/modules/shared/timezone.server";
+import { getWorkCentersByLocation } from "~/modules/resources/resources.service";
+import {
+  getLocationTimeZone,
+  resolveLocationId
+} from "~/modules/shared/shared.service";
 import type { Handle } from "~/utils/handle";
 import { path } from "~/utils/path";
 
@@ -363,7 +376,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
       : Promise.resolve({ data: [] as { id: string; name: string }[] }),
     abilityIds.size > 0
       ? client
-          .from("ability")
+          .from("abilities")
           .select("id, name")
           .in("id", Array.from(abilityIds))
       : Promise.resolve({ data: [] as { id: string; name: string }[] }),
@@ -408,7 +421,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
     (workCenters.data ?? []).map((w) => [w.id, w.name])
   );
   const abilityNames = new Map(
-    (abilities.data ?? []).map((a) => [a.id, a.name])
+    (abilities.data ?? []).map((a) => [a.id ?? "", a.name ?? ""])
   );
   const operatorNames = new Map(
     (operators.data ?? []).map((u) => [u.id, u.fullName])
@@ -433,6 +446,12 @@ export async function loader({ request }: LoaderFunctionArgs) {
       jobReadableId: r.job?.jobId ?? r.jobId,
       operationId: r.operationId,
       operationDescription: r.jobOperation?.description ?? null,
+      itemReadableId:
+        r.jobOperation?.jobMakeMethod?.item?.readableIdWithRevision ?? null,
+      itemName: r.jobOperation?.jobMakeMethod?.item?.name ?? null,
+      itemThumbnailPath:
+        r.jobOperation?.jobMakeMethod?.item?.thumbnailPath ?? null,
+      itemType: r.jobOperation?.jobMakeMethod?.item?.type ?? null,
       batchReadableId: r.jobOperationBatch?.readableId ?? null,
       batchId: r.jobOperationBatchId ?? null,
       batchMemberCount: r.jobOperationBatchId
@@ -546,6 +565,11 @@ function getSpanId(location: Location<any>): string | undefined {
   return search.get("span") ?? undefined;
 }
 
+function getView(location: Location<any>): ForecastView {
+  const search = new URLSearchParams(location.search);
+  return search.get("view") === "detailed" ? "detailed" : "compact";
+}
+
 export default function ResourceGanttView() {
   const {
     locationId,
@@ -576,6 +600,20 @@ export default function ResourceGanttView() {
   const navigate = useNavigate();
   const { location, replaceSearchParam } = useReplaceLocation();
   const selectedSpanId = getSpanId(location);
+  const view = getView(location);
+
+  // Compact (the default) puts each work center on one row with its operations
+  // side by side; detailed is the full Location > Work Center > Operation >
+  // People tree. Switched in the browser — both come from the same events.
+  const events = useMemo(
+    () =>
+      trace
+        ? view === "compact"
+          ? collapseToLanes(trace.events)
+          : trace.events
+        : [],
+    [trace, view]
+  );
 
   // Axis labels are 24-hour clock times for a day/shift and dates for a week,
   // both in the plant's timezone (the company fallback is resolved server-side).
@@ -660,6 +698,13 @@ export default function ResourceGanttView() {
         shiftId={shiftId}
         departments={departments}
         shifts={shifts}
+        view={view}
+        onViewChange={(nextView) =>
+          replaceSearchParam(
+            "view",
+            nextView === "detailed" ? nextView : undefined
+          )
+        }
       />
       {reservationCount === 0 && (
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-muted/40 px-4 py-2.5">
@@ -734,8 +779,8 @@ export default function ResourceGanttView() {
                 <div className="min-w-0 flex-1">
                   <Gantt
                     selectedId={selectedSpanId}
-                    key={trace.events[0]?.id ?? "-"}
-                    events={trace.events}
+                    key={`${view}:${events[0]?.id ?? "-"}`}
+                    events={events}
                     onSelectedIdChanged={(selectedSpan) => {
                       if (!selectedSpan) {
                         replaceSearchParam("span");

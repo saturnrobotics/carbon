@@ -1,3 +1,8 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Carbon (github.com/crbnos/carbon). Modified or adapted versions of this file,
+// including ports, remain AGPLv3; serving them over a network requires releasing their source.
+
+import { useLoaderQuery } from "@carbon/query";
 import {
   Alert,
   AlertDescription,
@@ -5,6 +10,10 @@ import {
   Badge,
   Button,
   ClientOnly,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
   HStack,
   IconButton,
   Modal,
@@ -23,6 +32,7 @@ import {
   useDisclosure,
   VStack
 } from "@carbon/react";
+import { getReadableIdWithRevision } from "@carbon/utils";
 import { Trans, useLingui } from "@lingui/react/macro";
 import {
   lazy,
@@ -39,12 +49,20 @@ import {
   LuFileText,
   LuScan,
   LuShieldAlert,
+  LuShieldX,
   LuTriangleAlert
 } from "react-icons/lu";
-import { useFetcher } from "react-router";
+import { Link, useFetcher } from "react-router";
+import {
+  RecordAction,
+  RecordHero,
+  RecordPhoneChrome
+} from "~/components/Layout/RecordHeader";
 import { Confirm } from "~/components/Modals";
 import { usePermissions } from "~/hooks";
 import type {
+  InspectionGauge,
+  InspectionIssue,
   InspectionMeasurement,
   InspectionRow,
   InspectionSample,
@@ -54,7 +72,6 @@ import type {
 } from "~/modules/quality/types";
 import { useItems } from "~/stores/items";
 import { path } from "~/utils/path";
-import { getReadableIdWithRevision } from "~/utils/string";
 import type { DrawingBalloon } from "./InspectionDrawingPane";
 import type { MeasurementSaveResult } from "./InspectionMeasurementGrid";
 import InspectionMeasurementGrid from "./InspectionMeasurementGrid";
@@ -88,23 +105,35 @@ export type InspectionViewProps = {
   inspection: InspectionRow;
   sourceDocumentReadableId: string | null;
   receiverId: string | null;
+  /** The receipt was voided: its stock was never received, so the lot is closed. */
+  receiptVoided: boolean;
   itemName: string;
   itemTrackingType: string | null;
   supplierName: string | null;
   samples: InspectionSample[];
   features: InspectionSamplingPlan[];
   measurements: InspectionMeasurement[];
+  // Active gauges, and the ones most recently recorded at this lot's work
+  // center (receipts are their own), newest first.
+  gauges: InspectionGauge[];
+  recentGaugeIds: string[];
   balloons: {
     id: string;
     inspectionFeatureId: string;
     pageNumber: number;
     xCoordinate: number;
     yCoordinate: number;
+    regionX: number;
+    regionY: number;
+    regionWidth: number;
+    regionHeight: number;
   }[];
   documentName: string | null;
   pdfUrl: string | null;
   lotEntities: InspectionTrackedEntity[];
   issueTypes: IssueTypeListItem[];
+  /** The issues linked to this lot (a rejected lot's NCR, or a manual link). */
+  issues: InspectionIssue[];
   currentUserId: string;
   enforceFourEyes: boolean;
 };
@@ -118,17 +147,21 @@ const InspectionView = ({
   inspection,
   sourceDocumentReadableId,
   receiverId,
+  receiptVoided,
   itemName,
   itemTrackingType,
   supplierName,
   samples,
   features,
   measurements,
+  gauges,
+  recentGaugeIds,
   balloons,
   documentName,
   pdfUrl,
   lotEntities,
   issueTypes,
+  issues,
   currentUserId,
   enforceFourEyes
 }: InspectionViewProps) => {
@@ -342,8 +375,9 @@ const InspectionView = ({
     enforceFourEyes && !!receiverId && receiverId === currentUserId;
 
   const lotClosed =
-    inspection.dispositionedAt != null &&
-    (inspection.status === "Passed" || inspection.status === "Failed");
+    receiptVoided ||
+    (inspection.dispositionedAt != null &&
+      (inspection.status === "Passed" || inspection.status === "Failed"));
 
   // Serial lots build their sample columns by scanning tracked entities. The
   // header "Add Sample" button stays primary until the plan's sample size is
@@ -366,8 +400,10 @@ const InspectionView = ({
   // Gating. Feature-driven lots gate per feature (mirrors the
   // server-side disposition guards); lots without features gate at the lot
   // level on the "Overall result" pass/fail counts.
+  // A lot can be rejected for any reason (a suspected counterfeit, the wrong
+  // part); without a statistical failure the inspector must give one.
   let canAccept: boolean;
-  let canReject: boolean;
+  let failedStatistically: boolean;
   if (hasFeatures) {
     const allFeaturesSatisfied = liveFeatures.every((feature) => {
       const counts = featureCounts.get(feature.inspectionFeatureId) ?? {
@@ -384,17 +420,16 @@ const InspectionView = ({
       return counts != null && counts.failed >= feature.rejectionNumber;
     });
     canAccept = isReceiptSource && !lotClosed && allFeaturesSatisfied;
-    canReject =
-      isReceiptSource && !lotClosed && (anyFeatureRejectable || fails > 0);
+    failedStatistically = anyFeatureRejectable || fails > 0;
   } else {
     canAccept =
       isReceiptSource &&
       !lotClosed &&
       inspected >= inspection.sampleSize &&
       fails <= inspection.acceptanceNumber;
-    canReject =
-      isReceiptSource && !lotClosed && fails > inspection.acceptanceNumber;
+    failedStatistically = fails > inspection.acceptanceNumber;
   }
+  const canReject = isReceiptSource && !lotClosed;
 
   const failedFeatureSummary = useMemo<FailedFeatureSummary[]>(() => {
     if (!hasFeatures) return [];
@@ -427,7 +462,7 @@ const InspectionView = ({
     .map((s) => s.trackedEntityId)
     .filter(Boolean) as string[];
 
-  const newIssueHref = `/x/issue/new?itemId=${encodeURIComponent(inspection.itemId)}&trackedEntityIds=${encodeURIComponent(failedTrackedEntityIds.join(","))}&sourceInspectionId=${encodeURIComponent(inspection.id)}`;
+  const newIssueHref = `/x/issue/new?itemId=${encodeURIComponent(inspection.itemId)}&trackedEntityIds=${encodeURIComponent(failedTrackedEntityIds.join(","))}${inspection.supplierId ? `&supplierId=${encodeURIComponent(inspection.supplierId)}` : ""}`;
 
   const drawingBalloons = useMemo<DrawingBalloon[]>(() => {
     const labelByFeatureId = new Map(
@@ -444,6 +479,10 @@ const InspectionView = ({
         pageNumber: b.pageNumber,
         xCoordinate: b.xCoordinate,
         yCoordinate: b.yCoordinate,
+        regionX: b.regionX,
+        regionY: b.regionY,
+        regionWidth: b.regionWidth,
+        regionHeight: b.regionHeight,
         label: labelByFeatureId.get(b.inspectionFeatureId) ?? ""
       }));
   }, [balloons, liveFeatures]);
@@ -472,64 +511,116 @@ const InspectionView = ({
     .filter(Boolean)
     .join("  ·  ");
 
+  const statusBadge = (
+    <HStack spacing={1}>
+      <Badge variant={statusBadgeVariant}>{inspection.status}</Badge>
+      {receiptVoided && (
+        <Badge variant="red">
+          <Trans>Receipt voided</Trans>
+        </Badge>
+      )}
+    </HStack>
+  );
+
   return (
     <div className="flex h-full flex-col overflow-hidden">
+      <RecordHero subtitle={metaLine} status={statusBadge} />
+      <RecordPhoneChrome />
       {/* Header bar — mirrors InspectionDocumentEditor's header */}
-      <div className="flex min-h-[var(--header-height)] flex-shrink-0 flex-wrap items-center justify-between gap-x-3 gap-y-2 overflow-x-auto border-b border-border bg-card px-4 py-2 scrollbar-hide">
+      <div className="flex min-h-[var(--header-height)] flex-shrink-0 flex-wrap items-center justify-between gap-x-3 gap-y-2 overflow-x-auto border-b border-border bg-card px-4 py-2 scrollbar-hide max-md:hidden">
         <div className="min-w-0 flex-1 pr-2">
           <HStack spacing={2} className="items-center">
             <h1 className="truncate text-base font-semibold">
               {inspection.inspectionId}
             </h1>
-            <Badge variant={statusBadgeVariant}>{inspection.status}</Badge>
+            {statusBadge}
           </HStack>
           <p className="truncate text-xs text-muted-foreground">{metaLine}</p>
         </div>
         <HStack spacing={2} className="flex-shrink-0 flex-wrap justify-end">
-          <Button
-            variant="secondary"
-            leftIcon={<LuShieldAlert />}
-            asChild
-            isDisabled={failedTrackedEntityIds.length === 0}
-          >
-            <a href={newIssueHref} target="_blank" rel="noreferrer">
-              <Trans>Create Issue</Trans>
-            </a>
-          </Button>
-          {canUpdate && !lotClosed && !hasMeasurements && (
+          {issues.length === 1 && (
+            <RecordAction slot="overflow">
+              <Button variant="secondary" leftIcon={<LuShieldX />} asChild>
+                <Link to={path.to.issue(issues[0].id)}>
+                  {issues[0].nonConformanceId}
+                </Link>
+              </Button>
+            </RecordAction>
+          )}
+          {issues.length > 1 && (
+            <RecordAction slot="overflow">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="secondary" leftIcon={<LuShieldX />}>
+                    <Trans>Issues</Trans>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  {issues.map((issue) => (
+                    <DropdownMenuItem key={issue.id} asChild>
+                      <Link to={path.to.issue(issue.id)}>
+                        {issue.nonConformanceId}
+                      </Link>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </RecordAction>
+          )}
+          <RecordAction slot="overflow">
             <Button
               variant="secondary"
-              leftIcon={<LuFileText />}
-              onClick={documentSwitchDisclosure.onOpen}
+              leftIcon={<LuShieldAlert />}
+              asChild
+              isDisabled={failedTrackedEntityIds.length === 0}
             >
-              <Trans>Change Document</Trans>
+              <a href={newIssueHref} target="_blank" rel="noreferrer">
+                <Trans>Create Issue</Trans>
+              </a>
             </Button>
+          </RecordAction>
+          {canUpdate && !lotClosed && !hasMeasurements && (
+            <RecordAction slot="overflow">
+              <Button
+                variant="secondary"
+                leftIcon={<LuFileText />}
+                onClick={documentSwitchDisclosure.onOpen}
+              >
+                <Trans>Change Document</Trans>
+              </Button>
+            </RecordAction>
           )}
           {isSerial && !lotClosed && (
-            <Button
-              variant={allSamplesLoaded ? "secondary" : "primary"}
-              leftIcon={<LuScan />}
-              onClick={scannerDisclosure.onOpen}
-              isDisabled={!canUpdate}
-            >
-              <Trans>Add Sample</Trans>
-            </Button>
+            <RecordAction slot={isReceiptSource ? "overflow" : "primary"}>
+              <Button
+                variant={allSamplesLoaded ? "secondary" : "primary"}
+                leftIcon={<LuScan />}
+                onClick={scannerDisclosure.onOpen}
+                isDisabled={!canUpdate}
+              >
+                <Trans>Add Sample</Trans>
+              </Button>
+            </RecordAction>
           )}
           {isReceiptSource && (
             <>
-              <Button
-                variant="destructive"
-                onClick={rejectConfirmDisclosure.onOpen}
-                isDisabled={!canUpdate || !canReject}
-              >
-                <Trans>Reject Lot</Trans>
-              </Button>
-              <Button
-                onClick={acceptConfirmDisclosure.onOpen}
-                isDisabled={!canUpdate || !canAccept}
-              >
-                <Trans>Accept Lot</Trans>
-              </Button>
+              <RecordAction slot="secondary">
+                <Button
+                  variant="destructive"
+                  onClick={rejectConfirmDisclosure.onOpen}
+                  isDisabled={!canUpdate || !canReject}
+                >
+                  <Trans>Reject Lot</Trans>
+                </Button>
+              </RecordAction>
+              <RecordAction slot="primary">
+                <Button
+                  onClick={acceptConfirmDisclosure.onOpen}
+                  isDisabled={!canUpdate || !canAccept}
+                >
+                  <Trans>Accept Lot</Trans>
+                </Button>
+              </RecordAction>
             </>
           )}
         </HStack>
@@ -562,7 +653,9 @@ const InspectionView = ({
             {/* PDF viewer — pinned height while the grid is expanded */}
             <div
               className={`flex min-h-0 min-w-full flex-col overflow-hidden rounded-lg border bg-muted ${
-                gridExpanded ? "shrink-0" : "min-h-[220px] flex-1"
+                gridExpanded
+                  ? "shrink-0 max-md:!h-[40dvh]"
+                  : "min-h-[220px] flex-1"
               }`}
               style={{
                 ...(gridExpanded ? { height: pdfPaneHeightPx } : undefined),
@@ -599,9 +692,9 @@ const InspectionView = ({
               <div
                 role="separator"
                 aria-orientation="horizontal"
-                aria-label={t`Drag to resize drawing and features`}
+                aria-label={t`Drag to resize drawing and characteristics`}
                 aria-valuenow={Math.round(pdfPaneHeightPx)}
-                className={`group flex h-2 shrink-0 cursor-row-resize touch-none items-center justify-center rounded-md px-2 hover:bg-muted/80 ${
+                className={`group flex h-2 shrink-0 cursor-row-resize touch-none items-center justify-center rounded-md px-2 hover:bg-muted/80 max-md:hidden ${
                   isResizingSplit ? "bg-muted" : ""
                 }`}
                 onMouseDown={onSplitResizeMouseDown}
@@ -614,7 +707,7 @@ const InspectionView = ({
             <div
               className={
                 gridExpanded
-                  ? "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-lg bg-card"
+                  ? "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-lg bg-card max-md:mt-2 max-md:!min-h-0"
                   : "flex max-h-[14rem] min-w-0 shrink-0 flex-col overflow-hidden rounded-lg bg-card"
               }
               style={
@@ -637,6 +730,8 @@ const InspectionView = ({
                   features={features}
                   samples={samples}
                   measurements={measurements}
+                  gauges={gauges}
+                  recentGaugeIds={recentGaugeIds}
                   maxSampleSize={maxSampleSize}
                   lotSize={inspection.lotSize}
                   lotAcceptanceNumber={inspection.acceptanceNumber}
@@ -652,8 +747,8 @@ const InspectionView = ({
                       aria-expanded={gridExpanded}
                       aria-label={
                         gridExpanded
-                          ? t`Collapse features table`
-                          : t`Expand features table`
+                          ? t`Collapse characteristics table`
+                          : t`Expand characteristics table`
                       }
                       icon={
                         gridExpanded ? (
@@ -674,7 +769,7 @@ const InspectionView = ({
         // No drawing: the grid takes the full body. Feature-driven lots still
         // render their features; lots without a document collapse to the
         // single "Overall result" row inside the same grid.
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 pb-4 pt-2">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 pb-4 pt-2 max-md:px-0">
           <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-lg bg-card">
             <div className="min-h-0 flex-1 overflow-auto">
               <InspectionMeasurementGrid
@@ -684,6 +779,8 @@ const InspectionView = ({
                 features={features}
                 samples={samples}
                 measurements={measurements}
+                gauges={gauges}
+                recentGaugeIds={recentGaugeIds}
                 maxSampleSize={maxSampleSize}
                 lotSize={inspection.lotSize}
                 lotAcceptanceNumber={inspection.acceptanceNumber}
@@ -729,10 +826,15 @@ const InspectionView = ({
         <RejectLotModal
           action={path.to.inspectionReject(inspection.id)}
           issueTypes={issueTypes}
+          requiresReason={!failedStatistically}
           summary={
-            isSerial
-              ? t`Statistical acceptance failed, so the entire lot is considered non-conforming (ISO 9001:2015 §8.7). All ${lotEntities.length} entities — ${passes} sampled pass(es), ${fails} failure(s), and ${Math.max(0, lotEntities.length - inspected)} un-inspected — will be marked Rejected.`
-              : t`Statistical acceptance failed, so the entire lot of ${inspection.lotSize} is considered non-conforming (ISO 9001:2015 §8.7) — ${passes} sampled pass(es) and ${fails} failure(s).`
+            failedStatistically
+              ? isSerial
+                ? t`Statistical acceptance failed, so the entire lot is considered non-conforming (ISO 9001:2015 §8.7). All ${lotEntities.length} entities — ${passes} sampled pass(es), ${fails} failure(s), and ${Math.max(0, lotEntities.length - inspected)} un-inspected — will be marked Rejected.`
+                : t`Statistical acceptance failed, so the entire lot of ${inspection.lotSize} is considered non-conforming (ISO 9001:2015 §8.7) — ${passes} sampled pass(es) and ${fails} failure(s).`
+              : isSerial
+                ? t`No characteristic has failed, so say why the lot is rejected. All ${lotEntities.length} entities will be marked Rejected.`
+                : t`No characteristic has failed, so say why the lot is rejected. The entire lot of ${inspection.lotSize} will be rejected.`
           }
           failedFeatureSummary={failedFeatureSummary}
           onCancel={rejectConfirmDisclosure.onClose}
@@ -768,7 +870,7 @@ function DocumentSwitchModal({
 }) {
   const { t } = useLingui();
   const fetcher = useFetcher<{}>();
-  const optionsFetcher = useFetcher<{
+  const optionsFetcher = useLoaderQuery<{
     data:
       | {
           id: string;
@@ -777,15 +879,8 @@ function DocumentSwitchModal({
           version: number;
         }[]
       | null;
-  }>();
+  }>(path.to.api.inspectionDocuments(itemId));
   const [documentId, setDocumentId] = useState(currentDocumentId ?? "none");
-
-  useEffect(() => {
-    if (optionsFetcher.state === "idle" && optionsFetcher.data == null) {
-      optionsFetcher.load(path.to.api.inspectionDocuments(itemId));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const options = optionsFetcher.data?.data ?? [];
 
@@ -807,8 +902,8 @@ function DocumentSwitchModal({
           <VStack spacing={2}>
             <p className="text-sm text-muted-foreground">
               <Trans>
-                The lot's per-feature sampling plan will be re-resolved from the
-                selected document.
+                The lot's per-characteristic sampling plan will be re-resolved
+                from the selected document.
               </Trans>
             </p>
             <Select value={documentId} onValueChange={setDocumentId}>

@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Carbon (github.com/crbnos/carbon). Modified or adapted versions of this file,
+// including ports, remain AGPLv3; serving them over a network requires releasing their source.
+
 import {
   Command,
   CommandGroup,
@@ -7,6 +11,7 @@ import {
   CommandSeparator,
   cn,
   Modal,
+  ModalClose,
   ModalContent,
   Subheading,
   useDebounce,
@@ -16,10 +21,12 @@ import { Trans, useLingui } from "@lingui/react/macro";
 import idb from "localforage";
 import { nanoid } from "nanoid";
 import { useEffect, useRef, useState } from "react";
+import type { IconType } from "react-icons";
 import {
   LuChevronRight,
   LuCirclePlay,
   LuClock,
+  LuCornerDownLeft,
   LuFileCheck,
   LuPackageSearch,
   LuShoppingCart,
@@ -40,8 +47,7 @@ import { getEntityTypeConfig } from "~/components/Layout/Topbar/Search/config";
 import { SearchEmptyState } from "~/components/Layout/Topbar/Search/SearchEmptyState";
 import { SearchFilterChips } from "~/components/Layout/Topbar/Search/SearchFilterChips";
 import type { EntityTypeFilter } from "~/components/Layout/Topbar/Search/types";
-import { useModules, useUser } from "~/hooks";
-import useAccountSubmodules from "~/modules/account/ui/useAccountSubmodules";
+import { useModules, useSettingsModule, useUser } from "~/hooks";
 import useAccountingSubmodules from "~/modules/accounting/ui/useAccountingSubmodules";
 import useDocumentsSubmodules from "~/modules/documents/ui/useDocumentsSubmodules";
 import useInventorySubmodules from "~/modules/inventory/ui/useInventorySubmodules";
@@ -77,6 +83,7 @@ export const SearchModal = () => {
   const [input, setInput] = useState("");
   const [typeFilter, setTypeFilter] = useState<EntityTypeFilter>("all");
   const typeFilterRef = useRef<EntityTypeFilter>(typeFilter);
+  const inputRef = useRef<HTMLInputElement>(null);
   typeFilterRef.current = typeFilter;
   const [isDebouncing, setIsDebouncing] = useState(false);
 
@@ -105,7 +112,7 @@ export const SearchModal = () => {
     }
   }, [isSearchModalOpen]);
 
-  const staticResults = useGroupedSubmodules();
+  const navItems = useNavigationItems();
   const modules = useModules();
 
   const getModuleIcon = (moduleName: string) => {
@@ -129,51 +136,45 @@ export const SearchModal = () => {
     loadRecentSearches();
   }, [storageKey]);
 
-  const recentPaths = new Set(recentResults.map((r) => r.to));
   const searchResults = input.length >= 2 ? (fetcher.data?.results ?? []) : [];
   const loading = fetcher.state === "loading";
   const isEntityTypeFiltered = typeFilter !== "all";
 
-  // When a type chip is active, only show recents that match that entity type
-  const visibleRecentResults = isEntityTypeFiltered
-    ? recentResults.filter((r) => r.entityType === typeFilter)
-    : recentResults;
-
-  // Filter static results based on input for empty state detection.
-  // Module nav is hidden when filtering by entity type (entity results only).
+  // cmdk's built-in filter/sort is disabled (`shouldFilter={false}`) so that we
+  // control ordering deterministically — navigation always renders before the
+  // search-index results. That means we filter the static lists ourselves here.
   const normalizedInput = input.toLowerCase().trim();
-  const hasMatchingStaticResults =
-    !isEntityTypeFiltered &&
-    (normalizedInput.length === 0 ||
-      Object.entries(staticResults).some(([module, submodules]) =>
-        submodules.some(
-          (s) =>
-            !recentPaths.has(s.to) &&
-            `${module} ${s.name}`.toLowerCase().includes(normalizedInput)
-        )
-      ));
-  const hasMatchingRecentResults =
-    visibleRecentResults.length > 0 &&
-    (normalizedInput.length === 0 ||
-      visibleRecentResults.some((r) =>
-        r.name.toLowerCase().includes(normalizedInput)
-      ));
+  const matchesInput = (text: string) =>
+    normalizedInput.length === 0 ||
+    text.toLowerCase().includes(normalizedInput);
+
+  // When a type chip is active, only show recents that match that entity type
+  const visibleRecentResults = (
+    isEntityTypeFiltered
+      ? recentResults.filter((r) => r.entityType === typeFilter)
+      : recentResults
+  ).filter((r) => matchesInput(r.name));
+
+  // Only suppress a navigation item when its recent is actually SHOWN. Building
+  // the exclusion set from all recents (including ones hidden by the active type
+  // chip or the input filter) would drop a matching nav item while its recent
+  // isn't visible either — leaving the target unreachable from search.
+  const visibleRecentPaths = new Set(visibleRecentResults.map((r) => r.to));
+
+  // Flat module › submodule navigation. Hidden when filtering by entity type
+  // (entity results only), and links already surfaced as recents are dropped.
+  const visibleNavItems = isEntityTypeFiltered
+    ? []
+    : navItems.filter(
+        (item) =>
+          !visibleRecentPaths.has(item.to) &&
+          matchesInput(`${item.module} ${item.name}`)
+      );
 
   const hasAnyResults =
     searchResults.length > 0 ||
-    hasMatchingStaticResults ||
-    hasMatchingRecentResults;
-
-  // Flatten module → submodule into a single ordered list (each row is a
-  // "Module › Submodule" pair), dropping anything already surfaced in Recent.
-  // Module nav is hidden when filtering by entity type (entity results only).
-  const flatStaticResults = isEntityTypeFiltered
-    ? []
-    : Object.entries(staticResults).flatMap(([module, submodules]) =>
-        submodules
-          .filter((s) => !recentPaths.has(s.to))
-          .map((s) => ({ ...s, module }))
-      );
+    visibleNavItems.length > 0 ||
+    visibleRecentResults.length > 0;
 
   const onInputChange = (value: string) => {
     setInput(value);
@@ -234,18 +235,35 @@ export const SearchModal = () => {
       }}
     >
       <ModalContent
-        className="rounded-lg p-0 h-[520px] max-w-2xl overflow-hidden dark:shadow-button"
+        className="rounded-lg p-0 h-[520px] max-w-2xl overflow-hidden dark:shadow-button max-md:h-[calc(100dvh-env(safe-area-inset-top)-12px)] max-md:max-h-none max-md:max-w-none max-md:pt-4"
         withCloseButton={false}
+        // Sheets keep focus off their fields on phones; search is the
+        // exception, since typing is the only thing it is opened for.
+        onOpenAutoFocus={(event) => {
+          event.preventDefault();
+          inputRef.current?.focus();
+        }}
       >
-        <Command className="h-full flex flex-col">
+        <Command shouldFilter={false} className="h-full flex flex-col">
           {/* Search Input */}
 
-          <CommandInput
-            placeholder={t`Search across your workspace...`}
-            value={input}
-            onValueChange={onInputChange}
-            className="h-14 text-base"
-          />
+          {/* Phones: the sheet has no Esc key, so the input row carries a
+              close button. */}
+          <div className="contents max-md:flex max-md:items-center max-md:border-b max-md:border-border max-md:pr-1 max-md:[&>[cmdk-input-wrapper]]:flex-1 max-md:[&>[cmdk-input-wrapper]]:border-b-0">
+            <CommandInput
+              ref={inputRef}
+              placeholder={t`Search across your workspace...`}
+              value={input}
+              onValueChange={onInputChange}
+              className="h-14 text-base"
+            />
+            <ModalClose
+              aria-label={t`Close`}
+              className="hidden max-md:flex size-11 shrink-0 items-center justify-center rounded-full text-muted-foreground outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+            >
+              <LuX className="size-5" />
+            </ModalClose>
+          </div>
 
           <SearchFilterChips
             selectedFilter={typeFilter}
@@ -321,7 +339,7 @@ export const SearchModal = () => {
                         <button
                           type="button"
                           onClick={(e) => removeRecentSearch(result.to, e)}
-                          className="flex-shrink-0 p-1 rounded hover:bg-muted opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="flex-shrink-0 p-1 rounded hover:bg-muted md:opacity-0 group-hover:opacity-100 transition-opacity"
                         >
                           <LuX className="w-4 h-4 text-muted-foreground" />
                         </button>
@@ -333,58 +351,60 @@ export const SearchModal = () => {
               </>
             )}
 
-            {/* Module Navigation — flattened "Module › Submodule" rows. Always
-                rendered before search results and visible while the live
-                search is still loading. */}
-            {flatStaticResults.length > 0 && (
+            {/* Module › Submodule navigation. A flat list, always rendered
+                before the search-index results. Hidden when filtering by
+                entity type. */}
+            {visibleNavItems.length > 0 && (
               <>
                 <CommandGroup
                   heading={
-                    <Subheading variant="heavy">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                       <Trans>Navigation</Trans>
-                    </Subheading>
+                    </span>
                   }
                   key="navigation"
                 >
-                  {flatStaticResults.map((submodule, index) => {
-                    const hasIconElement =
-                      "iconElement" in submodule && submodule.iconElement;
-                    return (
-                      <CommandItem
-                        key={`${submodule.to}-${submodule.name}-${index}`}
-                        onSelect={() =>
-                          onSelect(submodule, undefined, submodule.module)
-                        }
-                        value={`${submodule.module} ${submodule.name}`}
-                        className="flex items-center gap-3 px-3 py-2 rounded-lg group"
-                      >
-                        <div className="flex-shrink-0 w-7 h-7 rounded-md bg-muted/50 flex items-center justify-center text-muted-foreground [&>svg]:w-4 [&>svg]:h-4">
-                          {hasIconElement ? (
-                            submodule.iconElement
-                          ) : submodule.icon ? (
-                            <submodule.icon className="w-4 h-4" />
-                          ) : null}
-                        </div>
-                        <span className="flex-1 min-w-0 flex items-center gap-1.5 text-sm">
-                          <span className="text-muted-foreground capitalize truncate">
-                            {submodule.module}
-                          </span>
-                          <LuChevronRight className="w-3 h-3 flex-shrink-0 text-muted-foreground/60" />
-                          <span className="text-foreground truncate">
-                            {submodule.name}
-                          </span>
+                  {visibleNavItems.map((item, index) => (
+                    <CommandItem
+                      key={`${item.to}-${index}`}
+                      onSelect={() =>
+                        onSelect(
+                          { to: item.to, name: item.name },
+                          undefined,
+                          item.module
+                        )
+                      }
+                      value={`nav:${item.to}:${index}`}
+                      className="flex items-center gap-3 px-3 py-2 rounded-lg group"
+                    >
+                      <div className="flex-shrink-0 w-7 h-7 rounded-md bg-muted/50 flex items-center justify-center text-muted-foreground [&>svg]:w-4 [&>svg]:h-4">
+                        {item.iconElement ? (
+                          item.iconElement
+                        ) : item.moduleIcon ? (
+                          <item.moduleIcon className="w-4 h-4" />
+                        ) : null}
+                      </div>
+                      <span className="flex flex-1 items-center gap-1.5 min-w-0 text-sm">
+                        <span className="whitespace-nowrap text-muted-foreground">
+                          {item.module}
                         </span>
-                        <LuChevronRight className="w-4 h-4 flex-shrink-0 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                      </CommandItem>
-                    );
-                  })}
+                        <LuChevronRight className="w-3.5 h-3.5 shrink-0 text-muted-foreground/40" />
+                        <span className="truncate font-medium text-foreground">
+                          {item.name}
+                        </span>
+                      </span>
+                      <LuCornerDownLeft className="w-4 h-4 text-muted-foreground md:opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </CommandItem>
+                  ))}
                 </CommandGroup>
-                <CommandSeparator className="my-2" />
+                {(loading || isDebouncing || searchResults.length > 0) && (
+                  <CommandSeparator className="my-2" />
+                )}
               </>
             )}
 
             {/* Live Search Results — always after module navigation. Shows
-                loading skeletons in place while the search request is pending. */}
+                loading state in place while the search request is pending. */}
             {loading || isDebouncing ? (
               <SearchEmptyState type="loading" />
             ) : searchResults.length > 0 ? (
@@ -426,7 +446,7 @@ export const SearchModal = () => {
                         </span>
                       )}
                     </VStack>
-                    <LuChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <LuChevronRight className="w-4 h-4 text-muted-foreground md:opacity-0 group-hover:opacity-100 transition-opacity" />
                   </CommandItem>
                 ))}
               </CommandGroup>
@@ -439,7 +459,7 @@ export const SearchModal = () => {
           </CommandList>
 
           {/* Footer */}
-          <div className="border-t border-border px-4 py-2 flex items-center justify-between text-xs text-muted-foreground">
+          <div className="border-t border-border px-4 py-2 flex items-center justify-between text-xs text-muted-foreground max-md:hidden">
             <div className="flex items-center gap-3">
               <span className="flex items-center gap-1">
                 <kbd className="px-1.5 py-0.5 rounded bg-muted font-mono text-[10px]">
@@ -530,8 +550,24 @@ function ResultIcon({ entityType }: { entityType: string }) {
   }
 }
 
-function useGroupedSubmodules() {
+type NavigationItem = {
+  /** Parent module display name, e.g. "Accounting" */
+  module: string;
+  /** Parent module icon (fallback when the submodule has no icon) */
+  moduleIcon?: IconType;
+  /** Submodule display name, e.g. "Reporting" */
+  name: string;
+  to: string;
+  /** Submodule-specific icon element (rendered directly when present) */
+  iconElement?: React.ReactNode;
+};
+
+// A flat list of `Module › Submodule` navigation targets for the search palette.
+// Ordered by the user's module ordering; each module contributes its submodule
+// links in order.
+function useNavigationItems(): NavigationItem[] {
   const modules = useModules();
+  const settingsModule = useSettingsModule();
   const items = useItemsSubmodules();
   const production = useProductionSubmodules();
   const inventory = useInventorySubmodules();
@@ -545,7 +581,6 @@ function useGroupedSubmodules() {
   const people = usePeopleSubmodules();
   const quality = useQualitySubmodules();
   const resources = useResourcesSubmodules();
-  const account = useAccountSubmodules();
   const workflows = useWorkflowsSubmodules();
   const groupedSubmodules: Record<
     string,
@@ -569,45 +604,45 @@ function useGroupedSubmodules() {
     resources,
     settings,
     users,
-    workflows,
-    "my account": account
+    workflows
   };
 
   const ungroupedSubmodules: Record<string, { links: Route[] }> = {
     documents
   };
 
-  const shortcuts = modules.reduce<
-    Record<string, (Route & { iconElement?: React.ReactNode })[]>
-  >((acc, module) => {
+  // Settings is pinned out of `useModules()`, but its submodules should still be
+  // reachable from search (e.g. "Settings › API Keys"), so append it explicitly.
+  const searchableModules = settingsModule
+    ? [...modules, settingsModule]
+    : modules;
+
+  return searchableModules.reduce<NavigationItem[]>((acc, module) => {
     const moduleName = module.name.toLowerCase();
 
     if (moduleName in groupedSubmodules) {
-      const groups = groupedSubmodules[moduleName].groups;
-      acc = {
-        ...acc,
-        [module.name]: groups
-          .flatMap((group) => group.routes)
-          .map((route) => ({
-            to: route.to,
-            name: route.name,
-            icon: module.icon,
-            iconElement: route.icon
-          }))
-      };
+      for (const route of groupedSubmodules[moduleName].groups.flatMap(
+        (group) => group.routes
+      )) {
+        acc.push({
+          module: module.name,
+          moduleIcon: module.icon,
+          name: route.name,
+          to: route.to,
+          iconElement: route.icon
+        });
+      }
     } else if (moduleName in ungroupedSubmodules) {
-      acc = {
-        ...acc,
-        [module.name]: ungroupedSubmodules[moduleName].links.map((link) => ({
-          to: link.to,
+      for (const link of ungroupedSubmodules[moduleName].links) {
+        acc.push({
+          module: module.name,
+          moduleIcon: module.icon,
           name: link.name,
-          icon: module.icon
-        }))
-      };
+          to: link.to
+        });
+      }
     }
 
     return acc;
-  }, {});
-
-  return shortcuts;
+  }, []);
 }

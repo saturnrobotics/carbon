@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: LicenseRef-Carbon-Commercial
+// Carbon Enterprise file, licensed only under the Carbon Commercial License
+// (packages/ee/LICENSE). Not AGPL. Running, modifying, or copying it beyond those terms requires a commercial license.
+
 import { HiEnvelope } from "react-icons/hi2";
 import { z } from "zod";
 import { defineIntegration } from "../fns";
@@ -9,9 +13,9 @@ export const Email = defineIntegration({
   category: "Email",
   logo: HiEnvelope,
   description:
-    "Send transactional emails — quotes, purchase orders, invoices, and more — from your own domain. Pick Resend for a managed email API, or Custom SMTP to use your own mail server.",
+    "Send transactional emails — quotes, purchase orders, invoices, and more. Use this server's mail settings, or pick Resend or Custom SMTP to send from your own account.",
   shortDescription:
-    "Deliver transactional emails via Resend or a custom SMTP server.",
+    "Deliver transactional emails via this server's mail settings, Resend, or a custom SMTP server.",
   images: [],
 
   settingGroups: [
@@ -35,6 +39,12 @@ export const Email = defineIntegration({
       value: "resend",
       listOptions: [
         {
+          value: "server",
+          label: "Server mail",
+          description:
+            "The default. Documents are sent from this server's address under your company's name, so no credentials are needed."
+        },
+        {
           value: "resend",
           label: "Resend",
           description: "Managed email API with domain verification."
@@ -50,9 +60,10 @@ export const Email = defineIntegration({
       name: "fromEmail",
       label: "From email",
       description:
-        "The sender address your customers will see. Must be a domain you control.",
+        "The sender address your customers will see. Must be a domain you control. With Server mail, documents are sent from this server's address under your company's name, and replies go to the address you enter here.",
       type: "text",
-      required: true,
+      // Required for Resend and Custom SMTP; the schema enforces that.
+      required: false,
       value: ""
     },
     // Resend group
@@ -116,6 +127,11 @@ export const Email = defineIntegration({
     }
   ],
   schema: z.discriminatedUnion("provider", [
+    z.object({
+      provider: z.literal("server"),
+      // Empty means "use this server's sender address".
+      fromEmail: z.union([z.string().email(), z.literal("")]).default("")
+    }),
     z.object({
       provider: z.literal("resend"),
       fromEmail: z.string().email(),

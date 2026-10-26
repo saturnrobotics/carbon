@@ -1,11 +1,41 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Carbon (github.com/crbnos/carbon). Modified or adapted versions of this file,
+// including ports, remain AGPLv3; serving them over a network requires releasing their source.
+
 import { useCarbon } from "@carbon/auth";
 import { toast } from "@carbon/react";
 import { useLingui } from "@lingui/react/macro";
 import { useState } from "react";
 import { flushSync } from "react-dom";
 import type { z } from "zod";
+<<<<<<< HEAD
 import { useUser } from "~/hooks";
 import type { purchaseInvoiceValidator } from "~/modules/invoicing";
+||||||| 85d9006e1
+import type {
+  ExtractedDocumentData,
+  PurchaseInvoiceExtraction,
+  PurchaseInvoiceLineItem
+} from "~/modules/documents";
+import {
+  findMatchingContactId,
+  findMatchingLocationId,
+  getExtractionMatchCandidates
+} from "~/modules/documents";
+import type { purchaseInvoiceValidator } from "~/modules/invoicing";
+=======
+import type {
+  ExtractedDocumentData,
+  PurchaseInvoiceExtraction,
+  PurchaseInvoiceLineItem
+} from "~/modules/documents/documents.models";
+import {
+  findMatchingContactId,
+  findMatchingLocationId,
+  getExtractionMatchCandidates
+} from "~/modules/documents/documents.models";
+import type { purchaseInvoiceValidator } from "~/modules/invoicing/invoicing.models";
+>>>>>>> 2beccc9789c598823f9d9584cdeecce9c7ffac75
 
 type PurchaseInvoiceFormValues = z.infer<typeof purchaseInvoiceValidator>;
 
@@ -39,6 +69,327 @@ export function usePurchaseInvoiceAutoFill(
     id: initialValues.supplierId
   });
 
+<<<<<<< HEAD
+||||||| 85d9006e1
+  const [extractedLineItems, setExtractedLineItems] = useState<
+    PurchaseInvoiceLineItem[]
+  >([]);
+  const [extractedTaxAmount, setExtractedTaxAmount] = useState<number>(0);
+  const [extractedStoragePath, setExtractedStoragePath] = useState<string>();
+
+  const [formKey, setFormKey] = useState(0);
+  const [currentValues, setCurrentValues] = useState(initialValues);
+
+  const handleExtractionComplete = async (raw: ExtractedDocumentData) => {
+    const data = raw as PurchaseInvoiceExtraction & {
+      _storagePath?: string | null;
+    };
+
+    // Supplier and payment term are already resolved to real record ids by the
+    // extraction job (which was given the candidate lists). Contacts and
+    // locations are entity-scoped, so we still match them here against the
+    // resolved supplier's records — and simply leave them empty when nothing
+    // matches (no forced red-text placeholder).
+    const resolvedSupplierId = data.supplierId || currentValues.supplierId;
+    let resolvedPaymentTermId =
+      data.paymentTermId || currentValues.paymentTermId;
+    let resolvedCurrencyCode = data.currencyCode || currentValues.currencyCode;
+
+    let resolvedContactId: string | undefined = undefined;
+    let resolvedLocationId: string | undefined = undefined;
+
+    if (carbon && resolvedSupplierId) {
+      const { contacts, locations } = await getExtractionMatchCandidates(
+        carbon,
+        "supplier",
+        resolvedSupplierId
+      );
+
+      resolvedContactId = findMatchingContactId(contacts, {
+        name: data.supplierContactName,
+        email: data.supplierContactEmail
+      });
+      resolvedLocationId = findMatchingLocationId(
+        locations,
+        data.supplierAddressLine1
+      );
+    }
+
+    let finalContactId = resolvedContactId;
+    let finalLocationId = resolvedLocationId;
+
+    if (
+      carbon &&
+      resolvedSupplierId &&
+      resolvedSupplierId !== invoiceSupplier.id
+    ) {
+      flushSync(() => {
+        setSupplier({ id: resolvedSupplierId });
+        setInvoiceSupplier({
+          id: resolvedSupplierId,
+          currencyCode: resolvedCurrencyCode ?? undefined,
+          paymentTermId: resolvedPaymentTermId ?? undefined,
+          invoiceSupplierContactId: resolvedContactId,
+          invoiceSupplierLocationId: resolvedLocationId
+        });
+      });
+
+      const [supplierDetails, paymentTermData] = await Promise.all([
+        // @ts-ignore Supabase composite key issue
+        carbon
+          .from("supplier")
+          .select(
+            "currencyCode, purchasingContactId, supplierShipping!supplierShipping_supplierId_fkey(shippingSupplierLocationId)"
+          )
+          .eq("id", resolvedSupplierId)
+          .single(),
+        carbon
+          .from("supplierPayment")
+          .select("*")
+          .eq("supplierId", resolvedSupplierId)
+          .single()
+      ]);
+
+      if (
+        supplierDetails &&
+        !supplierDetails.error &&
+        paymentTermData &&
+        !paymentTermData.error
+      ) {
+        finalContactId =
+          resolvedContactId ??
+          paymentTermData.data.invoiceSupplierContactId ??
+          supplierDetails.data.purchasingContactId ??
+          undefined;
+        finalLocationId =
+          resolvedLocationId ??
+          paymentTermData.data.invoiceSupplierLocationId ??
+          supplierDetails.data.supplierShipping?.[0]
+            ?.shippingSupplierLocationId ??
+          undefined;
+
+        resolvedCurrencyCode =
+          resolvedCurrencyCode ??
+          supplierDetails.data.currencyCode ??
+          undefined;
+        resolvedPaymentTermId =
+          resolvedPaymentTermId ??
+          paymentTermData.data.paymentTermId ??
+          undefined;
+
+        setInvoiceSupplier((prev) => ({
+          ...prev,
+          invoiceSupplierContactId: finalContactId,
+          invoiceSupplierLocationId: finalLocationId,
+          currencyCode: resolvedCurrencyCode,
+          paymentTermId: resolvedPaymentTermId
+        }));
+      }
+    } else {
+      finalContactId =
+        resolvedContactId ?? invoiceSupplier.invoiceSupplierContactId;
+      finalLocationId =
+        resolvedLocationId ?? invoiceSupplier.invoiceSupplierLocationId;
+
+      setInvoiceSupplier((prev) => ({
+        ...prev,
+        currencyCode: resolvedCurrencyCode ?? prev.currencyCode,
+        paymentTermId: resolvedPaymentTermId ?? prev.paymentTermId,
+        invoiceSupplierContactId: finalContactId,
+        invoiceSupplierLocationId: finalLocationId
+      }));
+    }
+
+    setCurrentValues((prev) => ({
+      ...prev,
+      supplierId: resolvedSupplierId || prev.supplierId,
+      invoiceSupplierId: resolvedSupplierId || prev.invoiceSupplierId,
+      supplierReference: data.invoiceNumber || prev.supplierReference,
+      dateIssued: data.invoiceDate || prev.dateIssued,
+      dateDue: data.dueDate || prev.dateDue,
+      currencyCode: resolvedCurrencyCode || prev.currencyCode,
+      paymentTermId: resolvedPaymentTermId || prev.paymentTermId,
+      supplierShippingCost: data.shippingCost || prev.supplierShippingCost,
+      invoiceSupplierContactId: finalContactId || prev.invoiceSupplierContactId,
+      invoiceSupplierLocationId:
+        finalLocationId || prev.invoiceSupplierLocationId
+    }));
+
+    if (data.lineItems && Array.isArray(data.lineItems)) {
+      setExtractedLineItems(data.lineItems);
+    }
+
+    if (data.taxAmount) {
+      setExtractedTaxAmount(data.taxAmount);
+    }
+
+    if (data._storagePath) {
+      setExtractedStoragePath(data._storagePath);
+    }
+
+    setFormKey((prev) => prev + 1);
+  };
+
+=======
+  const [extractedLineItems, setExtractedLineItems] = useState<
+    PurchaseInvoiceLineItem[]
+  >([]);
+  const [extractedTaxAmount, setExtractedTaxAmount] = useState<number>(0);
+  const [extractedStoragePath, setExtractedStoragePath] = useState<string>();
+
+  const [formKey, setFormKey] = useState(0);
+  const [currentValues, setCurrentValues] = useState(initialValues);
+
+  const handleExtractionComplete = async (raw: ExtractedDocumentData) => {
+    const data = raw as PurchaseInvoiceExtraction & {
+      _storagePath?: string | null;
+    };
+
+    // Supplier and payment term are already resolved to real record ids by the
+    // extraction job (which was given the candidate lists). Contacts and
+    // locations are entity-scoped, so we still match them here against the
+    // resolved supplier's records — and simply leave them empty when nothing
+    // matches (no forced red-text placeholder).
+    const resolvedSupplierId = data.supplierId || currentValues.supplierId;
+    let resolvedPaymentTermId =
+      data.paymentTermId || currentValues.paymentTermId;
+    let resolvedCurrencyCode = data.currencyCode || currentValues.currencyCode;
+
+    let resolvedContactId: string | undefined = undefined;
+    let resolvedLocationId: string | undefined = undefined;
+
+    if (carbon && resolvedSupplierId) {
+      const { contacts, locations } = await getExtractionMatchCandidates(
+        carbon,
+        "supplier",
+        resolvedSupplierId
+      );
+
+      resolvedContactId = findMatchingContactId(contacts, {
+        name: data.supplierContactName,
+        email: data.supplierContactEmail
+      });
+      resolvedLocationId = findMatchingLocationId(
+        locations,
+        data.supplierAddressLine1
+      );
+    }
+
+    let finalContactId = resolvedContactId;
+    let finalLocationId = resolvedLocationId;
+
+    if (
+      carbon &&
+      resolvedSupplierId &&
+      resolvedSupplierId !== invoiceSupplier.id
+    ) {
+      flushSync(() => {
+        setSupplier({ id: resolvedSupplierId });
+        setInvoiceSupplier({
+          id: resolvedSupplierId,
+          currencyCode: resolvedCurrencyCode ?? undefined,
+          paymentTermId: resolvedPaymentTermId ?? undefined,
+          invoiceSupplierContactId: resolvedContactId,
+          invoiceSupplierLocationId: resolvedLocationId
+        });
+      });
+
+      const [supplierDetails, paymentTermData] = await Promise.all([
+        carbon
+          .from("supplier")
+          .select(
+            "currencyCode, purchasingContactId, supplierShipping!supplierShipping_supplierId_fkey(shippingSupplierLocationId)"
+          )
+          .eq("id", resolvedSupplierId)
+          .single(),
+        carbon
+          .from("supplierPayment")
+          .select("*")
+          .eq("supplierId", resolvedSupplierId)
+          .single()
+      ]);
+
+      if (
+        supplierDetails &&
+        !supplierDetails.error &&
+        paymentTermData &&
+        !paymentTermData.error
+      ) {
+        finalContactId =
+          resolvedContactId ??
+          paymentTermData.data.invoiceSupplierContactId ??
+          supplierDetails.data.purchasingContactId ??
+          undefined;
+        finalLocationId =
+          resolvedLocationId ??
+          paymentTermData.data.invoiceSupplierLocationId ??
+          supplierDetails.data.supplierShipping?.[0]
+            ?.shippingSupplierLocationId ??
+          undefined;
+
+        resolvedCurrencyCode =
+          resolvedCurrencyCode ??
+          supplierDetails.data.currencyCode ??
+          undefined;
+        resolvedPaymentTermId =
+          resolvedPaymentTermId ??
+          paymentTermData.data.paymentTermId ??
+          undefined;
+
+        setInvoiceSupplier((prev) => ({
+          ...prev,
+          invoiceSupplierContactId: finalContactId,
+          invoiceSupplierLocationId: finalLocationId,
+          currencyCode: resolvedCurrencyCode,
+          paymentTermId: resolvedPaymentTermId
+        }));
+      }
+    } else {
+      finalContactId =
+        resolvedContactId ?? invoiceSupplier.invoiceSupplierContactId;
+      finalLocationId =
+        resolvedLocationId ?? invoiceSupplier.invoiceSupplierLocationId;
+
+      setInvoiceSupplier((prev) => ({
+        ...prev,
+        currencyCode: resolvedCurrencyCode ?? prev.currencyCode,
+        paymentTermId: resolvedPaymentTermId ?? prev.paymentTermId,
+        invoiceSupplierContactId: finalContactId,
+        invoiceSupplierLocationId: finalLocationId
+      }));
+    }
+
+    setCurrentValues((prev) => ({
+      ...prev,
+      supplierId: resolvedSupplierId || prev.supplierId,
+      invoiceSupplierId: resolvedSupplierId || prev.invoiceSupplierId,
+      supplierReference: data.invoiceNumber || prev.supplierReference,
+      dateIssued: data.invoiceDate || prev.dateIssued,
+      dateDue: data.dueDate || prev.dateDue,
+      currencyCode: resolvedCurrencyCode || prev.currencyCode,
+      paymentTermId: resolvedPaymentTermId || prev.paymentTermId,
+      supplierShippingCost: data.shippingCost || prev.supplierShippingCost,
+      invoiceSupplierContactId: finalContactId || prev.invoiceSupplierContactId,
+      invoiceSupplierLocationId:
+        finalLocationId || prev.invoiceSupplierLocationId
+    }));
+
+    if (data.lineItems && Array.isArray(data.lineItems)) {
+      setExtractedLineItems(data.lineItems);
+    }
+
+    if (data.taxAmount) {
+      setExtractedTaxAmount(data.taxAmount);
+    }
+
+    if (data._storagePath) {
+      setExtractedStoragePath(data._storagePath);
+    }
+
+    setFormKey((prev) => prev + 1);
+  };
+
+>>>>>>> 2beccc9789c598823f9d9584cdeecce9c7ffac75
   const onSupplierChange = async (
     newValue: { value: string | undefined } | null
   ) => {

@@ -1,4 +1,9 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Carbon (github.com/crbnos/carbon). Modified or adapted versions of this file,
+// including ports, remain AGPLv3; serving them over a network requires releasing their source.
+
 import { getCarbonServiceRole } from "@carbon/auth/client.server";
+import { requireBackupsEntitlement } from "@carbon/ee/backups.server";
 import { chunkArray } from "@carbon/utils";
 import { sql } from "kysely";
 import { applyTableRenames } from "../../../backups/renames";
@@ -63,9 +68,15 @@ export const companyImportFunction = inngest.createFunction(
     const referencedTemplate =
       typeof templateIndustryId === "string" && templateIndustryId.length > 0;
 
+    // A real (foreign) backup import is the gated BACKUPS feature; an onboarding
+    // demo-template import is not — keep templating available on every edition.
+    if (!referencedTemplate) {
+      await requireBackupsEntitlement(companyId);
+    }
+
     return await step.run("import-company", async () => {
       const client = getCarbonServiceRole();
-      const db = getJobDatabaseClient(1);
+      const db = getJobDatabaseClient();
 
       // Idempotency guard — a retry after a partial failure must not
       // duplicate rows that already committed under this run id.
@@ -92,8 +103,8 @@ export const companyImportFunction = inngest.createFunction(
       }
 
       // Reseed populates a fresh company; refuse a target that's already been
-      // set up (the edge function gates this too — this is defense in depth
-      // for retries or direct triggers). accountDefault is the seed marker.
+      // set up (defense in depth for retries or direct triggers).
+      // accountDefault is the seed marker.
       if (mode === "reseed") {
         const seeded = await client
           .from("accountDefault")
@@ -429,7 +440,7 @@ export const companyImportFunction = inngest.createFunction(
 
       // Storage files travel outside the transaction — failures here leave the
       // imported rows intact and are surfaced as warnings. Copy them server-side
-      // from the artifact's `.assets/` folder into the shared `private` bucket,
+      // from the artifact's `.assets/` folder into the company's own bucket,
       // with the path rewritten for the target company (and remapped ids on
       // reseed) to match the path columns rewritten above.
       //

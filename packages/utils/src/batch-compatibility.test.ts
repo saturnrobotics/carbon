@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Carbon (github.com/crbnos/carbon). Modified or adapted versions of this file,
+// including ports, remain AGPLv3; serving them over a network requires releasing their source.
+
 import { describe, expect, it } from "vitest";
 import {
   compactBatchRules,
@@ -17,7 +21,8 @@ describe("resolveBatchRules", () => {
       grade: "guide",
       dimension: "guide",
       form: "ignore",
-      finish: "ignore"
+      finish: "ignore",
+      producedItem: "ignore"
     });
   });
 
@@ -33,7 +38,8 @@ describe("resolveBatchRules", () => {
       grade: "guide",
       dimension: "guide",
       form: "ignore",
-      finish: "must"
+      finish: "must",
+      producedItem: "ignore"
     });
   });
 
@@ -120,6 +126,21 @@ describe("mustViolations", () => {
       { substance: ["aluminum"] }
     ];
     expect(mustViolations(guideRules, members)).toEqual([]);
+  });
+
+  it("producedItem must refuses members producing different items", () => {
+    const produced = resolveBatchRules({ producedItem: "must" });
+    const members: MemberValueSets[] = [
+      { producedItem: ["SALAD-01"] },
+      { producedItem: ["SALAD-02"] }
+    ];
+    expect(mustViolations(produced, members)).toEqual(["producedItem"]);
+    expect(
+      mustViolations(produced, [
+        { producedItem: ["SALAD-01"] },
+        { producedItem: ["SALAD-01"] }
+      ])
+    ).toEqual([]);
   });
 
   it("reports multiple violated must-dimensions together", () => {

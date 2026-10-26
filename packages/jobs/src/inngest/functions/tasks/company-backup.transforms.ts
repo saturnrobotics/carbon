@@ -1,11 +1,17 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Carbon (github.com/crbnos/carbon). Modified or adapted versions of this file,
+// including ports, remain AGPLv3; serving them over a network requires releasing their source.
+
 import type { KyselyDatabase } from "@carbon/database/client";
 import { type Kysely, sql } from "kysely";
+import { ID_REF_COLUMNS } from "../../../backups/id-refs";
 import {
   type Catalog,
   type ColumnInfo,
   type CompanyBackup,
   mapWithConcurrency,
   newIdForTable,
+  READABLE_ID_TABLES,
   RETAINED_REF_TABLES,
   rewriteStoragePath,
   rewriteToTemplateAssetPath,
@@ -238,6 +244,13 @@ export function buildIdMaps(
 ): Map<string, Map<string, string>> {
   const idMaps = new Map<string, Map<string, string>>();
   for (const table of tables) {
+    // A readable-id table's `id` is a part number other rows match by value
+    // (`item."readableId"`), not an identifier — minting a fresh one orphans
+    // every row from its item. Skipped in BOTH the restore and the reseed/import
+    // path: the restore wipes the target first so the original values are free,
+    // and on an additive reseed a genuine duplicate hits the composite PK and
+    // fails loudly rather than silently corrupting the readable key.
+    if (READABLE_ID_TABLES.has(table.name)) continue;
     const idType = table.columns.find((c) => c.name === "id")?.udtName;
     if (idType !== "uuid" && idType !== "text") continue;
     const idFk = table.foreignKeys.find(
@@ -439,6 +452,12 @@ export function buildRowTransforms(
           ? rewriteToTemplateAssetPath(v, sourceCompanyId, templateIndustryId)
           : rewriteStoragePath(v, sourceCompanyId, companyId, idRewrite);
       };
+    }
+    if (!fk && ID_REF_COLUMNS[table.name]?.includes(col.name)) {
+      const { idRewrite } = ctx;
+      const rewrite = (id: unknown) =>
+        typeof id === "string" ? (idRewrite.get(id) ?? id) : id;
+      return (v) => (Array.isArray(v) ? v.map(rewrite) : rewrite(v));
     }
     if (fk) {
       if (USER_REF_TABLES.has(fk.refTable)) {

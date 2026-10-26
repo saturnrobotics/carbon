@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: LicenseRef-Carbon-Commercial
+// Carbon Enterprise file, licensed only under the Carbon Commercial License
+// (packages/ee/LICENSE). Not AGPL. Running, modifying, or copying it beyond those terms requires a commercial license.
+
 import {
   allocateSalesHeaderShipping,
   assertExchangeRate,
@@ -8,6 +12,7 @@ import {
   SCALE,
   toDocumentAmount
 } from "@carbon/utils";
+import { JournalEntrySyncError } from "./posting";
 import type { Accounting } from "./types";
 
 export type SalesDocumentComponent = {
@@ -21,6 +26,18 @@ export type SalesDocumentComponent = {
     | "HeaderShipping";
   itemId: string | null;
   itemCode: string | null;
+  /**
+   * The Carbon line type this component came from, `null` for HeaderShipping.
+   *
+   * Load-bearing, not informational: `post-sales-invoice` posts NO
+   * `"Sales Account"` line for a `Fixed Asset` line (`sales-posting-amounts.ts`,
+   * `if (!isAsset)`) — its proceeds go to the disposal gain/loss accounts. A
+   * mapper that cannot see the line type binds the disposal to the replayed
+   * sales-revenue account and reports it as revenue, which is a silent
+   * misstatement rather than a failure. `isRevenueComponent` below is the one
+   * place that decides.
+   */
+  invoiceLineType: string | null;
   description: string;
   quantity: number;
   unitAmount: number;
@@ -28,6 +45,77 @@ export type SalesDocumentComponent = {
   taxPercent: number;
   taxAmount: number;
 };
+
+/** A line whose proceeds are NOT sales revenue in Carbon's own journal. */
+const NON_REVENUE_LINE_TYPES: ReadonlySet<string> = new Set(["Fixed Asset"]);
+
+/**
+ * Does this component's money belong on the invoice's sales-revenue account?
+ *
+ * Shipping has its own account, and a Fixed Asset disposal has no revenue
+ * posting at all. Every provider mapper asks this rather than re-deriving it
+ * from `kind`, so the three adapters cannot drift apart on it.
+ */
+export function isRevenueComponent(component: SalesDocumentComponent): boolean {
+  if (component.kind === "LineShipping" || component.kind === "HeaderShipping")
+    return false;
+  return !(
+    component.invoiceLineType &&
+    NON_REVENUE_LINE_TYPES.has(component.invoiceLineType)
+  );
+}
+
+/** Does this document have any component that posts to sales revenue? */
+export function hasRevenueComponent(
+  components: readonly SalesDocumentComponent[]
+): boolean {
+  return components.some(isRevenueComponent);
+}
+
+/**
+ * Refuse a document carrying a fixed-asset disposal.
+ *
+ * Carbon books a `Fixed Asset` line against the asset's disposal gain/loss
+ * accounts and posts no sales revenue for it. `SalesInvoice` replays only the
+ * sales and shipping revenue accounts, so there is nothing on the document that
+ * could code a disposal correctly — and binding it to the sales-revenue account
+ * would report a $5,000 machine disposal as $5,000 of sales revenue, in the
+ * customer's ledger of record, with nothing failing.
+ *
+ * So this refuses instead, with a reason naming the lines. Rillet used to refuse
+ * these incidentally, because its preflight demanded an `itemId` and an asset
+ * line carries `assetId` instead; dropping that demand (correctly, so manual
+ * charge and service lines could pass) removed the accidental guard. This is the
+ * deliberate replacement. Replaying the disposal accounts is the real fix and
+ * needs its own posting-role classification.
+ */
+export function assertNoAssetDisposalComponents(
+  document: SalesDocumentComponents
+): void {
+  const disposals = document.components.filter(
+    (component) =>
+      component.invoiceLineType &&
+      NON_REVENUE_LINE_TYPES.has(component.invoiceLineType)
+  );
+  if (disposals.length === 0) return;
+  throw new JournalEntrySyncError({
+    errorCode: "UNMAPPED_ACCOUNTS",
+    warning: true,
+    message:
+      "Cannot sync invoice: it has a fixed-asset disposal line, which Carbon posts to the asset's disposal accounts rather than to sales revenue. Asset disposals are not yet represented on the external document — invoice the disposal separately, or post it as a journal entry.",
+    metadata: {
+      invoiceId: document.invoiceId,
+      componentIds: disposals.map((component) => component.id),
+      lineIds: [
+        ...new Set(
+          disposals.flatMap((component) =>
+            component.sourceLineId ? [component.sourceLineId] : []
+          )
+        )
+      ]
+    }
+  });
+}
 
 export type SalesDocumentComponents = {
   invoiceId: string;
@@ -43,6 +131,11 @@ export type SalesDocumentComponents = {
 function finite(value: number, name: string): number {
   if (!Number.isFinite(value)) throw new Error(`${name} must be finite`);
   return value;
+}
+
+/** The line discount, a fraction in [0, 1]; absent is no discount. */
+function lineDiscount(line: Accounting.SalesInvoiceLine): number {
+  return finite(line.discountPercent ?? 0, "Line discount");
 }
 
 function precision(value: number): void {
@@ -129,8 +222,16 @@ export function buildSalesDocumentComponents(
     const quantity = args.quantity ?? 1;
     let unitAmount = toDocumentAmount(baseNet, rate, decimals);
     if (kind === "Merchandise" && line) {
-      const convertedUnit = line.convertedUnitPrice;
-      const expectedUnit = finite(line.unitPrice * rate, "Document unit price");
+      // Both prices are LIST prices; the provider is sent the NET unit price,
+      // so the line discount is applied to each before they are compared. A
+      // discounted price is a rate, so it is rounded to storage scale; an
+      // undiscounted mirror is sent exactly as stored.
+      const discount = lineDiscount(line);
+      const net = 1 - discount;
+      const netUnit = line.unitPrice * net;
+      const convertedUnit =
+        line.convertedUnitPrice == null ? null : line.convertedUnitPrice * net;
+      const expectedUnit = finite(netUnit * rate, "Document unit price");
       if (
         convertedUnit != null &&
         Math.abs(
@@ -143,7 +244,11 @@ export function buildSalesDocumentComponents(
         );
       }
       unitAmount =
-        convertedUnit ?? toDocumentAmount(line.unitPrice, rate, SCALE);
+        convertedUnit == null
+          ? toDocumentAmount(netUnit, rate, SCALE)
+          : discount
+            ? round(convertedUnit)
+            : convertedUnit;
     }
     raw.push({
       baseNet,
@@ -154,6 +259,7 @@ export function buildSalesDocumentComponents(
         kind,
         itemId: line?.itemId ?? null,
         itemCode: line?.itemCode ?? null,
+        invoiceLineType: line?.invoiceLineType ?? null,
         description: args.description,
         quantity,
         unitAmount,
@@ -167,7 +273,9 @@ export function buildSalesDocumentComponents(
     push({
       kind: "Merchandise",
       line,
-      baseNet: line.quantity * line.unitPrice,
+      // The same expression `calculateSalesPostingAmounts` and the
+      // `salesInvoices` view use, so the reconciliation above holds.
+      baseNet: line.quantity * line.unitPrice * (1 - lineDiscount(line)),
       taxPercent: line.taxPercent,
       quantity: line.quantity,
       description: line.description ?? line.itemCode ?? "Invoice line"

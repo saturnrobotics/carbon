@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Carbon (github.com/crbnos/carbon). Modified or adapted versions of this file,
+// including ports, remain AGPLv3; serving them over a network requires releasing their source.
+
 import type { Database } from "@carbon/database";
 import { ERP_URL } from "@carbon/env";
 import type { ProductLabelItem } from "@carbon/utils";
@@ -14,6 +18,7 @@ export type KanbanCardItem = {
   fromStorageUnitName: string | null;
   supplierName: string | null;
   quantity: number;
+  replenishmentLevel: number | null;
   unitOfMeasureCode: string | null;
   thumbnailPath: string | null;
 };
@@ -78,6 +83,7 @@ export async function resolveKanbanData(
         fromStorageUnitName: kanban.fromStorageUnitName,
         supplierName: kanban.supplierName,
         quantity: kanban.quantity ?? 0,
+        replenishmentLevel: kanban.replenishmentLevel ?? null,
         unitOfMeasureCode: kanban.purchaseUnitOfMeasureCode,
         thumbnailPath: kanban.thumbnailPath
       }
@@ -151,6 +157,7 @@ async function queryTrackedEntities(
           "jobMakeMethodId, ...jobMakeMethod(...item(readableIdWithRevision))"
         )
         .eq("id", sourceDocumentId)
+        .eq("companyId", companyId)
         .single();
 
       if (!jobOperation?.jobMakeMethodId)
@@ -160,7 +167,12 @@ async function queryTrackedEntities(
         .from("trackedEntity")
         .select("*")
         .eq("attributes->>Job Make Method", jobOperation?.jobMakeMethodId)
-        .order("createdAt", { ascending: true });
+        .eq("companyId", companyId)
+        // Unit-axis order (see MES getTrackedEntitiesByMakeMethodId), so
+        // labels print in serial order even for serials minted together.
+        .order("createdAt", { ascending: true })
+        .order("readableId", { ascending: true })
+        .order("id", { ascending: true });
 
       return {
         trackedEntities,
