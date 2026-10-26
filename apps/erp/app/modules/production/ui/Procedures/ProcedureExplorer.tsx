@@ -1,4 +1,7 @@
-import { useCarbon } from "@carbon/auth";
+// SPDX-License-Identifier: AGPL-3.0-only
+// Carbon (github.com/crbnos/carbon). Modified or adapted versions of this file,
+// including ports, remain AGPLv3; serving them over a network requires releasing their source.
+
 import {
   Array as ArrayInput,
   Hidden,
@@ -27,6 +30,7 @@ import {
   HStack,
   IconButton,
   Label,
+  MENU_ITEM_SHORTCUTS,
   ShortcutKey,
   Tabs,
   TabsContent,
@@ -37,7 +41,6 @@ import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-  toast,
   useDebounce,
   useDisclosure,
   useShortcutKeyMap,
@@ -45,9 +48,8 @@ import {
 } from "@carbon/react";
 import { Editor } from "@carbon/react/Editor";
 import { Trans, useLingui } from "@lingui/react/macro";
-import type { DragControls } from "framer-motion";
-import { Reorder, useDragControls } from "framer-motion";
-import { nanoid } from "nanoid";
+import type { DragControls } from "motion/react";
+import { Reorder, useDragControls } from "motion/react";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
@@ -66,11 +68,12 @@ import type { z } from "zod";
 import { Empty } from "~/components";
 import { UnitOfMeasure } from "~/components/Form";
 import { ProcedureStepTypeIcon } from "~/components/Icons";
+import { MeasurementLimits } from "~/components/MeasurementLimits";
 import { ConfirmDelete } from "~/components/Modals";
-import { usePermissions, useRouteData, useUser } from "~/hooks";
-import { procedureStepType } from "~/modules/shared";
+import { useImageUpload, usePermissions, useRouteData } from "~/hooks";
+import { procedureStepType } from "~/modules/shared/shared.models";
 import { EXPLORER_SHORTCUTS } from "~/shortcuts";
-import { getPrivateUrl, path } from "~/utils/path";
+import { path } from "~/utils/path";
 import {
   procedureParameterValidator,
   procedureStepValidator
@@ -280,7 +283,6 @@ export default function ProcedureExplorer() {
                   values={sortOrder}
                   onReorder={onReorder}
                   className="w-full"
-                  disabled={isDisabled}
                 >
                   {sortOrder.map((sortId) => (
                     <DraggableStepItem
@@ -444,7 +446,7 @@ export default function ProcedureExplorer() {
       </VStack>
       {procedureStepDisclosure.isOpen && (
         <ProcedureStepForm
-          // @ts-ignore
+          // @ts-expect-error
           initialValues={procedureAttribtueInitialValues}
           isDisabled={isDisabled}
           onClose={procedureStepDisclosure.onClose}
@@ -552,13 +554,10 @@ function ProcedureStepItem({
             </HStack>
             {(attribute.minValue !== null || attribute.maxValue !== null) && (
               <p className="text-muted-foreground text-xs">
-                {attribute.minValue !== null && attribute.maxValue !== null
-                  ? `Must be between ${attribute.minValue} and ${attribute.maxValue}`
-                  : attribute.minValue !== null
-                    ? `Must be > ${attribute.minValue}`
-                    : attribute.maxValue !== null
-                      ? `Must be < ${attribute.maxValue}`
-                      : null}
+                <MeasurementLimits
+                  minValue={attribute.minValue}
+                  maxValue={attribute.maxValue}
+                />
               </p>
             )}
           </VStack>
@@ -570,7 +569,7 @@ function ProcedureStepItem({
             <DropdownMenuTrigger asChild>
               <IconButton
                 aria-label={t`More`}
-                className="opacity-0 group-hover:opacity-100 group-active:opacity-100 data-[state=open]:opacity-100"
+                className="md:opacity-0 group-hover:opacity-100 group-active:opacity-100 data-[state=open]:opacity-100"
                 icon={<LuEllipsisVertical />}
                 variant="solid"
                 onClick={(e) => e.stopPropagation()}
@@ -578,6 +577,7 @@ function ProcedureStepItem({
             </DropdownMenuTrigger>
             <DropdownMenuContent>
               <DropdownMenuItem
+                shortcut={MENU_ITEM_SHORTCUTS.edit}
                 onClick={(e) => {
                   e.stopPropagation();
                   onEdit(attribute);
@@ -587,6 +587,7 @@ function ProcedureStepItem({
                 Edit Step
               </DropdownMenuItem>
               <DropdownMenuItem
+                shortcut={MENU_ITEM_SHORTCUTS.delete}
                 destructive
                 disabled={!permissions.can("update", "production")}
                 onClick={(e) => {
@@ -660,7 +661,7 @@ function ProcedureParameterItem({
             <DropdownMenuTrigger asChild>
               <IconButton
                 aria-label={t`More`}
-                className="opacity-0 group-hover:opacity-100 group-active:opacity-100 data-[state=open]:opacity-100"
+                className="md:opacity-0 group-hover:opacity-100 group-active:opacity-100 data-[state=open]:opacity-100"
                 icon={<LuEllipsisVertical />}
                 variant="solid"
                 onClick={(e) => e.stopPropagation()}
@@ -668,6 +669,7 @@ function ProcedureParameterItem({
             </DropdownMenuTrigger>
             <DropdownMenuContent>
               <DropdownMenuItem
+                shortcut={MENU_ITEM_SHORTCUTS.edit}
                 onClick={(e) => {
                   e.stopPropagation();
                   onEdit(parameter);
@@ -677,6 +679,7 @@ function ProcedureParameterItem({
                 Edit Parameter
               </DropdownMenuItem>
               <DropdownMenuItem
+                shortcut={MENU_ITEM_SHORTCUTS.delete}
                 destructive
                 disabled={!permissions.can("update", "production")}
                 onClick={(e) => {
@@ -741,11 +744,6 @@ function ProcedureStepForm({
     }
   });
 
-  const { carbon } = useCarbon();
-  const {
-    company: { id: companyId }
-  } = useUser();
-
   const fetcher = useFetcher<{
     success: boolean;
   }>();
@@ -772,23 +770,7 @@ function ProcedureStepForm({
 
   const isEditing = !!initialValues.id;
 
-  const onUploadImage = async (file: File) => {
-    const fileType = file.name.split(".").pop();
-    const fileName = `${companyId}/parts/${nanoid()}.${fileType}`;
-
-    const result = await carbon?.storage.from("private").upload(fileName, file);
-
-    if (result?.error) {
-      toast.error(t`Failed to upload image`);
-      throw new Error(result.error.message);
-    }
-
-    if (!result?.data) {
-      throw new Error("Failed to upload image");
-    }
-
-    return getPrivateUrl(result.data.path);
-  };
+  const onUploadImage = useImageUpload("parts");
 
   return (
     <Drawer
@@ -890,7 +872,11 @@ function ProcedureStepForm({
                 </>
               )}
               {type === "List" && (
-                <ArrayInput name="listValues" label={t`List Options`} />
+                <ArrayInput
+                  name="listValues"
+                  label={t`List Options`}
+                  isRequired
+                />
               )}
             </VStack>
           </DrawerBody>

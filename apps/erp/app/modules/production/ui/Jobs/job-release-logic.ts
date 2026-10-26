@@ -1,0 +1,169 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Carbon (github.com/crbnos/carbon). Modified or adapted versions of this file,
+// including ports, remain AGPLv3; serving them over a network requires releasing their source.
+
+// Release checks shared by the job Release dialog and batch release, so a job
+// released as part of a batch is held to exactly the rules the job page applies.
+// Pure — no JSX/lingui — and unit-tested by apps/erp/test/job-release-logic.test.ts.
+
+import {
+  needsPullFrom,
+  summarizeList
+} from "@carbon/database/strict-backflush";
+
+export type ReleaseMaterial = {
+  jobMaterialMakeMethodId: string | null;
+  methodType: string | null;
+  kit: boolean | null;
+};
+
+export type ReleaseOperation = {
+  id: string;
+  jobMakeMethodId: string | null;
+  operationType: string | null;
+  operationSupplierProcessId: string | null;
+  processId?: string | null;
+};
+
+export type SupplierProcessRef = {
+  id: string;
+  supplierId: string;
+  processId: string;
+};
+
+// The job's own make method plus every Make-to-Order sub-assembly that is not
+// kitted must carry at least one operation, or nothing on the floor builds it.
+export function makeMethodsMissingOperations(
+  rootMakeMethodId: string | null,
+  materials: ReleaseMaterial[],
+  operations: ReleaseOperation[]
+): string[] {
+  const kitted = new Set(
+    materials
+      .filter((m) => m.jobMaterialMakeMethodId && m.kit)
+      .map((m) => m.jobMaterialMakeMethodId)
+  );
+  const required = new Set<string>();
+  for (const m of materials) {
+    if (
+      m.jobMaterialMakeMethodId &&
+      m.methodType === "Make to Order" &&
+      !kitted.has(m.jobMaterialMakeMethodId)
+    ) {
+      required.add(m.jobMaterialMakeMethodId);
+    }
+  }
+  if (rootMakeMethodId) required.add(rootMakeMethodId);
+
+  const withOperations = new Set(operations.map((op) => op.jobMakeMethodId));
+  return [...required].filter((id) => !withOperations.has(id));
+}
+
+// Outside operations release still has to purchase: no PO line exists yet.
+// Which supplier each goes to is resolveOperationSupplier's question.
+export function outsideOperationsNeedingPurchaseOrders<
+  T extends ReleaseOperation
+>(operations: T[], operationIdsWithPurchaseOrderLines: Set<string>): T[] {
+  return operations.filter(
+    (op) =>
+      op.operationType === "Outside Processing" &&
+      !operationIdsWithPurchaseOrderLines.has(op.id)
+  );
+}
+
+// An outside operation's supplier on release: its own supplier process, else
+// the sole supplier configured for its process — the same resolution as the
+// job Release dialog and `create` purchaseOrderFromJob. A process with no
+// supplier is "none"; one with several is "choose" (the job Release dialog
+// asks; batch release has no per-operation picker, so it refuses instead).
+export function resolveOperationSupplier(
+  op: Pick<ReleaseOperation, "operationSupplierProcessId" | "processId">,
+  supplierProcessById: Map<string, SupplierProcessRef>,
+  supplierProcessesByProcessId: Map<string, SupplierProcessRef[]>
+): { supplierProcess: SupplierProcessRef } | { missing: "none" | "choose" } {
+  if (op.operationSupplierProcessId) {
+    const own = supplierProcessById.get(op.operationSupplierProcessId);
+    return own ? { supplierProcess: own } : { missing: "none" };
+  }
+  const candidates = op.processId
+    ? (supplierProcessesByProcessId.get(op.processId) ?? [])
+    : [];
+  if (candidates.length === 1) return { supplierProcess: candidates[0]! };
+  return { missing: candidates.length === 0 ? "none" : "choose" };
+}
+
+// What stands between a job and release, in words. A release with no dialog to
+// settle these in (bulk job release, batch release) refuses the job and names
+// them; the job's own Release dialog is where they are fixed. A kanban scan
+// refuses the same way.
+export function jobReleaseProblems(job: {
+  manufacturingBlocked: boolean;
+  nothingToMake?: boolean;
+  makeToAssetError?: string | null;
+  missingAssemblies: { description: string }[];
+  outsideOperationsWithoutSupplier: {
+    description: string;
+    missing: "none" | "choose";
+  }[];
+  materialsWithoutStorageUnit: { description: string }[];
+}): string[] {
+  return [
+    ...(job.nothingToMake ? ["nothing to make"] : []),
+    ...(job.manufacturingBlocked ? ["manufacturing is blocked"] : []),
+    ...(job.makeToAssetError ? [job.makeToAssetError] : []),
+    ...(job.missingAssemblies.length > 0
+      ? [
+          `no operations on ${job.missingAssemblies
+            .map((m) => m.description)
+            .join(", ")}`
+        ]
+      : []),
+    // No per-operation supplier picker here: an ambiguous or missing supplier
+    // is settled on the job's own Release.
+    ...job.outsideOperationsWithoutSupplier.map((op) =>
+      op.missing === "choose"
+        ? `choose a supplier for ${op.description} on the job`
+        : `${op.description} has no supplier`
+    ),
+    ...(job.materialsWithoutStorageUnit.length > 0
+      ? [
+          `set a Pull From storage unit on ${summarizeList(
+            job.materialsWithoutStorageUnit.map((m) => m.description)
+          )}`
+        ]
+      : [])
+  ];
+}
+
+export type StorageUnitLine = {
+  id: string;
+  description: string;
+  methodType: string | null;
+  itemType: string | null;
+  storageUnitId: string | null;
+  item: {
+    itemTrackingType: string | null;
+    readableIdWithRevision: string | null;
+  } | null;
+};
+
+export function materialsWithoutStorageUnit(
+  lines: StorageUnitLine[]
+): { id: string; description: string }[] {
+  const byDescription = new Map<string, { id: string; description: string }>();
+  for (const line of lines) {
+    if (line.storageUnitId) continue;
+    if (
+      !needsPullFrom({
+        methodType: line.methodType,
+        itemType: line.itemType,
+        itemTrackingType: line.item?.itemTrackingType ?? null
+      })
+    )
+      continue;
+    const description = line.item?.readableIdWithRevision || line.description;
+    if (!byDescription.has(description))
+      byDescription.set(description, { id: line.id, description });
+  }
+  return [...byDescription.values()];
+}

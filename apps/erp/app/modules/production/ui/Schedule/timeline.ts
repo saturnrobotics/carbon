@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Carbon (github.com/crbnos/carbon). Modified or adapted versions of this file,
+// including ports, remain AGPLv3; serving them over a network requires releasing their source.
+
 /**
  * Detail-panel model shared by the schedule / forecast Gantt views. The
  * `TimelineDetail` panel renders one of these for the selected row; the
@@ -43,6 +47,17 @@ export type TimelineNodeDetail = {
    */
   jobId?: string;
   jobReadableId?: string;
+  /** The operation's own description — shown as a secondary "Operation" row. */
+  operationDescription?: string | null;
+  /**
+   * The part this reservation's operation produces (its make method's item).
+   * `itemReadableId` titles the panel and appears as the "Part" row; the
+   * thumbnail is shown alongside the header.
+   */
+  itemReadableId?: string | null;
+  itemName?: string | null;
+  thumbnailPath?: string | null;
+  itemType?: string | null;
   /**
    * Set when this reservation is a Released operation batch's coalesced hold.
    * The panel opens the batch (not the anchor member's job) when present.

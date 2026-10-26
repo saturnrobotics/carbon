@@ -1,10 +1,17 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Carbon (github.com/crbnos/carbon). Modified or adapted versions of this file,
+// including ports, remain AGPLv3; serving them over a network requires releasing their source.
+
 import { useCarbon } from "@carbon/auth";
-import { useStorageRuleViolations } from "@carbon/ee/storage-rules";
+import { useRuleViolations } from "@carbon/ee/rules";
 import {
   Alert,
   AlertDescription,
   AlertTitle,
   Button,
+  DatePicker,
+  FormControl,
+  FormLabel,
   HStack,
   Modal,
   ModalBody,
@@ -25,11 +32,14 @@ import { useState } from "react";
 import { LuTriangleAlert } from "react-icons/lu";
 import { useNavigation, useParams } from "react-router";
 import { DateTime } from "~/components";
-import { useSettings, useUser } from "~/hooks";
+import { useCompanyToday, useSettings, useUser } from "~/hooks";
 import { useItems } from "~/stores";
 import { path } from "~/utils/path";
-import type { Shipment, ShipmentLine } from "../..";
-import { getShipmentTracking } from "../..";
+import {
+  getShipmentTracking,
+  isShippableEntityStatus
+} from "../../inventory.utils";
+import type { Shipment, ShipmentLine } from "../../types";
 
 type ExpiredEntityPolicy = "Warn" | "Block" | "BlockWithOverride";
 
@@ -46,15 +56,18 @@ const ShipmentPostModal = ({ onClose }: { onClose: () => void }) => {
       id: string;
       shipped: boolean;
     }[];
+    rentalLines: { id: string; shipped: boolean }[];
   }>(path.to.shipment(shipmentId));
 
-  // Return-to-customer shipments (source "Sales Return Order") ship returned
-  // stock, which is deliberately On Hold until shipped back — mirror the
-  // status lines.tracking required when the entity was assigned.
-  const expectedEntityStatus =
-    routeData?.shipment?.sourceDocument === "Sales Return Order"
-      ? "On Hold"
-      : "Available";
+  const isRental = routeData?.shipment?.sourceDocument === "Rental Agreement";
+  const companyToday = useCompanyToday();
+  const [postingDate, setPostingDate] = useState(companyToday);
+
+  // Mirror the statuses lines.tracking accepted when the entity was assigned:
+  // On Hold on a return to a customer, Available or Rejected on a return to a
+  // supplier, Available otherwise.
+  const isShippable = (status: string | null | undefined) =>
+    isShippableEntityStatus(routeData?.shipment?.sourceDocument, status);
 
   const navigation = useNavigation();
 
@@ -118,8 +131,11 @@ const ShipmentPostModal = ({ onClose }: { onClose: () => void }) => {
     const hasFaLines = (routeData?.fixedAssetLines ?? []).some(
       (line) => line.shipped
     );
+    const hasRentalLines = (routeData?.rentalLines ?? []).some(
+      (line) => line.shipped
+    );
 
-    if (!hasShipmentLines && !hasFaLines) {
+    if (!hasShipmentLines && !hasFaLines && !hasRentalLines) {
       setValidationErrors([
         {
           itemReadableId: null,
@@ -156,7 +172,7 @@ const ShipmentPostModal = ({ onClose }: { onClose: () => void }) => {
           return attributes["Shipment Line"] === line.id;
         });
 
-        if (trackedEntity?.status !== expectedEntityStatus) {
+        if (!isShippable(trackedEntity?.status)) {
           errors.push({
             itemReadableId: getItemReadableId(items, line.itemId) ?? null,
             shippedQuantity: line.shippedQuantity ?? 0,
@@ -194,10 +210,7 @@ const ShipmentPostModal = ({ onClose }: { onClose: () => void }) => {
         const quantityAvailable = trackedEntities?.reduce((acc, tracking) => {
           const trackingQuantity = Number(tracking.quantity);
 
-          return (
-            acc +
-            (tracking.status === expectedEntityStatus ? trackingQuantity : 0)
-          );
+          return acc + (isShippable(tracking.status) ? trackingQuantity : 0);
         }, 0);
 
         if (quantityAvailable !== line.shippedQuantity) {
@@ -239,7 +252,7 @@ const ShipmentPostModal = ({ onClose }: { onClose: () => void }) => {
     validateShipmentTracking();
   });
 
-  const ruleViolations = useStorageRuleViolations({
+  const ruleViolations = useRuleViolations({
     action: path.to.shipmentPost(shipmentId),
     onSuccess: onClose
   });
@@ -263,6 +276,19 @@ const ShipmentPostModal = ({ onClose }: { onClose: () => void }) => {
           <p className="text-sm text-muted-foreground mb-4">
             <Trans>Are you sure you want to post this shipment?</Trans>
           </p>
+          {isRental && (
+            <FormControl className="mb-4">
+              <FormLabel>
+                <Trans>Delivered on</Trans>
+              </FormLabel>
+              <DatePicker
+                aria-label={t`Delivered on`}
+                value={parseDate(postingDate)}
+                maxValue={parseDate(companyToday)}
+                onChange={(d) => d && setPostingDate(d.toString())}
+              />
+            </FormControl>
+          )}
           {validationErrors.length > 0 && (
             <Alert variant="destructive">
               <LuTriangleAlert className="h-4 w-4" />
@@ -346,7 +372,9 @@ const ShipmentPostModal = ({ onClose }: { onClose: () => void }) => {
             <form
               onSubmit={(e) => {
                 e.preventDefault();
-                ruleViolations.submit(new FormData());
+                const formData = new FormData();
+                if (isRental) formData.set("postingDate", postingDate);
+                ruleViolations.submit(formData);
               }}
             >
               <Button

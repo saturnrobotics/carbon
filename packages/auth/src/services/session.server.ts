@@ -1,8 +1,22 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Carbon (github.com/crbnos/carbon). Modified or adapted versions of this file,
+// including ports, remain AGPLv3; serving them over a network requires releasing their source.
+
 import { redis } from "@carbon/kv";
 import { getLogger } from "@carbon/logger";
+<<<<<<< HEAD
 import { Edition } from "@carbon/utils";
+||||||| 85d9006e1
+import { Edition } from "@carbon/utils";
+=======
+import { Edition, redirect } from "@carbon/utils";
+>>>>>>> 2beccc9789c598823f9d9584cdeecce9c7ffac75
 import type { AuthSession as SupabaseAuthSession } from "@supabase/supabase-js";
-import { createCookieSessionStorage, redirect } from "react-router";
+import {
+  type CookieOptions,
+  createCookie,
+  createCookieSessionStorage
+} from "react-router";
 
 import {
   CarbonEdition,
@@ -17,8 +31,9 @@ import {
   SESSION_MAX_AGE,
   SESSION_SECRET
 } from "../config/env";
+import { isCrossSiteNavigation } from "../lib/security";
 import type { AuthSession, Result } from "../types";
-import { getCookieDomain } from "../utils/cookie";
+import { authCookieName, getCookieDomain } from "../utils/cookie";
 import { getCurrentPath, isGet, makeRedirectToFromHere } from "../utils/http";
 import { path } from "../utils/path";
 import {
@@ -54,6 +69,7 @@ export const isTestEdition = CarbonEdition === Edition.Test;
 
 const log = getLogger("auth");
 
+<<<<<<< HEAD
 // Hosts already warned about in development, so the shared-cookie fallback is
 // logged once per host per process rather than on every request.
 const warnedFallbackHosts = new Set<string>();
@@ -155,6 +171,79 @@ export async function expireLegacyAuthCookie(request: Request) {
     request.headers.get("Cookie")
   );
   return legacyStorage.destroySession(legacySession);
+}
+||||||| 85d9006e1
+const sessionStorage = createCookieSessionStorage({
+  cookie: {
+    name: "carbon",
+    httpOnly: true,
+    path: "/",
+    sameSite: isTestEdition ? "none" : "lax",
+    secrets: [SESSION_SECRET!],
+    secure: !!cookieDomain,
+    domain: cookieDomain
+  }
+});
+=======
+// Shared by every signed cookie in this file.
+const signedCookieOptions: CookieOptions = {
+  httpOnly: true,
+  path: "/",
+  sameSite: isTestEdition ? "none" : "lax",
+  secrets: [SESSION_SECRET!],
+  secure: isTestEdition || !!cookieDomain,
+  domain: cookieDomain
+};
+
+const sessionStorage = createCookieSessionStorage({
+  cookie: { name: authCookieName("carbon"), ...signedCookieOptions }
+});
+>>>>>>> 2beccc9789c598823f9d9584cdeecce9c7ffac75
+
+const log = getLogger("auth", "session");
+
+// The Web Push endpoint of this browser, set when the user enables browser
+// notifications. Signing out (clearAuthCookies) deletes the endpoint's
+// subscription rows, so a browser nobody is signed into stops receiving
+// pushes — whichever path signed it out.
+export const pushEndpointCookie = createCookie(authCookieName("carbon-push"), {
+  ...signedCookieOptions,
+  // Browsers cap a cookie's lifetime at 400 days.
+  maxAge: 60 * 60 * 24 * 400
+});
+
+async function endBrowserPush(request: Request) {
+  const endpoint = await pushEndpointCookie.parse(
+    request.headers.get("Cookie")
+  );
+  if (typeof endpoint !== "string" || !endpoint) return null;
+  // The login loader clears a dead session's cookies on a GET. A top-level
+  // navigation from another site must not write (packages/auth/AGENTS.md), so
+  // it leaves the rows and the cookie alone: they lapse once no session
+  // refreshes them (notify skips stale rows), or the next sign-in replaces
+  // them.
+  if (isCrossSiteNavigation(request.headers)) return null;
+  // Best effort: signing out must still succeed and clear its cookies, even
+  // when the client cannot be built (missing Supabase URL) or the delete
+  // fails. The next 404/410 from the push service cleans the row up.
+  try {
+    // Loaded here, not at module load: importing the session module must not
+    // build a Supabase client.
+    const { getCarbonServiceRole } = await import(
+      "../lib/supabase/client.server"
+    );
+    // Every user's row for this browser: after sign-out nobody is signed in.
+    const { error } = await getCarbonServiceRole()
+      .from("pushSubscription")
+      .delete()
+      .eq("endpoint", endpoint);
+    if (error) {
+      log.error("Failed to delete push subscriptions on sign-out", { error });
+    }
+  } catch (error) {
+    log.error("Failed to delete push subscriptions on sign-out", { error });
+  }
+  return pushEndpointCookie.serialize("", { maxAge: 0 });
 }
 
 export async function setAuthSession(
@@ -307,16 +396,37 @@ export async function clearAuthCookies(request: Request) {
   const sessionCookie =
     await sessionStorageForRequest(request).destroySession(session);
   const companyIdCookie = setCompanyId(null);
+  const pushCookie = await endBrowserPush(request);
   return [
     ["Set-Cookie", sessionCookie] as [string, string],
+<<<<<<< HEAD
     ["Set-Cookie", await expireLegacyAuthCookie(request)] as [string, string],
     ["Set-Cookie", companyIdCookie] as [string, string]
+||||||| 85d9006e1
+    ["Set-Cookie", companyIdCookie] as [string, string]
+=======
+    ["Set-Cookie", companyIdCookie] as [string, string],
+    ...(pushCookie ? [["Set-Cookie", pushCookie] as [string, string]] : [])
+>>>>>>> 2beccc9789c598823f9d9584cdeecce9c7ffac75
   ];
 }
 
-export async function destroyAuthSession(request: Request) {
+/**
+ * `reason` is a slug naming why the session was destroyed (e.g. "no-claims"),
+ * echoed to the browser console by login.tsx — a forced logout is otherwise
+ * invisible client-side, since the browser sees nothing but a 302 to /login.
+ *
+ * It reaches the client in every environment, so it must stay a fixed set of
+ * internal state names: nothing user-identifying, and nothing that reveals
+ * whether an account exists. Identifying detail goes in the server log instead.
+ */
+export async function destroyAuthSession(request: Request, reason?: string) {
   const headers = await clearAuthCookies(request);
-  return redirect(path.to.login, {
+  const destination = reason
+    ? `${path.to.login}?reason=${encodeURIComponent(reason)}`
+    : path.to.login;
+
+  return redirect(destination, {
     headers
   });
 }
@@ -334,10 +444,20 @@ export async function flash(request: Request, result: Result) {
     }
   }
 
+  // The flash shares the session cookie: without maxAge this write would turn
+  // the signed-in session into one that ends when the browser closes.
   return {
     headers: {
+<<<<<<< HEAD
       "Set-Cookie":
         await sessionStorageForRequest(request).commitSession(session)
+||||||| 85d9006e1
+    headers: { "Set-Cookie": await sessionStorage.commitSession(session) }
+=======
+      "Set-Cookie": await sessionStorage.commitSession(session, {
+        maxAge: SESSION_MAX_AGE
+      })
+>>>>>>> 2beccc9789c598823f9d9584cdeecce9c7ffac75
     }
   };
 }
@@ -375,7 +495,15 @@ export async function getSessionFlash(request: Request) {
   if (!result.message) return null;
 
   const headers = {
+<<<<<<< HEAD
     "Set-Cookie": await sessionStorageForRequest(request).commitSession(session)
+||||||| 85d9006e1
+  const headers = { "Set-Cookie": await sessionStorage.commitSession(session) };
+=======
+    "Set-Cookie": await sessionStorage.commitSession(session, {
+      maxAge: SESSION_MAX_AGE
+    })
+>>>>>>> 2beccc9789c598823f9d9584cdeecce9c7ffac75
   };
 
   return { result, headers };

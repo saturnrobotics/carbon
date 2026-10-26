@@ -42,8 +42,7 @@ export type Database = {
           createdBy: string
           curve: Json
           id: string
-          name: string
-          processId: string | null
+          processId: string
           recertifyEveryDays: number | null
           shadowWeeks: number
           updatedAt: string | null
@@ -56,8 +55,7 @@ export type Database = {
           createdBy: string
           curve?: Json
           id?: string
-          name: string
-          processId?: string | null
+          processId: string
           recertifyEveryDays?: number | null
           shadowWeeks?: number
           updatedAt?: string | null
@@ -70,8 +68,7 @@ export type Database = {
           createdBy?: string
           curve?: Json
           id?: string
-          name?: string
-          processId?: string | null
+          processId?: string
           recertifyEveryDays?: number | null
           shadowWeeks?: number
           updatedAt?: string | null
@@ -351,6 +348,7 @@ export type Database = {
         Row: {
           accumulatedDepreciationAccount: string
           accumulatedDepreciationOnDisposalAccount: string
+          accumulatedRightOfUseAmortizationAccount: string | null
           assetAquisitionCostAccount: string
           assetAquisitionCostOnDisposalAccount: string
           assetDepreciationExpenseAccount: string
@@ -360,12 +358,15 @@ export type Database = {
           bankForeignCurrencyAccount: string
           bankLocalCurrencyAccount: string
           companyId: string
+          contractAssetAccount: string | null
           costOfGoodsSoldAccount: string
           currencyTranslationAccount: string
           customerPaymentDiscountAccount: string
           customerWriteOffAccount: string
+          deferredRevenueAccount: string | null
           deferredTaxExpenseAccountId: string | null
           deferredTaxLiabilityAccountId: string | null
+          employeeReimbursementsPayableAccount: string | null
           finishedGoodsAccount: string
           goodsReceivedNotInvoicedAccount: string
           indirectCostAccount: string
@@ -375,9 +376,16 @@ export type Database = {
           inventoryAdjustmentVarianceAccount: string
           laborAbsorptionAccount: string | null
           laborAndMachineVarianceAccount: string
+          leaseInterestExpenseAccount: string | null
+          leaseInterestIncomeAccount: string | null
+          leaseLiabilityAccount: string | null
+          leaseRevenueAccount: string | null
           lotSizeVarianceAccount: string
           maintenanceAccount: string
           materialVarianceAccount: string
+          migrationClearingAccount: string | null
+          netInvestmentInLeasesAccount: string | null
+          operatingLeaseExpenseAccount: string | null
           overheadAbsorptionAccount: string | null
           overheadVarianceAccount: string
           payablesAccount: string
@@ -388,8 +396,11 @@ export type Database = {
           realizedExchangeGainAccount: string
           realizedExchangeLossAccount: string
           receivablesAccount: string
+          rentalIncomeAccount: string | null
           retainedEarningsAccount: string
           reverseChargeSalesTaxPayableAccount: string
+          rightOfUseAmortizationExpenseAccount: string | null
+          rightOfUseAssetAccount: string | null
           roundingAccount: string
           salesAccount: string
           salesDiscountAccount: string
@@ -403,11 +414,13 @@ export type Database = {
           supplierPrepaymentAccount: string
           supplierWriteOffAccount: string
           updatedBy: string | null
+          variableLeaseExpenseAccount: string | null
           workInProgressAccount: string
         }
         Insert: {
           accumulatedDepreciationAccount: string
           accumulatedDepreciationOnDisposalAccount: string
+          accumulatedRightOfUseAmortizationAccount?: string | null
           assetAquisitionCostAccount: string
           assetAquisitionCostOnDisposalAccount: string
           assetDepreciationExpenseAccount: string
@@ -417,12 +430,15 @@ export type Database = {
           bankForeignCurrencyAccount: string
           bankLocalCurrencyAccount: string
           companyId: string
+          contractAssetAccount?: string | null
           costOfGoodsSoldAccount: string
           currencyTranslationAccount: string
           customerPaymentDiscountAccount: string
           customerWriteOffAccount: string
+          deferredRevenueAccount?: string | null
           deferredTaxExpenseAccountId?: string | null
           deferredTaxLiabilityAccountId?: string | null
+          employeeReimbursementsPayableAccount?: string | null
           finishedGoodsAccount: string
           goodsReceivedNotInvoicedAccount: string
           indirectCostAccount: string
@@ -432,9 +448,16 @@ export type Database = {
           inventoryAdjustmentVarianceAccount: string
           laborAbsorptionAccount?: string | null
           laborAndMachineVarianceAccount: string
+          leaseInterestExpenseAccount?: string | null
+          leaseInterestIncomeAccount?: string | null
+          leaseLiabilityAccount?: string | null
+          leaseRevenueAccount?: string | null
           lotSizeVarianceAccount: string
           maintenanceAccount: string
           materialVarianceAccount: string
+          migrationClearingAccount?: string | null
+          netInvestmentInLeasesAccount?: string | null
+          operatingLeaseExpenseAccount?: string | null
           overheadAbsorptionAccount?: string | null
           overheadVarianceAccount: string
           payablesAccount: string
@@ -445,8 +468,11 @@ export type Database = {
           realizedExchangeGainAccount: string
           realizedExchangeLossAccount: string
           receivablesAccount: string
+          rentalIncomeAccount?: string | null
           retainedEarningsAccount: string
           reverseChargeSalesTaxPayableAccount: string
+          rightOfUseAmortizationExpenseAccount?: string | null
+          rightOfUseAssetAccount?: string | null
           roundingAccount: string
           salesAccount: string
           salesDiscountAccount: string
@@ -460,11 +486,13 @@ export type Database = {
           supplierPrepaymentAccount: string
           supplierWriteOffAccount: string
           updatedBy?: string | null
+          variableLeaseExpenseAccount?: string | null
           workInProgressAccount: string
         }
         Update: {
           accumulatedDepreciationAccount?: string
           accumulatedDepreciationOnDisposalAccount?: string
+          accumulatedRightOfUseAmortizationAccount?: string | null
           assetAquisitionCostAccount?: string
           assetAquisitionCostOnDisposalAccount?: string
           assetDepreciationExpenseAccount?: string
@@ -474,12 +502,15 @@ export type Database = {
           bankForeignCurrencyAccount?: string
           bankLocalCurrencyAccount?: string
           companyId?: string
+          contractAssetAccount?: string | null
           costOfGoodsSoldAccount?: string
           currencyTranslationAccount?: string
           customerPaymentDiscountAccount?: string
           customerWriteOffAccount?: string
+          deferredRevenueAccount?: string | null
           deferredTaxExpenseAccountId?: string | null
           deferredTaxLiabilityAccountId?: string | null
+          employeeReimbursementsPayableAccount?: string | null
           finishedGoodsAccount?: string
           goodsReceivedNotInvoicedAccount?: string
           indirectCostAccount?: string
@@ -489,9 +520,16 @@ export type Database = {
           inventoryAdjustmentVarianceAccount?: string
           laborAbsorptionAccount?: string | null
           laborAndMachineVarianceAccount?: string
+          leaseInterestExpenseAccount?: string | null
+          leaseInterestIncomeAccount?: string | null
+          leaseLiabilityAccount?: string | null
+          leaseRevenueAccount?: string | null
           lotSizeVarianceAccount?: string
           maintenanceAccount?: string
           materialVarianceAccount?: string
+          migrationClearingAccount?: string | null
+          netInvestmentInLeasesAccount?: string | null
+          operatingLeaseExpenseAccount?: string | null
           overheadAbsorptionAccount?: string | null
           overheadVarianceAccount?: string
           payablesAccount?: string
@@ -502,8 +540,11 @@ export type Database = {
           realizedExchangeGainAccount?: string
           realizedExchangeLossAccount?: string
           receivablesAccount?: string
+          rentalIncomeAccount?: string | null
           retainedEarningsAccount?: string
           reverseChargeSalesTaxPayableAccount?: string
+          rightOfUseAmortizationExpenseAccount?: string | null
+          rightOfUseAssetAccount?: string | null
           roundingAccount?: string
           salesAccount?: string
           salesDiscountAccount?: string
@@ -517,6 +558,7 @@ export type Database = {
           supplierPrepaymentAccount?: string
           supplierWriteOffAccount?: string
           updatedBy?: string | null
+          variableLeaseExpenseAccount?: string | null
           workInProgressAccount?: string
         }
         Relationships: [
@@ -549,6 +591,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "accountDefault_accumulatedRightOfUseAmortizationAccount_fkey"
+            columns: ["accumulatedRightOfUseAmortizationAccount"]
+            isOneToOne: false
+            referencedRelation: "account"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accountDefault_accumulatedRightOfUseAmortizationAccount_fkey"
+            columns: ["accumulatedRightOfUseAmortizationAccount"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "accountDefault_aquisitionCostAccount_fkey"
             columns: ["assetAquisitionCostAccount"]
             isOneToOne: false
@@ -661,6 +717,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "accountDefault_contractAssetAccount_fkey"
+            columns: ["contractAssetAccount"]
+            isOneToOne: false
+            referencedRelation: "account"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accountDefault_contractAssetAccount_fkey"
+            columns: ["contractAssetAccount"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "accountDefault_costOfGoodsSoldAccount_fkey"
             columns: ["costOfGoodsSoldAccount"]
             isOneToOne: false
@@ -717,6 +787,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "accountDefault_deferredRevenueAccount_fkey"
+            columns: ["deferredRevenueAccount"]
+            isOneToOne: false
+            referencedRelation: "account"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accountDefault_deferredRevenueAccount_fkey"
+            columns: ["deferredRevenueAccount"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "accountDefault_deferredTaxExpenseAccountId_fkey"
             columns: ["deferredTaxExpenseAccountId"]
             isOneToOne: false
@@ -740,6 +824,20 @@ export type Database = {
           {
             foreignKeyName: "accountDefault_deferredTaxLiabilityAccountId_fkey"
             columns: ["deferredTaxLiabilityAccountId"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accountDefault_employeeReimbursementsPayableAccount_fkey"
+            columns: ["employeeReimbursementsPayableAccount"]
+            isOneToOne: false
+            referencedRelation: "account"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accountDefault_employeeReimbursementsPayableAccount_fkey"
+            columns: ["employeeReimbursementsPayableAccount"]
             isOneToOne: false
             referencedRelation: "accounts"
             referencedColumns: ["id"]
@@ -899,6 +997,62 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "accountDefault_leaseInterestExpenseAccount_fkey"
+            columns: ["leaseInterestExpenseAccount"]
+            isOneToOne: false
+            referencedRelation: "account"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accountDefault_leaseInterestExpenseAccount_fkey"
+            columns: ["leaseInterestExpenseAccount"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accountDefault_leaseInterestIncomeAccount_fkey"
+            columns: ["leaseInterestIncomeAccount"]
+            isOneToOne: false
+            referencedRelation: "account"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accountDefault_leaseInterestIncomeAccount_fkey"
+            columns: ["leaseInterestIncomeAccount"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accountDefault_leaseLiabilityAccount_fkey"
+            columns: ["leaseLiabilityAccount"]
+            isOneToOne: false
+            referencedRelation: "account"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accountDefault_leaseLiabilityAccount_fkey"
+            columns: ["leaseLiabilityAccount"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accountDefault_leaseRevenueAccount_fkey"
+            columns: ["leaseRevenueAccount"]
+            isOneToOne: false
+            referencedRelation: "account"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accountDefault_leaseRevenueAccount_fkey"
+            columns: ["leaseRevenueAccount"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "accountDefault_lotSizeVarianceAccount_fkey"
             columns: ["lotSizeVarianceAccount"]
             isOneToOne: false
@@ -936,6 +1090,34 @@ export type Database = {
           {
             foreignKeyName: "accountDefault_materialVarianceAccount_fkey"
             columns: ["materialVarianceAccount"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accountDefault_netInvestmentInLeasesAccount_fkey"
+            columns: ["netInvestmentInLeasesAccount"]
+            isOneToOne: false
+            referencedRelation: "account"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accountDefault_netInvestmentInLeasesAccount_fkey"
+            columns: ["netInvestmentInLeasesAccount"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accountDefault_operatingLeaseExpenseAccount_fkey"
+            columns: ["operatingLeaseExpenseAccount"]
+            isOneToOne: false
+            referencedRelation: "account"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accountDefault_operatingLeaseExpenseAccount_fkey"
+            columns: ["operatingLeaseExpenseAccount"]
             isOneToOne: false
             referencedRelation: "accounts"
             referencedColumns: ["id"]
@@ -1081,6 +1263,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "accountDefault_rentalIncomeAccount_fkey"
+            columns: ["rentalIncomeAccount"]
+            isOneToOne: false
+            referencedRelation: "account"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accountDefault_rentalIncomeAccount_fkey"
+            columns: ["rentalIncomeAccount"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "accountDefault_retainedEarningsAccount_fkey"
             columns: ["retainedEarningsAccount"]
             isOneToOne: false
@@ -1104,6 +1300,34 @@ export type Database = {
           {
             foreignKeyName: "accountDefault_reverseChargeSalesTaxPayableAccount_fkey"
             columns: ["reverseChargeSalesTaxPayableAccount"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accountDefault_rightOfUseAmortizationExpenseAccount_fkey"
+            columns: ["rightOfUseAmortizationExpenseAccount"]
+            isOneToOne: false
+            referencedRelation: "account"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accountDefault_rightOfUseAmortizationExpenseAccount_fkey"
+            columns: ["rightOfUseAmortizationExpenseAccount"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accountDefault_rightOfUseAssetAccount_fkey"
+            columns: ["rightOfUseAssetAccount"]
+            isOneToOne: false
+            referencedRelation: "account"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accountDefault_rightOfUseAssetAccount_fkey"
+            columns: ["rightOfUseAssetAccount"]
             isOneToOne: false
             referencedRelation: "accounts"
             referencedColumns: ["id"]
@@ -1312,6 +1536,20 @@ export type Database = {
             referencedColumns: ["userId"]
           },
           {
+            foreignKeyName: "accountDefault_variableLeaseExpenseAccount_fkey"
+            columns: ["variableLeaseExpenseAccount"]
+            isOneToOne: false
+            referencedRelation: "account"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accountDefault_variableLeaseExpenseAccount_fkey"
+            columns: ["variableLeaseExpenseAccount"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "accountDefault_workInProgressAccount_fkey"
             columns: ["workInProgressAccount"]
             isOneToOne: false
@@ -1324,6 +1562,135 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "accounts"
             referencedColumns: ["id"]
+          }
+        ]
+      }
+      accountingCutoverIgnoredInvoice: {
+        Row: {
+          companyId: string
+          createdAt: string
+          createdBy: string
+          id: string
+          invoiceId: string
+          updatedAt: string | null
+          updatedBy: string | null
+        }
+        Insert: {
+          companyId: string
+          createdAt?: string
+          createdBy: string
+          id?: string
+          invoiceId: string
+          updatedAt?: string | null
+          updatedBy?: string | null
+        }
+        Update: {
+          companyId?: string
+          createdAt?: string
+          createdBy?: string
+          id?: string
+          invoiceId?: string
+          updatedAt?: string | null
+          updatedBy?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accountingCutoverIgnoredInvoice_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accountingCutoverIgnoredInvoice_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accountingCutoverIgnoredInvoice_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "customFieldTables"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "accountingCutoverIgnoredInvoice_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "integrations"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "accountingCutoverIgnoredInvoice_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accountingCutoverIgnoredInvoice_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accountingCutoverIgnoredInvoice_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accountingCutoverIgnoredInvoice_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accountingCutoverIgnoredInvoice_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "accountingCutoverIgnoredInvoice_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accountingCutoverIgnoredInvoice_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accountingCutoverIgnoredInvoice_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accountingCutoverIgnoredInvoice_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accountingCutoverIgnoredInvoice_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
           }
         ]
       }
@@ -3617,13 +3984,16 @@ export type Database = {
           explode: Json | null
           fastener: Json | null
           fileTypes: string[] | null
+          hiddenComponentNodeIds: string[]
           id: string
           instructionText: string | null
+          isSubAssembly: boolean
           listValues: string[] | null
           maxValue: number | null
           minValue: number | null
           motion: Json
           notes: Json | null
+          orientation: Json | null
           parentStepId: string | null
           planConfidence: string
           required: boolean | null
@@ -3635,6 +4005,7 @@ export type Database = {
           unitOfMeasureCode: string | null
           updatedAt: string | null
           updatedBy: string | null
+          usedInStepId: string | null
           warnings: Json | null
         }
         Insert: {
@@ -3650,13 +4021,16 @@ export type Database = {
           explode?: Json | null
           fastener?: Json | null
           fileTypes?: string[] | null
+          hiddenComponentNodeIds?: string[]
           id?: string
           instructionText?: string | null
+          isSubAssembly?: boolean
           listValues?: string[] | null
           maxValue?: number | null
           minValue?: number | null
           motion?: Json
           notes?: Json | null
+          orientation?: Json | null
           parentStepId?: string | null
           planConfidence?: string
           required?: boolean | null
@@ -3668,6 +4042,7 @@ export type Database = {
           unitOfMeasureCode?: string | null
           updatedAt?: string | null
           updatedBy?: string | null
+          usedInStepId?: string | null
           warnings?: Json | null
         }
         Update: {
@@ -3683,13 +4058,16 @@ export type Database = {
           explode?: Json | null
           fastener?: Json | null
           fileTypes?: string[] | null
+          hiddenComponentNodeIds?: string[]
           id?: string
           instructionText?: string | null
+          isSubAssembly?: boolean
           listValues?: string[] | null
           maxValue?: number | null
           minValue?: number | null
           motion?: Json
           notes?: Json | null
+          orientation?: Json | null
           parentStepId?: string | null
           planConfidence?: string
           required?: boolean | null
@@ -3701,6 +4079,7 @@ export type Database = {
           unitOfMeasureCode?: string | null
           updatedAt?: string | null
           updatedBy?: string | null
+          usedInStepId?: string | null
           warnings?: Json | null
         }
         Relationships: [
@@ -3836,6 +4215,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "userDefaults"
             referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "assemblyInstructionStep_usedInStepId_fkey"
+            columns: ["usedInStepId"]
+            isOneToOne: false
+            referencedRelation: "assemblyInstructionStep"
+            referencedColumns: ["id"]
           }
         ]
       }
@@ -4726,6 +5112,7 @@ export type Database = {
           isCustomer: boolean
           isDate: boolean
           isFile: boolean
+          isLink: boolean
           isList: boolean
           isNumeric: boolean
           isSupplier: boolean
@@ -4739,6 +5126,7 @@ export type Database = {
           isCustomer?: boolean
           isDate?: boolean
           isFile?: boolean
+          isLink?: boolean
           isList?: boolean
           isNumeric?: boolean
           isSupplier?: boolean
@@ -4752,6 +5140,7 @@ export type Database = {
           isCustomer?: boolean
           isDate?: boolean
           isFile?: boolean
+          isLink?: boolean
           isList?: boolean
           isNumeric?: boolean
           isSupplier?: boolean
@@ -5460,6 +5849,30 @@ export type Database = {
             referencedColumns: ["userId"]
           }
         ]
+      }
+      changelogDispatch: {
+        Row: {
+          description: string | null
+          dispatchedAt: string
+          emailsSent: number
+          guid: string
+          title: string | null
+        }
+        Insert: {
+          description?: string | null
+          dispatchedAt?: string
+          emailsSent?: number
+          guid: string
+          title?: string | null
+        }
+        Update: {
+          description?: string | null
+          dispatchedAt?: string
+          emailsSent?: number
+          guid?: string
+          title?: string | null
+        }
+        Relationships: []
       }
       changeOrder: {
         Row: {
@@ -6732,6 +7145,523 @@ export type Database = {
           }
         ]
       }
+      charge: {
+        Row: {
+          amount: number
+          cardAccountId: string
+          cardHolderName: string | null
+          cardLast4: string | null
+          chargeId: string
+          companyId: string
+          createdAt: string
+          createdBy: string
+          currencyCode: string
+          customFields: Json | null
+          exchangeRate: number
+          id: string
+          integration: string
+          journalId: string | null
+          memo: string | null
+          merchantName: string | null
+          offsetAccountId: string | null
+          postedAt: string | null
+          postedBy: string | null
+          postingDate: string | null
+          status: Database["public"]["Enums"]["chargeStatus"]
+          supplierId: string | null
+          transactionDate: string
+          type: Database["public"]["Enums"]["chargeType"]
+          updatedAt: string | null
+          updatedBy: string | null
+          voidedAt: string | null
+          voidedBy: string | null
+        }
+        Insert: {
+          amount: number
+          cardAccountId: string
+          cardHolderName?: string | null
+          cardLast4?: string | null
+          chargeId: string
+          companyId: string
+          createdAt?: string
+          createdBy: string
+          currencyCode: string
+          customFields?: Json | null
+          exchangeRate?: number
+          id?: string
+          integration?: string
+          journalId?: string | null
+          memo?: string | null
+          merchantName?: string | null
+          offsetAccountId?: string | null
+          postedAt?: string | null
+          postedBy?: string | null
+          postingDate?: string | null
+          status?: Database["public"]["Enums"]["chargeStatus"]
+          supplierId?: string | null
+          transactionDate: string
+          type?: Database["public"]["Enums"]["chargeType"]
+          updatedAt?: string | null
+          updatedBy?: string | null
+          voidedAt?: string | null
+          voidedBy?: string | null
+        }
+        Update: {
+          amount?: number
+          cardAccountId?: string
+          cardHolderName?: string | null
+          cardLast4?: string | null
+          chargeId?: string
+          companyId?: string
+          createdAt?: string
+          createdBy?: string
+          currencyCode?: string
+          customFields?: Json | null
+          exchangeRate?: number
+          id?: string
+          integration?: string
+          journalId?: string | null
+          memo?: string | null
+          merchantName?: string | null
+          offsetAccountId?: string | null
+          postedAt?: string | null
+          postedBy?: string | null
+          postingDate?: string | null
+          status?: Database["public"]["Enums"]["chargeStatus"]
+          supplierId?: string | null
+          transactionDate?: string
+          type?: Database["public"]["Enums"]["chargeType"]
+          updatedAt?: string | null
+          updatedBy?: string | null
+          voidedAt?: string | null
+          voidedBy?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "charge_cardAccountId_fkey"
+            columns: ["cardAccountId"]
+            isOneToOne: false
+            referencedRelation: "account"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "charge_cardAccountId_fkey"
+            columns: ["cardAccountId"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "charge_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "charge_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "charge_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "customFieldTables"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "charge_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "integrations"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "charge_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "charge_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "charge_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "charge_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "charge_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "charge_currencyCode_fkey"
+            columns: ["currencyCode"]
+            isOneToOne: false
+            referencedRelation: "currencyCode"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "charge_journalId_fkey"
+            columns: ["journalId"]
+            isOneToOne: false
+            referencedRelation: "journal"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "charge_journalId_fkey"
+            columns: ["journalId"]
+            isOneToOne: false
+            referencedRelation: "journalEntries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "charge_offsetAccountId_fkey"
+            columns: ["offsetAccountId"]
+            isOneToOne: false
+            referencedRelation: "account"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "charge_offsetAccountId_fkey"
+            columns: ["offsetAccountId"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "charge_postedBy_fkey"
+            columns: ["postedBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "charge_postedBy_fkey"
+            columns: ["postedBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "charge_postedBy_fkey"
+            columns: ["postedBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "charge_postedBy_fkey"
+            columns: ["postedBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "charge_postedBy_fkey"
+            columns: ["postedBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "charge_supplierId_fkey"
+            columns: ["supplierId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "purchaseOrderSuppliers"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "charge_supplierId_fkey"
+            columns: ["supplierId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "supplier"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "charge_supplierId_fkey"
+            columns: ["supplierId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "charge_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "charge_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "charge_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "charge_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "charge_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "charge_voidedBy_fkey"
+            columns: ["voidedBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "charge_voidedBy_fkey"
+            columns: ["voidedBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "charge_voidedBy_fkey"
+            columns: ["voidedBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "charge_voidedBy_fkey"
+            columns: ["voidedBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "charge_voidedBy_fkey"
+            columns: ["voidedBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          }
+        ]
+      }
+      chargeLine: {
+        Row: {
+          accountId: string
+          amount: number
+          chargeId: string
+          companyId: string
+          costCenterId: string | null
+          createdAt: string
+          createdBy: string
+          customFields: Json | null
+          description: string | null
+          id: string
+          projectId: string | null
+          sequence: number
+          updatedAt: string | null
+          updatedBy: string | null
+        }
+        Insert: {
+          accountId: string
+          amount: number
+          chargeId: string
+          companyId: string
+          costCenterId?: string | null
+          createdAt?: string
+          createdBy: string
+          customFields?: Json | null
+          description?: string | null
+          id?: string
+          projectId?: string | null
+          sequence?: number
+          updatedAt?: string | null
+          updatedBy?: string | null
+        }
+        Update: {
+          accountId?: string
+          amount?: number
+          chargeId?: string
+          companyId?: string
+          costCenterId?: string | null
+          createdAt?: string
+          createdBy?: string
+          customFields?: Json | null
+          description?: string | null
+          id?: string
+          projectId?: string | null
+          sequence?: number
+          updatedAt?: string | null
+          updatedBy?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chargeLine_accountId_fkey"
+            columns: ["accountId"]
+            isOneToOne: false
+            referencedRelation: "account"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chargeLine_accountId_fkey"
+            columns: ["accountId"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chargeLine_chargeId_fkey"
+            columns: ["chargeId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "charge"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "chargeLine_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chargeLine_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chargeLine_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "customFieldTables"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "chargeLine_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "integrations"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "chargeLine_costCenterId_fkey"
+            columns: ["costCenterId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "costCenter"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "chargeLine_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chargeLine_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chargeLine_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chargeLine_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chargeLine_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "chargeLine_projectId_fkey"
+            columns: ["projectId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "project"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "chargeLine_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chargeLine_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chargeLine_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chargeLine_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chargeLine_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          }
+        ]
+      }
       company: {
         Row: {
           active: boolean
@@ -6744,6 +7674,7 @@ export type Database = {
           countryCode: string | null
           createdAt: string
           customIndustryDescription: string | null
+          dimensions: Json
           email: string | null
           eori: string | null
           fax: string | null
@@ -6782,6 +7713,7 @@ export type Database = {
           countryCode?: string | null
           createdAt?: string
           customIndustryDescription?: string | null
+          dimensions?: Json
           email?: string | null
           eori?: string | null
           fax?: string | null
@@ -6820,6 +7752,7 @@ export type Database = {
           countryCode?: string | null
           createdAt?: string
           customIndustryDescription?: string | null
+          dimensions?: Json
           email?: string | null
           eori?: string | null
           fax?: string | null
@@ -7300,6 +8233,7 @@ export type Database = {
       companyPlan: {
         Row: {
           aiTokensLimit: number
+          apiRateLimit: number | null
           createdAt: string
           id: string
           planId: string
@@ -7314,6 +8248,7 @@ export type Database = {
         }
         Insert: {
           aiTokensLimit?: number
+          apiRateLimit?: number | null
           createdAt?: string
           id?: string
           planId: string
@@ -7328,6 +8263,7 @@ export type Database = {
         }
         Update: {
           aiTokensLimit?: number
+          apiRateLimit?: number | null
           createdAt?: string
           id?: string
           planId?: string
@@ -7380,6 +8316,9 @@ export type Database = {
       }
       companySettings: {
         Row: {
+          accountingActivatedAt: string | null
+          accountingActivatedBy: string | null
+          accountingCutoverDate: string | null
           accountingEnabled: boolean
           accountsPayableAddress: boolean | null
           accountsPayableEmail: string | null
@@ -7392,44 +8331,70 @@ export type Database = {
           autoStartOperationTimer: boolean
           consoleEnabled: boolean
           defaultCustomerCc: string[] | null
+          defaultPlanningHorizonDays: number | null
+          defaultResponsibleEmployee: string | null
           defaultSupplierCc: string[] | null
           digitalQuoteEnabled: boolean
           digitalQuoteIncludesPurchaseOrders: boolean
           digitalQuoteNotificationGroup: string[]
           enforceInspectionFourEyes: boolean
+          forecastConsumptionBackwardPeriods: number
+          forecastConsumptionForwardPeriods: number
           gaugeCalibrationExpiredNotificationGroup: string[]
           id: string
           includeMaterialsOnTraveler: boolean
+          includeOperationsOnTraveler: boolean
           incompletePickingListPolicy: string
           inventoryJobCompletedNotificationGroup: string[]
           inventoryShelfLife: Json
+          invoiceAutomation: Database["public"]["Enums"]["invoiceAutomation"]
+          invoiceNotificationGroup: string[]
           kanbanOutput: Database["public"]["Enums"]["kanbanOutput"]
+          leaseDefaultDiscountRate: number
+          leaseIncrementalBorrowingRate: number
+          leaseMajorPartThresholdPercent: number
+          leaseReminderDays: number
+          leaseShortTermExpedient: boolean
+          leaseSubstantiallyAllThresholdPercent: number
           maintenanceDispatchNotificationGroup: string[] | null
           materialGeneratedIds: boolean
+          mrpRunTime: string | null
           operationsDispatchNotificationGroup: string[] | null
           otherDispatchNotificationGroup: string[] | null
           plmReleaseControl: string
+          preventNegativeBackflush: boolean
           printing: Json | null
           productLabelSize: string | null
           purchasePriceUpdateTiming: Database["public"]["Enums"]["purchasePriceUpdateTiming"]
           qualityDispatchNotificationGroup: string[] | null
           qualityIssueTarget: number
           quoteLineCategoryMarkups: Json | null
+          receiptQuantitiesStartAtZero: boolean
+          requireBackflushStorageUnit: boolean
+          requireCustomerContactAndLocation: boolean
           requireMfa: boolean
+          requireSupplierContactAndLocation: boolean
+          rescheduleToleranceDays: number
           returnPickedMaterialTiming: string
           rfqReadyNotificationGroup: string[]
           salesJobCompletedNotificationGroup: string[]
+          salesRuleNotificationGroup: string[]
           samplingStandard: Database["public"]["Enums"]["samplingStandard"]
           shelfLabelSize: string | null
+          showBomExplorerReadableId: boolean
           showCurrencyTrailingZeros: boolean
           showCustomerReadableId: boolean
           showSupplierReadableId: boolean
+          skipApprovalForPlanningPurchaseOrders: boolean
           supplierQuoteNotificationGroup: string[]
           timeCardEnabled: boolean
           updateLeadTimesOnReceipt: boolean
           useMetric: boolean
         }
         Insert: {
+          accountingActivatedAt?: string | null
+          accountingActivatedBy?: string | null
+          accountingCutoverDate?: string | null
           accountingEnabled?: boolean
           accountsPayableAddress?: boolean | null
           accountsPayableEmail?: string | null
@@ -7442,44 +8407,70 @@ export type Database = {
           autoStartOperationTimer?: boolean
           consoleEnabled?: boolean
           defaultCustomerCc?: string[] | null
+          defaultPlanningHorizonDays?: number | null
+          defaultResponsibleEmployee?: string | null
           defaultSupplierCc?: string[] | null
           digitalQuoteEnabled?: boolean
           digitalQuoteIncludesPurchaseOrders?: boolean
           digitalQuoteNotificationGroup?: string[]
           enforceInspectionFourEyes?: boolean
+          forecastConsumptionBackwardPeriods?: number
+          forecastConsumptionForwardPeriods?: number
           gaugeCalibrationExpiredNotificationGroup?: string[]
           id: string
           includeMaterialsOnTraveler?: boolean
+          includeOperationsOnTraveler?: boolean
           incompletePickingListPolicy?: string
           inventoryJobCompletedNotificationGroup?: string[]
           inventoryShelfLife?: Json
+          invoiceAutomation?: Database["public"]["Enums"]["invoiceAutomation"]
+          invoiceNotificationGroup?: string[]
           kanbanOutput?: Database["public"]["Enums"]["kanbanOutput"]
+          leaseDefaultDiscountRate?: number
+          leaseIncrementalBorrowingRate?: number
+          leaseMajorPartThresholdPercent?: number
+          leaseReminderDays?: number
+          leaseShortTermExpedient?: boolean
+          leaseSubstantiallyAllThresholdPercent?: number
           maintenanceDispatchNotificationGroup?: string[] | null
           materialGeneratedIds?: boolean
+          mrpRunTime?: string | null
           operationsDispatchNotificationGroup?: string[] | null
           otherDispatchNotificationGroup?: string[] | null
           plmReleaseControl?: string
+          preventNegativeBackflush?: boolean
           printing?: Json | null
           productLabelSize?: string | null
           purchasePriceUpdateTiming?: Database["public"]["Enums"]["purchasePriceUpdateTiming"]
           qualityDispatchNotificationGroup?: string[] | null
           qualityIssueTarget?: number
           quoteLineCategoryMarkups?: Json | null
+          receiptQuantitiesStartAtZero?: boolean
+          requireBackflushStorageUnit?: boolean
+          requireCustomerContactAndLocation?: boolean
           requireMfa?: boolean
+          requireSupplierContactAndLocation?: boolean
+          rescheduleToleranceDays?: number
           returnPickedMaterialTiming?: string
           rfqReadyNotificationGroup?: string[]
           salesJobCompletedNotificationGroup?: string[]
+          salesRuleNotificationGroup?: string[]
           samplingStandard?: Database["public"]["Enums"]["samplingStandard"]
           shelfLabelSize?: string | null
+          showBomExplorerReadableId?: boolean
           showCurrencyTrailingZeros?: boolean
           showCustomerReadableId?: boolean
           showSupplierReadableId?: boolean
+          skipApprovalForPlanningPurchaseOrders?: boolean
           supplierQuoteNotificationGroup?: string[]
           timeCardEnabled?: boolean
           updateLeadTimesOnReceipt?: boolean
           useMetric?: boolean
         }
         Update: {
+          accountingActivatedAt?: string | null
+          accountingActivatedBy?: string | null
+          accountingCutoverDate?: string | null
           accountingEnabled?: boolean
           accountsPayableAddress?: boolean | null
           accountsPayableEmail?: string | null
@@ -7492,44 +8483,102 @@ export type Database = {
           autoStartOperationTimer?: boolean
           consoleEnabled?: boolean
           defaultCustomerCc?: string[] | null
+          defaultPlanningHorizonDays?: number | null
+          defaultResponsibleEmployee?: string | null
           defaultSupplierCc?: string[] | null
           digitalQuoteEnabled?: boolean
           digitalQuoteIncludesPurchaseOrders?: boolean
           digitalQuoteNotificationGroup?: string[]
           enforceInspectionFourEyes?: boolean
+          forecastConsumptionBackwardPeriods?: number
+          forecastConsumptionForwardPeriods?: number
           gaugeCalibrationExpiredNotificationGroup?: string[]
           id?: string
           includeMaterialsOnTraveler?: boolean
+          includeOperationsOnTraveler?: boolean
           incompletePickingListPolicy?: string
           inventoryJobCompletedNotificationGroup?: string[]
           inventoryShelfLife?: Json
+          invoiceAutomation?: Database["public"]["Enums"]["invoiceAutomation"]
+          invoiceNotificationGroup?: string[]
           kanbanOutput?: Database["public"]["Enums"]["kanbanOutput"]
+          leaseDefaultDiscountRate?: number
+          leaseIncrementalBorrowingRate?: number
+          leaseMajorPartThresholdPercent?: number
+          leaseReminderDays?: number
+          leaseShortTermExpedient?: boolean
+          leaseSubstantiallyAllThresholdPercent?: number
           maintenanceDispatchNotificationGroup?: string[] | null
           materialGeneratedIds?: boolean
+          mrpRunTime?: string | null
           operationsDispatchNotificationGroup?: string[] | null
           otherDispatchNotificationGroup?: string[] | null
           plmReleaseControl?: string
+          preventNegativeBackflush?: boolean
           printing?: Json | null
           productLabelSize?: string | null
           purchasePriceUpdateTiming?: Database["public"]["Enums"]["purchasePriceUpdateTiming"]
           qualityDispatchNotificationGroup?: string[] | null
           qualityIssueTarget?: number
           quoteLineCategoryMarkups?: Json | null
+          receiptQuantitiesStartAtZero?: boolean
+          requireBackflushStorageUnit?: boolean
+          requireCustomerContactAndLocation?: boolean
           requireMfa?: boolean
+          requireSupplierContactAndLocation?: boolean
+          rescheduleToleranceDays?: number
           returnPickedMaterialTiming?: string
           rfqReadyNotificationGroup?: string[]
           salesJobCompletedNotificationGroup?: string[]
+          salesRuleNotificationGroup?: string[]
           samplingStandard?: Database["public"]["Enums"]["samplingStandard"]
           shelfLabelSize?: string | null
+          showBomExplorerReadableId?: boolean
           showCurrencyTrailingZeros?: boolean
           showCustomerReadableId?: boolean
           showSupplierReadableId?: boolean
+          skipApprovalForPlanningPurchaseOrders?: boolean
           supplierQuoteNotificationGroup?: string[]
           timeCardEnabled?: boolean
           updateLeadTimesOnReceipt?: boolean
           useMetric?: boolean
         }
         Relationships: [
+          {
+            foreignKeyName: "companySettings_accountingActivatedBy_fkey"
+            columns: ["accountingActivatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "companySettings_accountingActivatedBy_fkey"
+            columns: ["accountingActivatedBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "companySettings_accountingActivatedBy_fkey"
+            columns: ["accountingActivatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "companySettings_accountingActivatedBy_fkey"
+            columns: ["accountingActivatedBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "companySettings_accountingActivatedBy_fkey"
+            columns: ["accountingActivatedBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
           {
             foreignKeyName: "companySettings_companyId_fkey"
             columns: ["id"]
@@ -7557,6 +8606,41 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "integrations"
             referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "companySettings_defaultResponsibleEmployee_fkey"
+            columns: ["defaultResponsibleEmployee"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "companySettings_defaultResponsibleEmployee_fkey"
+            columns: ["defaultResponsibleEmployee"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "companySettings_defaultResponsibleEmployee_fkey"
+            columns: ["defaultResponsibleEmployee"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "companySettings_defaultResponsibleEmployee_fkey"
+            columns: ["defaultResponsibleEmployee"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "companySettings_defaultResponsibleEmployee_fkey"
+            columns: ["defaultResponsibleEmployee"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
           }
         ]
       }
@@ -8502,6 +9586,13 @@ export type Database = {
             foreignKeyName: "contractorAbility_abilityId_fkey"
             columns: ["abilityId"]
             isOneToOne: false
+            referencedRelation: "abilities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contractorAbility_abilityId_fkey"
+            columns: ["abilityId"]
+            isOneToOne: false
             referencedRelation: "ability"
             referencedColumns: ["id"]
           },
@@ -8793,6 +9884,7 @@ export type Database = {
           quantity: number
           remainingQuantity: number
           supplierId: string | null
+          trackedEntityId: string | null
         }
         Insert: {
           adjustment?: boolean
@@ -8815,6 +9907,7 @@ export type Database = {
           quantity?: number
           remainingQuantity?: number
           supplierId?: string | null
+          trackedEntityId?: string | null
         }
         Update: {
           adjustment?: boolean
@@ -8837,6 +9930,7 @@ export type Database = {
           quantity?: number
           remainingQuantity?: number
           supplierId?: string | null
+          trackedEntityId?: string | null
         }
         Relationships: [
           {
@@ -8929,6 +10023,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "suppliers"
             referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "costLedger_trackedEntityId_fkey"
+            columns: ["trackedEntityId"]
+            isOneToOne: false
+            referencedRelation: "trackedEntity"
+            referencedColumns: ["id"]
           }
         ]
       }
@@ -9472,6 +10573,205 @@ export type Database = {
           }
         ]
       }
+      customerBankAccount: {
+        Row: {
+          accountHolderName: string | null
+          accountNumber: string | null
+          active: boolean
+          bankAddress: string | null
+          bankCode: string | null
+          bankName: string | null
+          companyId: string
+          countryCode: string | null
+          createdAt: string
+          createdBy: string
+          currencyCode: string | null
+          customerId: string
+          customFields: Json | null
+          id: string
+          isPrimary: boolean
+          name: string
+          notes: string | null
+          swiftBic: string | null
+          tags: string[] | null
+          updatedAt: string | null
+          updatedBy: string | null
+        }
+        Insert: {
+          accountHolderName?: string | null
+          accountNumber?: string | null
+          active?: boolean
+          bankAddress?: string | null
+          bankCode?: string | null
+          bankName?: string | null
+          companyId: string
+          countryCode?: string | null
+          createdAt?: string
+          createdBy: string
+          currencyCode?: string | null
+          customerId: string
+          customFields?: Json | null
+          id?: string
+          isPrimary?: boolean
+          name: string
+          notes?: string | null
+          swiftBic?: string | null
+          tags?: string[] | null
+          updatedAt?: string | null
+          updatedBy?: string | null
+        }
+        Update: {
+          accountHolderName?: string | null
+          accountNumber?: string | null
+          active?: boolean
+          bankAddress?: string | null
+          bankCode?: string | null
+          bankName?: string | null
+          companyId?: string
+          countryCode?: string | null
+          createdAt?: string
+          createdBy?: string
+          currencyCode?: string | null
+          customerId?: string
+          customFields?: Json | null
+          id?: string
+          isPrimary?: boolean
+          name?: string
+          notes?: string | null
+          swiftBic?: string | null
+          tags?: string[] | null
+          updatedAt?: string | null
+          updatedBy?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customerBankAccount_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerBankAccount_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerBankAccount_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "customFieldTables"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "customerBankAccount_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "integrations"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "customerBankAccount_countryCode_fkey"
+            columns: ["countryCode"]
+            isOneToOne: false
+            referencedRelation: "country"
+            referencedColumns: ["alpha2"]
+          },
+          {
+            foreignKeyName: "customerBankAccount_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerBankAccount_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerBankAccount_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerBankAccount_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerBankAccount_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "customerBankAccount_customerId_companyId_fkey"
+            columns: ["customerId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "customer"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "customerBankAccount_customerId_companyId_fkey"
+            columns: ["customerId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "customerBankAccount_customerId_companyId_fkey"
+            columns: ["customerId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "salesOrderCustomers"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "customerBankAccount_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerBankAccount_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerBankAccount_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerBankAccount_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerBankAccount_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          }
+        ]
+      }
       customerContact: {
         Row: {
           companyId: string
@@ -9570,6 +10870,1579 @@ export type Database = {
           {
             foreignKeyName: "customerContact_userId_fkey"
             columns: ["userId"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          }
+        ]
+      }
+      customerContract: {
+        Row: {
+          billedThrough: string | null
+          billingAlignment: Database["public"]["Enums"]["contractBillingAlignment"]
+          billingFrequency: Database["public"]["Enums"]["contractBillingFrequency"]
+          billingTiming: Database["public"]["Enums"]["contractBillingTiming"]
+          cancellationReason: string | null
+          cancelledAt: string | null
+          closeDate: string
+          companyId: string
+          confirmedAt: string | null
+          confirmedBy: string | null
+          contractType: Database["public"]["Enums"]["customerContractType"]
+          createdAt: string
+          createdBy: string
+          currencyCode: string
+          customerContractId: string
+          customerId: string
+          customerReference: string | null
+          customFields: Json | null
+          endDate: string | null
+          endedAt: string | null
+          exchangeRate: number
+          firstInvoiceDate: string | null
+          id: string
+          invoiceAutomation:
+            | Database["public"]["Enums"]["invoiceAutomation"]
+            | null
+          invoiceCustomerContactId: string | null
+          invoiceCustomerId: string | null
+          invoiceCustomerLocationId: string | null
+          name: string
+          notes: Json | null
+          paymentTermId: string | null
+          projectId: string | null
+          recognizeRevenueFrom: string | null
+          renewal: Database["public"]["Enums"]["contractRenewal"]
+          renewalUplift: number
+          salesOrderId: string | null
+          salesPersonId: string | null
+          shipToCustomerLocationId: string | null
+          startDate: string
+          status: Database["public"]["Enums"]["customerContractStatus"]
+          termMonths: number | null
+          updatedAt: string | null
+          updatedBy: string | null
+        }
+        Insert: {
+          billedThrough?: string | null
+          billingAlignment?: Database["public"]["Enums"]["contractBillingAlignment"]
+          billingFrequency?: Database["public"]["Enums"]["contractBillingFrequency"]
+          billingTiming?: Database["public"]["Enums"]["contractBillingTiming"]
+          cancellationReason?: string | null
+          cancelledAt?: string | null
+          closeDate: string
+          companyId: string
+          confirmedAt?: string | null
+          confirmedBy?: string | null
+          contractType?: Database["public"]["Enums"]["customerContractType"]
+          createdAt?: string
+          createdBy: string
+          currencyCode: string
+          customerContractId: string
+          customerId: string
+          customerReference?: string | null
+          customFields?: Json | null
+          endDate?: string | null
+          endedAt?: string | null
+          exchangeRate?: number
+          firstInvoiceDate?: string | null
+          id?: string
+          invoiceAutomation?:
+            | Database["public"]["Enums"]["invoiceAutomation"]
+            | null
+          invoiceCustomerContactId?: string | null
+          invoiceCustomerId?: string | null
+          invoiceCustomerLocationId?: string | null
+          name: string
+          notes?: Json | null
+          paymentTermId?: string | null
+          projectId?: string | null
+          recognizeRevenueFrom?: string | null
+          renewal?: Database["public"]["Enums"]["contractRenewal"]
+          renewalUplift?: number
+          salesOrderId?: string | null
+          salesPersonId?: string | null
+          shipToCustomerLocationId?: string | null
+          startDate: string
+          status?: Database["public"]["Enums"]["customerContractStatus"]
+          termMonths?: number | null
+          updatedAt?: string | null
+          updatedBy?: string | null
+        }
+        Update: {
+          billedThrough?: string | null
+          billingAlignment?: Database["public"]["Enums"]["contractBillingAlignment"]
+          billingFrequency?: Database["public"]["Enums"]["contractBillingFrequency"]
+          billingTiming?: Database["public"]["Enums"]["contractBillingTiming"]
+          cancellationReason?: string | null
+          cancelledAt?: string | null
+          closeDate?: string
+          companyId?: string
+          confirmedAt?: string | null
+          confirmedBy?: string | null
+          contractType?: Database["public"]["Enums"]["customerContractType"]
+          createdAt?: string
+          createdBy?: string
+          currencyCode?: string
+          customerContractId?: string
+          customerId?: string
+          customerReference?: string | null
+          customFields?: Json | null
+          endDate?: string | null
+          endedAt?: string | null
+          exchangeRate?: number
+          firstInvoiceDate?: string | null
+          id?: string
+          invoiceAutomation?:
+            | Database["public"]["Enums"]["invoiceAutomation"]
+            | null
+          invoiceCustomerContactId?: string | null
+          invoiceCustomerId?: string | null
+          invoiceCustomerLocationId?: string | null
+          name?: string
+          notes?: Json | null
+          paymentTermId?: string | null
+          projectId?: string | null
+          recognizeRevenueFrom?: string | null
+          renewal?: Database["public"]["Enums"]["contractRenewal"]
+          renewalUplift?: number
+          salesOrderId?: string | null
+          salesPersonId?: string | null
+          shipToCustomerLocationId?: string | null
+          startDate?: string
+          status?: Database["public"]["Enums"]["customerContractStatus"]
+          termMonths?: number | null
+          updatedAt?: string | null
+          updatedBy?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customerContract_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContract_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContract_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "customFieldTables"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "customerContract_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "integrations"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "customerContract_confirmedBy_fkey"
+            columns: ["confirmedBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContract_confirmedBy_fkey"
+            columns: ["confirmedBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContract_confirmedBy_fkey"
+            columns: ["confirmedBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContract_confirmedBy_fkey"
+            columns: ["confirmedBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContract_confirmedBy_fkey"
+            columns: ["confirmedBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "customerContract_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContract_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContract_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContract_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContract_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "customerContract_customerId_fkey"
+            columns: ["customerId"]
+            isOneToOne: false
+            referencedRelation: "customer"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContract_customerId_fkey"
+            columns: ["customerId"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContract_customerId_fkey"
+            columns: ["customerId"]
+            isOneToOne: false
+            referencedRelation: "salesOrderCustomers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContract_invoiceCustomerContactId_fkey"
+            columns: ["invoiceCustomerContactId"]
+            isOneToOne: false
+            referencedRelation: "customerContact"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContract_invoiceCustomerId_fkey"
+            columns: ["invoiceCustomerId"]
+            isOneToOne: false
+            referencedRelation: "customer"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContract_invoiceCustomerId_fkey"
+            columns: ["invoiceCustomerId"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContract_invoiceCustomerId_fkey"
+            columns: ["invoiceCustomerId"]
+            isOneToOne: false
+            referencedRelation: "salesOrderCustomers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContract_invoiceCustomerLocationId_fkey"
+            columns: ["invoiceCustomerLocationId"]
+            isOneToOne: false
+            referencedRelation: "customerLocation"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContract_paymentTermId_fkey"
+            columns: ["paymentTermId"]
+            isOneToOne: false
+            referencedRelation: "paymentTerm"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContract_project_fkey"
+            columns: ["projectId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "project"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "customerContract_salesOrderId_fkey"
+            columns: ["salesOrderId"]
+            isOneToOne: false
+            referencedRelation: "salesOrder"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContract_salesOrderId_fkey"
+            columns: ["salesOrderId"]
+            isOneToOne: false
+            referencedRelation: "salesOrderLocations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContract_salesOrderId_fkey"
+            columns: ["salesOrderId"]
+            isOneToOne: false
+            referencedRelation: "salesOrders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContract_salesPersonId_fkey"
+            columns: ["salesPersonId"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContract_salesPersonId_fkey"
+            columns: ["salesPersonId"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContract_salesPersonId_fkey"
+            columns: ["salesPersonId"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContract_salesPersonId_fkey"
+            columns: ["salesPersonId"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContract_salesPersonId_fkey"
+            columns: ["salesPersonId"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "customerContract_shipToCustomerLocationId_fkey"
+            columns: ["shipToCustomerLocationId"]
+            isOneToOne: false
+            referencedRelation: "customerLocation"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContract_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContract_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContract_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContract_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContract_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          }
+        ]
+      }
+      customerContractAmendment: {
+        Row: {
+          amendmentDate: string
+          companyId: string
+          contractType: Database["public"]["Enums"]["customerContractType"]
+          createdAt: string
+          createdBy: string
+          customerContractId: string
+          effect: Database["public"]["Enums"]["contractAmendmentEffect"]
+          id: string
+          previousState: Json | null
+          reason: string
+          updatedAt: string | null
+          updatedBy: string | null
+        }
+        Insert: {
+          amendmentDate: string
+          companyId: string
+          contractType: Database["public"]["Enums"]["customerContractType"]
+          createdAt?: string
+          createdBy: string
+          customerContractId: string
+          effect?: Database["public"]["Enums"]["contractAmendmentEffect"]
+          id?: string
+          previousState?: Json | null
+          reason: string
+          updatedAt?: string | null
+          updatedBy?: string | null
+        }
+        Update: {
+          amendmentDate?: string
+          companyId?: string
+          contractType?: Database["public"]["Enums"]["customerContractType"]
+          createdAt?: string
+          createdBy?: string
+          customerContractId?: string
+          effect?: Database["public"]["Enums"]["contractAmendmentEffect"]
+          id?: string
+          previousState?: Json | null
+          reason?: string
+          updatedAt?: string | null
+          updatedBy?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customerContractAmendment_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractAmendment_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractAmendment_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "customFieldTables"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "customerContractAmendment_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "integrations"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "customerContractAmendment_contract_fkey"
+            columns: ["customerContractId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "customerContract"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "customerContractAmendment_contract_fkey"
+            columns: ["customerContractId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "customerContracts"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "customerContractAmendment_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractAmendment_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractAmendment_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractAmendment_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractAmendment_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "customerContractAmendment_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractAmendment_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractAmendment_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractAmendment_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractAmendment_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          }
+        ]
+      }
+      customerContractInvoice: {
+        Row: {
+          companyId: string
+          createdAt: string
+          createdBy: string
+          customerContractId: string
+          id: string
+          invoiceDate: string
+          isEdited: boolean
+          salesInvoiceId: string | null
+          status: Database["public"]["Enums"]["contractInvoiceStatus"]
+          updatedAt: string | null
+          updatedBy: string | null
+        }
+        Insert: {
+          companyId: string
+          createdAt?: string
+          createdBy: string
+          customerContractId: string
+          id?: string
+          invoiceDate: string
+          isEdited?: boolean
+          salesInvoiceId?: string | null
+          status?: Database["public"]["Enums"]["contractInvoiceStatus"]
+          updatedAt?: string | null
+          updatedBy?: string | null
+        }
+        Update: {
+          companyId?: string
+          createdAt?: string
+          createdBy?: string
+          customerContractId?: string
+          id?: string
+          invoiceDate?: string
+          isEdited?: boolean
+          salesInvoiceId?: string | null
+          status?: Database["public"]["Enums"]["contractInvoiceStatus"]
+          updatedAt?: string | null
+          updatedBy?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customerContractInvoice_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractInvoice_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractInvoice_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "customFieldTables"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "customerContractInvoice_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "integrations"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "customerContractInvoice_contract_fkey"
+            columns: ["customerContractId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "customerContract"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "customerContractInvoice_contract_fkey"
+            columns: ["customerContractId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "customerContracts"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "customerContractInvoice_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractInvoice_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractInvoice_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractInvoice_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractInvoice_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "customerContractInvoice_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractInvoice_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractInvoice_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractInvoice_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractInvoice_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          }
+        ]
+      }
+      customerContractInvoiceLine: {
+        Row: {
+          amount: number
+          companyId: string
+          createdAt: string
+          createdBy: string
+          customerContractId: string
+          customerContractInvoiceId: string | null
+          customerContractLineId: string
+          id: string
+          isAdjustment: boolean
+          memoId: string | null
+          periodEnd: string
+          periodStart: string
+          salesInvoiceLineId: string | null
+          unitPrice: number
+          units: number
+          updatedAt: string | null
+          updatedBy: string | null
+          voidedSalesInvoiceId: string | null
+        }
+        Insert: {
+          amount: number
+          companyId: string
+          createdAt?: string
+          createdBy: string
+          customerContractId: string
+          customerContractInvoiceId?: string | null
+          customerContractLineId: string
+          id?: string
+          isAdjustment?: boolean
+          memoId?: string | null
+          periodEnd: string
+          periodStart: string
+          salesInvoiceLineId?: string | null
+          unitPrice: number
+          units: number
+          updatedAt?: string | null
+          updatedBy?: string | null
+          voidedSalesInvoiceId?: string | null
+        }
+        Update: {
+          amount?: number
+          companyId?: string
+          createdAt?: string
+          createdBy?: string
+          customerContractId?: string
+          customerContractInvoiceId?: string | null
+          customerContractLineId?: string
+          id?: string
+          isAdjustment?: boolean
+          memoId?: string | null
+          periodEnd?: string
+          periodStart?: string
+          salesInvoiceLineId?: string | null
+          unitPrice?: number
+          units?: number
+          updatedAt?: string | null
+          updatedBy?: string | null
+          voidedSalesInvoiceId?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customerContractInvoiceLine_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractInvoiceLine_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractInvoiceLine_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "customFieldTables"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "customerContractInvoiceLine_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "integrations"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "customerContractInvoiceLine_contract_fkey"
+            columns: ["customerContractId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "customerContract"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "customerContractInvoiceLine_contract_fkey"
+            columns: ["customerContractId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "customerContracts"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "customerContractInvoiceLine_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractInvoiceLine_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractInvoiceLine_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractInvoiceLine_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractInvoiceLine_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "customerContractInvoiceLine_invoice_fkey"
+            columns: ["customerContractInvoiceId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "customerContractInvoice"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "customerContractInvoiceLine_line_fkey"
+            columns: ["customerContractLineId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "customerContractLine"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "customerContractInvoiceLine_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractInvoiceLine_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractInvoiceLine_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractInvoiceLine_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractInvoiceLine_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          }
+        ]
+      }
+      customerContractLedgerEntry: {
+        Row: {
+          assetAmount: number
+          assetBase: number
+          companyId: string
+          createdAt: string
+          createdBy: string
+          customerContractId: string
+          customerContractLineId: string
+          customerContractRevenueId: string | null
+          deferredAmount: number
+          deferredBase: number
+          entryType: Database["public"]["Enums"]["contractLedgerEntryType"]
+          id: string
+          journalId: string | null
+          memoId: string | null
+          postingDate: string
+          revenueRecognitionScheduleId: string | null
+          salesInvoiceLineId: string | null
+          updatedAt: string | null
+          updatedBy: string | null
+        }
+        Insert: {
+          assetAmount?: number
+          assetBase?: number
+          companyId: string
+          createdAt?: string
+          createdBy: string
+          customerContractId: string
+          customerContractLineId: string
+          customerContractRevenueId?: string | null
+          deferredAmount?: number
+          deferredBase?: number
+          entryType: Database["public"]["Enums"]["contractLedgerEntryType"]
+          id?: string
+          journalId?: string | null
+          memoId?: string | null
+          postingDate: string
+          revenueRecognitionScheduleId?: string | null
+          salesInvoiceLineId?: string | null
+          updatedAt?: string | null
+          updatedBy?: string | null
+        }
+        Update: {
+          assetAmount?: number
+          assetBase?: number
+          companyId?: string
+          createdAt?: string
+          createdBy?: string
+          customerContractId?: string
+          customerContractLineId?: string
+          customerContractRevenueId?: string | null
+          deferredAmount?: number
+          deferredBase?: number
+          entryType?: Database["public"]["Enums"]["contractLedgerEntryType"]
+          id?: string
+          journalId?: string | null
+          memoId?: string | null
+          postingDate?: string
+          revenueRecognitionScheduleId?: string | null
+          salesInvoiceLineId?: string | null
+          updatedAt?: string | null
+          updatedBy?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customerContractLedgerEntry_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractLedgerEntry_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractLedgerEntry_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "customFieldTables"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "customerContractLedgerEntry_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "integrations"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "customerContractLedgerEntry_contract_fkey"
+            columns: ["customerContractId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "customerContract"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "customerContractLedgerEntry_contract_fkey"
+            columns: ["customerContractId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "customerContracts"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "customerContractLedgerEntry_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractLedgerEntry_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractLedgerEntry_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractLedgerEntry_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractLedgerEntry_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "customerContractLedgerEntry_journalId_fkey"
+            columns: ["journalId"]
+            isOneToOne: false
+            referencedRelation: "journal"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractLedgerEntry_journalId_fkey"
+            columns: ["journalId"]
+            isOneToOne: false
+            referencedRelation: "journalEntries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractLedgerEntry_line_fkey"
+            columns: ["customerContractLineId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "customerContractLine"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "customerContractLedgerEntry_schedule_fkey"
+            columns: ["revenueRecognitionScheduleId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "revenueRecognitionSchedule"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "customerContractLedgerEntry_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractLedgerEntry_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractLedgerEntry_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractLedgerEntry_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractLedgerEntry_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          }
+        ]
+      }
+      customerContractLine: {
+        Row: {
+          amendmentId: string | null
+          amendsLineId: string | null
+          companyId: string
+          createdAt: string
+          createdBy: string
+          customerContractId: string
+          customFields: Json | null
+          description: string | null
+          discountEndsOn: string | null
+          discountPercent: number
+          endDate: string | null
+          goLiveDate: string | null
+          id: string
+          itemId: string
+          projectId: string | null
+          quantity: number
+          rate: number
+          rateUnit: Database["public"]["Enums"]["contractRateUnit"] | null
+          revenueEndDate: string | null
+          revenueMethod: Database["public"]["Enums"]["contractRevenueMethod"]
+          revenueStartDate: string | null
+          revenueType: Database["public"]["Enums"]["contractRevenueType"]
+          salesOrderLineId: string | null
+          sortOrder: number | null
+          startDate: string
+          taxPercent: number
+          updatedAt: string | null
+          updatedBy: string | null
+        }
+        Insert: {
+          amendmentId?: string | null
+          amendsLineId?: string | null
+          companyId: string
+          createdAt?: string
+          createdBy: string
+          customerContractId: string
+          customFields?: Json | null
+          description?: string | null
+          discountEndsOn?: string | null
+          discountPercent?: number
+          endDate?: string | null
+          goLiveDate?: string | null
+          id?: string
+          itemId: string
+          projectId?: string | null
+          quantity?: number
+          rate: number
+          rateUnit?: Database["public"]["Enums"]["contractRateUnit"] | null
+          revenueEndDate?: string | null
+          revenueMethod?: Database["public"]["Enums"]["contractRevenueMethod"]
+          revenueStartDate?: string | null
+          revenueType: Database["public"]["Enums"]["contractRevenueType"]
+          salesOrderLineId?: string | null
+          sortOrder?: number | null
+          startDate: string
+          taxPercent?: number
+          updatedAt?: string | null
+          updatedBy?: string | null
+        }
+        Update: {
+          amendmentId?: string | null
+          amendsLineId?: string | null
+          companyId?: string
+          createdAt?: string
+          createdBy?: string
+          customerContractId?: string
+          customFields?: Json | null
+          description?: string | null
+          discountEndsOn?: string | null
+          discountPercent?: number
+          endDate?: string | null
+          goLiveDate?: string | null
+          id?: string
+          itemId?: string
+          projectId?: string | null
+          quantity?: number
+          rate?: number
+          rateUnit?: Database["public"]["Enums"]["contractRateUnit"] | null
+          revenueEndDate?: string | null
+          revenueMethod?: Database["public"]["Enums"]["contractRevenueMethod"]
+          revenueStartDate?: string | null
+          revenueType?: Database["public"]["Enums"]["contractRevenueType"]
+          salesOrderLineId?: string | null
+          sortOrder?: number | null
+          startDate?: string
+          taxPercent?: number
+          updatedAt?: string | null
+          updatedBy?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customerContractLine_amendment_fkey"
+            columns: ["amendmentId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "customerContractAmendment"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "customerContractLine_amendsLine_fkey"
+            columns: ["amendsLineId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "customerContractLine"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "customerContractLine_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractLine_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractLine_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "customFieldTables"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "customerContractLine_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "integrations"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "customerContractLine_contract_fkey"
+            columns: ["customerContractId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "customerContract"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "customerContractLine_contract_fkey"
+            columns: ["customerContractId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "customerContracts"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "customerContractLine_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractLine_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractLine_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractLine_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractLine_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "customerContractLine_itemId_fkey"
+            columns: ["itemId"]
+            isOneToOne: false
+            referencedRelation: "consumables"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractLine_itemId_fkey"
+            columns: ["itemId"]
+            isOneToOne: false
+            referencedRelation: "item"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractLine_itemId_fkey"
+            columns: ["itemId"]
+            isOneToOne: false
+            referencedRelation: "materials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractLine_itemId_fkey"
+            columns: ["itemId"]
+            isOneToOne: false
+            referencedRelation: "parts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractLine_itemId_fkey"
+            columns: ["itemId"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractLine_itemId_fkey"
+            columns: ["itemId"]
+            isOneToOne: false
+            referencedRelation: "tools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractLine_project_fkey"
+            columns: ["projectId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "project"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "customerContractLine_salesOrderLineId_fkey"
+            columns: ["salesOrderLineId"]
+            isOneToOne: false
+            referencedRelation: "openSalesOrderLines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractLine_salesOrderLineId_fkey"
+            columns: ["salesOrderLineId"]
+            isOneToOne: false
+            referencedRelation: "salesOrderLine"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractLine_salesOrderLineId_fkey"
+            columns: ["salesOrderLineId"]
+            isOneToOne: false
+            referencedRelation: "salesOrderLines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractLine_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractLine_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractLine_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractLine_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractLine_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          }
+        ]
+      }
+      customerContractRevenue: {
+        Row: {
+          amount: number
+          companyId: string
+          createdAt: string
+          createdBy: string
+          customerContractId: string
+          customerContractLineId: string
+          id: string
+          periodEnd: string
+          periodStart: string
+          status: Database["public"]["Enums"]["contractRevenueStatus"]
+          updatedAt: string | null
+          updatedBy: string | null
+        }
+        Insert: {
+          amount: number
+          companyId: string
+          createdAt?: string
+          createdBy: string
+          customerContractId: string
+          customerContractLineId: string
+          id?: string
+          periodEnd: string
+          periodStart: string
+          status?: Database["public"]["Enums"]["contractRevenueStatus"]
+          updatedAt?: string | null
+          updatedBy?: string | null
+        }
+        Update: {
+          amount?: number
+          companyId?: string
+          createdAt?: string
+          createdBy?: string
+          customerContractId?: string
+          customerContractLineId?: string
+          id?: string
+          periodEnd?: string
+          periodStart?: string
+          status?: Database["public"]["Enums"]["contractRevenueStatus"]
+          updatedAt?: string | null
+          updatedBy?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customerContractRevenue_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractRevenue_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractRevenue_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "customFieldTables"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "customerContractRevenue_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "integrations"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "customerContractRevenue_contract_fkey"
+            columns: ["customerContractId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "customerContract"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "customerContractRevenue_contract_fkey"
+            columns: ["customerContractId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "customerContracts"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "customerContractRevenue_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractRevenue_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractRevenue_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractRevenue_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractRevenue_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "customerContractRevenue_line_fkey"
+            columns: ["customerContractLineId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "customerContractLine"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "customerContractRevenue_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractRevenue_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractRevenue_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractRevenue_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContractRevenue_updatedBy_fkey"
+            columns: ["updatedBy"]
             isOneToOne: false
             referencedRelation: "userDefaults"
             referencedColumns: ["userId"]
@@ -9934,6 +12807,232 @@ export type Database = {
           },
           {
             foreignKeyName: "customerItemPriceOverrideBreak_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          }
+        ]
+      }
+      customerItemRentalRate: {
+        Row: {
+          companyId: string
+          createdAt: string
+          createdBy: string
+          currencyCode: string
+          customerId: string | null
+          customerTypeId: string | null
+          dayRate: number | null
+          id: string
+          itemId: string
+          monthRate: number | null
+          notes: string | null
+          updatedAt: string | null
+          updatedBy: string | null
+          validFrom: string | null
+          validTo: string | null
+          weekRate: number | null
+        }
+        Insert: {
+          companyId: string
+          createdAt?: string
+          createdBy: string
+          currencyCode: string
+          customerId?: string | null
+          customerTypeId?: string | null
+          dayRate?: number | null
+          id?: string
+          itemId: string
+          monthRate?: number | null
+          notes?: string | null
+          updatedAt?: string | null
+          updatedBy?: string | null
+          validFrom?: string | null
+          validTo?: string | null
+          weekRate?: number | null
+        }
+        Update: {
+          companyId?: string
+          createdAt?: string
+          createdBy?: string
+          currencyCode?: string
+          customerId?: string | null
+          customerTypeId?: string | null
+          dayRate?: number | null
+          id?: string
+          itemId?: string
+          monthRate?: number | null
+          notes?: string | null
+          updatedAt?: string | null
+          updatedBy?: string | null
+          validFrom?: string | null
+          validTo?: string | null
+          weekRate?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customerItemRentalRate_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerItemRentalRate_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerItemRentalRate_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "customFieldTables"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "customerItemRentalRate_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "integrations"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "customerItemRentalRate_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerItemRentalRate_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerItemRentalRate_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerItemRentalRate_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerItemRentalRate_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "customerItemRentalRate_customerId_fkey"
+            columns: ["customerId"]
+            isOneToOne: false
+            referencedRelation: "customer"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerItemRentalRate_customerId_fkey"
+            columns: ["customerId"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerItemRentalRate_customerId_fkey"
+            columns: ["customerId"]
+            isOneToOne: false
+            referencedRelation: "salesOrderCustomers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerItemRentalRate_customerTypeId_fkey"
+            columns: ["customerTypeId"]
+            isOneToOne: false
+            referencedRelation: "customerType"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerItemRentalRate_itemId_fkey"
+            columns: ["itemId"]
+            isOneToOne: false
+            referencedRelation: "consumables"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerItemRentalRate_itemId_fkey"
+            columns: ["itemId"]
+            isOneToOne: false
+            referencedRelation: "item"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerItemRentalRate_itemId_fkey"
+            columns: ["itemId"]
+            isOneToOne: false
+            referencedRelation: "materials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerItemRentalRate_itemId_fkey"
+            columns: ["itemId"]
+            isOneToOne: false
+            referencedRelation: "parts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerItemRentalRate_itemId_fkey"
+            columns: ["itemId"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerItemRentalRate_itemId_fkey"
+            columns: ["itemId"]
+            isOneToOne: false
+            referencedRelation: "tools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerItemRentalRate_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerItemRentalRate_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerItemRentalRate_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerItemRentalRate_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerItemRentalRate_updatedBy_fkey"
             columns: ["updatedBy"]
             isOneToOne: false
             referencedRelation: "userDefaults"
@@ -11717,6 +14816,7 @@ export type Database = {
         Row: {
           companyId: string
           confidence: number | null
+          consumedQuantity: number
           createdAt: string
           createdBy: string
           forecastMethod: string | null
@@ -11732,6 +14832,7 @@ export type Database = {
         Insert: {
           companyId: string
           confidence?: number | null
+          consumedQuantity?: number
           createdAt?: string
           createdBy: string
           forecastMethod?: string | null
@@ -11747,6 +14848,7 @@ export type Database = {
         Update: {
           companyId?: string
           confidence?: number | null
+          consumedQuantity?: number
           createdAt?: string
           createdBy?: string
           forecastMethod?: string | null
@@ -12168,28 +15270,34 @@ export type Database = {
         Row: {
           amount: number
           companyId: string
+          deferredTaxJournalId: string | null
           depreciationRunId: string
           fixedAssetId: string
           id: string
           journalId: string | null
+          periodEnd: string | null
           taxAmount: number | null
         }
         Insert: {
           amount: number
           companyId: string
+          deferredTaxJournalId?: string | null
           depreciationRunId: string
           fixedAssetId: string
           id?: string
           journalId?: string | null
+          periodEnd?: string | null
           taxAmount?: number | null
         }
         Update: {
           amount?: number
           companyId?: string
+          deferredTaxJournalId?: string | null
           depreciationRunId?: string
           fixedAssetId?: string
           id?: string
           journalId?: string | null
+          periodEnd?: string | null
           taxAmount?: number | null
         }
         Relationships: [
@@ -12222,6 +15330,20 @@ export type Database = {
             referencedColumns: ["companyId"]
           },
           {
+            foreignKeyName: "depreciationRunLine_deferredTaxJournalId_fkey"
+            columns: ["deferredTaxJournalId"]
+            isOneToOne: false
+            referencedRelation: "journal"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "depreciationRunLine_deferredTaxJournalId_fkey"
+            columns: ["deferredTaxJournalId"]
+            isOneToOne: false
+            referencedRelation: "journalEntries"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "depreciationRunLine_depreciationRunId_fkey"
             columns: ["depreciationRunId"]
             isOneToOne: false
@@ -12233,6 +15355,13 @@ export type Database = {
             columns: ["fixedAssetId"]
             isOneToOne: false
             referencedRelation: "fixedAsset"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "depreciationRunLine_fixedAssetId_fkey"
+            columns: ["fixedAssetId"]
+            isOneToOne: false
+            referencedRelation: "fleetAssets"
             referencedColumns: ["id"]
           },
           {
@@ -12632,10 +15761,6 @@ export type Database = {
       }
       documentExtraction: {
         Row: {
-          actualCostUsd: number | null
-          attemptNumber: number | null
-          billingState: string | null
-          claimToken: string | null
           companyId: string
           createdAt: string
           createdBy: string
@@ -12643,33 +15768,15 @@ export type Database = {
           error: string | null
           extractedData: Json | null
           filteredData: Json | null
-          generation: number | null
           id: string
-          inputRevision: number | null
-          intakeId: string | null
-          leaseUntil: string | null
-          modelId: string | null
-          operation: string | null
-          priceSnapshot: Json | null
-          processingRegion: string | null
-          promptVersion: string | null
-          provider: string | null
-          reservedAt: string | null
-          reservedCostUsd: number | null
-          schemaVersion: string | null
           sourceDocument: string
           sourceDocumentId: string | null
           status: Database["public"]["Enums"]["documentExtractionStatus"]
           storagePath: string
           updatedAt: string | null
           updatedBy: string | null
-          usage: Json | null
         }
         Insert: {
-          actualCostUsd?: number | null
-          attemptNumber?: number | null
-          billingState?: string | null
-          claimToken?: string | null
           companyId: string
           createdAt?: string
           createdBy: string
@@ -12677,33 +15784,15 @@ export type Database = {
           error?: string | null
           extractedData?: Json | null
           filteredData?: Json | null
-          generation?: number | null
           id?: string
-          inputRevision?: number | null
-          intakeId?: string | null
-          leaseUntil?: string | null
-          modelId?: string | null
-          operation?: string | null
-          priceSnapshot?: Json | null
-          processingRegion?: string | null
-          promptVersion?: string | null
-          provider?: string | null
-          reservedAt?: string | null
-          reservedCostUsd?: number | null
-          schemaVersion?: string | null
           sourceDocument: string
           sourceDocumentId?: string | null
           status?: Database["public"]["Enums"]["documentExtractionStatus"]
           storagePath: string
           updatedAt?: string | null
           updatedBy?: string | null
-          usage?: Json | null
         }
         Update: {
-          actualCostUsd?: number | null
-          attemptNumber?: number | null
-          billingState?: string | null
-          claimToken?: string | null
           companyId?: string
           createdAt?: string
           createdBy?: string
@@ -12711,27 +15800,13 @@ export type Database = {
           error?: string | null
           extractedData?: Json | null
           filteredData?: Json | null
-          generation?: number | null
           id?: string
-          inputRevision?: number | null
-          intakeId?: string | null
-          leaseUntil?: string | null
-          modelId?: string | null
-          operation?: string | null
-          priceSnapshot?: Json | null
-          processingRegion?: string | null
-          promptVersion?: string | null
-          provider?: string | null
-          reservedAt?: string | null
-          reservedCostUsd?: number | null
-          schemaVersion?: string | null
           sourceDocument?: string
           sourceDocumentId?: string | null
           status?: Database["public"]["Enums"]["documentExtractionStatus"]
           storagePath?: string
           updatedAt?: string | null
           updatedBy?: string | null
-          usage?: Json | null
         }
         Relationships: [
           {
@@ -12796,13 +15871,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "userDefaults"
             referencedColumns: ["userId"]
-          },
-          {
-            foreignKeyName: "documentExtraction_intake_fkey"
-            columns: ["intakeId", "companyId"]
-            isOneToOne: false
-            referencedRelation: "invoiceIntake"
-            referencedColumns: ["id", "companyId"]
           },
           {
             foreignKeyName: "documentExtraction_updatedBy_fkey"
@@ -13345,21 +16413,18 @@ export type Database = {
           companyId: string
           employeeTypeId: string
           id: string
-          pin: string | null
         }
         Insert: {
           active?: boolean
           companyId: string
           employeeTypeId: string
           id?: string
-          pin?: string | null
         }
         Update: {
           active?: boolean
           companyId?: string
           employeeTypeId?: string
           id?: string
-          pin?: string | null
         }
         Relationships: [
           {
@@ -13425,6 +16490,13 @@ export type Database = {
           lastTrainingDate?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "employeeAbilities_abilityId_fkey"
+            columns: ["abilityId"]
+            isOneToOne: false
+            referencedRelation: "abilities"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "employeeAbilities_abilityId_fkey"
             columns: ["abilityId"]
@@ -13503,7 +16575,7 @@ export type Database = {
           customFields: Json | null
           departmentId: string | null
           id: string
-          locationId: string | null
+          locationId: string
           managerId: string | null
           shiftId: string | null
           startDate: string | null
@@ -13517,7 +16589,7 @@ export type Database = {
           customFields?: Json | null
           departmentId?: string | null
           id: string
-          locationId?: string | null
+          locationId: string
           managerId?: string | null
           shiftId?: string | null
           startDate?: string | null
@@ -13531,7 +16603,7 @@ export type Database = {
           customFields?: Json | null
           departmentId?: string | null
           id?: string
-          locationId?: string | null
+          locationId?: string
           managerId?: string | null
           shiftId?: string | null
           startDate?: string | null
@@ -13697,6 +16769,101 @@ export type Database = {
           },
           {
             foreignKeyName: "employeeJob_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          }
+        ]
+      }
+      employeePin: {
+        Row: {
+          companyId: string
+          employeeId: string
+          pinHash: string
+          updatedAt: string
+          updatedBy: string | null
+        }
+        Insert: {
+          companyId: string
+          employeeId: string
+          pinHash: string
+          updatedAt?: string
+          updatedBy?: string | null
+        }
+        Update: {
+          companyId?: string
+          employeeId?: string
+          pinHash?: string
+          updatedAt?: string
+          updatedBy?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employeePin_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employeePin_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employeePin_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "customFieldTables"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "employeePin_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "integrations"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "employeePin_employee_fkey"
+            columns: ["employeeId", "companyId"]
+            isOneToOne: true
+            referencedRelation: "employee"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "employeePin_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employeePin_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employeePin_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employeePin_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employeePin_updatedBy_fkey"
             columns: ["updatedBy"]
             isOneToOne: false
             referencedRelation: "userDefaults"
@@ -13877,6 +17044,660 @@ export type Database = {
             columns: ["employeeTypeId"]
             isOneToOne: false
             referencedRelation: "employeeType"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      enforcementRule: {
+        Row: {
+          active: boolean
+          appliesToAll: boolean
+          companyId: string
+          conditionAst: Json
+          createdAt: string
+          createdBy: string
+          customFields: Json | null
+          description: string | null
+          family: Database["public"]["Enums"]["enforcementRuleFamily"]
+          filteredItemGroupIds: string[]
+          filteredItemMatchAll: boolean
+          filteredItemTypes: string[]
+          id: string
+          message: string
+          name: string
+          severity: string
+          surfaces: Database["public"]["Enums"]["enforcementRuleSurface"][]
+          targetType: Database["public"]["Enums"]["enforcementRuleTargetType"]
+          updatedAt: string | null
+          updatedBy: string | null
+        }
+        Insert: {
+          active?: boolean
+          appliesToAll?: boolean
+          companyId: string
+          conditionAst: Json
+          createdAt?: string
+          createdBy: string
+          customFields?: Json | null
+          description?: string | null
+          family?: Database["public"]["Enums"]["enforcementRuleFamily"]
+          filteredItemGroupIds?: string[]
+          filteredItemMatchAll?: boolean
+          filteredItemTypes?: string[]
+          id?: string
+          message: string
+          name: string
+          severity: string
+          surfaces: Database["public"]["Enums"]["enforcementRuleSurface"][]
+          targetType?: Database["public"]["Enums"]["enforcementRuleTargetType"]
+          updatedAt?: string | null
+          updatedBy?: string | null
+        }
+        Update: {
+          active?: boolean
+          appliesToAll?: boolean
+          companyId?: string
+          conditionAst?: Json
+          createdAt?: string
+          createdBy?: string
+          customFields?: Json | null
+          description?: string | null
+          family?: Database["public"]["Enums"]["enforcementRuleFamily"]
+          filteredItemGroupIds?: string[]
+          filteredItemMatchAll?: boolean
+          filteredItemTypes?: string[]
+          id?: string
+          message?: string
+          name?: string
+          severity?: string
+          surfaces?: Database["public"]["Enums"]["enforcementRuleSurface"][]
+          targetType?: Database["public"]["Enums"]["enforcementRuleTargetType"]
+          updatedAt?: string | null
+          updatedBy?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enforcementRule_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enforcementRule_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enforcementRule_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "customFieldTables"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "enforcementRule_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "integrations"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "enforcementRule_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enforcementRule_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enforcementRule_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enforcementRule_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enforcementRule_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "enforcementRule_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enforcementRule_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enforcementRule_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enforcementRule_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enforcementRule_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          }
+        ]
+      }
+      enforcementRuleAcknowledgment: {
+        Row: {
+          companyId: string
+          createdAt: string
+          createdBy: string
+          documentId: string
+          documentLineId: string | null
+          documentType: string
+          id: string
+          itemId: string | null
+          message: string
+          outcome: string
+          ruleId: string | null
+          ruleName: string | null
+          severity: string
+          updatedBy: string | null
+        }
+        Insert: {
+          companyId: string
+          createdAt?: string
+          createdBy: string
+          documentId: string
+          documentLineId?: string | null
+          documentType: string
+          id?: string
+          itemId?: string | null
+          message: string
+          outcome: string
+          ruleId?: string | null
+          ruleName?: string | null
+          severity: string
+          updatedBy?: string | null
+        }
+        Update: {
+          companyId?: string
+          createdAt?: string
+          createdBy?: string
+          documentId?: string
+          documentLineId?: string | null
+          documentType?: string
+          id?: string
+          itemId?: string | null
+          message?: string
+          outcome?: string
+          ruleId?: string | null
+          ruleName?: string | null
+          severity?: string
+          updatedBy?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enforcementRuleAcknowledgment_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enforcementRuleAcknowledgment_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enforcementRuleAcknowledgment_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "customFieldTables"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "enforcementRuleAcknowledgment_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "integrations"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "enforcementRuleAcknowledgment_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enforcementRuleAcknowledgment_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enforcementRuleAcknowledgment_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enforcementRuleAcknowledgment_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enforcementRuleAcknowledgment_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "enforcementRuleAcknowledgment_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enforcementRuleAcknowledgment_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enforcementRuleAcknowledgment_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enforcementRuleAcknowledgment_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enforcementRuleAcknowledgment_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          }
+        ]
+      }
+      enforcementRuleItemAssignment: {
+        Row: {
+          companyId: string
+          createdAt: string
+          createdBy: string
+          itemId: string
+          ruleId: string
+          updatedBy: string | null
+        }
+        Insert: {
+          companyId: string
+          createdAt?: string
+          createdBy: string
+          itemId: string
+          ruleId: string
+          updatedBy?: string | null
+        }
+        Update: {
+          companyId?: string
+          createdAt?: string
+          createdBy?: string
+          itemId?: string
+          ruleId?: string
+          updatedBy?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enforcementRuleItemAssignment_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enforcementRuleItemAssignment_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enforcementRuleItemAssignment_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "customFieldTables"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "enforcementRuleItemAssignment_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "integrations"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "enforcementRuleItemAssignment_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enforcementRuleItemAssignment_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enforcementRuleItemAssignment_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enforcementRuleItemAssignment_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enforcementRuleItemAssignment_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "enforcementRuleItemAssignment_itemId_fkey"
+            columns: ["itemId"]
+            isOneToOne: false
+            referencedRelation: "consumables"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enforcementRuleItemAssignment_itemId_fkey"
+            columns: ["itemId"]
+            isOneToOne: false
+            referencedRelation: "item"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enforcementRuleItemAssignment_itemId_fkey"
+            columns: ["itemId"]
+            isOneToOne: false
+            referencedRelation: "materials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enforcementRuleItemAssignment_itemId_fkey"
+            columns: ["itemId"]
+            isOneToOne: false
+            referencedRelation: "parts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enforcementRuleItemAssignment_itemId_fkey"
+            columns: ["itemId"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enforcementRuleItemAssignment_itemId_fkey"
+            columns: ["itemId"]
+            isOneToOne: false
+            referencedRelation: "tools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enforcementRuleItemAssignment_rule_fkey"
+            columns: ["ruleId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "enforcementRule"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "enforcementRuleItemAssignment_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enforcementRuleItemAssignment_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enforcementRuleItemAssignment_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enforcementRuleItemAssignment_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enforcementRuleItemAssignment_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          }
+        ]
+      }
+      enforcementRuleWorkCenterAssignment: {
+        Row: {
+          companyId: string
+          createdAt: string
+          createdBy: string
+          ruleId: string
+          updatedBy: string | null
+          workCenterId: string
+        }
+        Insert: {
+          companyId: string
+          createdAt?: string
+          createdBy: string
+          ruleId: string
+          updatedBy?: string | null
+          workCenterId: string
+        }
+        Update: {
+          companyId?: string
+          createdAt?: string
+          createdBy?: string
+          ruleId?: string
+          updatedBy?: string | null
+          workCenterId?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enforcementRuleWorkCenterAssignment_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enforcementRuleWorkCenterAssignment_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enforcementRuleWorkCenterAssignment_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "customFieldTables"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "enforcementRuleWorkCenterAssignment_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "integrations"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "enforcementRuleWorkCenterAssignment_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enforcementRuleWorkCenterAssignment_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enforcementRuleWorkCenterAssignment_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enforcementRuleWorkCenterAssignment_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enforcementRuleWorkCenterAssignment_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "enforcementRuleWorkCenterAssignment_rule_fkey"
+            columns: ["ruleId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "enforcementRule"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "enforcementRuleWorkCenterAssignment_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enforcementRuleWorkCenterAssignment_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enforcementRuleWorkCenterAssignment_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enforcementRuleWorkCenterAssignment_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enforcementRuleWorkCenterAssignment_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "enforcementRuleWorkCenterAssignment_workCenterId_fkey"
+            columns: ["workCenterId"]
+            isOneToOne: false
+            referencedRelation: "riskRegisters"
+            referencedColumns: ["workCenterId"]
+          },
+          {
+            foreignKeyName: "enforcementRuleWorkCenterAssignment_workCenterId_fkey"
+            columns: ["workCenterId"]
+            isOneToOne: false
+            referencedRelation: "workCenter"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enforcementRuleWorkCenterAssignment_workCenterId_fkey"
+            columns: ["workCenterId"]
+            isOneToOne: false
+            referencedRelation: "workCenters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enforcementRuleWorkCenterAssignment_workCenterId_fkey"
+            columns: ["workCenterId"]
+            isOneToOne: false
+            referencedRelation: "workCentersWithBlockingStatus"
             referencedColumns: ["id"]
           }
         ]
@@ -14542,6 +18363,7 @@ export type Database = {
           fixedAssetClassId: string
           fixedAssetId: string
           id: string
+          itemId: string | null
           locationId: string | null
           macrsConvention: Database["public"]["Enums"]["macrsConvention"] | null
           macrsPropertyClass:
@@ -14549,6 +18371,9 @@ export type Database = {
             | null
           name: string
           notes: Json | null
+          outOfServiceReason: string | null
+          outOfServiceSince: string | null
+          quantity: number
           residualValuePercent: number
           saleProceeds: number | null
           serialNumber: string | null
@@ -14558,9 +18383,11 @@ export type Database = {
             | null
           taxResidualValuePercent: number | null
           taxUsefulLifeMonths: number | null
+          trackedEntityId: string | null
           updatedAt: string | null
           updatedBy: string | null
           usefulLifeMonths: number
+          workCenterId: string | null
         }
         Insert: {
           accumulatedDepreciation?: number
@@ -14581,6 +18408,7 @@ export type Database = {
           fixedAssetClassId: string
           fixedAssetId: string
           id?: string
+          itemId?: string | null
           locationId?: string | null
           macrsConvention?:
             | Database["public"]["Enums"]["macrsConvention"]
@@ -14590,6 +18418,9 @@ export type Database = {
             | null
           name: string
           notes?: Json | null
+          outOfServiceReason?: string | null
+          outOfServiceSince?: string | null
+          quantity?: number
           residualValuePercent?: number
           saleProceeds?: number | null
           serialNumber?: string | null
@@ -14599,9 +18430,11 @@ export type Database = {
             | null
           taxResidualValuePercent?: number | null
           taxUsefulLifeMonths?: number | null
+          trackedEntityId?: string | null
           updatedAt?: string | null
           updatedBy?: string | null
           usefulLifeMonths?: number
+          workCenterId?: string | null
         }
         Update: {
           accumulatedDepreciation?: number
@@ -14622,6 +18455,7 @@ export type Database = {
           fixedAssetClassId?: string
           fixedAssetId?: string
           id?: string
+          itemId?: string | null
           locationId?: string | null
           macrsConvention?:
             | Database["public"]["Enums"]["macrsConvention"]
@@ -14631,6 +18465,9 @@ export type Database = {
             | null
           name?: string
           notes?: Json | null
+          outOfServiceReason?: string | null
+          outOfServiceSince?: string | null
+          quantity?: number
           residualValuePercent?: number
           saleProceeds?: number | null
           serialNumber?: string | null
@@ -14640,9 +18477,11 @@ export type Database = {
             | null
           taxResidualValuePercent?: number | null
           taxUsefulLifeMonths?: number | null
+          trackedEntityId?: string | null
           updatedAt?: string | null
           updatedBy?: string | null
           usefulLifeMonths?: number
+          workCenterId?: string | null
         }
         Relationships: [
           {
@@ -14716,10 +18555,59 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "fixedAsset_itemId_fkey"
+            columns: ["itemId"]
+            isOneToOne: false
+            referencedRelation: "consumables"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAsset_itemId_fkey"
+            columns: ["itemId"]
+            isOneToOne: false
+            referencedRelation: "item"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAsset_itemId_fkey"
+            columns: ["itemId"]
+            isOneToOne: false
+            referencedRelation: "materials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAsset_itemId_fkey"
+            columns: ["itemId"]
+            isOneToOne: false
+            referencedRelation: "parts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAsset_itemId_fkey"
+            columns: ["itemId"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAsset_itemId_fkey"
+            columns: ["itemId"]
+            isOneToOne: false
+            referencedRelation: "tools"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "fixedAsset_locationId_fkey"
             columns: ["locationId"]
             isOneToOne: false
             referencedRelation: "location"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAsset_trackedEntityId_fkey"
+            columns: ["trackedEntityId"]
+            isOneToOne: false
+            referencedRelation: "trackedEntity"
             referencedColumns: ["id"]
           },
           {
@@ -14756,6 +18644,233 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "userDefaults"
             referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "fixedAsset_workCenterId_fkey"
+            columns: ["workCenterId"]
+            isOneToOne: false
+            referencedRelation: "riskRegisters"
+            referencedColumns: ["workCenterId"]
+          },
+          {
+            foreignKeyName: "fixedAsset_workCenterId_fkey"
+            columns: ["workCenterId"]
+            isOneToOne: false
+            referencedRelation: "workCenter"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAsset_workCenterId_fkey"
+            columns: ["workCenterId"]
+            isOneToOne: false
+            referencedRelation: "workCenters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAsset_workCenterId_fkey"
+            columns: ["workCenterId"]
+            isOneToOne: false
+            referencedRelation: "workCentersWithBlockingStatus"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      fixedAssetCipCost: {
+        Row: {
+          amount: number
+          companyId: string
+          costDate: string
+          createdAt: string
+          createdBy: string
+          fixedAssetId: string
+          id: string
+          jobId: string | null
+          journalId: string | null
+          sourceDocumentId: string | null
+          sourceDocumentLineId: string | null
+          sourceType: string
+          updatedAt: string | null
+          updatedBy: string | null
+        }
+        Insert: {
+          amount: number
+          companyId: string
+          costDate: string
+          createdAt?: string
+          createdBy: string
+          fixedAssetId: string
+          id?: string
+          jobId?: string | null
+          journalId?: string | null
+          sourceDocumentId?: string | null
+          sourceDocumentLineId?: string | null
+          sourceType: string
+          updatedAt?: string | null
+          updatedBy?: string | null
+        }
+        Update: {
+          amount?: number
+          companyId?: string
+          costDate?: string
+          createdAt?: string
+          createdBy?: string
+          fixedAssetId?: string
+          id?: string
+          jobId?: string | null
+          journalId?: string | null
+          sourceDocumentId?: string | null
+          sourceDocumentLineId?: string | null
+          sourceType?: string
+          updatedAt?: string | null
+          updatedBy?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fixedAssetCipCost_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAssetCipCost_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAssetCipCost_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "customFieldTables"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "fixedAssetCipCost_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "integrations"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "fixedAssetCipCost_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAssetCipCost_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAssetCipCost_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAssetCipCost_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAssetCipCost_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "fixedAssetCipCost_fixedAssetId_fkey"
+            columns: ["fixedAssetId"]
+            isOneToOne: false
+            referencedRelation: "fixedAsset"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAssetCipCost_fixedAssetId_fkey"
+            columns: ["fixedAssetId"]
+            isOneToOne: false
+            referencedRelation: "fleetAssets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAssetCipCost_jobId_fkey"
+            columns: ["jobId"]
+            isOneToOne: false
+            referencedRelation: "job"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAssetCipCost_jobId_fkey"
+            columns: ["jobId"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAssetCipCost_jobId_fkey"
+            columns: ["jobId"]
+            isOneToOne: false
+            referencedRelation: "openProductionOrders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAssetCipCost_journalId_fkey"
+            columns: ["journalId"]
+            isOneToOne: false
+            referencedRelation: "journal"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAssetCipCost_journalId_fkey"
+            columns: ["journalId"]
+            isOneToOne: false
+            referencedRelation: "journalEntries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAssetCipCost_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAssetCipCost_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAssetCipCost_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAssetCipCost_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAssetCipCost_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
           }
         ]
       }
@@ -14773,6 +18888,7 @@ export type Database = {
           description: string | null
           gainOnDisposalAccountId: string
           id: string
+          isConstructionInProgress: boolean
           lossOnDisposalAccountId: string
           macrsConvention: Database["public"]["Enums"]["macrsConvention"] | null
           macrsPropertyClass:
@@ -14804,6 +18920,7 @@ export type Database = {
           description?: string | null
           gainOnDisposalAccountId: string
           id?: string
+          isConstructionInProgress?: boolean
           lossOnDisposalAccountId: string
           macrsConvention?:
             | Database["public"]["Enums"]["macrsConvention"]
@@ -14837,6 +18954,7 @@ export type Database = {
           description?: string | null
           gainOnDisposalAccountId?: string
           id?: string
+          isConstructionInProgress?: boolean
           lossOnDisposalAccountId?: string
           macrsConvention?:
             | Database["public"]["Enums"]["macrsConvention"]
@@ -15171,6 +19289,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "fixedAssetDisposal_fixedAssetId_fkey"
+            columns: ["fixedAssetId"]
+            isOneToOne: false
+            referencedRelation: "fleetAssets"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "fixedAssetDisposal_journalId_fkey"
             columns: ["journalId"]
             isOneToOne: false
@@ -15214,6 +19339,339 @@ export type Database = {
           },
           {
             foreignKeyName: "fixedAssetDisposal_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          }
+        ]
+      }
+      fixedAssetTransfer: {
+        Row: {
+          accumulatedDepreciation: number
+          amount: number
+          companyId: string
+          createdAt: string
+          createdBy: string
+          customFields: Json | null
+          fixedAssetId: string
+          fromClassId: string | null
+          id: string
+          inServiceDate: string | null
+          itemId: string | null
+          jobId: string | null
+          journalId: string | null
+          locationId: string
+          postedAt: string | null
+          postedBy: string | null
+          quantity: number
+          sourceType: Database["public"]["Enums"]["fixedAssetTransferSourceType"]
+          status: string
+          storageUnitId: string | null
+          trackedEntityId: string | null
+          transferDate: string
+          transferId: string
+          type: Database["public"]["Enums"]["fixedAssetTransferType"]
+          updatedAt: string | null
+          updatedBy: string | null
+        }
+        Insert: {
+          accumulatedDepreciation?: number
+          amount: number
+          companyId: string
+          createdAt?: string
+          createdBy: string
+          customFields?: Json | null
+          fixedAssetId: string
+          fromClassId?: string | null
+          id?: string
+          inServiceDate?: string | null
+          itemId?: string | null
+          jobId?: string | null
+          journalId?: string | null
+          locationId: string
+          postedAt?: string | null
+          postedBy?: string | null
+          quantity?: number
+          sourceType?: Database["public"]["Enums"]["fixedAssetTransferSourceType"]
+          status?: string
+          storageUnitId?: string | null
+          trackedEntityId?: string | null
+          transferDate: string
+          transferId: string
+          type: Database["public"]["Enums"]["fixedAssetTransferType"]
+          updatedAt?: string | null
+          updatedBy?: string | null
+        }
+        Update: {
+          accumulatedDepreciation?: number
+          amount?: number
+          companyId?: string
+          createdAt?: string
+          createdBy?: string
+          customFields?: Json | null
+          fixedAssetId?: string
+          fromClassId?: string | null
+          id?: string
+          inServiceDate?: string | null
+          itemId?: string | null
+          jobId?: string | null
+          journalId?: string | null
+          locationId?: string
+          postedAt?: string | null
+          postedBy?: string | null
+          quantity?: number
+          sourceType?: Database["public"]["Enums"]["fixedAssetTransferSourceType"]
+          status?: string
+          storageUnitId?: string | null
+          trackedEntityId?: string | null
+          transferDate?: string
+          transferId?: string
+          type?: Database["public"]["Enums"]["fixedAssetTransferType"]
+          updatedAt?: string | null
+          updatedBy?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fixedAssetTransfer_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAssetTransfer_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAssetTransfer_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "customFieldTables"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "fixedAssetTransfer_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "integrations"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "fixedAssetTransfer_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAssetTransfer_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAssetTransfer_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAssetTransfer_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAssetTransfer_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "fixedAssetTransfer_fixedAssetId_fkey"
+            columns: ["fixedAssetId"]
+            isOneToOne: false
+            referencedRelation: "fixedAsset"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAssetTransfer_fixedAssetId_fkey"
+            columns: ["fixedAssetId"]
+            isOneToOne: false
+            referencedRelation: "fleetAssets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAssetTransfer_fromClassId_fkey"
+            columns: ["fromClassId"]
+            isOneToOne: false
+            referencedRelation: "fixedAssetClass"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAssetTransfer_itemId_fkey"
+            columns: ["itemId"]
+            isOneToOne: false
+            referencedRelation: "consumables"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAssetTransfer_itemId_fkey"
+            columns: ["itemId"]
+            isOneToOne: false
+            referencedRelation: "item"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAssetTransfer_itemId_fkey"
+            columns: ["itemId"]
+            isOneToOne: false
+            referencedRelation: "materials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAssetTransfer_itemId_fkey"
+            columns: ["itemId"]
+            isOneToOne: false
+            referencedRelation: "parts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAssetTransfer_itemId_fkey"
+            columns: ["itemId"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAssetTransfer_itemId_fkey"
+            columns: ["itemId"]
+            isOneToOne: false
+            referencedRelation: "tools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAssetTransfer_jobId_fkey"
+            columns: ["jobId"]
+            isOneToOne: false
+            referencedRelation: "job"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAssetTransfer_jobId_fkey"
+            columns: ["jobId"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAssetTransfer_jobId_fkey"
+            columns: ["jobId"]
+            isOneToOne: false
+            referencedRelation: "openProductionOrders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAssetTransfer_journalId_fkey"
+            columns: ["journalId"]
+            isOneToOne: false
+            referencedRelation: "journal"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAssetTransfer_journalId_fkey"
+            columns: ["journalId"]
+            isOneToOne: false
+            referencedRelation: "journalEntries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAssetTransfer_locationId_fkey"
+            columns: ["locationId"]
+            isOneToOne: false
+            referencedRelation: "location"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAssetTransfer_postedBy_fkey"
+            columns: ["postedBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAssetTransfer_postedBy_fkey"
+            columns: ["postedBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAssetTransfer_postedBy_fkey"
+            columns: ["postedBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAssetTransfer_postedBy_fkey"
+            columns: ["postedBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAssetTransfer_postedBy_fkey"
+            columns: ["postedBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "fixedAssetTransfer_trackedEntityId_fkey"
+            columns: ["trackedEntityId"]
+            isOneToOne: false
+            referencedRelation: "trackedEntity"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAssetTransfer_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAssetTransfer_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAssetTransfer_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAssetTransfer_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAssetTransfer_updatedBy_fkey"
             columns: ["updatedBy"]
             isOneToOne: false
             referencedRelation: "userDefaults"
@@ -15324,6 +19782,13 @@ export type Database = {
             columns: ["fixedAssetId"]
             isOneToOne: false
             referencedRelation: "fixedAsset"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAssetUsageLog_fixedAssetId_fkey"
+            columns: ["fixedAssetId"]
+            isOneToOne: false
+            referencedRelation: "fleetAssets"
             referencedColumns: ["id"]
           },
           {
@@ -17783,6 +22248,7 @@ export type Database = {
           createdAt: string
           createdBy: string
           description: string | null
+          gaugeTypeId: string | null
           id: string
           inspectionDocumentId: string
           label: string
@@ -17812,6 +22278,7 @@ export type Database = {
           createdAt?: string
           createdBy: string
           description?: string | null
+          gaugeTypeId?: string | null
           id?: string
           inspectionDocumentId: string
           label: string
@@ -17841,6 +22308,7 @@ export type Database = {
           createdAt?: string
           createdBy?: string
           description?: string | null
+          gaugeTypeId?: string | null
           id?: string
           inspectionDocumentId?: string
           label?: string
@@ -17942,6 +22410,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "inspectionDocuments"
             referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "inspectionFeature_gaugeTypeId_fkey"
+            columns: ["gaugeTypeId"]
+            isOneToOne: false
+            referencedRelation: "gaugeType"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "inspectionFeature_updatedBy_fkey"
@@ -18616,6 +23091,8 @@ export type Database = {
           companyId: string
           createdAt: string
           createdBy: string
+          gaugeId: string | null
+          gaugeRecordedAt: string | null
           id: string
           inspectionFeatureId: string
           inspectionId: string
@@ -18630,6 +23107,8 @@ export type Database = {
           companyId: string
           createdAt?: string
           createdBy: string
+          gaugeId?: string | null
+          gaugeRecordedAt?: string | null
           id?: string
           inspectionFeatureId: string
           inspectionId: string
@@ -18644,6 +23123,8 @@ export type Database = {
           companyId?: string
           createdAt?: string
           createdBy?: string
+          gaugeId?: string | null
+          gaugeRecordedAt?: string | null
           id?: string
           inspectionFeatureId?: string
           inspectionId?: string
@@ -18764,6 +23245,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "userDefaults"
             referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "inspectionSamplingPlan_gaugeId_fkey"
+            columns: ["gaugeId"]
+            isOneToOne: false
+            referencedRelation: "gauge"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inspectionSamplingPlan_gaugeId_fkey"
+            columns: ["gaugeId"]
+            isOneToOne: false
+            referencedRelation: "gauges"
+            referencedColumns: ["id"]
           }
         ]
       }
@@ -18771,14 +23266,17 @@ export type Database = {
         Row: {
           id: string
           jsonschema: Json
+          providerRole: string | null
         }
         Insert: {
           id: string
           jsonschema: Json
+          providerRole?: string | null
         }
         Update: {
           id?: string
           jsonschema?: Json
+          providerRole?: string | null
         }
         Relationships: []
       }
@@ -19731,1253 +24229,6 @@ export type Database = {
           }
         ]
       }
-      invoiceIntake: {
-        Row: {
-          activeExtractionId: string | null
-          approvalKey: string | null
-          approvalSnapshot: Json | null
-          approvedAt: string | null
-          approvedBy: string | null
-          attachmentStatus: string
-          companyId: string
-          createdAt: string
-          createdBy: string
-          documentKind: string
-          generation: number
-          header: Json
-          historical: boolean
-          id: string
-          invoiceSupplierContactId: string | null
-          invoiceSupplierId: string | null
-          invoiceSupplierLocationId: string | null
-          lastErrorCode: string | null
-          locationId: string | null
-          newSupplier: Json | null
-          paymentTermId: string | null
-          purchaseInvoiceId: string | null
-          revision: number
-          status: string
-          supplierId: string | null
-          updatedAt: string | null
-          updatedBy: string | null
-        }
-        Insert: {
-          activeExtractionId?: string | null
-          approvalKey?: string | null
-          approvalSnapshot?: Json | null
-          approvedAt?: string | null
-          approvedBy?: string | null
-          attachmentStatus?: string
-          companyId: string
-          createdAt?: string
-          createdBy: string
-          documentKind?: string
-          generation?: number
-          header?: Json
-          historical?: boolean
-          id?: string
-          invoiceSupplierContactId?: string | null
-          invoiceSupplierId?: string | null
-          invoiceSupplierLocationId?: string | null
-          lastErrorCode?: string | null
-          locationId?: string | null
-          newSupplier?: Json | null
-          paymentTermId?: string | null
-          purchaseInvoiceId?: string | null
-          revision?: number
-          status?: string
-          supplierId?: string | null
-          updatedAt?: string | null
-          updatedBy?: string | null
-        }
-        Update: {
-          activeExtractionId?: string | null
-          approvalKey?: string | null
-          approvalSnapshot?: Json | null
-          approvedAt?: string | null
-          approvedBy?: string | null
-          attachmentStatus?: string
-          companyId?: string
-          createdAt?: string
-          createdBy?: string
-          documentKind?: string
-          generation?: number
-          header?: Json
-          historical?: boolean
-          id?: string
-          invoiceSupplierContactId?: string | null
-          invoiceSupplierId?: string | null
-          invoiceSupplierLocationId?: string | null
-          lastErrorCode?: string | null
-          locationId?: string | null
-          newSupplier?: Json | null
-          paymentTermId?: string | null
-          purchaseInvoiceId?: string | null
-          revision?: number
-          status?: string
-          supplierId?: string | null
-          updatedAt?: string | null
-          updatedBy?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "invoiceIntake_activeExtractionId_companyId_fkey"
-            columns: ["activeExtractionId", "companyId"]
-            isOneToOne: false
-            referencedRelation: "documentExtraction"
-            referencedColumns: ["id", "companyId"]
-          },
-          {
-            foreignKeyName: "invoiceIntake_active_attempt_fkey"
-            columns: ["activeExtractionId", "id", "companyId", "generation"]
-            isOneToOne: false
-            referencedRelation: "documentExtraction"
-            referencedColumns: ["id", "intakeId", "companyId", "generation"]
-          },
-          {
-            foreignKeyName: "invoiceIntake_approvedBy_fkey"
-            columns: ["approvedBy"]
-            isOneToOne: false
-            referencedRelation: "employeeSummary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoiceIntake_approvedBy_fkey"
-            columns: ["approvedBy"]
-            isOneToOne: false
-            referencedRelation: "employees"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoiceIntake_approvedBy_fkey"
-            columns: ["approvedBy"]
-            isOneToOne: false
-            referencedRelation: "employeesAcrossCompanies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoiceIntake_approvedBy_fkey"
-            columns: ["approvedBy"]
-            isOneToOne: false
-            referencedRelation: "user"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoiceIntake_approvedBy_fkey"
-            columns: ["approvedBy"]
-            isOneToOne: false
-            referencedRelation: "userDefaults"
-            referencedColumns: ["userId"]
-          },
-          {
-            foreignKeyName: "invoiceIntake_companyId_fkey"
-            columns: ["companyId"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoiceIntake_companyId_fkey"
-            columns: ["companyId"]
-            isOneToOne: false
-            referencedRelation: "company"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoiceIntake_companyId_fkey"
-            columns: ["companyId"]
-            isOneToOne: false
-            referencedRelation: "customFieldTables"
-            referencedColumns: ["companyId"]
-          },
-          {
-            foreignKeyName: "invoiceIntake_companyId_fkey"
-            columns: ["companyId"]
-            isOneToOne: false
-            referencedRelation: "integrations"
-            referencedColumns: ["companyId"]
-          },
-          {
-            foreignKeyName: "invoiceIntake_createdBy_fkey"
-            columns: ["createdBy"]
-            isOneToOne: false
-            referencedRelation: "employeeSummary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoiceIntake_createdBy_fkey"
-            columns: ["createdBy"]
-            isOneToOne: false
-            referencedRelation: "employees"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoiceIntake_createdBy_fkey"
-            columns: ["createdBy"]
-            isOneToOne: false
-            referencedRelation: "employeesAcrossCompanies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoiceIntake_createdBy_fkey"
-            columns: ["createdBy"]
-            isOneToOne: false
-            referencedRelation: "user"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoiceIntake_createdBy_fkey"
-            columns: ["createdBy"]
-            isOneToOne: false
-            referencedRelation: "userDefaults"
-            referencedColumns: ["userId"]
-          },
-          {
-            foreignKeyName: "invoiceIntake_invoiceSupplierContactId_companyId_fkey"
-            columns: ["invoiceSupplierContactId", "companyId"]
-            isOneToOne: false
-            referencedRelation: "supplierContact"
-            referencedColumns: ["id", "companyId"]
-          },
-          {
-            foreignKeyName: "invoiceIntake_invoiceSupplierId_companyId_fkey"
-            columns: ["invoiceSupplierId", "companyId"]
-            isOneToOne: false
-            referencedRelation: "purchaseOrderSuppliers"
-            referencedColumns: ["id", "companyId"]
-          },
-          {
-            foreignKeyName: "invoiceIntake_invoiceSupplierId_companyId_fkey"
-            columns: ["invoiceSupplierId", "companyId"]
-            isOneToOne: false
-            referencedRelation: "supplier"
-            referencedColumns: ["id", "companyId"]
-          },
-          {
-            foreignKeyName: "invoiceIntake_invoiceSupplierId_companyId_fkey"
-            columns: ["invoiceSupplierId", "companyId"]
-            isOneToOne: false
-            referencedRelation: "suppliers"
-            referencedColumns: ["id", "companyId"]
-          },
-          {
-            foreignKeyName: "invoiceIntake_invoiceSupplierLocationId_companyId_fkey"
-            columns: ["invoiceSupplierLocationId", "companyId"]
-            isOneToOne: false
-            referencedRelation: "supplierLocation"
-            referencedColumns: ["id", "companyId"]
-          },
-          {
-            foreignKeyName: "invoiceIntake_locationId_companyId_fkey"
-            columns: ["locationId", "companyId"]
-            isOneToOne: false
-            referencedRelation: "location"
-            referencedColumns: ["id", "companyId"]
-          },
-          {
-            foreignKeyName: "invoiceIntake_paymentTermId_fkey"
-            columns: ["paymentTermId"]
-            isOneToOne: false
-            referencedRelation: "paymentTerm"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoiceIntake_paymentTerm_company_fkey"
-            columns: ["paymentTermId", "companyId"]
-            isOneToOne: false
-            referencedRelation: "paymentTerm"
-            referencedColumns: ["id", "companyId"]
-          },
-          {
-            foreignKeyName: "invoiceIntake_purchaseInvoiceId_companyId_fkey"
-            columns: ["purchaseInvoiceId", "companyId"]
-            isOneToOne: false
-            referencedRelation: "purchaseInvoice"
-            referencedColumns: ["id", "companyId"]
-          },
-          {
-            foreignKeyName: "invoiceIntake_purchaseInvoiceId_companyId_fkey"
-            columns: ["purchaseInvoiceId", "companyId"]
-            isOneToOne: false
-            referencedRelation: "purchaseInvoices"
-            referencedColumns: ["id", "companyId"]
-          },
-          {
-            foreignKeyName: "invoiceIntake_supplierId_companyId_fkey"
-            columns: ["supplierId", "companyId"]
-            isOneToOne: false
-            referencedRelation: "purchaseOrderSuppliers"
-            referencedColumns: ["id", "companyId"]
-          },
-          {
-            foreignKeyName: "invoiceIntake_supplierId_companyId_fkey"
-            columns: ["supplierId", "companyId"]
-            isOneToOne: false
-            referencedRelation: "supplier"
-            referencedColumns: ["id", "companyId"]
-          },
-          {
-            foreignKeyName: "invoiceIntake_supplierId_companyId_fkey"
-            columns: ["supplierId", "companyId"]
-            isOneToOne: false
-            referencedRelation: "suppliers"
-            referencedColumns: ["id", "companyId"]
-          },
-          {
-            foreignKeyName: "invoiceIntake_updatedBy_fkey"
-            columns: ["updatedBy"]
-            isOneToOne: false
-            referencedRelation: "employeeSummary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoiceIntake_updatedBy_fkey"
-            columns: ["updatedBy"]
-            isOneToOne: false
-            referencedRelation: "employees"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoiceIntake_updatedBy_fkey"
-            columns: ["updatedBy"]
-            isOneToOne: false
-            referencedRelation: "employeesAcrossCompanies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoiceIntake_updatedBy_fkey"
-            columns: ["updatedBy"]
-            isOneToOne: false
-            referencedRelation: "user"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoiceIntake_updatedBy_fkey"
-            columns: ["updatedBy"]
-            isOneToOne: false
-            referencedRelation: "userDefaults"
-            referencedColumns: ["userId"]
-          }
-        ]
-      }
-      invoiceIntakeLine: {
-        Row: {
-          accountId: string | null
-          assetId: string | null
-          companyId: string
-          conversionFactor: number | null
-          costCenterId: string | null
-          createdAt: string
-          createdBy: string
-          description: string | null
-          discountAmount: number | null
-          documentLineTotal: number | null
-          id: string
-          intakeId: string
-          itemId: string | null
-          lineKey: string
-          lineType: string | null
-          locationId: string | null
-          manufacturerPartNumber: string | null
-          newItem: Json | null
-          purchaseInvoiceLineId: string | null
-          purchaseOrderLineId: string | null
-          purchaseUnit: string | null
-          quantity: number | null
-          raw: Json
-          review: Json
-          sortOrder: number
-          stockUnit: string | null
-          storageUnitId: string | null
-          supplierShippingCost: number | null
-          supplierSku: string | null
-          supplierTaxAmount: number | null
-          supplierUnitPrice: number | null
-          taxPercent: number | null
-          updatedAt: string | null
-          updatedBy: string | null
-        }
-        Insert: {
-          accountId?: string | null
-          assetId?: string | null
-          companyId: string
-          conversionFactor?: number | null
-          costCenterId?: string | null
-          createdAt?: string
-          createdBy: string
-          description?: string | null
-          discountAmount?: number | null
-          documentLineTotal?: number | null
-          id?: string
-          intakeId: string
-          itemId?: string | null
-          lineKey: string
-          lineType?: string | null
-          locationId?: string | null
-          manufacturerPartNumber?: string | null
-          newItem?: Json | null
-          purchaseInvoiceLineId?: string | null
-          purchaseOrderLineId?: string | null
-          purchaseUnit?: string | null
-          quantity?: number | null
-          raw?: Json
-          review?: Json
-          sortOrder: number
-          stockUnit?: string | null
-          storageUnitId?: string | null
-          supplierShippingCost?: number | null
-          supplierSku?: string | null
-          supplierTaxAmount?: number | null
-          supplierUnitPrice?: number | null
-          taxPercent?: number | null
-          updatedAt?: string | null
-          updatedBy?: string | null
-        }
-        Update: {
-          accountId?: string | null
-          assetId?: string | null
-          companyId?: string
-          conversionFactor?: number | null
-          costCenterId?: string | null
-          createdAt?: string
-          createdBy?: string
-          description?: string | null
-          discountAmount?: number | null
-          documentLineTotal?: number | null
-          id?: string
-          intakeId?: string
-          itemId?: string | null
-          lineKey?: string
-          lineType?: string | null
-          locationId?: string | null
-          manufacturerPartNumber?: string | null
-          newItem?: Json | null
-          purchaseInvoiceLineId?: string | null
-          purchaseOrderLineId?: string | null
-          purchaseUnit?: string | null
-          quantity?: number | null
-          raw?: Json
-          review?: Json
-          sortOrder?: number
-          stockUnit?: string | null
-          storageUnitId?: string | null
-          supplierShippingCost?: number | null
-          supplierSku?: string | null
-          supplierTaxAmount?: number | null
-          supplierUnitPrice?: number | null
-          taxPercent?: number | null
-          updatedAt?: string | null
-          updatedBy?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "invoiceIntakeLine_accountId_fkey"
-            columns: ["accountId"]
-            isOneToOne: false
-            referencedRelation: "account"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoiceIntakeLine_accountId_fkey"
-            columns: ["accountId"]
-            isOneToOne: false
-            referencedRelation: "accounts"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoiceIntakeLine_assetId_companyId_fkey"
-            columns: ["assetId", "companyId"]
-            isOneToOne: false
-            referencedRelation: "fixedAsset"
-            referencedColumns: ["id", "companyId"]
-          },
-          {
-            foreignKeyName: "invoiceIntakeLine_companyId_fkey"
-            columns: ["companyId"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoiceIntakeLine_companyId_fkey"
-            columns: ["companyId"]
-            isOneToOne: false
-            referencedRelation: "company"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoiceIntakeLine_companyId_fkey"
-            columns: ["companyId"]
-            isOneToOne: false
-            referencedRelation: "customFieldTables"
-            referencedColumns: ["companyId"]
-          },
-          {
-            foreignKeyName: "invoiceIntakeLine_companyId_fkey"
-            columns: ["companyId"]
-            isOneToOne: false
-            referencedRelation: "integrations"
-            referencedColumns: ["companyId"]
-          },
-          {
-            foreignKeyName: "invoiceIntakeLine_costCenterId_fkey"
-            columns: ["costCenterId"]
-            isOneToOne: false
-            referencedRelation: "costCenter"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoiceIntakeLine_costCenter_company_fkey"
-            columns: ["costCenterId", "companyId"]
-            isOneToOne: false
-            referencedRelation: "costCenter"
-            referencedColumns: ["id", "companyId"]
-          },
-          {
-            foreignKeyName: "invoiceIntakeLine_createdBy_fkey"
-            columns: ["createdBy"]
-            isOneToOne: false
-            referencedRelation: "employeeSummary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoiceIntakeLine_createdBy_fkey"
-            columns: ["createdBy"]
-            isOneToOne: false
-            referencedRelation: "employees"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoiceIntakeLine_createdBy_fkey"
-            columns: ["createdBy"]
-            isOneToOne: false
-            referencedRelation: "employeesAcrossCompanies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoiceIntakeLine_createdBy_fkey"
-            columns: ["createdBy"]
-            isOneToOne: false
-            referencedRelation: "user"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoiceIntakeLine_createdBy_fkey"
-            columns: ["createdBy"]
-            isOneToOne: false
-            referencedRelation: "userDefaults"
-            referencedColumns: ["userId"]
-          },
-          {
-            foreignKeyName: "invoiceIntakeLine_intakeId_companyId_fkey"
-            columns: ["intakeId", "companyId"]
-            isOneToOne: false
-            referencedRelation: "invoiceIntake"
-            referencedColumns: ["id", "companyId"]
-          },
-          {
-            foreignKeyName: "invoiceIntakeLine_itemId_companyId_fkey"
-            columns: ["itemId", "companyId"]
-            isOneToOne: false
-            referencedRelation: "consumables"
-            referencedColumns: ["id", "companyId"]
-          },
-          {
-            foreignKeyName: "invoiceIntakeLine_itemId_companyId_fkey"
-            columns: ["itemId", "companyId"]
-            isOneToOne: false
-            referencedRelation: "item"
-            referencedColumns: ["id", "companyId"]
-          },
-          {
-            foreignKeyName: "invoiceIntakeLine_itemId_companyId_fkey"
-            columns: ["itemId", "companyId"]
-            isOneToOne: false
-            referencedRelation: "materials"
-            referencedColumns: ["id", "companyId"]
-          },
-          {
-            foreignKeyName: "invoiceIntakeLine_itemId_companyId_fkey"
-            columns: ["itemId", "companyId"]
-            isOneToOne: false
-            referencedRelation: "parts"
-            referencedColumns: ["id", "companyId"]
-          },
-          {
-            foreignKeyName: "invoiceIntakeLine_itemId_companyId_fkey"
-            columns: ["itemId", "companyId"]
-            isOneToOne: false
-            referencedRelation: "services"
-            referencedColumns: ["id", "companyId"]
-          },
-          {
-            foreignKeyName: "invoiceIntakeLine_itemId_companyId_fkey"
-            columns: ["itemId", "companyId"]
-            isOneToOne: false
-            referencedRelation: "tools"
-            referencedColumns: ["id", "companyId"]
-          },
-          {
-            foreignKeyName: "invoiceIntakeLine_locationId_companyId_fkey"
-            columns: ["locationId", "companyId"]
-            isOneToOne: false
-            referencedRelation: "location"
-            referencedColumns: ["id", "companyId"]
-          },
-          {
-            foreignKeyName: "invoiceIntakeLine_purchaseInvoiceLineId_companyId_fkey"
-            columns: ["purchaseInvoiceLineId", "companyId"]
-            isOneToOne: false
-            referencedRelation: "purchaseInvoiceLine"
-            referencedColumns: ["id", "companyId"]
-          },
-          {
-            foreignKeyName: "invoiceIntakeLine_purchaseInvoiceLineId_companyId_fkey"
-            columns: ["purchaseInvoiceLineId", "companyId"]
-            isOneToOne: false
-            referencedRelation: "purchaseInvoiceLines"
-            referencedColumns: ["id", "companyId"]
-          },
-          {
-            foreignKeyName: "invoiceIntakeLine_purchaseOrderLineId_companyId_fkey"
-            columns: ["purchaseOrderLineId", "companyId"]
-            isOneToOne: false
-            referencedRelation: "openPurchaseOrderLines"
-            referencedColumns: ["id", "companyId"]
-          },
-          {
-            foreignKeyName: "invoiceIntakeLine_purchaseOrderLineId_companyId_fkey"
-            columns: ["purchaseOrderLineId", "companyId"]
-            isOneToOne: false
-            referencedRelation: "purchaseOrderLine"
-            referencedColumns: ["id", "companyId"]
-          },
-          {
-            foreignKeyName: "invoiceIntakeLine_purchaseOrderLineId_companyId_fkey"
-            columns: ["purchaseOrderLineId", "companyId"]
-            isOneToOne: false
-            referencedRelation: "purchaseOrderLines"
-            referencedColumns: ["id", "companyId"]
-          },
-          {
-            foreignKeyName: "invoiceIntakeLine_storageUnitId_companyId_fkey"
-            columns: ["storageUnitId", "companyId"]
-            isOneToOne: false
-            referencedRelation: "storageUnit"
-            referencedColumns: ["id", "companyId"]
-          },
-          {
-            foreignKeyName: "invoiceIntakeLine_updatedBy_fkey"
-            columns: ["updatedBy"]
-            isOneToOne: false
-            referencedRelation: "employeeSummary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoiceIntakeLine_updatedBy_fkey"
-            columns: ["updatedBy"]
-            isOneToOne: false
-            referencedRelation: "employees"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoiceIntakeLine_updatedBy_fkey"
-            columns: ["updatedBy"]
-            isOneToOne: false
-            referencedRelation: "employeesAcrossCompanies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoiceIntakeLine_updatedBy_fkey"
-            columns: ["updatedBy"]
-            isOneToOne: false
-            referencedRelation: "user"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoiceIntakeLine_updatedBy_fkey"
-            columns: ["updatedBy"]
-            isOneToOne: false
-            referencedRelation: "userDefaults"
-            referencedColumns: ["userId"]
-          }
-        ]
-      }
-      invoiceIntakeSettings: {
-        Row: {
-          automaticMercuryIntake: boolean
-          backfillCounts: Json
-          backfillCursor: Json | null
-          backfillStatus: string
-          backfillUpperBound: string | null
-          companyId: string
-          createdAt: string
-          createdBy: string
-          dailyBudgetUsd: number
-          enabled: boolean
-          id: string
-          lastErrorCode: string | null
-          monthlyBudgetUsd: number
-          updatedAt: string | null
-          updatedBy: string | null
-        }
-        Insert: {
-          automaticMercuryIntake?: boolean
-          backfillCounts?: Json
-          backfillCursor?: Json | null
-          backfillStatus?: string
-          backfillUpperBound?: string | null
-          companyId: string
-          createdAt?: string
-          createdBy: string
-          dailyBudgetUsd?: number
-          enabled?: boolean
-          id?: string
-          lastErrorCode?: string | null
-          monthlyBudgetUsd?: number
-          updatedAt?: string | null
-          updatedBy?: string | null
-        }
-        Update: {
-          automaticMercuryIntake?: boolean
-          backfillCounts?: Json
-          backfillCursor?: Json | null
-          backfillStatus?: string
-          backfillUpperBound?: string | null
-          companyId?: string
-          createdAt?: string
-          createdBy?: string
-          dailyBudgetUsd?: number
-          enabled?: boolean
-          id?: string
-          lastErrorCode?: string | null
-          monthlyBudgetUsd?: number
-          updatedAt?: string | null
-          updatedBy?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "invoiceIntakeSettings_companyId_fkey"
-            columns: ["companyId"]
-            isOneToOne: true
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoiceIntakeSettings_companyId_fkey"
-            columns: ["companyId"]
-            isOneToOne: true
-            referencedRelation: "company"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoiceIntakeSettings_companyId_fkey"
-            columns: ["companyId"]
-            isOneToOne: true
-            referencedRelation: "customFieldTables"
-            referencedColumns: ["companyId"]
-          },
-          {
-            foreignKeyName: "invoiceIntakeSettings_companyId_fkey"
-            columns: ["companyId"]
-            isOneToOne: true
-            referencedRelation: "integrations"
-            referencedColumns: ["companyId"]
-          },
-          {
-            foreignKeyName: "invoiceIntakeSettings_createdBy_fkey"
-            columns: ["createdBy"]
-            isOneToOne: false
-            referencedRelation: "employeeSummary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoiceIntakeSettings_createdBy_fkey"
-            columns: ["createdBy"]
-            isOneToOne: false
-            referencedRelation: "employees"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoiceIntakeSettings_createdBy_fkey"
-            columns: ["createdBy"]
-            isOneToOne: false
-            referencedRelation: "employeesAcrossCompanies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoiceIntakeSettings_createdBy_fkey"
-            columns: ["createdBy"]
-            isOneToOne: false
-            referencedRelation: "user"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoiceIntakeSettings_createdBy_fkey"
-            columns: ["createdBy"]
-            isOneToOne: false
-            referencedRelation: "userDefaults"
-            referencedColumns: ["userId"]
-          },
-          {
-            foreignKeyName: "invoiceIntakeSettings_updatedBy_fkey"
-            columns: ["updatedBy"]
-            isOneToOne: false
-            referencedRelation: "employeeSummary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoiceIntakeSettings_updatedBy_fkey"
-            columns: ["updatedBy"]
-            isOneToOne: false
-            referencedRelation: "employees"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoiceIntakeSettings_updatedBy_fkey"
-            columns: ["updatedBy"]
-            isOneToOne: false
-            referencedRelation: "employeesAcrossCompanies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoiceIntakeSettings_updatedBy_fkey"
-            columns: ["updatedBy"]
-            isOneToOne: false
-            referencedRelation: "user"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoiceIntakeSettings_updatedBy_fkey"
-            columns: ["updatedBy"]
-            isOneToOne: false
-            referencedRelation: "userDefaults"
-            referencedColumns: ["userId"]
-          }
-        ]
-      }
-      invoiceIntakeSource: {
-        Row: {
-          byteSize: number | null
-          companyId: string
-          createdAt: string
-          createdBy: string
-          fileName: string | null
-          id: string
-          intakeId: string
-          kind: string
-          mediaType: string | null
-          mercuryImportId: string | null
-          provenance: Json
-          sha256: string | null
-          sourceKey: string
-          storageBucket: string | null
-          storagePath: string | null
-          updatedAt: string | null
-          updatedBy: string | null
-        }
-        Insert: {
-          byteSize?: number | null
-          companyId: string
-          createdAt?: string
-          createdBy: string
-          fileName?: string | null
-          id?: string
-          intakeId: string
-          kind: string
-          mediaType?: string | null
-          mercuryImportId?: string | null
-          provenance?: Json
-          sha256?: string | null
-          sourceKey: string
-          storageBucket?: string | null
-          storagePath?: string | null
-          updatedAt?: string | null
-          updatedBy?: string | null
-        }
-        Update: {
-          byteSize?: number | null
-          companyId?: string
-          createdAt?: string
-          createdBy?: string
-          fileName?: string | null
-          id?: string
-          intakeId?: string
-          kind?: string
-          mediaType?: string | null
-          mercuryImportId?: string | null
-          provenance?: Json
-          sha256?: string | null
-          sourceKey?: string
-          storageBucket?: string | null
-          storagePath?: string | null
-          updatedAt?: string | null
-          updatedBy?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "invoiceIntakeSource_companyId_fkey"
-            columns: ["companyId"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoiceIntakeSource_companyId_fkey"
-            columns: ["companyId"]
-            isOneToOne: false
-            referencedRelation: "company"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoiceIntakeSource_companyId_fkey"
-            columns: ["companyId"]
-            isOneToOne: false
-            referencedRelation: "customFieldTables"
-            referencedColumns: ["companyId"]
-          },
-          {
-            foreignKeyName: "invoiceIntakeSource_companyId_fkey"
-            columns: ["companyId"]
-            isOneToOne: false
-            referencedRelation: "integrations"
-            referencedColumns: ["companyId"]
-          },
-          {
-            foreignKeyName: "invoiceIntakeSource_createdBy_fkey"
-            columns: ["createdBy"]
-            isOneToOne: false
-            referencedRelation: "employeeSummary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoiceIntakeSource_createdBy_fkey"
-            columns: ["createdBy"]
-            isOneToOne: false
-            referencedRelation: "employees"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoiceIntakeSource_createdBy_fkey"
-            columns: ["createdBy"]
-            isOneToOne: false
-            referencedRelation: "employeesAcrossCompanies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoiceIntakeSource_createdBy_fkey"
-            columns: ["createdBy"]
-            isOneToOne: false
-            referencedRelation: "user"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoiceIntakeSource_createdBy_fkey"
-            columns: ["createdBy"]
-            isOneToOne: false
-            referencedRelation: "userDefaults"
-            referencedColumns: ["userId"]
-          },
-          {
-            foreignKeyName: "invoiceIntakeSource_intakeId_companyId_fkey"
-            columns: ["intakeId", "companyId"]
-            isOneToOne: false
-            referencedRelation: "invoiceIntake"
-            referencedColumns: ["id", "companyId"]
-          },
-          {
-            foreignKeyName: "invoiceIntakeSource_mercuryImportId_companyId_fkey"
-            columns: ["mercuryImportId", "companyId"]
-            isOneToOne: false
-            referencedRelation: "mercuryTransactionImport"
-            referencedColumns: ["id", "companyId"]
-          },
-          {
-            foreignKeyName: "invoiceIntakeSource_updatedBy_fkey"
-            columns: ["updatedBy"]
-            isOneToOne: false
-            referencedRelation: "employeeSummary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoiceIntakeSource_updatedBy_fkey"
-            columns: ["updatedBy"]
-            isOneToOne: false
-            referencedRelation: "employees"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoiceIntakeSource_updatedBy_fkey"
-            columns: ["updatedBy"]
-            isOneToOne: false
-            referencedRelation: "employeesAcrossCompanies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoiceIntakeSource_updatedBy_fkey"
-            columns: ["updatedBy"]
-            isOneToOne: false
-            referencedRelation: "user"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoiceIntakeSource_updatedBy_fkey"
-            columns: ["updatedBy"]
-            isOneToOne: false
-            referencedRelation: "userDefaults"
-            referencedColumns: ["userId"]
-          }
-        ]
-      }
-      invoiceRecognitionRule: {
-        Row: {
-          active: boolean
-          companyId: string
-          conversionFactor: number | null
-          createdAt: string
-          createdBy: string
-          id: string
-          intakeId: string | null
-          itemId: string | null
-          kind: string
-          matchKey: string
-          purchaseUnit: string | null
-          sourceText: string
-          stockUnit: string | null
-          supersedesId: string | null
-          supplierId: string
-          supplierPartId: string | null
-          updatedAt: string | null
-          updatedBy: string | null
-          version: number
-        }
-        Insert: {
-          active?: boolean
-          companyId: string
-          conversionFactor?: number | null
-          createdAt?: string
-          createdBy: string
-          id?: string
-          intakeId?: string | null
-          itemId?: string | null
-          kind: string
-          matchKey: string
-          purchaseUnit?: string | null
-          sourceText: string
-          stockUnit?: string | null
-          supersedesId?: string | null
-          supplierId: string
-          supplierPartId?: string | null
-          updatedAt?: string | null
-          updatedBy?: string | null
-          version?: number
-        }
-        Update: {
-          active?: boolean
-          companyId?: string
-          conversionFactor?: number | null
-          createdAt?: string
-          createdBy?: string
-          id?: string
-          intakeId?: string | null
-          itemId?: string | null
-          kind?: string
-          matchKey?: string
-          purchaseUnit?: string | null
-          sourceText?: string
-          stockUnit?: string | null
-          supersedesId?: string | null
-          supplierId?: string
-          supplierPartId?: string | null
-          updatedAt?: string | null
-          updatedBy?: string | null
-          version?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "invoiceRecognitionRule_companyId_fkey"
-            columns: ["companyId"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoiceRecognitionRule_companyId_fkey"
-            columns: ["companyId"]
-            isOneToOne: false
-            referencedRelation: "company"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoiceRecognitionRule_companyId_fkey"
-            columns: ["companyId"]
-            isOneToOne: false
-            referencedRelation: "customFieldTables"
-            referencedColumns: ["companyId"]
-          },
-          {
-            foreignKeyName: "invoiceRecognitionRule_companyId_fkey"
-            columns: ["companyId"]
-            isOneToOne: false
-            referencedRelation: "integrations"
-            referencedColumns: ["companyId"]
-          },
-          {
-            foreignKeyName: "invoiceRecognitionRule_createdBy_fkey"
-            columns: ["createdBy"]
-            isOneToOne: false
-            referencedRelation: "employeeSummary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoiceRecognitionRule_createdBy_fkey"
-            columns: ["createdBy"]
-            isOneToOne: false
-            referencedRelation: "employees"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoiceRecognitionRule_createdBy_fkey"
-            columns: ["createdBy"]
-            isOneToOne: false
-            referencedRelation: "employeesAcrossCompanies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoiceRecognitionRule_createdBy_fkey"
-            columns: ["createdBy"]
-            isOneToOne: false
-            referencedRelation: "user"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoiceRecognitionRule_createdBy_fkey"
-            columns: ["createdBy"]
-            isOneToOne: false
-            referencedRelation: "userDefaults"
-            referencedColumns: ["userId"]
-          },
-          {
-            foreignKeyName: "invoiceRecognitionRule_intakeId_companyId_fkey"
-            columns: ["intakeId", "companyId"]
-            isOneToOne: false
-            referencedRelation: "invoiceIntake"
-            referencedColumns: ["id", "companyId"]
-          },
-          {
-            foreignKeyName: "invoiceRecognitionRule_itemId_companyId_fkey"
-            columns: ["itemId", "companyId"]
-            isOneToOne: false
-            referencedRelation: "consumables"
-            referencedColumns: ["id", "companyId"]
-          },
-          {
-            foreignKeyName: "invoiceRecognitionRule_itemId_companyId_fkey"
-            columns: ["itemId", "companyId"]
-            isOneToOne: false
-            referencedRelation: "item"
-            referencedColumns: ["id", "companyId"]
-          },
-          {
-            foreignKeyName: "invoiceRecognitionRule_itemId_companyId_fkey"
-            columns: ["itemId", "companyId"]
-            isOneToOne: false
-            referencedRelation: "materials"
-            referencedColumns: ["id", "companyId"]
-          },
-          {
-            foreignKeyName: "invoiceRecognitionRule_itemId_companyId_fkey"
-            columns: ["itemId", "companyId"]
-            isOneToOne: false
-            referencedRelation: "parts"
-            referencedColumns: ["id", "companyId"]
-          },
-          {
-            foreignKeyName: "invoiceRecognitionRule_itemId_companyId_fkey"
-            columns: ["itemId", "companyId"]
-            isOneToOne: false
-            referencedRelation: "services"
-            referencedColumns: ["id", "companyId"]
-          },
-          {
-            foreignKeyName: "invoiceRecognitionRule_itemId_companyId_fkey"
-            columns: ["itemId", "companyId"]
-            isOneToOne: false
-            referencedRelation: "tools"
-            referencedColumns: ["id", "companyId"]
-          },
-          {
-            foreignKeyName: "invoiceRecognitionRule_supersedesId_companyId_fkey"
-            columns: ["supersedesId", "companyId"]
-            isOneToOne: false
-            referencedRelation: "invoiceRecognitionRule"
-            referencedColumns: ["id", "companyId"]
-          },
-          {
-            foreignKeyName: "invoiceRecognitionRule_supplierId_companyId_fkey"
-            columns: ["supplierId", "companyId"]
-            isOneToOne: false
-            referencedRelation: "purchaseOrderSuppliers"
-            referencedColumns: ["id", "companyId"]
-          },
-          {
-            foreignKeyName: "invoiceRecognitionRule_supplierId_companyId_fkey"
-            columns: ["supplierId", "companyId"]
-            isOneToOne: false
-            referencedRelation: "supplier"
-            referencedColumns: ["id", "companyId"]
-          },
-          {
-            foreignKeyName: "invoiceRecognitionRule_supplierId_companyId_fkey"
-            columns: ["supplierId", "companyId"]
-            isOneToOne: false
-            referencedRelation: "suppliers"
-            referencedColumns: ["id", "companyId"]
-          },
-          {
-            foreignKeyName: "invoiceRecognitionRule_supplierPartId_companyId_fkey"
-            columns: ["supplierPartId", "companyId"]
-            isOneToOne: false
-            referencedRelation: "supplierPart"
-            referencedColumns: ["id", "companyId"]
-          },
-          {
-            foreignKeyName: "invoiceRecognitionRule_updatedBy_fkey"
-            columns: ["updatedBy"]
-            isOneToOne: false
-            referencedRelation: "employeeSummary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoiceRecognitionRule_updatedBy_fkey"
-            columns: ["updatedBy"]
-            isOneToOne: false
-            referencedRelation: "employees"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoiceRecognitionRule_updatedBy_fkey"
-            columns: ["updatedBy"]
-            isOneToOne: false
-            referencedRelation: "employeesAcrossCompanies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoiceRecognitionRule_updatedBy_fkey"
-            columns: ["updatedBy"]
-            isOneToOne: false
-            referencedRelation: "user"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoiceRecognitionRule_updatedBy_fkey"
-            columns: ["updatedBy"]
-            isOneToOne: false
-            referencedRelation: "userDefaults"
-            referencedColumns: ["userId"]
-          }
-        ]
-      }
       invoiceSettlement: {
         Row: {
           appliedAmount: number
@@ -20997,6 +24248,7 @@ export type Database = {
           targetExchangeRate: number
           targetMemoId: string | null
           targetPurchaseInvoiceId: string | null
+          targetReimbursementId: string | null
           targetSalesInvoiceId: string | null
           updatedBy: string | null
           writeOffAmount: number
@@ -21019,6 +24271,7 @@ export type Database = {
           targetExchangeRate: number
           targetMemoId?: string | null
           targetPurchaseInvoiceId?: string | null
+          targetReimbursementId?: string | null
           targetSalesInvoiceId?: string | null
           updatedBy?: string | null
           writeOffAmount?: number
@@ -21041,6 +24294,7 @@ export type Database = {
           targetExchangeRate?: number
           targetMemoId?: string | null
           targetPurchaseInvoiceId?: string | null
+          targetReimbursementId?: string | null
           targetSalesInvoiceId?: string | null
           updatedBy?: string | null
           writeOffAmount?: number
@@ -21157,6 +24411,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "purchaseInvoices"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoiceSettlement_targetReimbursementId_fkey"
+            columns: ["targetReimbursementId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "reimbursement"
+            referencedColumns: ["id", "companyId"]
           },
           {
             foreignKeyName: "invoiceSettlement_targetSalesInvoiceId_fkey"
@@ -22330,9 +25591,11 @@ export type Database = {
           minimumOrderQuantity: number
           minimumReserveQuantity: number
           orderMultiple: number
+          planningHorizonDays: number | null
           reorderingPolicy: Database["public"]["Enums"]["itemReorderingPolicy"]
           reorderPoint: number
           reorderQuantity: number
+          responsibleEmployee: string | null
           tags: string[] | null
           updatedAt: string | null
           updatedBy: string | null
@@ -22353,9 +25616,11 @@ export type Database = {
           minimumOrderQuantity?: number
           minimumReserveQuantity?: number
           orderMultiple?: number
+          planningHorizonDays?: number | null
           reorderingPolicy?: Database["public"]["Enums"]["itemReorderingPolicy"]
           reorderPoint?: number
           reorderQuantity?: number
+          responsibleEmployee?: string | null
           tags?: string[] | null
           updatedAt?: string | null
           updatedBy?: string | null
@@ -22376,9 +25641,11 @@ export type Database = {
           minimumOrderQuantity?: number
           minimumReserveQuantity?: number
           orderMultiple?: number
+          planningHorizonDays?: number | null
           reorderingPolicy?: Database["public"]["Enums"]["itemReorderingPolicy"]
           reorderPoint?: number
           reorderQuantity?: number
+          responsibleEmployee?: string | null
           tags?: string[] | null
           updatedAt?: string | null
           updatedBy?: string | null
@@ -22495,6 +25762,41 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "location"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "itemPlanning_responsibleEmployee_fkey"
+            columns: ["responsibleEmployee"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "itemPlanning_responsibleEmployee_fkey"
+            columns: ["responsibleEmployee"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "itemPlanning_responsibleEmployee_fkey"
+            columns: ["responsibleEmployee"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "itemPlanning_responsibleEmployee_fkey"
+            columns: ["responsibleEmployee"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "itemPlanning_responsibleEmployee_fkey"
+            columns: ["responsibleEmployee"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
           },
           {
             foreignKeyName: "itemPlanning_updatedBy_fkey"
@@ -22667,6 +25969,373 @@ export type Database = {
           },
           {
             foreignKeyName: "itemPostingGroup_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          }
+        ]
+      }
+      itemPostingGroupResponsibility: {
+        Row: {
+          companyId: string
+          createdAt: string
+          createdBy: string
+          id: string
+          itemPostingGroupId: string
+          locationId: string
+          responsibleEmployee: string | null
+          updatedAt: string | null
+          updatedBy: string | null
+        }
+        Insert: {
+          companyId: string
+          createdAt?: string
+          createdBy: string
+          id?: string
+          itemPostingGroupId: string
+          locationId: string
+          responsibleEmployee?: string | null
+          updatedAt?: string | null
+          updatedBy?: string | null
+        }
+        Update: {
+          companyId?: string
+          createdAt?: string
+          createdBy?: string
+          id?: string
+          itemPostingGroupId?: string
+          locationId?: string
+          responsibleEmployee?: string | null
+          updatedAt?: string | null
+          updatedBy?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "itemPostingGroupResponsibility_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "itemPostingGroupResponsibility_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "itemPostingGroupResponsibility_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "customFieldTables"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "itemPostingGroupResponsibility_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "integrations"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "itemPostingGroupResponsibility_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "itemPostingGroupResponsibility_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "itemPostingGroupResponsibility_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "itemPostingGroupResponsibility_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "itemPostingGroupResponsibility_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "itemPostingGroupResponsibility_group_fkey"
+            columns: ["itemPostingGroupId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "itemPostingGroup"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "itemPostingGroupResponsibility_location_fkey"
+            columns: ["locationId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "location"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "itemPostingGroupResponsibility_responsibleEmployee_fkey"
+            columns: ["responsibleEmployee"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "itemPostingGroupResponsibility_responsibleEmployee_fkey"
+            columns: ["responsibleEmployee"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "itemPostingGroupResponsibility_responsibleEmployee_fkey"
+            columns: ["responsibleEmployee"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "itemPostingGroupResponsibility_responsibleEmployee_fkey"
+            columns: ["responsibleEmployee"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "itemPostingGroupResponsibility_responsibleEmployee_fkey"
+            columns: ["responsibleEmployee"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "itemPostingGroupResponsibility_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "itemPostingGroupResponsibility_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "itemPostingGroupResponsibility_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "itemPostingGroupResponsibility_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "itemPostingGroupResponsibility_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          }
+        ]
+      }
+      itemRentalRate: {
+        Row: {
+          companyId: string
+          createdAt: string
+          createdBy: string
+          currencyCode: string
+          dayRate: number | null
+          id: string
+          itemId: string
+          monthRate: number | null
+          updatedAt: string | null
+          updatedBy: string | null
+          weekRate: number | null
+        }
+        Insert: {
+          companyId: string
+          createdAt?: string
+          createdBy: string
+          currencyCode: string
+          dayRate?: number | null
+          id?: string
+          itemId: string
+          monthRate?: number | null
+          updatedAt?: string | null
+          updatedBy?: string | null
+          weekRate?: number | null
+        }
+        Update: {
+          companyId?: string
+          createdAt?: string
+          createdBy?: string
+          currencyCode?: string
+          dayRate?: number | null
+          id?: string
+          itemId?: string
+          monthRate?: number | null
+          updatedAt?: string | null
+          updatedBy?: string | null
+          weekRate?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "itemRentalRate_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "itemRentalRate_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "itemRentalRate_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "customFieldTables"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "itemRentalRate_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "integrations"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "itemRentalRate_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "itemRentalRate_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "itemRentalRate_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "itemRentalRate_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "itemRentalRate_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "itemRentalRate_itemId_fkey"
+            columns: ["itemId"]
+            isOneToOne: false
+            referencedRelation: "consumables"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "itemRentalRate_itemId_fkey"
+            columns: ["itemId"]
+            isOneToOne: false
+            referencedRelation: "item"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "itemRentalRate_itemId_fkey"
+            columns: ["itemId"]
+            isOneToOne: false
+            referencedRelation: "materials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "itemRentalRate_itemId_fkey"
+            columns: ["itemId"]
+            isOneToOne: false
+            referencedRelation: "parts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "itemRentalRate_itemId_fkey"
+            columns: ["itemId"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "itemRentalRate_itemId_fkey"
+            columns: ["itemId"]
+            isOneToOne: false
+            referencedRelation: "tools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "itemRentalRate_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "itemRentalRate_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "itemRentalRate_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "itemRentalRate_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "itemRentalRate_updatedBy_fkey"
             columns: ["updatedBy"]
             isOneToOne: false
             referencedRelation: "userDefaults"
@@ -23755,6 +27424,8 @@ export type Database = {
           deadlineType: Database["public"]["Enums"]["deadlineType"]
           dueDate: string | null
           estimatedTime: number | null
+          fixedAssetClassId: string | null
+          fixedAssetId: string | null
           id: string
           itemId: string
           jobId: string
@@ -23798,6 +27469,8 @@ export type Database = {
           deadlineType?: Database["public"]["Enums"]["deadlineType"]
           dueDate?: string | null
           estimatedTime?: number | null
+          fixedAssetClassId?: string | null
+          fixedAssetId?: string | null
           id?: string
           itemId: string
           jobId: string
@@ -23841,6 +27514,8 @@ export type Database = {
           deadlineType?: Database["public"]["Enums"]["deadlineType"]
           dueDate?: string | null
           estimatedTime?: number | null
+          fixedAssetClassId?: string | null
+          fixedAssetId?: string | null
           id?: string
           itemId?: string
           jobId?: string
@@ -23990,6 +27665,27 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "salesOrderCustomers"
             referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "job_fixedAssetClassId_fkey"
+            columns: ["fixedAssetClassId"]
+            isOneToOne: false
+            referencedRelation: "fixedAssetClass"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_fixedAssetId_fkey"
+            columns: ["fixedAssetId"]
+            isOneToOne: false
+            referencedRelation: "fixedAsset"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_fixedAssetId_fkey"
+            columns: ["fixedAssetId"]
+            isOneToOne: false
+            referencedRelation: "fleetAssets"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "job_itemId_fkey"
@@ -25285,7 +28981,9 @@ export type Database = {
           customFields: Json | null
           id: string
           locationId: string
+          mergeOutput: boolean
           notes: string | null
+          outputLotNumber: string | null
           processId: string
           readableId: string
           status: Database["public"]["Enums"]["jobOperationBatchStatus"]
@@ -25300,7 +28998,9 @@ export type Database = {
           customFields?: Json | null
           id?: string
           locationId: string
+          mergeOutput?: boolean
           notes?: string | null
+          outputLotNumber?: string | null
           processId: string
           readableId: string
           status?: Database["public"]["Enums"]["jobOperationBatchStatus"]
@@ -25315,7 +29015,9 @@ export type Database = {
           customFields?: Json | null
           id?: string
           locationId?: string
+          mergeOutput?: boolean
           notes?: string | null
+          outputLotNumber?: string | null
           processId?: string
           readableId?: string
           status?: Database["public"]["Enums"]["jobOperationBatchStatus"]
@@ -26905,6 +30607,7 @@ export type Database = {
       }
       journalLine: {
         Row: {
+          accountDefaultRole: string | null
           accountId: string | null
           accrual: boolean
           amount: number
@@ -26929,6 +30632,7 @@ export type Database = {
           updatedBy: string | null
         }
         Insert: {
+          accountDefaultRole?: string | null
           accountId?: string | null
           accrual?: boolean
           amount: number
@@ -26953,6 +30657,7 @@ export type Database = {
           updatedBy?: string | null
         }
         Update: {
+          accountDefaultRole?: string | null
           accountId?: string | null
           accrual?: boolean
           amount?: number
@@ -27233,6 +30938,7 @@ export type Database = {
           locationId: string
           purchaseUnitOfMeasureCode: string | null
           quantity: number
+          replenishmentLevel: number | null
           replenishmentSystem: Database["public"]["Enums"]["kanbanReplenishmentSystem"]
           storageUnitId: string | null
           supplierId: string | null
@@ -27254,6 +30960,7 @@ export type Database = {
           locationId: string
           purchaseUnitOfMeasureCode?: string | null
           quantity: number
+          replenishmentLevel?: number | null
           replenishmentSystem?: Database["public"]["Enums"]["kanbanReplenishmentSystem"]
           storageUnitId?: string | null
           supplierId?: string | null
@@ -27275,6 +30982,7 @@ export type Database = {
           locationId?: string
           purchaseUnitOfMeasureCode?: string | null
           quantity?: number
+          replenishmentLevel?: number | null
           replenishmentSystem?: Database["public"]["Enums"]["kanbanReplenishmentSystem"]
           storageUnitId?: string | null
           supplierId?: string | null
@@ -27494,6 +31202,1139 @@ export type Database = {
           }
         ]
       }
+      lease: {
+        Row: {
+          activatedAt: string | null
+          annualEscalationPercent: number
+          assignee: string | null
+          closedAt: string | null
+          commencementDate: string
+          commencementJournalId: string | null
+          companyId: string
+          createdAt: string
+          createdBy: string
+          currencyCode: string
+          customFields: Json | null
+          description: string | null
+          discountRate: number
+          endDate: string | null
+          endRemindedFor: string | null
+          id: string
+          invoiceFromDate: string
+          leaseId: string
+          locationId: string | null
+          name: string | null
+          noticeDate: string | null
+          noticeRemindedFor: string | null
+          paymentFrequency: Database["public"]["Enums"]["leasePaymentFrequency"]
+          paymentTiming: Database["public"]["Enums"]["rentalBillingTiming"]
+          status: Database["public"]["Enums"]["leaseStatus"]
+          supplierContactId: string | null
+          supplierId: string
+          supplierLocationId: string | null
+          updatedAt: string | null
+          updatedBy: string | null
+        }
+        Insert: {
+          activatedAt?: string | null
+          annualEscalationPercent?: number
+          assignee?: string | null
+          closedAt?: string | null
+          commencementDate: string
+          commencementJournalId?: string | null
+          companyId: string
+          createdAt?: string
+          createdBy: string
+          currencyCode: string
+          customFields?: Json | null
+          description?: string | null
+          discountRate: number
+          endDate?: string | null
+          endRemindedFor?: string | null
+          id?: string
+          invoiceFromDate: string
+          leaseId: string
+          locationId?: string | null
+          name?: string | null
+          noticeDate?: string | null
+          noticeRemindedFor?: string | null
+          paymentFrequency?: Database["public"]["Enums"]["leasePaymentFrequency"]
+          paymentTiming?: Database["public"]["Enums"]["rentalBillingTiming"]
+          status?: Database["public"]["Enums"]["leaseStatus"]
+          supplierContactId?: string | null
+          supplierId: string
+          supplierLocationId?: string | null
+          updatedAt?: string | null
+          updatedBy?: string | null
+        }
+        Update: {
+          activatedAt?: string | null
+          annualEscalationPercent?: number
+          assignee?: string | null
+          closedAt?: string | null
+          commencementDate?: string
+          commencementJournalId?: string | null
+          companyId?: string
+          createdAt?: string
+          createdBy?: string
+          currencyCode?: string
+          customFields?: Json | null
+          description?: string | null
+          discountRate?: number
+          endDate?: string | null
+          endRemindedFor?: string | null
+          id?: string
+          invoiceFromDate?: string
+          leaseId?: string
+          locationId?: string | null
+          name?: string | null
+          noticeDate?: string | null
+          noticeRemindedFor?: string | null
+          paymentFrequency?: Database["public"]["Enums"]["leasePaymentFrequency"]
+          paymentTiming?: Database["public"]["Enums"]["rentalBillingTiming"]
+          status?: Database["public"]["Enums"]["leaseStatus"]
+          supplierContactId?: string | null
+          supplierId?: string
+          supplierLocationId?: string | null
+          updatedAt?: string | null
+          updatedBy?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lease_assignee_fkey"
+            columns: ["assignee"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lease_assignee_fkey"
+            columns: ["assignee"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lease_assignee_fkey"
+            columns: ["assignee"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lease_assignee_fkey"
+            columns: ["assignee"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lease_assignee_fkey"
+            columns: ["assignee"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "lease_commencementJournalId_fkey"
+            columns: ["commencementJournalId"]
+            isOneToOne: false
+            referencedRelation: "journal"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lease_commencementJournalId_fkey"
+            columns: ["commencementJournalId"]
+            isOneToOne: false
+            referencedRelation: "journalEntries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lease_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lease_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lease_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "customFieldTables"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "lease_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "integrations"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "lease_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lease_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lease_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lease_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lease_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "lease_locationId_fkey"
+            columns: ["locationId"]
+            isOneToOne: false
+            referencedRelation: "location"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lease_supplierContactId_fkey"
+            columns: ["supplierContactId"]
+            isOneToOne: false
+            referencedRelation: "supplierContact"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lease_supplierId_fkey"
+            columns: ["supplierId"]
+            isOneToOne: false
+            referencedRelation: "contractors"
+            referencedColumns: ["supplierId"]
+          },
+          {
+            foreignKeyName: "lease_supplierId_fkey"
+            columns: ["supplierId"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["supplierId"]
+          },
+          {
+            foreignKeyName: "lease_supplierId_fkey"
+            columns: ["supplierId"]
+            isOneToOne: false
+            referencedRelation: "purchaseOrderSuppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lease_supplierId_fkey"
+            columns: ["supplierId"]
+            isOneToOne: false
+            referencedRelation: "supplier"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lease_supplierId_fkey"
+            columns: ["supplierId"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lease_supplierLocationId_fkey"
+            columns: ["supplierLocationId"]
+            isOneToOne: false
+            referencedRelation: "supplierLocation"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lease_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lease_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lease_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lease_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lease_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          }
+        ]
+      }
+      leaseEvent: {
+        Row: {
+          classificationAfter: Database["public"]["Enums"]["lesseeClassification"]
+          classificationBefore: Database["public"]["Enums"]["lesseeClassification"]
+          companyId: string
+          createdAt: string
+          createdBy: string
+          effectiveDate: string
+          eventType: Database["public"]["Enums"]["leaseEventType"]
+          fixedAssetId: string | null
+          gainLoss: number
+          id: string
+          journalId: string | null
+          leaseId: string
+          leaseLineId: string
+          liabilityAfter: number
+          liabilityBefore: number
+          notes: string | null
+          rouAssetAfter: number
+          rouAssetBefore: number
+          updatedAt: string | null
+          updatedBy: string | null
+        }
+        Insert: {
+          classificationAfter: Database["public"]["Enums"]["lesseeClassification"]
+          classificationBefore: Database["public"]["Enums"]["lesseeClassification"]
+          companyId: string
+          createdAt?: string
+          createdBy: string
+          effectiveDate: string
+          eventType: Database["public"]["Enums"]["leaseEventType"]
+          fixedAssetId?: string | null
+          gainLoss?: number
+          id?: string
+          journalId?: string | null
+          leaseId: string
+          leaseLineId: string
+          liabilityAfter: number
+          liabilityBefore: number
+          notes?: string | null
+          rouAssetAfter: number
+          rouAssetBefore: number
+          updatedAt?: string | null
+          updatedBy?: string | null
+        }
+        Update: {
+          classificationAfter?: Database["public"]["Enums"]["lesseeClassification"]
+          classificationBefore?: Database["public"]["Enums"]["lesseeClassification"]
+          companyId?: string
+          createdAt?: string
+          createdBy?: string
+          effectiveDate?: string
+          eventType?: Database["public"]["Enums"]["leaseEventType"]
+          fixedAssetId?: string | null
+          gainLoss?: number
+          id?: string
+          journalId?: string | null
+          leaseId?: string
+          leaseLineId?: string
+          liabilityAfter?: number
+          liabilityBefore?: number
+          notes?: string | null
+          rouAssetAfter?: number
+          rouAssetBefore?: number
+          updatedAt?: string | null
+          updatedBy?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leaseEvent_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leaseEvent_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leaseEvent_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "customFieldTables"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "leaseEvent_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "integrations"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "leaseEvent_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leaseEvent_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leaseEvent_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leaseEvent_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leaseEvent_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "leaseEvent_fixedAssetId_fkey"
+            columns: ["fixedAssetId"]
+            isOneToOne: false
+            referencedRelation: "fixedAsset"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leaseEvent_fixedAssetId_fkey"
+            columns: ["fixedAssetId"]
+            isOneToOne: false
+            referencedRelation: "fleetAssets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leaseEvent_journalId_fkey"
+            columns: ["journalId"]
+            isOneToOne: false
+            referencedRelation: "journal"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leaseEvent_journalId_fkey"
+            columns: ["journalId"]
+            isOneToOne: false
+            referencedRelation: "journalEntries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leaseEvent_leaseLine_fkey"
+            columns: ["leaseLineId", "leaseId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "leaseLine"
+            referencedColumns: ["id", "leaseId", "companyId"]
+          },
+          {
+            foreignKeyName: "leaseEvent_lease_fkey"
+            columns: ["leaseId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "lease"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "leaseEvent_lease_fkey"
+            columns: ["leaseId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "leases"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "leaseEvent_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leaseEvent_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leaseEvent_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leaseEvent_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leaseEvent_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          }
+        ]
+      }
+      leaseLine: {
+        Row: {
+          classificationInputs: Json | null
+          classificationOverride:
+            | Database["public"]["Enums"]["lesseeClassification"]
+            | null
+          classificationOverrideReason: string | null
+          companyId: string
+          createdAt: string
+          createdBy: string
+          description: string
+          economicLifeMonths: number | null
+          fairValue: number | null
+          fixedAssetId: string | null
+          id: string
+          initialLiability: number | null
+          initialRouAsset: number | null
+          leaseId: string
+          lesseeClassification:
+            | Database["public"]["Enums"]["lesseeClassification"]
+            | null
+          locationId: string | null
+          ownershipTransfers: boolean
+          paymentAmount: number
+          purchaseOptionAmount: number | null
+          purchaseOptionReasonablyCertain: boolean
+          rouAssetCost: number | null
+          serialNumber: string | null
+          sortOrder: number
+          specializedAsset: boolean
+          status: Database["public"]["Enums"]["leaseLineStatus"]
+          updatedAt: string | null
+          updatedBy: string | null
+        }
+        Insert: {
+          classificationInputs?: Json | null
+          classificationOverride?:
+            | Database["public"]["Enums"]["lesseeClassification"]
+            | null
+          classificationOverrideReason?: string | null
+          companyId: string
+          createdAt?: string
+          createdBy: string
+          description: string
+          economicLifeMonths?: number | null
+          fairValue?: number | null
+          fixedAssetId?: string | null
+          id?: string
+          initialLiability?: number | null
+          initialRouAsset?: number | null
+          leaseId: string
+          lesseeClassification?:
+            | Database["public"]["Enums"]["lesseeClassification"]
+            | null
+          locationId?: string | null
+          ownershipTransfers?: boolean
+          paymentAmount?: number
+          purchaseOptionAmount?: number | null
+          purchaseOptionReasonablyCertain?: boolean
+          rouAssetCost?: number | null
+          serialNumber?: string | null
+          sortOrder?: number
+          specializedAsset?: boolean
+          status?: Database["public"]["Enums"]["leaseLineStatus"]
+          updatedAt?: string | null
+          updatedBy?: string | null
+        }
+        Update: {
+          classificationInputs?: Json | null
+          classificationOverride?:
+            | Database["public"]["Enums"]["lesseeClassification"]
+            | null
+          classificationOverrideReason?: string | null
+          companyId?: string
+          createdAt?: string
+          createdBy?: string
+          description?: string
+          economicLifeMonths?: number | null
+          fairValue?: number | null
+          fixedAssetId?: string | null
+          id?: string
+          initialLiability?: number | null
+          initialRouAsset?: number | null
+          leaseId?: string
+          lesseeClassification?:
+            | Database["public"]["Enums"]["lesseeClassification"]
+            | null
+          locationId?: string | null
+          ownershipTransfers?: boolean
+          paymentAmount?: number
+          purchaseOptionAmount?: number | null
+          purchaseOptionReasonablyCertain?: boolean
+          rouAssetCost?: number | null
+          serialNumber?: string | null
+          sortOrder?: number
+          specializedAsset?: boolean
+          status?: Database["public"]["Enums"]["leaseLineStatus"]
+          updatedAt?: string | null
+          updatedBy?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leaseLine_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leaseLine_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leaseLine_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "customFieldTables"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "leaseLine_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "integrations"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "leaseLine_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leaseLine_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leaseLine_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leaseLine_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leaseLine_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "leaseLine_fixedAssetId_fkey"
+            columns: ["fixedAssetId"]
+            isOneToOne: false
+            referencedRelation: "fixedAsset"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leaseLine_fixedAssetId_fkey"
+            columns: ["fixedAssetId"]
+            isOneToOne: false
+            referencedRelation: "fleetAssets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leaseLine_lease_fkey"
+            columns: ["leaseId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "lease"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "leaseLine_lease_fkey"
+            columns: ["leaseId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "leases"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "leaseLine_locationId_fkey"
+            columns: ["locationId"]
+            isOneToOne: false
+            referencedRelation: "location"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leaseLine_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leaseLine_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leaseLine_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leaseLine_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leaseLine_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          }
+        ]
+      }
+      leasePayment: {
+        Row: {
+          amount: number
+          companyId: string
+          createdAt: string
+          createdBy: string
+          dueDate: string
+          id: string
+          leaseId: string
+          leaseLineId: string
+          paymentType: Database["public"]["Enums"]["leasePaymentType"]
+          periodEnd: string
+          periodStart: string
+          purchaseInvoiceLineId: string | null
+          status: Database["public"]["Enums"]["leasePaymentStatus"]
+          updatedAt: string | null
+          updatedBy: string | null
+          voidedPurchaseInvoiceId: string | null
+        }
+        Insert: {
+          amount: number
+          companyId: string
+          createdAt?: string
+          createdBy: string
+          dueDate: string
+          id?: string
+          leaseId: string
+          leaseLineId: string
+          paymentType?: Database["public"]["Enums"]["leasePaymentType"]
+          periodEnd: string
+          periodStart: string
+          purchaseInvoiceLineId?: string | null
+          status?: Database["public"]["Enums"]["leasePaymentStatus"]
+          updatedAt?: string | null
+          updatedBy?: string | null
+          voidedPurchaseInvoiceId?: string | null
+        }
+        Update: {
+          amount?: number
+          companyId?: string
+          createdAt?: string
+          createdBy?: string
+          dueDate?: string
+          id?: string
+          leaseId?: string
+          leaseLineId?: string
+          paymentType?: Database["public"]["Enums"]["leasePaymentType"]
+          periodEnd?: string
+          periodStart?: string
+          purchaseInvoiceLineId?: string | null
+          status?: Database["public"]["Enums"]["leasePaymentStatus"]
+          updatedAt?: string | null
+          updatedBy?: string | null
+          voidedPurchaseInvoiceId?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leasePayment_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leasePayment_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leasePayment_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "customFieldTables"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "leasePayment_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "integrations"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "leasePayment_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leasePayment_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leasePayment_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leasePayment_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leasePayment_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "leasePayment_leaseLine_fkey"
+            columns: ["leaseLineId", "leaseId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "leaseLine"
+            referencedColumns: ["id", "leaseId", "companyId"]
+          },
+          {
+            foreignKeyName: "leasePayment_lease_fkey"
+            columns: ["leaseId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "lease"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "leasePayment_lease_fkey"
+            columns: ["leaseId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "leases"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "leasePayment_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leasePayment_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leasePayment_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leasePayment_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leasePayment_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          }
+        ]
+      }
+      leaseScheduleLine: {
+        Row: {
+          closingLiability: number
+          closingRouAsset: number
+          companyId: string
+          createdAt: string
+          createdBy: string
+          id: string
+          interestAmount: number
+          journalId: string | null
+          leaseCost: number
+          leaseId: string
+          leaseLineId: string
+          openingLiability: number
+          paymentAmount: number
+          periodDate: string
+          postedAt: string | null
+          principalAmount: number
+          rouAmortization: number
+          updatedAt: string | null
+          updatedBy: string | null
+        }
+        Insert: {
+          closingLiability: number
+          closingRouAsset: number
+          companyId: string
+          createdAt?: string
+          createdBy: string
+          id?: string
+          interestAmount: number
+          journalId?: string | null
+          leaseCost: number
+          leaseId: string
+          leaseLineId: string
+          openingLiability: number
+          paymentAmount: number
+          periodDate: string
+          postedAt?: string | null
+          principalAmount: number
+          rouAmortization: number
+          updatedAt?: string | null
+          updatedBy?: string | null
+        }
+        Update: {
+          closingLiability?: number
+          closingRouAsset?: number
+          companyId?: string
+          createdAt?: string
+          createdBy?: string
+          id?: string
+          interestAmount?: number
+          journalId?: string | null
+          leaseCost?: number
+          leaseId?: string
+          leaseLineId?: string
+          openingLiability?: number
+          paymentAmount?: number
+          periodDate?: string
+          postedAt?: string | null
+          principalAmount?: number
+          rouAmortization?: number
+          updatedAt?: string | null
+          updatedBy?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leaseScheduleLine_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leaseScheduleLine_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leaseScheduleLine_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "customFieldTables"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "leaseScheduleLine_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "integrations"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "leaseScheduleLine_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leaseScheduleLine_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leaseScheduleLine_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leaseScheduleLine_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leaseScheduleLine_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "leaseScheduleLine_journalId_fkey"
+            columns: ["journalId"]
+            isOneToOne: false
+            referencedRelation: "journal"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leaseScheduleLine_journalId_fkey"
+            columns: ["journalId"]
+            isOneToOne: false
+            referencedRelation: "journalEntries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leaseScheduleLine_leaseLine_fkey"
+            columns: ["leaseLineId", "leaseId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "leaseLine"
+            referencedColumns: ["id", "leaseId", "companyId"]
+          },
+          {
+            foreignKeyName: "leaseScheduleLine_lease_fkey"
+            columns: ["leaseId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "lease"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "leaseScheduleLine_lease_fkey"
+            columns: ["leaseId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "leases"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "leaseScheduleLine_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leaseScheduleLine_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leaseScheduleLine_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leaseScheduleLine_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leaseScheduleLine_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          }
+        ]
+      }
       lessonCompletion: {
         Row: {
           courseId: string
@@ -27568,6 +32409,7 @@ export type Database = {
           name: string
           postalCode: string
           requiresStaffing: boolean
+          responsibleEmployee: string | null
           stateProvince: string | null
           tags: string[] | null
           timezone: string
@@ -27590,6 +32432,7 @@ export type Database = {
           name: string
           postalCode: string
           requiresStaffing?: boolean
+          responsibleEmployee?: string | null
           stateProvince?: string | null
           tags?: string[] | null
           timezone: string
@@ -27612,6 +32455,7 @@ export type Database = {
           name?: string
           postalCode?: string
           requiresStaffing?: boolean
+          responsibleEmployee?: string | null
           stateProvince?: string | null
           tags?: string[] | null
           timezone?: string
@@ -27646,6 +32490,124 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "integrations"
             referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "location_responsibleEmployee_fkey"
+            columns: ["responsibleEmployee"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "location_responsibleEmployee_fkey"
+            columns: ["responsibleEmployee"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "location_responsibleEmployee_fkey"
+            columns: ["responsibleEmployee"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "location_responsibleEmployee_fkey"
+            columns: ["responsibleEmployee"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "location_responsibleEmployee_fkey"
+            columns: ["responsibleEmployee"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          }
+        ]
+      }
+      machineStateChange: {
+        Row: {
+          changedAt: string
+          companyId: string
+          createdAt: string
+          externalEventId: string
+          id: string
+          state: Database["public"]["Enums"]["machineState"]
+          workCenterDeviceId: string
+          workCenterId: string
+        }
+        Insert: {
+          changedAt: string
+          companyId: string
+          createdAt?: string
+          externalEventId: string
+          id?: string
+          state: Database["public"]["Enums"]["machineState"]
+          workCenterDeviceId: string
+          workCenterId: string
+        }
+        Update: {
+          changedAt?: string
+          companyId?: string
+          createdAt?: string
+          externalEventId?: string
+          id?: string
+          state?: Database["public"]["Enums"]["machineState"]
+          workCenterDeviceId?: string
+          workCenterId?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "machineStateChange_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machineStateChange_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machineStateChange_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "customFieldTables"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "machineStateChange_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "integrations"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "machineStateChange_workCenterId_fkey"
+            columns: ["workCenterId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "workCenter"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "machineStateChange_workCenterId_fkey"
+            columns: ["workCenterId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "workCenters"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "machineStateChange_workCenterId_fkey"
+            columns: ["workCenterId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "workCentersWithBlockingStatus"
+            referencedColumns: ["id", "companyId"]
           }
         ]
       }
@@ -30445,6 +35407,7 @@ export type Database = {
           createdAt: string
           createdBy: string
           currencyCode: string
+          customerContractId: string | null
           customerId: string | null
           customFields: Json | null
           direction: Database["public"]["Enums"]["memoDirection"]
@@ -30460,6 +35423,7 @@ export type Database = {
           purchaseReturnOrderId: string | null
           reasonAccount: string | null
           reference: string | null
+          rentalAgreementId: string | null
           salesReturnOrderId: string | null
           status: Database["public"]["Enums"]["memoStatus"]
           supplierId: string | null
@@ -30474,6 +35438,7 @@ export type Database = {
           createdAt?: string
           createdBy: string
           currencyCode: string
+          customerContractId?: string | null
           customerId?: string | null
           customFields?: Json | null
           direction: Database["public"]["Enums"]["memoDirection"]
@@ -30489,6 +35454,7 @@ export type Database = {
           purchaseReturnOrderId?: string | null
           reasonAccount?: string | null
           reference?: string | null
+          rentalAgreementId?: string | null
           salesReturnOrderId?: string | null
           status?: Database["public"]["Enums"]["memoStatus"]
           supplierId?: string | null
@@ -30503,6 +35469,7 @@ export type Database = {
           createdAt?: string
           createdBy?: string
           currencyCode?: string
+          customerContractId?: string | null
           customerId?: string | null
           customFields?: Json | null
           direction?: Database["public"]["Enums"]["memoDirection"]
@@ -30518,6 +35485,7 @@ export type Database = {
           purchaseReturnOrderId?: string | null
           reasonAccount?: string | null
           reference?: string | null
+          rentalAgreementId?: string | null
           salesReturnOrderId?: string | null
           status?: Database["public"]["Enums"]["memoStatus"]
           supplierId?: string | null
@@ -30596,6 +35564,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "currencyCode"
             referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "memo_customerContract_fkey"
+            columns: ["customerContractId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "customerContract"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "memo_customerContract_fkey"
+            columns: ["customerContractId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "customerContracts"
+            referencedColumns: ["id", "companyId"]
           },
           {
             foreignKeyName: "memo_customerId_fkey"
@@ -30694,6 +35676,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "accounts"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "memo_rentalAgreement_fkey"
+            columns: ["rentalAgreementId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "rentalAgreement"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "memo_rentalAgreement_fkey"
+            columns: ["rentalAgreementId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "rentalAgreements"
+            referencedColumns: ["id", "companyId"]
           },
           {
             foreignKeyName: "memo_salesReturnOrderId_fkey"
@@ -30796,524 +35792,6 @@ export type Database = {
           {
             foreignKeyName: "memo_voidedBy_fkey"
             columns: ["voidedBy"]
-            isOneToOne: false
-            referencedRelation: "userDefaults"
-            referencedColumns: ["userId"]
-          }
-        ]
-      }
-      mercuryRecipientMapping: {
-        Row: {
-          companyId: string
-          createdAt: string
-          createdBy: string
-          id: string
-          mercuryRecipientId: string
-          supplierId: string
-          updatedAt: string | null
-          updatedBy: string | null
-        }
-        Insert: {
-          companyId: string
-          createdAt?: string
-          createdBy: string
-          id?: string
-          mercuryRecipientId: string
-          supplierId: string
-          updatedAt?: string | null
-          updatedBy?: string | null
-        }
-        Update: {
-          companyId?: string
-          createdAt?: string
-          createdBy?: string
-          id?: string
-          mercuryRecipientId?: string
-          supplierId?: string
-          updatedAt?: string | null
-          updatedBy?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "mercuryRecipientMapping_companyId_fkey"
-            columns: ["companyId"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "mercuryRecipientMapping_companyId_fkey"
-            columns: ["companyId"]
-            isOneToOne: false
-            referencedRelation: "company"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "mercuryRecipientMapping_companyId_fkey"
-            columns: ["companyId"]
-            isOneToOne: false
-            referencedRelation: "customFieldTables"
-            referencedColumns: ["companyId"]
-          },
-          {
-            foreignKeyName: "mercuryRecipientMapping_companyId_fkey"
-            columns: ["companyId"]
-            isOneToOne: false
-            referencedRelation: "integrations"
-            referencedColumns: ["companyId"]
-          },
-          {
-            foreignKeyName: "mercuryRecipientMapping_createdBy_fkey"
-            columns: ["createdBy"]
-            isOneToOne: false
-            referencedRelation: "employeeSummary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "mercuryRecipientMapping_createdBy_fkey"
-            columns: ["createdBy"]
-            isOneToOne: false
-            referencedRelation: "employees"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "mercuryRecipientMapping_createdBy_fkey"
-            columns: ["createdBy"]
-            isOneToOne: false
-            referencedRelation: "employeesAcrossCompanies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "mercuryRecipientMapping_createdBy_fkey"
-            columns: ["createdBy"]
-            isOneToOne: false
-            referencedRelation: "user"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "mercuryRecipientMapping_createdBy_fkey"
-            columns: ["createdBy"]
-            isOneToOne: false
-            referencedRelation: "userDefaults"
-            referencedColumns: ["userId"]
-          },
-          {
-            foreignKeyName: "mercuryRecipientMapping_supplierId_companyId_fkey"
-            columns: ["supplierId", "companyId"]
-            isOneToOne: false
-            referencedRelation: "purchaseOrderSuppliers"
-            referencedColumns: ["id", "companyId"]
-          },
-          {
-            foreignKeyName: "mercuryRecipientMapping_supplierId_companyId_fkey"
-            columns: ["supplierId", "companyId"]
-            isOneToOne: false
-            referencedRelation: "supplier"
-            referencedColumns: ["id", "companyId"]
-          },
-          {
-            foreignKeyName: "mercuryRecipientMapping_supplierId_companyId_fkey"
-            columns: ["supplierId", "companyId"]
-            isOneToOne: false
-            referencedRelation: "suppliers"
-            referencedColumns: ["id", "companyId"]
-          },
-          {
-            foreignKeyName: "mercuryRecipientMapping_updatedBy_fkey"
-            columns: ["updatedBy"]
-            isOneToOne: false
-            referencedRelation: "employeeSummary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "mercuryRecipientMapping_updatedBy_fkey"
-            columns: ["updatedBy"]
-            isOneToOne: false
-            referencedRelation: "employees"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "mercuryRecipientMapping_updatedBy_fkey"
-            columns: ["updatedBy"]
-            isOneToOne: false
-            referencedRelation: "employeesAcrossCompanies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "mercuryRecipientMapping_updatedBy_fkey"
-            columns: ["updatedBy"]
-            isOneToOne: false
-            referencedRelation: "user"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "mercuryRecipientMapping_updatedBy_fkey"
-            columns: ["updatedBy"]
-            isOneToOne: false
-            referencedRelation: "userDefaults"
-            referencedColumns: ["userId"]
-          }
-        ]
-      }
-      mercurySyncSettings: {
-        Row: {
-          companyId: string
-          createdAt: string
-          createdBy: string
-          cursor: string | null
-          disabledMailboxes: string[]
-          enabled: boolean
-          eventCursor: string | null
-          gmailEnabled: boolean
-          id: string
-          lastAttemptAt: string | null
-          lastError: string | null
-          lastGmailError: string | null
-          lastSuccessAt: string | null
-          syncFromDate: string | null
-          updatedAt: string | null
-          updatedBy: string | null
-        }
-        Insert: {
-          companyId: string
-          createdAt?: string
-          createdBy: string
-          cursor?: string | null
-          disabledMailboxes?: string[]
-          enabled?: boolean
-          eventCursor?: string | null
-          gmailEnabled?: boolean
-          id?: string
-          lastAttemptAt?: string | null
-          lastError?: string | null
-          lastGmailError?: string | null
-          lastSuccessAt?: string | null
-          syncFromDate?: string | null
-          updatedAt?: string | null
-          updatedBy?: string | null
-        }
-        Update: {
-          companyId?: string
-          createdAt?: string
-          createdBy?: string
-          cursor?: string | null
-          disabledMailboxes?: string[]
-          enabled?: boolean
-          eventCursor?: string | null
-          gmailEnabled?: boolean
-          id?: string
-          lastAttemptAt?: string | null
-          lastError?: string | null
-          lastGmailError?: string | null
-          lastSuccessAt?: string | null
-          syncFromDate?: string | null
-          updatedAt?: string | null
-          updatedBy?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "mercurySyncSettings_companyId_fkey"
-            columns: ["companyId"]
-            isOneToOne: true
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "mercurySyncSettings_companyId_fkey"
-            columns: ["companyId"]
-            isOneToOne: true
-            referencedRelation: "company"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "mercurySyncSettings_companyId_fkey"
-            columns: ["companyId"]
-            isOneToOne: true
-            referencedRelation: "customFieldTables"
-            referencedColumns: ["companyId"]
-          },
-          {
-            foreignKeyName: "mercurySyncSettings_companyId_fkey"
-            columns: ["companyId"]
-            isOneToOne: true
-            referencedRelation: "integrations"
-            referencedColumns: ["companyId"]
-          },
-          {
-            foreignKeyName: "mercurySyncSettings_createdBy_fkey"
-            columns: ["createdBy"]
-            isOneToOne: false
-            referencedRelation: "employeeSummary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "mercurySyncSettings_createdBy_fkey"
-            columns: ["createdBy"]
-            isOneToOne: false
-            referencedRelation: "employees"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "mercurySyncSettings_createdBy_fkey"
-            columns: ["createdBy"]
-            isOneToOne: false
-            referencedRelation: "employeesAcrossCompanies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "mercurySyncSettings_createdBy_fkey"
-            columns: ["createdBy"]
-            isOneToOne: false
-            referencedRelation: "user"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "mercurySyncSettings_createdBy_fkey"
-            columns: ["createdBy"]
-            isOneToOne: false
-            referencedRelation: "userDefaults"
-            referencedColumns: ["userId"]
-          },
-          {
-            foreignKeyName: "mercurySyncSettings_updatedBy_fkey"
-            columns: ["updatedBy"]
-            isOneToOne: false
-            referencedRelation: "employeeSummary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "mercurySyncSettings_updatedBy_fkey"
-            columns: ["updatedBy"]
-            isOneToOne: false
-            referencedRelation: "employees"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "mercurySyncSettings_updatedBy_fkey"
-            columns: ["updatedBy"]
-            isOneToOne: false
-            referencedRelation: "employeesAcrossCompanies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "mercurySyncSettings_updatedBy_fkey"
-            columns: ["updatedBy"]
-            isOneToOne: false
-            referencedRelation: "user"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "mercurySyncSettings_updatedBy_fkey"
-            columns: ["updatedBy"]
-            isOneToOne: false
-            referencedRelation: "userDefaults"
-            referencedColumns: ["userId"]
-          }
-        ]
-      }
-      mercuryTransactionImport: {
-        Row: {
-          amount: number
-          attachments: Json
-          companyId: string
-          createdAt: string
-          createdBy: string
-          currencyCode: string
-          id: string
-          invoiceEvidence: Json
-          lastError: string | null
-          memo: string | null
-          mercuryAccountId: string
-          mercuryRecipientId: string | null
-          mercuryTransactionId: string
-          purchaseInvoiceId: string | null
-          reference: string | null
-          remoteStatus: string
-          reviewStatus: string
-          supplierId: string | null
-          transactionDate: string
-          updatedAt: string | null
-          updatedBy: string | null
-          vendorSuggestion: Json
-        }
-        Insert: {
-          amount: number
-          attachments?: Json
-          companyId: string
-          createdAt?: string
-          createdBy: string
-          currencyCode: string
-          id?: string
-          invoiceEvidence?: Json
-          lastError?: string | null
-          memo?: string | null
-          mercuryAccountId: string
-          mercuryRecipientId?: string | null
-          mercuryTransactionId: string
-          purchaseInvoiceId?: string | null
-          reference?: string | null
-          remoteStatus: string
-          reviewStatus?: string
-          supplierId?: string | null
-          transactionDate: string
-          updatedAt?: string | null
-          updatedBy?: string | null
-          vendorSuggestion?: Json
-        }
-        Update: {
-          amount?: number
-          attachments?: Json
-          companyId?: string
-          createdAt?: string
-          createdBy?: string
-          currencyCode?: string
-          id?: string
-          invoiceEvidence?: Json
-          lastError?: string | null
-          memo?: string | null
-          mercuryAccountId?: string
-          mercuryRecipientId?: string | null
-          mercuryTransactionId?: string
-          purchaseInvoiceId?: string | null
-          reference?: string | null
-          remoteStatus?: string
-          reviewStatus?: string
-          supplierId?: string | null
-          transactionDate?: string
-          updatedAt?: string | null
-          updatedBy?: string | null
-          vendorSuggestion?: Json
-        }
-        Relationships: [
-          {
-            foreignKeyName: "mercuryTransactionImport_companyId_fkey"
-            columns: ["companyId"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "mercuryTransactionImport_companyId_fkey"
-            columns: ["companyId"]
-            isOneToOne: false
-            referencedRelation: "company"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "mercuryTransactionImport_companyId_fkey"
-            columns: ["companyId"]
-            isOneToOne: false
-            referencedRelation: "customFieldTables"
-            referencedColumns: ["companyId"]
-          },
-          {
-            foreignKeyName: "mercuryTransactionImport_companyId_fkey"
-            columns: ["companyId"]
-            isOneToOne: false
-            referencedRelation: "integrations"
-            referencedColumns: ["companyId"]
-          },
-          {
-            foreignKeyName: "mercuryTransactionImport_createdBy_fkey"
-            columns: ["createdBy"]
-            isOneToOne: false
-            referencedRelation: "employeeSummary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "mercuryTransactionImport_createdBy_fkey"
-            columns: ["createdBy"]
-            isOneToOne: false
-            referencedRelation: "employees"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "mercuryTransactionImport_createdBy_fkey"
-            columns: ["createdBy"]
-            isOneToOne: false
-            referencedRelation: "employeesAcrossCompanies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "mercuryTransactionImport_createdBy_fkey"
-            columns: ["createdBy"]
-            isOneToOne: false
-            referencedRelation: "user"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "mercuryTransactionImport_createdBy_fkey"
-            columns: ["createdBy"]
-            isOneToOne: false
-            referencedRelation: "userDefaults"
-            referencedColumns: ["userId"]
-          },
-          {
-            foreignKeyName: "mercuryTransactionImport_purchaseInvoiceId_companyId_fkey"
-            columns: ["purchaseInvoiceId", "companyId"]
-            isOneToOne: false
-            referencedRelation: "purchaseInvoice"
-            referencedColumns: ["id", "companyId"]
-          },
-          {
-            foreignKeyName: "mercuryTransactionImport_purchaseInvoiceId_companyId_fkey"
-            columns: ["purchaseInvoiceId", "companyId"]
-            isOneToOne: false
-            referencedRelation: "purchaseInvoices"
-            referencedColumns: ["id", "companyId"]
-          },
-          {
-            foreignKeyName: "mercuryTransactionImport_supplierId_companyId_fkey"
-            columns: ["supplierId", "companyId"]
-            isOneToOne: false
-            referencedRelation: "purchaseOrderSuppliers"
-            referencedColumns: ["id", "companyId"]
-          },
-          {
-            foreignKeyName: "mercuryTransactionImport_supplierId_companyId_fkey"
-            columns: ["supplierId", "companyId"]
-            isOneToOne: false
-            referencedRelation: "supplier"
-            referencedColumns: ["id", "companyId"]
-          },
-          {
-            foreignKeyName: "mercuryTransactionImport_supplierId_companyId_fkey"
-            columns: ["supplierId", "companyId"]
-            isOneToOne: false
-            referencedRelation: "suppliers"
-            referencedColumns: ["id", "companyId"]
-          },
-          {
-            foreignKeyName: "mercuryTransactionImport_updatedBy_fkey"
-            columns: ["updatedBy"]
-            isOneToOne: false
-            referencedRelation: "employeeSummary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "mercuryTransactionImport_updatedBy_fkey"
-            columns: ["updatedBy"]
-            isOneToOne: false
-            referencedRelation: "employees"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "mercuryTransactionImport_updatedBy_fkey"
-            columns: ["updatedBy"]
-            isOneToOne: false
-            referencedRelation: "employeesAcrossCompanies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "mercuryTransactionImport_updatedBy_fkey"
-            columns: ["updatedBy"]
-            isOneToOne: false
-            referencedRelation: "user"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "mercuryTransactionImport_updatedBy_fkey"
-            columns: ["updatedBy"]
             isOneToOne: false
             referencedRelation: "userDefaults"
             referencedColumns: ["userId"]
@@ -37034,7 +41512,7 @@ export type Database = {
       notificationPreference: {
         Row: {
           channel: string
-          companyId: string
+          companyId: string | null
           enabled: boolean
           id: string
           topic: string
@@ -37043,7 +41521,7 @@ export type Database = {
         }
         Insert: {
           channel: string
-          companyId: string
+          companyId?: string | null
           enabled?: boolean
           id?: string
           topic: string
@@ -37052,7 +41530,7 @@ export type Database = {
         }
         Update: {
           channel?: string
-          companyId?: string
+          companyId?: string | null
           enabled?: boolean
           id?: string
           topic?: string
@@ -37694,6 +42172,13 @@ export type Database = {
             foreignKeyName: "partner_abilityId_fkey"
             columns: ["abilityId"]
             isOneToOne: false
+            referencedRelation: "abilities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_abilityId_fkey"
+            columns: ["abilityId"]
+            isOneToOne: false
             referencedRelation: "ability"
             referencedColumns: ["id"]
           },
@@ -37897,6 +42382,7 @@ export type Database = {
           currencyCode: string
           customerId: string | null
           customFields: Json | null
+          employeeId: string | null
           exchangeRate: number
           id: string
           journalId: string | null
@@ -37908,6 +42394,8 @@ export type Database = {
           postedBy: string | null
           postingDate: string | null
           reference: string | null
+          rentalAgreementId: string | null
+          salesOrderId: string | null
           status: Database["public"]["Enums"]["paymentStatus"]
           supplierId: string | null
           totalAmount: number
@@ -37924,6 +42412,7 @@ export type Database = {
           currencyCode: string
           customerId?: string | null
           customFields?: Json | null
+          employeeId?: string | null
           exchangeRate?: number
           id?: string
           journalId?: string | null
@@ -37935,6 +42424,8 @@ export type Database = {
           postedBy?: string | null
           postingDate?: string | null
           reference?: string | null
+          rentalAgreementId?: string | null
+          salesOrderId?: string | null
           status?: Database["public"]["Enums"]["paymentStatus"]
           supplierId?: string | null
           totalAmount: number
@@ -37951,6 +42442,7 @@ export type Database = {
           currencyCode?: string
           customerId?: string | null
           customFields?: Json | null
+          employeeId?: string | null
           exchangeRate?: number
           id?: string
           journalId?: string | null
@@ -37962,6 +42454,8 @@ export type Database = {
           postedBy?: string | null
           postingDate?: string | null
           reference?: string | null
+          rentalAgreementId?: string | null
+          salesOrderId?: string | null
           status?: Database["public"]["Enums"]["paymentStatus"]
           supplierId?: string | null
           totalAmount?: number
@@ -38077,6 +42571,13 @@ export type Database = {
             referencedColumns: ["id", "companyId"]
           },
           {
+            foreignKeyName: "payment_employeeId_fkey"
+            columns: ["employeeId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "employee"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
             foreignKeyName: "payment_journalId_fkey"
             columns: ["journalId"]
             isOneToOne: false
@@ -38124,6 +42625,41 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "userDefaults"
             referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "payment_rentalAgreementId_fkey"
+            columns: ["rentalAgreementId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "rentalAgreement"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "payment_rentalAgreementId_fkey"
+            columns: ["rentalAgreementId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "rentalAgreements"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "payment_salesOrderId_fkey"
+            columns: ["salesOrderId"]
+            isOneToOne: false
+            referencedRelation: "salesOrder"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_salesOrderId_fkey"
+            columns: ["salesOrderId"]
+            isOneToOne: false
+            referencedRelation: "salesOrderLocations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_salesOrderId_fkey"
+            columns: ["salesOrderId"]
+            isOneToOne: false
+            referencedRelation: "salesOrders"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "payment_supplierId_fkey"
@@ -40025,506 +44561,350 @@ export type Database = {
         }
         Relationships: []
       }
-      portalCommandReceipt: {
+      planningAction: {
         Row: {
-          action: string
-          actorId: string
-          companyId: string
-          createdAt: string
-          id: string
-          idempotencyKey: string
-          payloadHash: string
-          purchaseOrderId: string
-          version: number
-        }
-        Insert: {
-          action: string
-          actorId: string
-          companyId: string
-          createdAt?: string
-          id?: string
-          idempotencyKey: string
-          payloadHash: string
-          purchaseOrderId: string
-          version?: number
-        }
-        Update: {
-          action?: string
-          actorId?: string
-          companyId?: string
-          createdAt?: string
-          id?: string
-          idempotencyKey?: string
-          payloadHash?: string
-          purchaseOrderId?: string
-          version?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "portalCommandReceipt_actorId_fkey"
-            columns: ["actorId"]
-            isOneToOne: false
-            referencedRelation: "employeeSummary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "portalCommandReceipt_actorId_fkey"
-            columns: ["actorId"]
-            isOneToOne: false
-            referencedRelation: "employees"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "portalCommandReceipt_actorId_fkey"
-            columns: ["actorId"]
-            isOneToOne: false
-            referencedRelation: "employeesAcrossCompanies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "portalCommandReceipt_actorId_fkey"
-            columns: ["actorId"]
-            isOneToOne: false
-            referencedRelation: "user"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "portalCommandReceipt_actorId_fkey"
-            columns: ["actorId"]
-            isOneToOne: false
-            referencedRelation: "userDefaults"
-            referencedColumns: ["userId"]
-          },
-          {
-            foreignKeyName: "portalCommandReceipt_companyId_fkey"
-            columns: ["companyId"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "portalCommandReceipt_companyId_fkey"
-            columns: ["companyId"]
-            isOneToOne: false
-            referencedRelation: "company"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "portalCommandReceipt_companyId_fkey"
-            columns: ["companyId"]
-            isOneToOne: false
-            referencedRelation: "customFieldTables"
-            referencedColumns: ["companyId"]
-          },
-          {
-            foreignKeyName: "portalCommandReceipt_companyId_fkey"
-            columns: ["companyId"]
-            isOneToOne: false
-            referencedRelation: "integrations"
-            referencedColumns: ["companyId"]
-          },
-          {
-            foreignKeyName: "portalCommandReceipt_purchaseOrderId_fkey"
-            columns: ["purchaseOrderId"]
-            isOneToOne: false
-            referencedRelation: "purchaseOrder"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "portalCommandReceipt_purchaseOrderId_fkey"
-            columns: ["purchaseOrderId"]
-            isOneToOne: false
-            referencedRelation: "purchaseOrderLocations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "portalCommandReceipt_purchaseOrderId_fkey"
-            columns: ["purchaseOrderId"]
-            isOneToOne: false
-            referencedRelation: "purchaseOrders"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-      portalProcurementSchedule: {
-        Row: {
-          action: string
-          actorId: string
-          claimedAt: string | null
-          companyGroupId: string
+          assignee: string | null
+          assigneeOverridden: boolean
           companyId: string
           createdAt: string
           createdBy: string
-          executeAt: string
-          failureCode: string | null
+          horizonDate: string
           id: string
-          idempotencyKey: string
-          payload: Json
-          payloadHash: string
-          purchaseOrderId: string | null
-          revocationCheckedAt: string | null
-          revocationVersion: string | null
-          status: string
-          updatedAt: string | null
-          updatedBy: string | null
-          version: number
-        }
-        Insert: {
-          action: string
-          actorId: string
-          claimedAt?: string | null
-          companyGroupId: string
-          companyId: string
-          createdAt?: string
-          createdBy: string
-          executeAt: string
-          failureCode?: string | null
-          id?: string
-          idempotencyKey: string
-          payload: Json
-          payloadHash: string
-          purchaseOrderId?: string | null
-          revocationCheckedAt?: string | null
-          revocationVersion?: string | null
-          status?: string
-          updatedAt?: string | null
-          updatedBy?: string | null
-          version: number
-        }
-        Update: {
-          action?: string
-          actorId?: string
-          claimedAt?: string | null
-          companyGroupId?: string
-          companyId?: string
-          createdAt?: string
-          createdBy?: string
-          executeAt?: string
-          failureCode?: string | null
-          id?: string
-          idempotencyKey?: string
-          payload?: Json
-          payloadHash?: string
-          purchaseOrderId?: string | null
-          revocationCheckedAt?: string | null
-          revocationVersion?: string | null
-          status?: string
-          updatedAt?: string | null
-          updatedBy?: string | null
-          version?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "portalProcurementSchedule_actorId_fkey"
-            columns: ["actorId"]
-            isOneToOne: false
-            referencedRelation: "employeeSummary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "portalProcurementSchedule_actorId_fkey"
-            columns: ["actorId"]
-            isOneToOne: false
-            referencedRelation: "employees"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "portalProcurementSchedule_actorId_fkey"
-            columns: ["actorId"]
-            isOneToOne: false
-            referencedRelation: "employeesAcrossCompanies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "portalProcurementSchedule_actorId_fkey"
-            columns: ["actorId"]
-            isOneToOne: false
-            referencedRelation: "user"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "portalProcurementSchedule_actorId_fkey"
-            columns: ["actorId"]
-            isOneToOne: false
-            referencedRelation: "userDefaults"
-            referencedColumns: ["userId"]
-          },
-          {
-            foreignKeyName: "portalProcurementSchedule_companyId_fkey"
-            columns: ["companyId"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "portalProcurementSchedule_companyId_fkey"
-            columns: ["companyId"]
-            isOneToOne: false
-            referencedRelation: "company"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "portalProcurementSchedule_companyId_fkey"
-            columns: ["companyId"]
-            isOneToOne: false
-            referencedRelation: "customFieldTables"
-            referencedColumns: ["companyId"]
-          },
-          {
-            foreignKeyName: "portalProcurementSchedule_companyId_fkey"
-            columns: ["companyId"]
-            isOneToOne: false
-            referencedRelation: "integrations"
-            referencedColumns: ["companyId"]
-          },
-          {
-            foreignKeyName: "portalProcurementSchedule_createdBy_fkey"
-            columns: ["createdBy"]
-            isOneToOne: false
-            referencedRelation: "employeeSummary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "portalProcurementSchedule_createdBy_fkey"
-            columns: ["createdBy"]
-            isOneToOne: false
-            referencedRelation: "employees"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "portalProcurementSchedule_createdBy_fkey"
-            columns: ["createdBy"]
-            isOneToOne: false
-            referencedRelation: "employeesAcrossCompanies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "portalProcurementSchedule_createdBy_fkey"
-            columns: ["createdBy"]
-            isOneToOne: false
-            referencedRelation: "user"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "portalProcurementSchedule_createdBy_fkey"
-            columns: ["createdBy"]
-            isOneToOne: false
-            referencedRelation: "userDefaults"
-            referencedColumns: ["userId"]
-          },
-          {
-            foreignKeyName: "portalProcurementSchedule_purchaseOrderId_fkey"
-            columns: ["purchaseOrderId"]
-            isOneToOne: false
-            referencedRelation: "purchaseOrder"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "portalProcurementSchedule_purchaseOrderId_fkey"
-            columns: ["purchaseOrderId"]
-            isOneToOne: false
-            referencedRelation: "purchaseOrderLocations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "portalProcurementSchedule_purchaseOrderId_fkey"
-            columns: ["purchaseOrderId"]
-            isOneToOne: false
-            referencedRelation: "purchaseOrders"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "portalProcurementSchedule_updatedBy_fkey"
-            columns: ["updatedBy"]
-            isOneToOne: false
-            referencedRelation: "employeeSummary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "portalProcurementSchedule_updatedBy_fkey"
-            columns: ["updatedBy"]
-            isOneToOne: false
-            referencedRelation: "employees"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "portalProcurementSchedule_updatedBy_fkey"
-            columns: ["updatedBy"]
-            isOneToOne: false
-            referencedRelation: "employeesAcrossCompanies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "portalProcurementSchedule_updatedBy_fkey"
-            columns: ["updatedBy"]
-            isOneToOne: false
-            referencedRelation: "user"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "portalProcurementSchedule_updatedBy_fkey"
-            columns: ["updatedBy"]
-            isOneToOne: false
-            referencedRelation: "userDefaults"
-            referencedColumns: ["userId"]
-          }
-        ]
-      }
-      portalSourceOutbox: {
-        Row: {
-          attempts: number
-          availableAt: string
-          claimedAt: string | null
-          companyId: string
-          createdAt: string
-          createdBy: string
-          deliveredAt: string | null
-          entityId: string
-          entityType: string
-          eventType: string
-          id: string
-          leaseExpiresAt: string | null
-          leaseOwner: string | null
-          payload: Json
-          source: string
-          sourceVersion: string
+          isASAP: boolean
+          itemId: string
+          jobId: string | null
+          latestOrderDate: string | null
+          locationId: string
+          periodId: string
+          policyName: string | null
+          purchaseOrderLineId: string | null
+          reason: string | null
+          requiresManualAction: boolean
+          status: Database["public"]["Enums"]["planningActionStatus"]
+          suggestedDate: string
+          suggestedQuantity: number
+          supplierId: string | null
+          triggerValues: Json | null
+          type: Database["public"]["Enums"]["planningActionType"]
           updatedAt: string | null
           updatedBy: string | null
         }
         Insert: {
-          attempts?: number
-          availableAt?: string
-          claimedAt?: string | null
+          assignee?: string | null
+          assigneeOverridden?: boolean
           companyId: string
           createdAt?: string
           createdBy: string
-          deliveredAt?: string | null
-          entityId: string
-          entityType: string
-          eventType: string
+          horizonDate: string
           id?: string
-          leaseExpiresAt?: string | null
-          leaseOwner?: string | null
-          payload?: Json
-          source?: string
-          sourceVersion: string
+          isASAP?: boolean
+          itemId: string
+          jobId?: string | null
+          latestOrderDate?: string | null
+          locationId: string
+          periodId: string
+          policyName?: string | null
+          purchaseOrderLineId?: string | null
+          reason?: string | null
+          requiresManualAction?: boolean
+          status?: Database["public"]["Enums"]["planningActionStatus"]
+          suggestedDate: string
+          suggestedQuantity: number
+          supplierId?: string | null
+          triggerValues?: Json | null
+          type: Database["public"]["Enums"]["planningActionType"]
           updatedAt?: string | null
           updatedBy?: string | null
         }
         Update: {
-          attempts?: number
-          availableAt?: string
-          claimedAt?: string | null
+          assignee?: string | null
+          assigneeOverridden?: boolean
           companyId?: string
           createdAt?: string
           createdBy?: string
-          deliveredAt?: string | null
-          entityId?: string
-          entityType?: string
-          eventType?: string
+          horizonDate?: string
           id?: string
-          leaseExpiresAt?: string | null
-          leaseOwner?: string | null
-          payload?: Json
-          source?: string
-          sourceVersion?: string
+          isASAP?: boolean
+          itemId?: string
+          jobId?: string | null
+          latestOrderDate?: string | null
+          locationId?: string
+          periodId?: string
+          policyName?: string | null
+          purchaseOrderLineId?: string | null
+          reason?: string | null
+          requiresManualAction?: boolean
+          status?: Database["public"]["Enums"]["planningActionStatus"]
+          suggestedDate?: string
+          suggestedQuantity?: number
+          supplierId?: string | null
+          triggerValues?: Json | null
+          type?: Database["public"]["Enums"]["planningActionType"]
           updatedAt?: string | null
           updatedBy?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "portalSourceOutbox_companyId_fkey"
+            foreignKeyName: "planningAction_assignee_fkey"
+            columns: ["assignee"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planningAction_assignee_fkey"
+            columns: ["assignee"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planningAction_assignee_fkey"
+            columns: ["assignee"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planningAction_assignee_fkey"
+            columns: ["assignee"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planningAction_assignee_fkey"
+            columns: ["assignee"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "planningAction_companyId_fkey"
             columns: ["companyId"]
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "portalSourceOutbox_companyId_fkey"
+            foreignKeyName: "planningAction_companyId_fkey"
             columns: ["companyId"]
             isOneToOne: false
             referencedRelation: "company"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "portalSourceOutbox_companyId_fkey"
+            foreignKeyName: "planningAction_companyId_fkey"
             columns: ["companyId"]
             isOneToOne: false
             referencedRelation: "customFieldTables"
             referencedColumns: ["companyId"]
           },
           {
-            foreignKeyName: "portalSourceOutbox_companyId_fkey"
+            foreignKeyName: "planningAction_companyId_fkey"
             columns: ["companyId"]
             isOneToOne: false
             referencedRelation: "integrations"
             referencedColumns: ["companyId"]
           },
           {
-            foreignKeyName: "portalSourceOutbox_createdBy_fkey"
+            foreignKeyName: "planningAction_createdBy_fkey"
             columns: ["createdBy"]
             isOneToOne: false
             referencedRelation: "employeeSummary"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "portalSourceOutbox_createdBy_fkey"
+            foreignKeyName: "planningAction_createdBy_fkey"
             columns: ["createdBy"]
             isOneToOne: false
             referencedRelation: "employees"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "portalSourceOutbox_createdBy_fkey"
+            foreignKeyName: "planningAction_createdBy_fkey"
             columns: ["createdBy"]
             isOneToOne: false
             referencedRelation: "employeesAcrossCompanies"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "portalSourceOutbox_createdBy_fkey"
+            foreignKeyName: "planningAction_createdBy_fkey"
             columns: ["createdBy"]
             isOneToOne: false
             referencedRelation: "user"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "portalSourceOutbox_createdBy_fkey"
+            foreignKeyName: "planningAction_createdBy_fkey"
             columns: ["createdBy"]
             isOneToOne: false
             referencedRelation: "userDefaults"
             referencedColumns: ["userId"]
           },
           {
-            foreignKeyName: "portalSourceOutbox_updatedBy_fkey"
+            foreignKeyName: "planningAction_itemId_fkey"
+            columns: ["itemId"]
+            isOneToOne: false
+            referencedRelation: "consumables"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planningAction_itemId_fkey"
+            columns: ["itemId"]
+            isOneToOne: false
+            referencedRelation: "item"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planningAction_itemId_fkey"
+            columns: ["itemId"]
+            isOneToOne: false
+            referencedRelation: "materials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planningAction_itemId_fkey"
+            columns: ["itemId"]
+            isOneToOne: false
+            referencedRelation: "parts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planningAction_itemId_fkey"
+            columns: ["itemId"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planningAction_itemId_fkey"
+            columns: ["itemId"]
+            isOneToOne: false
+            referencedRelation: "tools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planningAction_jobId_fkey"
+            columns: ["jobId"]
+            isOneToOne: false
+            referencedRelation: "job"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planningAction_jobId_fkey"
+            columns: ["jobId"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planningAction_jobId_fkey"
+            columns: ["jobId"]
+            isOneToOne: false
+            referencedRelation: "openProductionOrders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planningAction_locationId_fkey"
+            columns: ["locationId"]
+            isOneToOne: false
+            referencedRelation: "location"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planningAction_periodId_fkey"
+            columns: ["periodId"]
+            isOneToOne: false
+            referencedRelation: "period"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planningAction_purchaseOrderLineId_fkey"
+            columns: ["purchaseOrderLineId"]
+            isOneToOne: false
+            referencedRelation: "openPurchaseOrderLines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planningAction_purchaseOrderLineId_fkey"
+            columns: ["purchaseOrderLineId"]
+            isOneToOne: false
+            referencedRelation: "purchaseOrderLine"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planningAction_purchaseOrderLineId_fkey"
+            columns: ["purchaseOrderLineId"]
+            isOneToOne: false
+            referencedRelation: "purchaseOrderLines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planningAction_supplierId_fkey"
+            columns: ["supplierId"]
+            isOneToOne: false
+            referencedRelation: "contractors"
+            referencedColumns: ["supplierId"]
+          },
+          {
+            foreignKeyName: "planningAction_supplierId_fkey"
+            columns: ["supplierId"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["supplierId"]
+          },
+          {
+            foreignKeyName: "planningAction_supplierId_fkey"
+            columns: ["supplierId"]
+            isOneToOne: false
+            referencedRelation: "purchaseOrderSuppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planningAction_supplierId_fkey"
+            columns: ["supplierId"]
+            isOneToOne: false
+            referencedRelation: "supplier"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planningAction_supplierId_fkey"
+            columns: ["supplierId"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planningAction_updatedBy_fkey"
             columns: ["updatedBy"]
             isOneToOne: false
             referencedRelation: "employeeSummary"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "portalSourceOutbox_updatedBy_fkey"
+            foreignKeyName: "planningAction_updatedBy_fkey"
             columns: ["updatedBy"]
             isOneToOne: false
             referencedRelation: "employees"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "portalSourceOutbox_updatedBy_fkey"
+            foreignKeyName: "planningAction_updatedBy_fkey"
             columns: ["updatedBy"]
             isOneToOne: false
             referencedRelation: "employeesAcrossCompanies"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "portalSourceOutbox_updatedBy_fkey"
+            foreignKeyName: "planningAction_updatedBy_fkey"
             columns: ["updatedBy"]
             isOneToOne: false
             referencedRelation: "user"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "portalSourceOutbox_updatedBy_fkey"
+            foreignKeyName: "planningAction_updatedBy_fkey"
             columns: ["updatedBy"]
             isOneToOne: false
             referencedRelation: "userDefaults"
@@ -40538,6 +44918,7 @@ export type Database = {
           amount: number
           amountType: Database["public"]["Enums"]["pricingRuleAmountType"]
           companyId: string
+          configurationPrices: Json | null
           createdAt: string
           createdBy: string
           customerIds: string[] | null
@@ -40560,6 +44941,7 @@ export type Database = {
           amount: number
           amountType?: Database["public"]["Enums"]["pricingRuleAmountType"]
           companyId: string
+          configurationPrices?: Json | null
           createdAt?: string
           createdBy: string
           customerIds?: string[] | null
@@ -40582,6 +44964,7 @@ export type Database = {
           amount?: number
           amountType?: Database["public"]["Enums"]["pricingRuleAmountType"]
           companyId?: string
+          configurationPrices?: Json | null
           createdAt?: string
           createdBy?: string
           customerIds?: string[] | null
@@ -41442,6 +45825,7 @@ export type Database = {
       }
       process: {
         Row: {
+          abilityPolicy: Database["public"]["Enums"]["processAbilityPolicy"]
           active: boolean
           batchable: boolean
           batchRules: Json | null
@@ -41461,6 +45845,7 @@ export type Database = {
           updatedBy: string | null
         }
         Insert: {
+          abilityPolicy?: Database["public"]["Enums"]["processAbilityPolicy"]
           active?: boolean
           batchable?: boolean
           batchRules?: Json | null
@@ -41480,6 +45865,7 @@ export type Database = {
           updatedBy?: string | null
         }
         Update: {
+          abilityPolicy?: Database["public"]["Enums"]["processAbilityPolicy"]
           active?: boolean
           batchable?: boolean
           batchRules?: Json | null
@@ -42009,6 +46395,141 @@ export type Database = {
           }
         ]
       }
+      project: {
+        Row: {
+          active: boolean
+          companyId: string
+          createdAt: string
+          createdBy: string
+          description: string | null
+          id: string
+          name: string
+          updatedAt: string | null
+          updatedBy: string | null
+        }
+        Insert: {
+          active?: boolean
+          companyId: string
+          createdAt?: string
+          createdBy: string
+          description?: string | null
+          id?: string
+          name: string
+          updatedAt?: string | null
+          updatedBy?: string | null
+        }
+        Update: {
+          active?: boolean
+          companyId?: string
+          createdAt?: string
+          createdBy?: string
+          description?: string | null
+          id?: string
+          name?: string
+          updatedAt?: string | null
+          updatedBy?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "customFieldTables"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "project_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "integrations"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "project_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "project_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          }
+        ]
+      }
       purchaseInvoice: {
         Row: {
           assignee: string | null
@@ -42462,9 +46983,12 @@ export type Database = {
           invoiceLineType: Database["public"]["Enums"]["payableLineType"]
           itemId: string | null
           jobOperationId: string | null
+          leaseId: string | null
+          leasePaymentId: string | null
           locationId: string | null
           modelUploadId: string | null
           ownerId: string | null
+          projectId: string | null
           purchaseOrderId: string | null
           purchaseOrderLineId: string | null
           purchaseUnitOfMeasureCode: string | null
@@ -42505,9 +47029,12 @@ export type Database = {
           invoiceLineType: Database["public"]["Enums"]["payableLineType"]
           itemId?: string | null
           jobOperationId?: string | null
+          leaseId?: string | null
+          leasePaymentId?: string | null
           locationId?: string | null
           modelUploadId?: string | null
           ownerId?: string | null
+          projectId?: string | null
           purchaseOrderId?: string | null
           purchaseOrderLineId?: string | null
           purchaseUnitOfMeasureCode?: string | null
@@ -42548,9 +47075,12 @@ export type Database = {
           invoiceLineType?: Database["public"]["Enums"]["payableLineType"]
           itemId?: string | null
           jobOperationId?: string | null
+          leaseId?: string | null
+          leasePaymentId?: string | null
           locationId?: string | null
           modelUploadId?: string | null
           ownerId?: string | null
+          projectId?: string | null
           purchaseOrderId?: string | null
           purchaseOrderLineId?: string | null
           purchaseUnitOfMeasureCode?: string | null
@@ -42623,6 +47153,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "purchaseInvoiceLine_leasePayment_fkey"
+            columns: ["leasePaymentId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "leasePayment"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "purchaseInvoiceLine_lease_fkey"
+            columns: ["leaseId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "lease"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "purchaseInvoiceLine_lease_fkey"
+            columns: ["leaseId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "leases"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
             foreignKeyName: "purchaseInvoiceLine_modelUploadId_fkey"
             columns: ["modelUploadId"]
             isOneToOne: false
@@ -42677,6 +47228,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "userDefaults"
             referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "purchaseInvoiceLine_projectId_fkey"
+            columns: ["projectId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "project"
+            referencedColumns: ["id", "companyId"]
           },
           {
             foreignKeyName: "purchaseInvoiceLine_storageUnitId_fkey"
@@ -43051,6 +47609,7 @@ export type Database = {
           companyId: string
           createdAt: string
           createdBy: string
+          createdFromPlanning: boolean
           currencyCode: string | null
           customFields: Json | null
           exchangeRate: number | null
@@ -43081,6 +47640,7 @@ export type Database = {
           companyId: string
           createdAt?: string
           createdBy: string
+          createdFromPlanning?: boolean
           currencyCode?: string | null
           customFields?: Json | null
           exchangeRate?: number | null
@@ -43111,6 +47671,7 @@ export type Database = {
           companyId?: string
           createdAt?: string
           createdBy?: string
+          createdFromPlanning?: boolean
           currencyCode?: string | null
           customFields?: Json | null
           exchangeRate?: number | null
@@ -43799,6 +48360,13 @@ export type Database = {
             columns: ["assetId"]
             isOneToOne: false
             referencedRelation: "fixedAsset"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchaseOrderLine_assetId_fkey"
+            columns: ["assetId"]
+            isOneToOne: false
+            referencedRelation: "fleetAssets"
             referencedColumns: ["id"]
           },
           {
@@ -46123,6 +50691,106 @@ export type Database = {
           }
         ]
       }
+      pushSubscription: {
+        Row: {
+          auth: string
+          companyId: string
+          createdAt: string
+          endpoint: string
+          id: string
+          p256dh: string
+          updatedAt: string
+          userAgent: string | null
+          userId: string
+        }
+        Insert: {
+          auth: string
+          companyId: string
+          createdAt?: string
+          endpoint: string
+          id?: string
+          p256dh: string
+          updatedAt?: string
+          userAgent?: string | null
+          userId: string
+        }
+        Update: {
+          auth?: string
+          companyId?: string
+          createdAt?: string
+          endpoint?: string
+          id?: string
+          p256dh?: string
+          updatedAt?: string
+          userAgent?: string | null
+          userId?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pushSubscription_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pushSubscription_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pushSubscription_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "customFieldTables"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "pushSubscription_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "integrations"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "pushSubscription_userId_fkey"
+            columns: ["userId"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pushSubscription_userId_fkey"
+            columns: ["userId"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pushSubscription_userId_fkey"
+            columns: ["userId"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pushSubscription_userId_fkey"
+            columns: ["userId"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pushSubscription_userId_fkey"
+            columns: ["userId"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          }
+        ]
+      }
       qualityDocument: {
         Row: {
           assignee: string | null
@@ -47299,6 +51967,7 @@ export type Database = {
           netExtendedPrice: number | null
           netUnitPrice: number | null
           priceSource: string
+          priceTrace: Json | null
           quantity: number
           quoteId: string
           quoteLineId: string
@@ -47322,6 +51991,7 @@ export type Database = {
           netExtendedPrice?: number | null
           netUnitPrice?: number | null
           priceSource?: string
+          priceTrace?: Json | null
           quantity?: number
           quoteId: string
           quoteLineId: string
@@ -47345,6 +52015,7 @@ export type Database = {
           netExtendedPrice?: number | null
           netUnitPrice?: number | null
           priceSource?: string
+          priceTrace?: Json | null
           quantity?: number
           quoteId?: string
           quoteLineId?: string
@@ -49658,10 +54329,16 @@ export type Database = {
           createdAt: string
           createdBy: string
           id: string
-          purchaseOrderLineId: string
+          meter: number | null
+          notes: string | null
+          outOfServiceReason: string | null
+          purchaseOrderLineId: string | null
           receiptId: string
           received: boolean
+          rentalAgreementLineId: string | null
+          residualDestination: string | null
           serialNumber: string | null
+          takeOutOfService: boolean
           updatedAt: string | null
           updatedBy: string | null
         }
@@ -49670,10 +54347,16 @@ export type Database = {
           createdAt?: string
           createdBy: string
           id?: string
-          purchaseOrderLineId: string
+          meter?: number | null
+          notes?: string | null
+          outOfServiceReason?: string | null
+          purchaseOrderLineId?: string | null
           receiptId: string
           received?: boolean
+          rentalAgreementLineId?: string | null
+          residualDestination?: string | null
           serialNumber?: string | null
+          takeOutOfService?: boolean
           updatedAt?: string | null
           updatedBy?: string | null
         }
@@ -49682,10 +54365,16 @@ export type Database = {
           createdAt?: string
           createdBy?: string
           id?: string
-          purchaseOrderLineId?: string
+          meter?: number | null
+          notes?: string | null
+          outOfServiceReason?: string | null
+          purchaseOrderLineId?: string | null
           receiptId?: string
           received?: boolean
+          rentalAgreementLineId?: string | null
+          residualDestination?: string | null
           serialNumber?: string | null
+          takeOutOfService?: boolean
           updatedAt?: string | null
           updatedBy?: string | null
         }
@@ -49787,6 +54476,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "receipts"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "receiptFixedAssetLine_rentalAgreementLineId_fkey"
+            columns: ["rentalAgreementLineId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "rentalAgreementLine"
+            referencedColumns: ["id", "companyId"]
           }
         ]
       }
@@ -49990,6 +54686,1659 @@ export type Database = {
           },
           {
             foreignKeyName: "receiptLine_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          }
+        ]
+      }
+      reimbursement: {
+        Row: {
+          amount: number
+          companyId: string
+          createdAt: string
+          createdBy: string
+          currencyCode: string
+          customFields: Json | null
+          employeeId: string
+          exchangeRate: number
+          id: string
+          integration: string
+          journalId: string | null
+          notes: string | null
+          payableAccountId: string | null
+          postedAt: string | null
+          postedBy: string | null
+          postingDate: string | null
+          reference: string | null
+          reimbursementDate: string
+          reimbursementId: string
+          status: Database["public"]["Enums"]["reimbursementStatus"]
+          updatedAt: string | null
+          updatedBy: string | null
+          voidedAt: string | null
+          voidedBy: string | null
+        }
+        Insert: {
+          amount: number
+          companyId: string
+          createdAt?: string
+          createdBy: string
+          currencyCode: string
+          customFields?: Json | null
+          employeeId: string
+          exchangeRate?: number
+          id?: string
+          integration?: string
+          journalId?: string | null
+          notes?: string | null
+          payableAccountId?: string | null
+          postedAt?: string | null
+          postedBy?: string | null
+          postingDate?: string | null
+          reference?: string | null
+          reimbursementDate: string
+          reimbursementId: string
+          status?: Database["public"]["Enums"]["reimbursementStatus"]
+          updatedAt?: string | null
+          updatedBy?: string | null
+          voidedAt?: string | null
+          voidedBy?: string | null
+        }
+        Update: {
+          amount?: number
+          companyId?: string
+          createdAt?: string
+          createdBy?: string
+          currencyCode?: string
+          customFields?: Json | null
+          employeeId?: string
+          exchangeRate?: number
+          id?: string
+          integration?: string
+          journalId?: string | null
+          notes?: string | null
+          payableAccountId?: string | null
+          postedAt?: string | null
+          postedBy?: string | null
+          postingDate?: string | null
+          reference?: string | null
+          reimbursementDate?: string
+          reimbursementId?: string
+          status?: Database["public"]["Enums"]["reimbursementStatus"]
+          updatedAt?: string | null
+          updatedBy?: string | null
+          voidedAt?: string | null
+          voidedBy?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reimbursement_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reimbursement_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reimbursement_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "customFieldTables"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "reimbursement_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "integrations"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "reimbursement_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reimbursement_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reimbursement_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reimbursement_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reimbursement_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "reimbursement_currencyCode_fkey"
+            columns: ["currencyCode"]
+            isOneToOne: false
+            referencedRelation: "currencyCode"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "reimbursement_employeeId_fkey"
+            columns: ["employeeId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "employee"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "reimbursement_journalId_fkey"
+            columns: ["journalId"]
+            isOneToOne: false
+            referencedRelation: "journal"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reimbursement_journalId_fkey"
+            columns: ["journalId"]
+            isOneToOne: false
+            referencedRelation: "journalEntries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reimbursement_payableAccountId_fkey"
+            columns: ["payableAccountId"]
+            isOneToOne: false
+            referencedRelation: "account"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reimbursement_payableAccountId_fkey"
+            columns: ["payableAccountId"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reimbursement_postedBy_fkey"
+            columns: ["postedBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reimbursement_postedBy_fkey"
+            columns: ["postedBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reimbursement_postedBy_fkey"
+            columns: ["postedBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reimbursement_postedBy_fkey"
+            columns: ["postedBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reimbursement_postedBy_fkey"
+            columns: ["postedBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "reimbursement_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reimbursement_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reimbursement_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reimbursement_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reimbursement_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "reimbursement_voidedBy_fkey"
+            columns: ["voidedBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reimbursement_voidedBy_fkey"
+            columns: ["voidedBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reimbursement_voidedBy_fkey"
+            columns: ["voidedBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reimbursement_voidedBy_fkey"
+            columns: ["voidedBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reimbursement_voidedBy_fkey"
+            columns: ["voidedBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          }
+        ]
+      }
+      reimbursementLine: {
+        Row: {
+          accountId: string
+          amount: number
+          companyId: string
+          costCenterId: string | null
+          createdAt: string
+          createdBy: string
+          customFields: Json | null
+          description: string | null
+          id: string
+          projectId: string | null
+          reimbursementId: string
+          sequence: number
+          updatedAt: string | null
+          updatedBy: string | null
+        }
+        Insert: {
+          accountId: string
+          amount: number
+          companyId: string
+          costCenterId?: string | null
+          createdAt?: string
+          createdBy: string
+          customFields?: Json | null
+          description?: string | null
+          id?: string
+          projectId?: string | null
+          reimbursementId: string
+          sequence?: number
+          updatedAt?: string | null
+          updatedBy?: string | null
+        }
+        Update: {
+          accountId?: string
+          amount?: number
+          companyId?: string
+          costCenterId?: string | null
+          createdAt?: string
+          createdBy?: string
+          customFields?: Json | null
+          description?: string | null
+          id?: string
+          projectId?: string | null
+          reimbursementId?: string
+          sequence?: number
+          updatedAt?: string | null
+          updatedBy?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reimbursementLine_accountId_fkey"
+            columns: ["accountId"]
+            isOneToOne: false
+            referencedRelation: "account"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reimbursementLine_accountId_fkey"
+            columns: ["accountId"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reimbursementLine_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reimbursementLine_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reimbursementLine_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "customFieldTables"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "reimbursementLine_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "integrations"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "reimbursementLine_costCenterId_fkey"
+            columns: ["costCenterId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "costCenter"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "reimbursementLine_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reimbursementLine_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reimbursementLine_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reimbursementLine_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reimbursementLine_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "reimbursementLine_projectId_fkey"
+            columns: ["projectId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "project"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "reimbursementLine_reimbursementId_fkey"
+            columns: ["reimbursementId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "reimbursement"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "reimbursementLine_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reimbursementLine_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reimbursementLine_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reimbursementLine_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reimbursementLine_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          }
+        ]
+      }
+      reimbursementLineDimension: {
+        Row: {
+          companyId: string
+          createdAt: string
+          dimensionId: string
+          id: string
+          reimbursementLineId: string
+          valueId: string
+        }
+        Insert: {
+          companyId: string
+          createdAt?: string
+          dimensionId: string
+          id?: string
+          reimbursementLineId: string
+          valueId: string
+        }
+        Update: {
+          companyId?: string
+          createdAt?: string
+          dimensionId?: string
+          id?: string
+          reimbursementLineId?: string
+          valueId?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reimbursementLineDimension_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reimbursementLineDimension_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reimbursementLineDimension_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "customFieldTables"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "reimbursementLineDimension_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "integrations"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "reimbursementLineDimension_dimensionId_fkey"
+            columns: ["dimensionId"]
+            isOneToOne: false
+            referencedRelation: "dimension"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reimbursementLineDimension_dimensionId_fkey"
+            columns: ["dimensionId"]
+            isOneToOne: false
+            referencedRelation: "dimensionValues"
+            referencedColumns: ["dimensionId"]
+          },
+          {
+            foreignKeyName: "reimbursementLineDimension_reimbursementLineId_fkey"
+            columns: ["reimbursementLineId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "reimbursementLine"
+            referencedColumns: ["id", "companyId"]
+          }
+        ]
+      }
+      rentalAgreement: {
+        Row: {
+          activatedAt: string | null
+          billingCycle: Database["public"]["Enums"]["rentalBillingCycle"]
+          billingTiming: Database["public"]["Enums"]["rentalBillingTiming"]
+          closedAt: string | null
+          companyId: string
+          createdAt: string
+          createdBy: string
+          currencyCode: string
+          customerContactId: string | null
+          customerId: string
+          customerLocationId: string | null
+          customFields: Json | null
+          depositAmount: number
+          discountRate: number
+          endDate: string | null
+          exchangeRate: number
+          id: string
+          invoiceAutomation:
+            | Database["public"]["Enums"]["invoiceAutomation"]
+            | null
+          locationId: string
+          notes: string | null
+          ownershipTransfers: boolean
+          paymentTermId: string | null
+          purchaseOptionAmount: number | null
+          purchaseOptionReasonablyCertain: boolean
+          rentalAgreementId: string
+          salesPersonId: string | null
+          specializedAsset: boolean
+          startDate: string
+          status: Database["public"]["Enums"]["rentalAgreementStatus"]
+          taxPercent: number
+          updatedAt: string | null
+          updatedBy: string | null
+        }
+        Insert: {
+          activatedAt?: string | null
+          billingCycle?: Database["public"]["Enums"]["rentalBillingCycle"]
+          billingTiming?: Database["public"]["Enums"]["rentalBillingTiming"]
+          closedAt?: string | null
+          companyId: string
+          createdAt?: string
+          createdBy: string
+          currencyCode: string
+          customerContactId?: string | null
+          customerId: string
+          customerLocationId?: string | null
+          customFields?: Json | null
+          depositAmount?: number
+          discountRate: number
+          endDate?: string | null
+          exchangeRate?: number
+          id?: string
+          invoiceAutomation?:
+            | Database["public"]["Enums"]["invoiceAutomation"]
+            | null
+          locationId: string
+          notes?: string | null
+          ownershipTransfers?: boolean
+          paymentTermId?: string | null
+          purchaseOptionAmount?: number | null
+          purchaseOptionReasonablyCertain?: boolean
+          rentalAgreementId: string
+          salesPersonId?: string | null
+          specializedAsset?: boolean
+          startDate: string
+          status?: Database["public"]["Enums"]["rentalAgreementStatus"]
+          taxPercent?: number
+          updatedAt?: string | null
+          updatedBy?: string | null
+        }
+        Update: {
+          activatedAt?: string | null
+          billingCycle?: Database["public"]["Enums"]["rentalBillingCycle"]
+          billingTiming?: Database["public"]["Enums"]["rentalBillingTiming"]
+          closedAt?: string | null
+          companyId?: string
+          createdAt?: string
+          createdBy?: string
+          currencyCode?: string
+          customerContactId?: string | null
+          customerId?: string
+          customerLocationId?: string | null
+          customFields?: Json | null
+          depositAmount?: number
+          discountRate?: number
+          endDate?: string | null
+          exchangeRate?: number
+          id?: string
+          invoiceAutomation?:
+            | Database["public"]["Enums"]["invoiceAutomation"]
+            | null
+          locationId?: string
+          notes?: string | null
+          ownershipTransfers?: boolean
+          paymentTermId?: string | null
+          purchaseOptionAmount?: number | null
+          purchaseOptionReasonablyCertain?: boolean
+          rentalAgreementId?: string
+          salesPersonId?: string | null
+          specializedAsset?: boolean
+          startDate?: string
+          status?: Database["public"]["Enums"]["rentalAgreementStatus"]
+          taxPercent?: number
+          updatedAt?: string | null
+          updatedBy?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rentalAgreement_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreement_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreement_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "customFieldTables"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "rentalAgreement_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "integrations"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "rentalAgreement_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreement_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreement_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreement_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreement_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "rentalAgreement_customerContactId_fkey"
+            columns: ["customerContactId"]
+            isOneToOne: false
+            referencedRelation: "customerContact"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreement_customerId_fkey"
+            columns: ["customerId"]
+            isOneToOne: false
+            referencedRelation: "customer"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreement_customerId_fkey"
+            columns: ["customerId"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreement_customerId_fkey"
+            columns: ["customerId"]
+            isOneToOne: false
+            referencedRelation: "salesOrderCustomers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreement_customerLocationId_fkey"
+            columns: ["customerLocationId"]
+            isOneToOne: false
+            referencedRelation: "customerLocation"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreement_locationId_fkey"
+            columns: ["locationId"]
+            isOneToOne: false
+            referencedRelation: "location"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreement_paymentTermId_fkey"
+            columns: ["paymentTermId"]
+            isOneToOne: false
+            referencedRelation: "paymentTerm"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreement_salesPersonId_fkey"
+            columns: ["salesPersonId"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreement_salesPersonId_fkey"
+            columns: ["salesPersonId"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreement_salesPersonId_fkey"
+            columns: ["salesPersonId"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreement_salesPersonId_fkey"
+            columns: ["salesPersonId"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreement_salesPersonId_fkey"
+            columns: ["salesPersonId"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "rentalAgreement_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreement_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreement_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreement_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreement_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          }
+        ]
+      }
+      rentalAgreementCharge: {
+        Row: {
+          amount: number
+          chargeDate: string
+          chargeType: Database["public"]["Enums"]["rentalInvoiceLineType"]
+          companyId: string
+          createdAt: string
+          createdBy: string
+          description: string
+          id: string
+          invoiceSeparately: boolean
+          rentalAgreementLineId: string
+          salesInvoiceLineId: string | null
+          taxPercent: number
+          updatedAt: string | null
+          updatedBy: string | null
+          voidedSalesInvoiceId: string | null
+        }
+        Insert: {
+          amount: number
+          chargeDate: string
+          chargeType?: Database["public"]["Enums"]["rentalInvoiceLineType"]
+          companyId: string
+          createdAt?: string
+          createdBy: string
+          description: string
+          id?: string
+          invoiceSeparately?: boolean
+          rentalAgreementLineId: string
+          salesInvoiceLineId?: string | null
+          taxPercent?: number
+          updatedAt?: string | null
+          updatedBy?: string | null
+          voidedSalesInvoiceId?: string | null
+        }
+        Update: {
+          amount?: number
+          chargeDate?: string
+          chargeType?: Database["public"]["Enums"]["rentalInvoiceLineType"]
+          companyId?: string
+          createdAt?: string
+          createdBy?: string
+          description?: string
+          id?: string
+          invoiceSeparately?: boolean
+          rentalAgreementLineId?: string
+          salesInvoiceLineId?: string | null
+          taxPercent?: number
+          updatedAt?: string | null
+          updatedBy?: string | null
+          voidedSalesInvoiceId?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rentalAgreementCharge_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreementCharge_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreementCharge_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "customFieldTables"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "rentalAgreementCharge_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "integrations"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "rentalAgreementCharge_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreementCharge_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreementCharge_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreementCharge_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreementCharge_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "rentalAgreementCharge_line_fkey"
+            columns: ["rentalAgreementLineId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "rentalAgreementLine"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "rentalAgreementCharge_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreementCharge_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreementCharge_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreementCharge_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreementCharge_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          }
+        ]
+      }
+      rentalAgreementLine: {
+        Row: {
+          classificationInputs: Json | null
+          classificationOverride: boolean
+          classificationOverrideReason: string | null
+          commencementJournalId: string | null
+          companyId: string
+          createdAt: string
+          createdBy: string
+          deliveredAt: string | null
+          economicLifeMonths: number | null
+          fairValue: number | null
+          fixedAssetId: string | null
+          guaranteedResidualValue: number
+          id: string
+          initialNetInvestment: number | null
+          itemId: string
+          lessorClassification:
+            | Database["public"]["Enums"]["lessorClassification"]
+            | null
+          meterIn: number | null
+          meterOut: number | null
+          quantity: number
+          rate: number
+          rateUnit: Database["public"]["Enums"]["rentalRateUnit"]
+          rentalAgreementId: string
+          returnedAt: string | null
+          returnNotes: string | null
+          sellingProfit: number | null
+          status: Database["public"]["Enums"]["rentalAgreementLineStatus"]
+          trackedEntityId: string | null
+          unguaranteedResidualValue: number
+          updatedAt: string | null
+          updatedBy: string | null
+        }
+        Insert: {
+          classificationInputs?: Json | null
+          classificationOverride?: boolean
+          classificationOverrideReason?: string | null
+          commencementJournalId?: string | null
+          companyId: string
+          createdAt?: string
+          createdBy: string
+          deliveredAt?: string | null
+          economicLifeMonths?: number | null
+          fairValue?: number | null
+          fixedAssetId?: string | null
+          guaranteedResidualValue?: number
+          id?: string
+          initialNetInvestment?: number | null
+          itemId: string
+          lessorClassification?:
+            | Database["public"]["Enums"]["lessorClassification"]
+            | null
+          meterIn?: number | null
+          meterOut?: number | null
+          quantity?: number
+          rate: number
+          rateUnit?: Database["public"]["Enums"]["rentalRateUnit"]
+          rentalAgreementId: string
+          returnedAt?: string | null
+          returnNotes?: string | null
+          sellingProfit?: number | null
+          status?: Database["public"]["Enums"]["rentalAgreementLineStatus"]
+          trackedEntityId?: string | null
+          unguaranteedResidualValue?: number
+          updatedAt?: string | null
+          updatedBy?: string | null
+        }
+        Update: {
+          classificationInputs?: Json | null
+          classificationOverride?: boolean
+          classificationOverrideReason?: string | null
+          commencementJournalId?: string | null
+          companyId?: string
+          createdAt?: string
+          createdBy?: string
+          deliveredAt?: string | null
+          economicLifeMonths?: number | null
+          fairValue?: number | null
+          fixedAssetId?: string | null
+          guaranteedResidualValue?: number
+          id?: string
+          initialNetInvestment?: number | null
+          itemId?: string
+          lessorClassification?:
+            | Database["public"]["Enums"]["lessorClassification"]
+            | null
+          meterIn?: number | null
+          meterOut?: number | null
+          quantity?: number
+          rate?: number
+          rateUnit?: Database["public"]["Enums"]["rentalRateUnit"]
+          rentalAgreementId?: string
+          returnedAt?: string | null
+          returnNotes?: string | null
+          sellingProfit?: number | null
+          status?: Database["public"]["Enums"]["rentalAgreementLineStatus"]
+          trackedEntityId?: string | null
+          unguaranteedResidualValue?: number
+          updatedAt?: string | null
+          updatedBy?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rentalAgreementLine_agreement_fkey"
+            columns: ["rentalAgreementId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "rentalAgreement"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "rentalAgreementLine_agreement_fkey"
+            columns: ["rentalAgreementId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "rentalAgreements"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "rentalAgreementLine_commencementJournalId_fkey"
+            columns: ["commencementJournalId"]
+            isOneToOne: false
+            referencedRelation: "journal"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreementLine_commencementJournalId_fkey"
+            columns: ["commencementJournalId"]
+            isOneToOne: false
+            referencedRelation: "journalEntries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreementLine_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreementLine_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreementLine_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "customFieldTables"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "rentalAgreementLine_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "integrations"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "rentalAgreementLine_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreementLine_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreementLine_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreementLine_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreementLine_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "rentalAgreementLine_fixedAssetId_fkey"
+            columns: ["fixedAssetId"]
+            isOneToOne: false
+            referencedRelation: "fixedAsset"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreementLine_fixedAssetId_fkey"
+            columns: ["fixedAssetId"]
+            isOneToOne: false
+            referencedRelation: "fleetAssets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreementLine_itemId_fkey"
+            columns: ["itemId"]
+            isOneToOne: false
+            referencedRelation: "consumables"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreementLine_itemId_fkey"
+            columns: ["itemId"]
+            isOneToOne: false
+            referencedRelation: "item"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreementLine_itemId_fkey"
+            columns: ["itemId"]
+            isOneToOne: false
+            referencedRelation: "materials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreementLine_itemId_fkey"
+            columns: ["itemId"]
+            isOneToOne: false
+            referencedRelation: "parts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreementLine_itemId_fkey"
+            columns: ["itemId"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreementLine_itemId_fkey"
+            columns: ["itemId"]
+            isOneToOne: false
+            referencedRelation: "tools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreementLine_trackedEntityId_fkey"
+            columns: ["trackedEntityId"]
+            isOneToOne: false
+            referencedRelation: "trackedEntity"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreementLine_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreementLine_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreementLine_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreementLine_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreementLine_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          }
+        ]
+      }
+      rentalBillingPeriod: {
+        Row: {
+          amount: number
+          companyId: string
+          createdAt: string
+          createdBy: string
+          days: number
+          dueOn: string
+          id: string
+          isAdjustment: boolean
+          memoId: string | null
+          periodEnd: string
+          periodStart: string
+          rateUnitApplied: Database["public"]["Enums"]["rentalRateUnit"] | null
+          rentalAgreementLineId: string
+          salesInvoiceLineId: string | null
+          status: Database["public"]["Enums"]["rentalBillingPeriodStatus"]
+          updatedAt: string | null
+          updatedBy: string | null
+          voidedSalesInvoiceId: string | null
+        }
+        Insert: {
+          amount: number
+          companyId: string
+          createdAt?: string
+          createdBy: string
+          days: number
+          dueOn: string
+          id?: string
+          isAdjustment?: boolean
+          memoId?: string | null
+          periodEnd: string
+          periodStart: string
+          rateUnitApplied?: Database["public"]["Enums"]["rentalRateUnit"] | null
+          rentalAgreementLineId: string
+          salesInvoiceLineId?: string | null
+          status?: Database["public"]["Enums"]["rentalBillingPeriodStatus"]
+          updatedAt?: string | null
+          updatedBy?: string | null
+          voidedSalesInvoiceId?: string | null
+        }
+        Update: {
+          amount?: number
+          companyId?: string
+          createdAt?: string
+          createdBy?: string
+          days?: number
+          dueOn?: string
+          id?: string
+          isAdjustment?: boolean
+          memoId?: string | null
+          periodEnd?: string
+          periodStart?: string
+          rateUnitApplied?: Database["public"]["Enums"]["rentalRateUnit"] | null
+          rentalAgreementLineId?: string
+          salesInvoiceLineId?: string | null
+          status?: Database["public"]["Enums"]["rentalBillingPeriodStatus"]
+          updatedAt?: string | null
+          updatedBy?: string | null
+          voidedSalesInvoiceId?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rentalBillingPeriod_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalBillingPeriod_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalBillingPeriod_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "customFieldTables"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "rentalBillingPeriod_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "integrations"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "rentalBillingPeriod_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalBillingPeriod_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalBillingPeriod_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalBillingPeriod_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalBillingPeriod_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "rentalBillingPeriod_line_fkey"
+            columns: ["rentalAgreementLineId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "rentalAgreementLine"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "rentalBillingPeriod_memo_fkey"
+            columns: ["memoId"]
+            isOneToOne: false
+            referencedRelation: "memo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalBillingPeriod_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalBillingPeriod_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalBillingPeriod_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalBillingPeriod_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalBillingPeriod_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          }
+        ]
+      }
+      rentalLeaseScheduleLine: {
+        Row: {
+          closingNetInvestment: number
+          companyId: string
+          createdAt: string
+          createdBy: string
+          id: string
+          interestAmount: number
+          journalId: string | null
+          openingNetInvestment: number
+          paymentAmount: number
+          periodDate: string
+          postedAt: string | null
+          principalAmount: number
+          rentalAgreementLineId: string
+          updatedAt: string | null
+          updatedBy: string | null
+        }
+        Insert: {
+          closingNetInvestment: number
+          companyId: string
+          createdAt?: string
+          createdBy: string
+          id?: string
+          interestAmount: number
+          journalId?: string | null
+          openingNetInvestment: number
+          paymentAmount: number
+          periodDate: string
+          postedAt?: string | null
+          principalAmount: number
+          rentalAgreementLineId: string
+          updatedAt?: string | null
+          updatedBy?: string | null
+        }
+        Update: {
+          closingNetInvestment?: number
+          companyId?: string
+          createdAt?: string
+          createdBy?: string
+          id?: string
+          interestAmount?: number
+          journalId?: string | null
+          openingNetInvestment?: number
+          paymentAmount?: number
+          periodDate?: string
+          postedAt?: string | null
+          principalAmount?: number
+          rentalAgreementLineId?: string
+          updatedAt?: string | null
+          updatedBy?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rentalLeaseScheduleLine_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalLeaseScheduleLine_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalLeaseScheduleLine_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "customFieldTables"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "rentalLeaseScheduleLine_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "integrations"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "rentalLeaseScheduleLine_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalLeaseScheduleLine_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalLeaseScheduleLine_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalLeaseScheduleLine_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalLeaseScheduleLine_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "rentalLeaseScheduleLine_journalId_fkey"
+            columns: ["journalId"]
+            isOneToOne: false
+            referencedRelation: "journal"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalLeaseScheduleLine_journalId_fkey"
+            columns: ["journalId"]
+            isOneToOne: false
+            referencedRelation: "journalEntries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalLeaseScheduleLine_line_fkey"
+            columns: ["rentalAgreementLineId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "rentalAgreementLine"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "rentalLeaseScheduleLine_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalLeaseScheduleLine_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalLeaseScheduleLine_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalLeaseScheduleLine_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalLeaseScheduleLine_updatedBy_fkey"
             columns: ["updatedBy"]
             isOneToOne: false
             referencedRelation: "userDefaults"
@@ -50437,6 +56786,638 @@ export type Database = {
           }
         ]
       }
+      revenueRecognitionRun: {
+        Row: {
+          companyId: string
+          createdAt: string
+          createdBy: string
+          id: string
+          journalId: string | null
+          periodEnd: string
+          postedAt: string | null
+          postedBy: string | null
+          runId: string
+          status: string
+          type: Database["public"]["Enums"]["runType"]
+          updatedAt: string | null
+          updatedBy: string | null
+        }
+        Insert: {
+          companyId: string
+          createdAt?: string
+          createdBy: string
+          id?: string
+          journalId?: string | null
+          periodEnd: string
+          postedAt?: string | null
+          postedBy?: string | null
+          runId: string
+          status?: string
+          type?: Database["public"]["Enums"]["runType"]
+          updatedAt?: string | null
+          updatedBy?: string | null
+        }
+        Update: {
+          companyId?: string
+          createdAt?: string
+          createdBy?: string
+          id?: string
+          journalId?: string | null
+          periodEnd?: string
+          postedAt?: string | null
+          postedBy?: string | null
+          runId?: string
+          status?: string
+          type?: Database["public"]["Enums"]["runType"]
+          updatedAt?: string | null
+          updatedBy?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "revenueRecognitionRun_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "revenueRecognitionRun_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "revenueRecognitionRun_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "customFieldTables"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "revenueRecognitionRun_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "integrations"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "revenueRecognitionRun_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "revenueRecognitionRun_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "revenueRecognitionRun_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "revenueRecognitionRun_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "revenueRecognitionRun_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "revenueRecognitionRun_journalId_fkey"
+            columns: ["journalId"]
+            isOneToOne: false
+            referencedRelation: "journal"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "revenueRecognitionRun_journalId_fkey"
+            columns: ["journalId"]
+            isOneToOne: false
+            referencedRelation: "journalEntries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "revenueRecognitionRun_postedBy_fkey"
+            columns: ["postedBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "revenueRecognitionRun_postedBy_fkey"
+            columns: ["postedBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "revenueRecognitionRun_postedBy_fkey"
+            columns: ["postedBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "revenueRecognitionRun_postedBy_fkey"
+            columns: ["postedBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "revenueRecognitionRun_postedBy_fkey"
+            columns: ["postedBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "revenueRecognitionRun_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "revenueRecognitionRun_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "revenueRecognitionRun_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "revenueRecognitionRun_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "revenueRecognitionRun_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          }
+        ]
+      }
+      revenueRecognitionRunLine: {
+        Row: {
+          amount: number
+          companyId: string
+          createdAt: string
+          createdBy: string
+          id: string
+          runId: string
+          scheduleId: string
+          updatedAt: string | null
+          updatedBy: string | null
+        }
+        Insert: {
+          amount: number
+          companyId: string
+          createdAt?: string
+          createdBy: string
+          id?: string
+          runId: string
+          scheduleId: string
+          updatedAt?: string | null
+          updatedBy?: string | null
+        }
+        Update: {
+          amount?: number
+          companyId?: string
+          createdAt?: string
+          createdBy?: string
+          id?: string
+          runId?: string
+          scheduleId?: string
+          updatedAt?: string | null
+          updatedBy?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "revenueRecognitionRunLine_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "revenueRecognitionRunLine_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "revenueRecognitionRunLine_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "customFieldTables"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "revenueRecognitionRunLine_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "integrations"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "revenueRecognitionRunLine_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "revenueRecognitionRunLine_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "revenueRecognitionRunLine_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "revenueRecognitionRunLine_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "revenueRecognitionRunLine_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "revenueRecognitionRunLine_run_fkey"
+            columns: ["runId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "revenueRecognitionRun"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "revenueRecognitionRunLine_schedule_fkey"
+            columns: ["scheduleId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "revenueRecognitionSchedule"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "revenueRecognitionRunLine_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "revenueRecognitionRunLine_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "revenueRecognitionRunLine_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "revenueRecognitionRunLine_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "revenueRecognitionRunLine_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          }
+        ]
+      }
+      revenueRecognitionSchedule: {
+        Row: {
+          accountingPeriodId: string | null
+          amount: number
+          billedBySalesInvoiceLineId: string | null
+          companyId: string
+          contractAmount: number | null
+          createdAt: string
+          createdBy: string
+          creditAccountId: string
+          customerContractLineId: string | null
+          customerContractRevenueId: string | null
+          debitAccountId: string
+          id: string
+          journalId: string | null
+          leaseId: string | null
+          leaseScheduleLineId: string | null
+          memoId: string | null
+          periodEnd: string
+          periodStart: string
+          rentalAgreementLineId: string | null
+          rentalLeaseScheduleLineId: string | null
+          runLineId: string | null
+          salesInvoiceLineId: string | null
+          scheduledDate: string
+          status: Database["public"]["Enums"]["revenueScheduleStatus"]
+          type: Database["public"]["Enums"]["revenueScheduleType"]
+          updatedAt: string | null
+          updatedBy: string | null
+        }
+        Insert: {
+          accountingPeriodId?: string | null
+          amount: number
+          billedBySalesInvoiceLineId?: string | null
+          companyId: string
+          contractAmount?: number | null
+          createdAt?: string
+          createdBy: string
+          creditAccountId: string
+          customerContractLineId?: string | null
+          customerContractRevenueId?: string | null
+          debitAccountId: string
+          id?: string
+          journalId?: string | null
+          leaseId?: string | null
+          leaseScheduleLineId?: string | null
+          memoId?: string | null
+          periodEnd: string
+          periodStart: string
+          rentalAgreementLineId?: string | null
+          rentalLeaseScheduleLineId?: string | null
+          runLineId?: string | null
+          salesInvoiceLineId?: string | null
+          scheduledDate: string
+          status?: Database["public"]["Enums"]["revenueScheduleStatus"]
+          type: Database["public"]["Enums"]["revenueScheduleType"]
+          updatedAt?: string | null
+          updatedBy?: string | null
+        }
+        Update: {
+          accountingPeriodId?: string | null
+          amount?: number
+          billedBySalesInvoiceLineId?: string | null
+          companyId?: string
+          contractAmount?: number | null
+          createdAt?: string
+          createdBy?: string
+          creditAccountId?: string
+          customerContractLineId?: string | null
+          customerContractRevenueId?: string | null
+          debitAccountId?: string
+          id?: string
+          journalId?: string | null
+          leaseId?: string | null
+          leaseScheduleLineId?: string | null
+          memoId?: string | null
+          periodEnd?: string
+          periodStart?: string
+          rentalAgreementLineId?: string | null
+          rentalLeaseScheduleLineId?: string | null
+          runLineId?: string | null
+          salesInvoiceLineId?: string | null
+          scheduledDate?: string
+          status?: Database["public"]["Enums"]["revenueScheduleStatus"]
+          type?: Database["public"]["Enums"]["revenueScheduleType"]
+          updatedAt?: string | null
+          updatedBy?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "revenueRecognitionSchedule_accountingPeriodId_fkey"
+            columns: ["accountingPeriodId"]
+            isOneToOne: false
+            referencedRelation: "accountingPeriod"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "revenueRecognitionSchedule_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "revenueRecognitionSchedule_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "revenueRecognitionSchedule_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "customFieldTables"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "revenueRecognitionSchedule_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "integrations"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "revenueRecognitionSchedule_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "revenueRecognitionSchedule_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "revenueRecognitionSchedule_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "revenueRecognitionSchedule_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "revenueRecognitionSchedule_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "revenueRecognitionSchedule_creditAccountId_fkey"
+            columns: ["creditAccountId"]
+            isOneToOne: false
+            referencedRelation: "account"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "revenueRecognitionSchedule_creditAccountId_fkey"
+            columns: ["creditAccountId"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "revenueRecognitionSchedule_customerContractLine_fkey"
+            columns: ["customerContractLineId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "customerContractLine"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "revenueRecognitionSchedule_customerContractRevenue_fkey"
+            columns: ["customerContractRevenueId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "customerContractRevenue"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "revenueRecognitionSchedule_debitAccountId_fkey"
+            columns: ["debitAccountId"]
+            isOneToOne: false
+            referencedRelation: "account"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "revenueRecognitionSchedule_debitAccountId_fkey"
+            columns: ["debitAccountId"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "revenueRecognitionSchedule_journalId_fkey"
+            columns: ["journalId"]
+            isOneToOne: false
+            referencedRelation: "journal"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "revenueRecognitionSchedule_journalId_fkey"
+            columns: ["journalId"]
+            isOneToOne: false
+            referencedRelation: "journalEntries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "revenueRecognitionSchedule_leaseScheduleLine_fkey"
+            columns: ["leaseScheduleLineId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "leaseScheduleLine"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "revenueRecognitionSchedule_lease_fkey"
+            columns: ["leaseId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "lease"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "revenueRecognitionSchedule_lease_fkey"
+            columns: ["leaseId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "leases"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "revenueRecognitionSchedule_memo_fkey"
+            columns: ["memoId"]
+            isOneToOne: false
+            referencedRelation: "memo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "revenueRecognitionSchedule_rentalLeaseScheduleLineId_fkey"
+            columns: ["rentalLeaseScheduleLineId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "rentalLeaseScheduleLine"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "revenueRecognitionSchedule_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "revenueRecognitionSchedule_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "revenueRecognitionSchedule_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "revenueRecognitionSchedule_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "revenueRecognitionSchedule_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          }
+        ]
+      }
       rework: {
         Row: {
           companyId: string
@@ -50859,10 +57840,12 @@ export type Database = {
       salesInvoice: {
         Row: {
           assignee: string | null
+          automationHoldReason: string | null
           companyId: string
           createdAt: string
           createdBy: string
           currencyCode: string
+          customerContractId: string | null
           customerId: string
           customerReference: string | null
           customFields: Json
@@ -50882,6 +57865,9 @@ export type Database = {
           opportunityId: string | null
           paymentTermId: string | null
           postingDate: string | null
+          sendError: string | null
+          sentAt: string | null
+          sentTo: string | null
           shipmentId: string | null
           status: Database["public"]["Enums"]["salesInvoiceStatus"]
           subtotal: number
@@ -50894,10 +57880,12 @@ export type Database = {
         }
         Insert: {
           assignee?: string | null
+          automationHoldReason?: string | null
           companyId: string
           createdAt?: string
           createdBy: string
           currencyCode: string
+          customerContractId?: string | null
           customerId: string
           customerReference?: string | null
           customFields?: Json
@@ -50917,6 +57905,9 @@ export type Database = {
           opportunityId?: string | null
           paymentTermId?: string | null
           postingDate?: string | null
+          sendError?: string | null
+          sentAt?: string | null
+          sentTo?: string | null
           shipmentId?: string | null
           status?: Database["public"]["Enums"]["salesInvoiceStatus"]
           subtotal?: number
@@ -50929,10 +57920,12 @@ export type Database = {
         }
         Update: {
           assignee?: string | null
+          automationHoldReason?: string | null
           companyId?: string
           createdAt?: string
           createdBy?: string
           currencyCode?: string
+          customerContractId?: string | null
           customerId?: string
           customerReference?: string | null
           customFields?: Json
@@ -50952,6 +57945,9 @@ export type Database = {
           opportunityId?: string | null
           paymentTermId?: string | null
           postingDate?: string | null
+          sendError?: string | null
+          sentAt?: string | null
+          sentTo?: string | null
           shipmentId?: string | null
           status?: Database["public"]["Enums"]["salesInvoiceStatus"]
           subtotal?: number
@@ -51032,6 +58028,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "currencyCode"
             referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "salesInvoice_customerContract_fkey"
+            columns: ["customerContractId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "customerContract"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "salesInvoice_customerContract_fkey"
+            columns: ["customerContractId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "customerContracts"
+            referencedColumns: ["id", "companyId"]
           },
           {
             foreignKeyName: "salesInvoice_customerId_fkey"
@@ -51161,14 +58171,19 @@ export type Database = {
           assetId: string | null
           companyId: string
           convertedAddOnCost: number | null
+          convertedNetUnitPrice: number | null
           convertedNonTaxableAddOnCost: number | null
           convertedSetupPrice: number | null
           convertedShippingCost: number | null
           convertedUnitPrice: number | null
           createdAt: string
           createdBy: string
+          customerContractId: string | null
+          customerContractInvoiceLineId: string | null
+          customerContractLineId: string | null
           customFields: Json
           description: string | null
+          discountPercent: number
           exchangeRate: number
           externalNotes: Json
           id: string
@@ -51179,11 +58194,22 @@ export type Database = {
           locationId: string | null
           methodType: Database["public"]["Enums"]["methodType"]
           modelUploadId: string | null
+          netUnitPrice: number | null
           nonTaxableAddOnCost: number
           opportunityId: string | null
+          projectId: string | null
           quantity: number
+          rentalAgreementChargeId: string | null
+          rentalAgreementId: string | null
+          rentalAgreementLineId: string | null
+          rentalBillingPeriodId: string | null
+          rentalLineType:
+            | Database["public"]["Enums"]["rentalInvoiceLineType"]
+            | null
           salesOrderId: string | null
           salesOrderLineId: string | null
+          serviceEndDate: string | null
+          serviceStartDate: string | null
           setupPrice: number
           shippingCost: number
           sortOrder: number
@@ -51200,14 +58226,19 @@ export type Database = {
           assetId?: string | null
           companyId: string
           convertedAddOnCost?: number | null
+          convertedNetUnitPrice?: number | null
           convertedNonTaxableAddOnCost?: number | null
           convertedSetupPrice?: number | null
           convertedShippingCost?: number | null
           convertedUnitPrice?: number | null
           createdAt?: string
           createdBy: string
+          customerContractId?: string | null
+          customerContractInvoiceLineId?: string | null
+          customerContractLineId?: string | null
           customFields?: Json
           description?: string | null
+          discountPercent?: number
           exchangeRate?: number
           externalNotes?: Json
           id?: string
@@ -51218,11 +58249,22 @@ export type Database = {
           locationId?: string | null
           methodType?: Database["public"]["Enums"]["methodType"]
           modelUploadId?: string | null
+          netUnitPrice?: number | null
           nonTaxableAddOnCost?: number
           opportunityId?: string | null
+          projectId?: string | null
           quantity?: number
+          rentalAgreementChargeId?: string | null
+          rentalAgreementId?: string | null
+          rentalAgreementLineId?: string | null
+          rentalBillingPeriodId?: string | null
+          rentalLineType?:
+            | Database["public"]["Enums"]["rentalInvoiceLineType"]
+            | null
           salesOrderId?: string | null
           salesOrderLineId?: string | null
+          serviceEndDate?: string | null
+          serviceStartDate?: string | null
           setupPrice?: number
           shippingCost?: number
           sortOrder?: number
@@ -51239,14 +58281,19 @@ export type Database = {
           assetId?: string | null
           companyId?: string
           convertedAddOnCost?: number | null
+          convertedNetUnitPrice?: number | null
           convertedNonTaxableAddOnCost?: number | null
           convertedSetupPrice?: number | null
           convertedShippingCost?: number | null
           convertedUnitPrice?: number | null
           createdAt?: string
           createdBy?: string
+          customerContractId?: string | null
+          customerContractInvoiceLineId?: string | null
+          customerContractLineId?: string | null
           customFields?: Json
           description?: string | null
+          discountPercent?: number
           exchangeRate?: number
           externalNotes?: Json
           id?: string
@@ -51257,11 +58304,22 @@ export type Database = {
           locationId?: string | null
           methodType?: Database["public"]["Enums"]["methodType"]
           modelUploadId?: string | null
+          netUnitPrice?: number | null
           nonTaxableAddOnCost?: number
           opportunityId?: string | null
+          projectId?: string | null
           quantity?: number
+          rentalAgreementChargeId?: string | null
+          rentalAgreementId?: string | null
+          rentalAgreementLineId?: string | null
+          rentalBillingPeriodId?: string | null
+          rentalLineType?:
+            | Database["public"]["Enums"]["rentalInvoiceLineType"]
+            | null
           salesOrderId?: string | null
           salesOrderLineId?: string | null
+          serviceEndDate?: string | null
+          serviceStartDate?: string | null
           setupPrice?: number
           shippingCost?: number
           sortOrder?: number
@@ -51292,6 +58350,13 @@ export type Database = {
             columns: ["assetId"]
             isOneToOne: false
             referencedRelation: "fixedAsset"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salesInvoiceLine_assetId_fkey"
+            columns: ["assetId"]
+            isOneToOne: false
+            referencedRelation: "fleetAssets"
             referencedColumns: ["id"]
           },
           {
@@ -51356,6 +58421,34 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "userDefaults"
             referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "salesInvoiceLine_customerContractInvoiceLine_fkey"
+            columns: ["customerContractInvoiceLineId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "customerContractInvoiceLine"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "salesInvoiceLine_customerContractLine_fkey"
+            columns: ["customerContractLineId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "customerContractLine"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "salesInvoiceLine_customerContract_fkey"
+            columns: ["customerContractId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "customerContract"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "salesInvoiceLine_customerContract_fkey"
+            columns: ["customerContractId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "customerContracts"
+            referencedColumns: ["id", "companyId"]
           },
           {
             foreignKeyName: "salesInvoiceLine_invoiceId_fkey"
@@ -51456,6 +58549,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "salesInvoiceLine_project_fkey"
+            columns: ["projectId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "project"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
             foreignKeyName: "salesInvoiceLine_salesOrderId_fkey"
             columns: ["salesOrderId"]
             isOneToOne: false
@@ -51546,6 +58646,7 @@ export type Database = {
           companyId: string | null
           createdAt: string
           createdBy: string
+          customerLocationId: string | null
           customFields: Json
           id: string
           incoterm: Database["public"]["Enums"]["incoterm"] | null
@@ -51561,6 +58662,7 @@ export type Database = {
           companyId?: string | null
           createdAt?: string
           createdBy: string
+          customerLocationId?: string | null
           customFields?: Json
           id: string
           incoterm?: Database["public"]["Enums"]["incoterm"] | null
@@ -51576,6 +58678,7 @@ export type Database = {
           companyId?: string | null
           createdAt?: string
           createdBy?: string
+          customerLocationId?: string | null
           customFields?: Json
           id?: string
           incoterm?: Database["public"]["Enums"]["incoterm"] | null
@@ -51650,6 +58753,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "userDefaults"
             referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "salesInvoiceShipment_customerLocationId_fkey"
+            columns: ["customerLocationId"]
+            isOneToOne: false
+            referencedRelation: "customerLocation"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "salesInvoiceShipment_id_fkey"
@@ -52115,6 +59225,7 @@ export type Database = {
           addOnCost: number
           assetId: string | null
           companyId: string
+          configuration: Json | null
           convertedAddOnCost: number | null
           convertedNonTaxableAddOnCost: number | null
           convertedShippingCost: number | null
@@ -52145,6 +59256,8 @@ export type Database = {
           salesOrderLineType: Database["public"]["Enums"]["salesOrderLineType"]
           sentComplete: boolean
           sentDate: string | null
+          serviceEndDate: string | null
+          serviceStartDate: string | null
           setupPrice: number | null
           shippingCost: number
           sortOrder: number
@@ -52161,6 +59274,7 @@ export type Database = {
           addOnCost?: number
           assetId?: string | null
           companyId: string
+          configuration?: Json | null
           convertedAddOnCost?: number | null
           convertedNonTaxableAddOnCost?: number | null
           convertedShippingCost?: number | null
@@ -52191,6 +59305,8 @@ export type Database = {
           salesOrderLineType: Database["public"]["Enums"]["salesOrderLineType"]
           sentComplete?: boolean
           sentDate?: string | null
+          serviceEndDate?: string | null
+          serviceStartDate?: string | null
           setupPrice?: number | null
           shippingCost?: number
           sortOrder?: number
@@ -52207,6 +59323,7 @@ export type Database = {
           addOnCost?: number
           assetId?: string | null
           companyId?: string
+          configuration?: Json | null
           convertedAddOnCost?: number | null
           convertedNonTaxableAddOnCost?: number | null
           convertedShippingCost?: number | null
@@ -52237,6 +59354,8 @@ export type Database = {
           salesOrderLineType?: Database["public"]["Enums"]["salesOrderLineType"]
           sentComplete?: boolean
           sentDate?: string | null
+          serviceEndDate?: string | null
+          serviceStartDate?: string | null
           setupPrice?: number | null
           shippingCost?: number
           sortOrder?: number
@@ -52268,6 +59387,13 @@ export type Database = {
             columns: ["assetId"]
             isOneToOne: false
             referencedRelation: "fixedAsset"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salesOrderLine_assetId_fkey"
+            columns: ["assetId"]
+            isOneToOne: false
+            referencedRelation: "fleetAssets"
             referencedColumns: ["id"]
           },
           {
@@ -54655,6 +61781,24 @@ export type Database = {
           }
         ]
       }
+      scriptRun: {
+        Row: {
+          name: string
+          ranAt: string
+          result: Json | null
+        }
+        Insert: {
+          name: string
+          ranAt?: string
+          result?: Json | null
+        }
+        Update: {
+          name?: string
+          ranAt?: string
+          result?: Json | null
+        }
+        Relationships: []
+      }
       searchIndexRegistry: {
         Row: {
           companyId: string
@@ -55506,7 +62650,9 @@ export type Database = {
           createdAt: string
           createdBy: string
           id: string
-          salesOrderLineId: string
+          meter: number | null
+          rentalAgreementLineId: string | null
+          salesOrderLineId: string | null
           serialNumber: string | null
           shipmentId: string
           shipped: boolean
@@ -55518,7 +62664,9 @@ export type Database = {
           createdAt?: string
           createdBy: string
           id?: string
-          salesOrderLineId: string
+          meter?: number | null
+          rentalAgreementLineId?: string | null
+          salesOrderLineId?: string | null
           serialNumber?: string | null
           shipmentId: string
           shipped?: boolean
@@ -55530,7 +62678,9 @@ export type Database = {
           createdAt?: string
           createdBy?: string
           id?: string
-          salesOrderLineId?: string
+          meter?: number | null
+          rentalAgreementLineId?: string | null
+          salesOrderLineId?: string | null
           serialNumber?: string | null
           shipmentId?: string
           shipped?: boolean
@@ -55600,6 +62750,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "userDefaults"
             referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "shipmentFixedAssetLine_rentalAgreementLineId_fkey"
+            columns: ["rentalAgreementLineId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "rentalAgreementLine"
+            referencedColumns: ["id", "companyId"]
           },
           {
             foreignKeyName: "shipmentFixedAssetLine_salesOrderLineId_fkey"
@@ -56582,6 +63739,7 @@ export type Database = {
           createdBy: string
           customFields: Json | null
           id: string
+          kanbanId: string | null
           locationId: string
           notes: Json | null
           status: Database["public"]["Enums"]["stockTransferStatus"]
@@ -56598,6 +63756,7 @@ export type Database = {
           createdBy: string
           customFields?: Json | null
           id?: string
+          kanbanId?: string | null
           locationId: string
           notes?: Json | null
           status?: Database["public"]["Enums"]["stockTransferStatus"]
@@ -56614,6 +63773,7 @@ export type Database = {
           createdBy?: string
           customFields?: Json | null
           id?: string
+          kanbanId?: string | null
           locationId?: string
           notes?: Json | null
           status?: Database["public"]["Enums"]["stockTransferStatus"]
@@ -56720,6 +63880,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "userDefaults"
             referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "stockTransfer_kanbanId_fkey"
+            columns: ["kanbanId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "kanban"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "stockTransfer_kanbanId_fkey"
+            columns: ["kanbanId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "kanbans"
+            referencedColumns: ["id", "companyId"]
           },
           {
             foreignKeyName: "stockTransfer_locationId_fkey"
@@ -57036,507 +64210,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "userDefaults"
             referencedColumns: ["userId"]
-          }
-        ]
-      }
-      storageRule: {
-        Row: {
-          active: boolean
-          appliesToAll: boolean
-          companyId: string
-          conditionAst: Json
-          createdAt: string
-          createdBy: string
-          customFields: Json | null
-          description: string | null
-          filteredItemGroupIds: string[]
-          filteredItemMatchAll: boolean
-          filteredItemTypes: string[]
-          id: string
-          message: string
-          name: string
-          severity: string
-          surfaces: Database["public"]["Enums"]["transactionSurface"][]
-          targetType: Database["public"]["Enums"]["storageRuleTargetType"]
-          updatedAt: string | null
-          updatedBy: string | null
-        }
-        Insert: {
-          active?: boolean
-          appliesToAll?: boolean
-          companyId: string
-          conditionAst: Json
-          createdAt?: string
-          createdBy: string
-          customFields?: Json | null
-          description?: string | null
-          filteredItemGroupIds?: string[]
-          filteredItemMatchAll?: boolean
-          filteredItemTypes?: string[]
-          id?: string
-          message: string
-          name: string
-          severity: string
-          surfaces?: Database["public"]["Enums"]["transactionSurface"][]
-          targetType?: Database["public"]["Enums"]["storageRuleTargetType"]
-          updatedAt?: string | null
-          updatedBy?: string | null
-        }
-        Update: {
-          active?: boolean
-          appliesToAll?: boolean
-          companyId?: string
-          conditionAst?: Json
-          createdAt?: string
-          createdBy?: string
-          customFields?: Json | null
-          description?: string | null
-          filteredItemGroupIds?: string[]
-          filteredItemMatchAll?: boolean
-          filteredItemTypes?: string[]
-          id?: string
-          message?: string
-          name?: string
-          severity?: string
-          surfaces?: Database["public"]["Enums"]["transactionSurface"][]
-          targetType?: Database["public"]["Enums"]["storageRuleTargetType"]
-          updatedAt?: string | null
-          updatedBy?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "storageRule_companyId_fkey"
-            columns: ["companyId"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "storageRule_companyId_fkey"
-            columns: ["companyId"]
-            isOneToOne: false
-            referencedRelation: "company"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "storageRule_companyId_fkey"
-            columns: ["companyId"]
-            isOneToOne: false
-            referencedRelation: "customFieldTables"
-            referencedColumns: ["companyId"]
-          },
-          {
-            foreignKeyName: "storageRule_companyId_fkey"
-            columns: ["companyId"]
-            isOneToOne: false
-            referencedRelation: "integrations"
-            referencedColumns: ["companyId"]
-          },
-          {
-            foreignKeyName: "storageRule_createdBy_fkey"
-            columns: ["createdBy"]
-            isOneToOne: false
-            referencedRelation: "employeeSummary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "storageRule_createdBy_fkey"
-            columns: ["createdBy"]
-            isOneToOne: false
-            referencedRelation: "employees"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "storageRule_createdBy_fkey"
-            columns: ["createdBy"]
-            isOneToOne: false
-            referencedRelation: "employeesAcrossCompanies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "storageRule_createdBy_fkey"
-            columns: ["createdBy"]
-            isOneToOne: false
-            referencedRelation: "user"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "storageRule_createdBy_fkey"
-            columns: ["createdBy"]
-            isOneToOne: false
-            referencedRelation: "userDefaults"
-            referencedColumns: ["userId"]
-          },
-          {
-            foreignKeyName: "storageRule_updatedBy_fkey"
-            columns: ["updatedBy"]
-            isOneToOne: false
-            referencedRelation: "employeeSummary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "storageRule_updatedBy_fkey"
-            columns: ["updatedBy"]
-            isOneToOne: false
-            referencedRelation: "employees"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "storageRule_updatedBy_fkey"
-            columns: ["updatedBy"]
-            isOneToOne: false
-            referencedRelation: "employeesAcrossCompanies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "storageRule_updatedBy_fkey"
-            columns: ["updatedBy"]
-            isOneToOne: false
-            referencedRelation: "user"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "storageRule_updatedBy_fkey"
-            columns: ["updatedBy"]
-            isOneToOne: false
-            referencedRelation: "userDefaults"
-            referencedColumns: ["userId"]
-          }
-        ]
-      }
-      storageRuleItemAssignment: {
-        Row: {
-          companyId: string
-          createdAt: string
-          createdBy: string
-          itemId: string
-          ruleId: string
-          updatedBy: string | null
-        }
-        Insert: {
-          companyId: string
-          createdAt?: string
-          createdBy: string
-          itemId: string
-          ruleId: string
-          updatedBy?: string | null
-        }
-        Update: {
-          companyId?: string
-          createdAt?: string
-          createdBy?: string
-          itemId?: string
-          ruleId?: string
-          updatedBy?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "storageRuleItemAssignment_companyId_fkey"
-            columns: ["companyId"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "storageRuleItemAssignment_companyId_fkey"
-            columns: ["companyId"]
-            isOneToOne: false
-            referencedRelation: "company"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "storageRuleItemAssignment_companyId_fkey"
-            columns: ["companyId"]
-            isOneToOne: false
-            referencedRelation: "customFieldTables"
-            referencedColumns: ["companyId"]
-          },
-          {
-            foreignKeyName: "storageRuleItemAssignment_companyId_fkey"
-            columns: ["companyId"]
-            isOneToOne: false
-            referencedRelation: "integrations"
-            referencedColumns: ["companyId"]
-          },
-          {
-            foreignKeyName: "storageRuleItemAssignment_createdBy_fkey"
-            columns: ["createdBy"]
-            isOneToOne: false
-            referencedRelation: "employeeSummary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "storageRuleItemAssignment_createdBy_fkey"
-            columns: ["createdBy"]
-            isOneToOne: false
-            referencedRelation: "employees"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "storageRuleItemAssignment_createdBy_fkey"
-            columns: ["createdBy"]
-            isOneToOne: false
-            referencedRelation: "employeesAcrossCompanies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "storageRuleItemAssignment_createdBy_fkey"
-            columns: ["createdBy"]
-            isOneToOne: false
-            referencedRelation: "user"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "storageRuleItemAssignment_createdBy_fkey"
-            columns: ["createdBy"]
-            isOneToOne: false
-            referencedRelation: "userDefaults"
-            referencedColumns: ["userId"]
-          },
-          {
-            foreignKeyName: "storageRuleItemAssignment_itemId_fkey"
-            columns: ["itemId"]
-            isOneToOne: false
-            referencedRelation: "consumables"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "storageRuleItemAssignment_itemId_fkey"
-            columns: ["itemId"]
-            isOneToOne: false
-            referencedRelation: "item"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "storageRuleItemAssignment_itemId_fkey"
-            columns: ["itemId"]
-            isOneToOne: false
-            referencedRelation: "materials"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "storageRuleItemAssignment_itemId_fkey"
-            columns: ["itemId"]
-            isOneToOne: false
-            referencedRelation: "parts"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "storageRuleItemAssignment_itemId_fkey"
-            columns: ["itemId"]
-            isOneToOne: false
-            referencedRelation: "services"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "storageRuleItemAssignment_itemId_fkey"
-            columns: ["itemId"]
-            isOneToOne: false
-            referencedRelation: "tools"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "storageRuleItemAssignment_ruleId_fkey"
-            columns: ["ruleId"]
-            isOneToOne: false
-            referencedRelation: "storageRule"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "storageRuleItemAssignment_updatedBy_fkey"
-            columns: ["updatedBy"]
-            isOneToOne: false
-            referencedRelation: "employeeSummary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "storageRuleItemAssignment_updatedBy_fkey"
-            columns: ["updatedBy"]
-            isOneToOne: false
-            referencedRelation: "employees"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "storageRuleItemAssignment_updatedBy_fkey"
-            columns: ["updatedBy"]
-            isOneToOne: false
-            referencedRelation: "employeesAcrossCompanies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "storageRuleItemAssignment_updatedBy_fkey"
-            columns: ["updatedBy"]
-            isOneToOne: false
-            referencedRelation: "user"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "storageRuleItemAssignment_updatedBy_fkey"
-            columns: ["updatedBy"]
-            isOneToOne: false
-            referencedRelation: "userDefaults"
-            referencedColumns: ["userId"]
-          }
-        ]
-      }
-      storageRuleWorkCenterAssignment: {
-        Row: {
-          companyId: string
-          createdAt: string
-          createdBy: string
-          ruleId: string
-          updatedBy: string | null
-          workCenterId: string
-        }
-        Insert: {
-          companyId: string
-          createdAt?: string
-          createdBy: string
-          ruleId: string
-          updatedBy?: string | null
-          workCenterId: string
-        }
-        Update: {
-          companyId?: string
-          createdAt?: string
-          createdBy?: string
-          ruleId?: string
-          updatedBy?: string | null
-          workCenterId?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "storageRuleWorkCenterAssignment_companyId_fkey"
-            columns: ["companyId"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "storageRuleWorkCenterAssignment_companyId_fkey"
-            columns: ["companyId"]
-            isOneToOne: false
-            referencedRelation: "company"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "storageRuleWorkCenterAssignment_companyId_fkey"
-            columns: ["companyId"]
-            isOneToOne: false
-            referencedRelation: "customFieldTables"
-            referencedColumns: ["companyId"]
-          },
-          {
-            foreignKeyName: "storageRuleWorkCenterAssignment_companyId_fkey"
-            columns: ["companyId"]
-            isOneToOne: false
-            referencedRelation: "integrations"
-            referencedColumns: ["companyId"]
-          },
-          {
-            foreignKeyName: "storageRuleWorkCenterAssignment_createdBy_fkey"
-            columns: ["createdBy"]
-            isOneToOne: false
-            referencedRelation: "employeeSummary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "storageRuleWorkCenterAssignment_createdBy_fkey"
-            columns: ["createdBy"]
-            isOneToOne: false
-            referencedRelation: "employees"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "storageRuleWorkCenterAssignment_createdBy_fkey"
-            columns: ["createdBy"]
-            isOneToOne: false
-            referencedRelation: "employeesAcrossCompanies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "storageRuleWorkCenterAssignment_createdBy_fkey"
-            columns: ["createdBy"]
-            isOneToOne: false
-            referencedRelation: "user"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "storageRuleWorkCenterAssignment_createdBy_fkey"
-            columns: ["createdBy"]
-            isOneToOne: false
-            referencedRelation: "userDefaults"
-            referencedColumns: ["userId"]
-          },
-          {
-            foreignKeyName: "storageRuleWorkCenterAssignment_ruleId_fkey"
-            columns: ["ruleId"]
-            isOneToOne: false
-            referencedRelation: "storageRule"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "storageRuleWorkCenterAssignment_updatedBy_fkey"
-            columns: ["updatedBy"]
-            isOneToOne: false
-            referencedRelation: "employeeSummary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "storageRuleWorkCenterAssignment_updatedBy_fkey"
-            columns: ["updatedBy"]
-            isOneToOne: false
-            referencedRelation: "employees"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "storageRuleWorkCenterAssignment_updatedBy_fkey"
-            columns: ["updatedBy"]
-            isOneToOne: false
-            referencedRelation: "employeesAcrossCompanies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "storageRuleWorkCenterAssignment_updatedBy_fkey"
-            columns: ["updatedBy"]
-            isOneToOne: false
-            referencedRelation: "user"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "storageRuleWorkCenterAssignment_updatedBy_fkey"
-            columns: ["updatedBy"]
-            isOneToOne: false
-            referencedRelation: "userDefaults"
-            referencedColumns: ["userId"]
-          },
-          {
-            foreignKeyName: "storageRuleWorkCenterAssignment_workCenterId_fkey"
-            columns: ["workCenterId"]
-            isOneToOne: false
-            referencedRelation: "riskRegisters"
-            referencedColumns: ["workCenterId"]
-          },
-          {
-            foreignKeyName: "storageRuleWorkCenterAssignment_workCenterId_fkey"
-            columns: ["workCenterId"]
-            isOneToOne: false
-            referencedRelation: "workCenter"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "storageRuleWorkCenterAssignment_workCenterId_fkey"
-            columns: ["workCenterId"]
-            isOneToOne: false
-            referencedRelation: "workCenters"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "storageRuleWorkCenterAssignment_workCenterId_fkey"
-            columns: ["workCenterId"]
-            isOneToOne: false
-            referencedRelation: "workCentersWithBlockingStatus"
-            referencedColumns: ["id"]
           }
         ]
       }
@@ -58388,6 +65061,205 @@ export type Database = {
           }
         ]
       }
+      supplierBankAccount: {
+        Row: {
+          accountHolderName: string | null
+          accountNumber: string | null
+          active: boolean
+          bankAddress: string | null
+          bankCode: string | null
+          bankName: string | null
+          companyId: string
+          countryCode: string | null
+          createdAt: string
+          createdBy: string
+          currencyCode: string | null
+          customFields: Json | null
+          id: string
+          isPrimary: boolean
+          name: string
+          notes: string | null
+          supplierId: string
+          swiftBic: string | null
+          tags: string[] | null
+          updatedAt: string | null
+          updatedBy: string | null
+        }
+        Insert: {
+          accountHolderName?: string | null
+          accountNumber?: string | null
+          active?: boolean
+          bankAddress?: string | null
+          bankCode?: string | null
+          bankName?: string | null
+          companyId: string
+          countryCode?: string | null
+          createdAt?: string
+          createdBy: string
+          currencyCode?: string | null
+          customFields?: Json | null
+          id?: string
+          isPrimary?: boolean
+          name: string
+          notes?: string | null
+          supplierId: string
+          swiftBic?: string | null
+          tags?: string[] | null
+          updatedAt?: string | null
+          updatedBy?: string | null
+        }
+        Update: {
+          accountHolderName?: string | null
+          accountNumber?: string | null
+          active?: boolean
+          bankAddress?: string | null
+          bankCode?: string | null
+          bankName?: string | null
+          companyId?: string
+          countryCode?: string | null
+          createdAt?: string
+          createdBy?: string
+          currencyCode?: string | null
+          customFields?: Json | null
+          id?: string
+          isPrimary?: boolean
+          name?: string
+          notes?: string | null
+          supplierId?: string
+          swiftBic?: string | null
+          tags?: string[] | null
+          updatedAt?: string | null
+          updatedBy?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplierBankAccount_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplierBankAccount_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplierBankAccount_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "customFieldTables"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "supplierBankAccount_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "integrations"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "supplierBankAccount_countryCode_fkey"
+            columns: ["countryCode"]
+            isOneToOne: false
+            referencedRelation: "country"
+            referencedColumns: ["alpha2"]
+          },
+          {
+            foreignKeyName: "supplierBankAccount_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplierBankAccount_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplierBankAccount_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplierBankAccount_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplierBankAccount_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "supplierBankAccount_supplierId_companyId_fkey"
+            columns: ["supplierId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "purchaseOrderSuppliers"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "supplierBankAccount_supplierId_companyId_fkey"
+            columns: ["supplierId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "supplier"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "supplierBankAccount_supplierId_companyId_fkey"
+            columns: ["supplierId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "supplierBankAccount_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplierBankAccount_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplierBankAccount_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplierBankAccount_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplierBankAccount_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          }
+        ]
+      }
       supplierContact: {
         Row: {
           companyId: string
@@ -58721,6 +65593,7 @@ export type Database = {
           conversionFactor: number
           createdAt: string
           createdBy: string
+          currencyCode: string | null
           customFields: Json | null
           id: string
           itemId: string
@@ -58729,8 +65602,8 @@ export type Database = {
           supplierId: string
           supplierPartId: string | null
           supplierUnitOfMeasureCode: string | null
+          supplierUnitPrice: number | null
           tags: string[] | null
-          unitPrice: number | null
           updatedAt: string | null
           updatedBy: string | null
         }
@@ -58740,6 +65613,7 @@ export type Database = {
           conversionFactor?: number
           createdAt?: string
           createdBy: string
+          currencyCode?: string | null
           customFields?: Json | null
           id?: string
           itemId: string
@@ -58748,8 +65622,8 @@ export type Database = {
           supplierId: string
           supplierPartId?: string | null
           supplierUnitOfMeasureCode?: string | null
+          supplierUnitPrice?: number | null
           tags?: string[] | null
-          unitPrice?: number | null
           updatedAt?: string | null
           updatedBy?: string | null
         }
@@ -58759,6 +65633,7 @@ export type Database = {
           conversionFactor?: number
           createdAt?: string
           createdBy?: string
+          currencyCode?: string | null
           customFields?: Json | null
           id?: string
           itemId?: string
@@ -58767,8 +65642,8 @@ export type Database = {
           supplierId?: string
           supplierPartId?: string | null
           supplierUnitOfMeasureCode?: string | null
+          supplierUnitPrice?: number | null
           tags?: string[] | null
-          unitPrice?: number | null
           updatedAt?: string | null
           updatedBy?: string | null
         }
@@ -58933,6 +65808,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "userDefaults"
             referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "supplierPart_currencyCode_fkey"
+            columns: ["currencyCode"]
+            isOneToOne: false
+            referencedRelation: "currencyCode"
+            referencedColumns: ["code"]
           }
         ]
       }
@@ -58946,7 +65828,7 @@ export type Database = {
           sourceDocumentId: string | null
           sourceType: Database["public"]["Enums"]["supplierPartPriceSourceType"]
           supplierPartId: string
-          unitPrice: number
+          supplierUnitPrice: number
           updatedAt: string | null
           updatedBy: string | null
         }
@@ -58959,7 +65841,7 @@ export type Database = {
           sourceDocumentId?: string | null
           sourceType?: Database["public"]["Enums"]["supplierPartPriceSourceType"]
           supplierPartId: string
-          unitPrice: number
+          supplierUnitPrice: number
           updatedAt?: string | null
           updatedBy?: string | null
         }
@@ -58972,7 +65854,7 @@ export type Database = {
           sourceDocumentId?: string | null
           sourceType?: Database["public"]["Enums"]["supplierPartPriceSourceType"]
           supplierPartId?: string
-          unitPrice?: number
+          supplierUnitPrice?: number
           updatedAt?: string | null
           updatedBy?: string | null
         }
@@ -61098,6 +67980,33 @@ export type Database = {
           }
         ]
       }
+      tableChange: {
+        Row: {
+          companyId: string
+          createdAt: string
+          id: number
+          rowId: string | null
+          table: string
+          xid: unknown
+        }
+        Insert: {
+          companyId: string
+          createdAt?: string
+          id?: never
+          rowId?: string | null
+          table: string
+          xid?: unknown
+        }
+        Update: {
+          companyId?: string
+          createdAt?: string
+          id?: never
+          rowId?: string | null
+          table?: string
+          xid?: unknown
+        }
+        Relationships: []
+      }
       tableView: {
         Row: {
           columnOrder: string[] | null
@@ -62455,6 +69364,7 @@ export type Database = {
           estimatedDuration: string | null
           frequency: Database["public"]["Enums"]["trainingFrequency"]
           grantsAbilityId: string | null
+          guidePath: string | null
           id: string
           name: string
           processId: string | null
@@ -62464,6 +69374,7 @@ export type Database = {
           updatedAt: string | null
           updatedBy: string | null
           version: number
+          videoUrl: string | null
         }
         Insert: {
           assignee?: string | null
@@ -62475,6 +69386,7 @@ export type Database = {
           estimatedDuration?: string | null
           frequency?: Database["public"]["Enums"]["trainingFrequency"]
           grantsAbilityId?: string | null
+          guidePath?: string | null
           id?: string
           name: string
           processId?: string | null
@@ -62484,6 +69396,7 @@ export type Database = {
           updatedAt?: string | null
           updatedBy?: string | null
           version?: number
+          videoUrl?: string | null
         }
         Update: {
           assignee?: string | null
@@ -62495,6 +69408,7 @@ export type Database = {
           estimatedDuration?: string | null
           frequency?: Database["public"]["Enums"]["trainingFrequency"]
           grantsAbilityId?: string | null
+          guidePath?: string | null
           id?: string
           name?: string
           processId?: string | null
@@ -62504,6 +69418,7 @@ export type Database = {
           updatedAt?: string | null
           updatedBy?: string | null
           version?: number
+          videoUrl?: string | null
         }
         Relationships: [
           {
@@ -62608,6 +69523,13 @@ export type Database = {
             foreignKeyName: "training_grantsAbilityId_fkey"
             columns: ["grantsAbilityId"]
             isOneToOne: false
+            referencedRelation: "abilities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_grantsAbilityId_fkey"
+            columns: ["grantsAbilityId"]
+            isOneToOne: false
             referencedRelation: "ability"
             referencedColumns: ["id"]
           },
@@ -62669,7 +69591,8 @@ export type Database = {
           createdBy: string
           groupIds: string[] | null
           id: string
-          trainingId: string
+          name: string | null
+          trainingId: string | null
           updatedAt: string | null
           updatedBy: string | null
         }
@@ -62679,7 +69602,8 @@ export type Database = {
           createdBy: string
           groupIds?: string[] | null
           id?: string
-          trainingId: string
+          name?: string | null
+          trainingId?: string | null
           updatedAt?: string | null
           updatedBy?: string | null
         }
@@ -62689,7 +69613,8 @@ export type Database = {
           createdBy?: string
           groupIds?: string[] | null
           id?: string
-          trainingId?: string
+          name?: string | null
+          trainingId?: string | null
           updatedAt?: string | null
           updatedBy?: string | null
         }
@@ -62810,6 +69735,7 @@ export type Database = {
       }
       trainingCompletion: {
         Row: {
+          certificatePath: string | null
           companyId: string
           completedAt: string
           completedBy: string
@@ -62823,6 +69749,7 @@ export type Database = {
           updatedBy: string | null
         }
         Insert: {
+          certificatePath?: string | null
           companyId: string
           completedAt?: string
           completedBy: string
@@ -62836,6 +69763,7 @@ export type Database = {
           updatedBy?: string | null
         }
         Update: {
+          certificatePath?: string | null
           companyId?: string
           completedAt?: string
           completedBy?: string
@@ -63161,6 +70089,162 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "userDefaults"
             referencedColumns: ["userId"]
+          }
+        ]
+      }
+      unattributedMachineTime: {
+        Row: {
+          companyId: string
+          createdAt: string
+          createdBy: string
+          endTime: string | null
+          id: string
+          startTime: string
+          updatedAt: string | null
+          updatedBy: string | null
+          workCenterId: string
+        }
+        Insert: {
+          companyId: string
+          createdAt?: string
+          createdBy: string
+          endTime?: string | null
+          id?: string
+          startTime: string
+          updatedAt?: string | null
+          updatedBy?: string | null
+          workCenterId: string
+        }
+        Update: {
+          companyId?: string
+          createdAt?: string
+          createdBy?: string
+          endTime?: string | null
+          id?: string
+          startTime?: string
+          updatedAt?: string | null
+          updatedBy?: string | null
+          workCenterId?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "unattributedMachineTime_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "unattributedMachineTime_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "unattributedMachineTime_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "customFieldTables"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "unattributedMachineTime_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "integrations"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "unattributedMachineTime_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "unattributedMachineTime_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "unattributedMachineTime_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "unattributedMachineTime_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "unattributedMachineTime_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "unattributedMachineTime_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "unattributedMachineTime_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "unattributedMachineTime_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "unattributedMachineTime_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "unattributedMachineTime_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "unattributedMachineTime_workCenterId_fkey"
+            columns: ["workCenterId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "workCenter"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "unattributedMachineTime_workCenterId_fkey"
+            columns: ["workCenterId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "workCenters"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "unattributedMachineTime_workCenterId_fkey"
+            columns: ["workCenterId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "workCentersWithBlockingStatus"
+            referencedColumns: ["id", "companyId"]
           }
         ]
       }
@@ -64895,6 +71979,13 @@ export type Database = {
             foreignKeyName: "workCenter_requiredAbilityId_fkey"
             columns: ["requiredAbilityId"]
             isOneToOne: false
+            referencedRelation: "abilities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workCenter_requiredAbilityId_fkey"
+            columns: ["requiredAbilityId"]
+            isOneToOne: false
             referencedRelation: "ability"
             referencedColumns: ["id"]
           },
@@ -64932,6 +72023,289 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "userDefaults"
             referencedColumns: ["userId"]
+          }
+        ]
+      }
+      workCenterDevice: {
+        Row: {
+          appliedThrough: string | null
+          companyId: string
+          createdAt: string
+          createdBy: string
+          currentState: Database["public"]["Enums"]["machineState"] | null
+          currentStateAt: string | null
+          deviceName: string
+          externalDeviceId: string
+          externalSiteId: string | null
+          id: string
+          integration: string
+          lastEventAt: string
+          lastManualChangeAt: string | null
+          lastSyncedAt: string | null
+          lastSyncError: string | null
+          siteTimezone: string | null
+          unplannedPressAt: string | null
+          updatedAt: string | null
+          updatedBy: string | null
+          workCenterId: string
+        }
+        Insert: {
+          appliedThrough?: string | null
+          companyId: string
+          createdAt?: string
+          createdBy: string
+          currentState?: Database["public"]["Enums"]["machineState"] | null
+          currentStateAt?: string | null
+          deviceName: string
+          externalDeviceId: string
+          externalSiteId?: string | null
+          id?: string
+          integration: string
+          lastEventAt?: string
+          lastManualChangeAt?: string | null
+          lastSyncedAt?: string | null
+          lastSyncError?: string | null
+          siteTimezone?: string | null
+          unplannedPressAt?: string | null
+          updatedAt?: string | null
+          updatedBy?: string | null
+          workCenterId: string
+        }
+        Update: {
+          appliedThrough?: string | null
+          companyId?: string
+          createdAt?: string
+          createdBy?: string
+          currentState?: Database["public"]["Enums"]["machineState"] | null
+          currentStateAt?: string | null
+          deviceName?: string
+          externalDeviceId?: string
+          externalSiteId?: string | null
+          id?: string
+          integration?: string
+          lastEventAt?: string
+          lastManualChangeAt?: string | null
+          lastSyncedAt?: string | null
+          lastSyncError?: string | null
+          siteTimezone?: string | null
+          unplannedPressAt?: string | null
+          updatedAt?: string | null
+          updatedBy?: string | null
+          workCenterId?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workCenterDevice_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workCenterDevice_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workCenterDevice_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "customFieldTables"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "workCenterDevice_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "integrations"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "workCenterDevice_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workCenterDevice_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workCenterDevice_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workCenterDevice_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workCenterDevice_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "workCenterDevice_integration_fkey"
+            columns: ["integration"]
+            isOneToOne: false
+            referencedRelation: "integration"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workCenterDevice_integration_fkey"
+            columns: ["integration"]
+            isOneToOne: false
+            referencedRelation: "integrations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workCenterDevice_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workCenterDevice_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workCenterDevice_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workCenterDevice_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workCenterDevice_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "workCenterDevice_workCenterId_fkey"
+            columns: ["workCenterId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "workCenter"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "workCenterDevice_workCenterId_fkey"
+            columns: ["workCenterId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "workCenters"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "workCenterDevice_workCenterId_fkey"
+            columns: ["workCenterId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "workCentersWithBlockingStatus"
+            referencedColumns: ["id", "companyId"]
+          }
+        ]
+      }
+      workCenterLoad: {
+        Row: {
+          companyId: string
+          createdAt: string
+          id: string
+          jobOperationId: string
+          loadedAt: string
+          unloadedAt: string | null
+          workCenterId: string
+        }
+        Insert: {
+          companyId: string
+          createdAt?: string
+          id?: string
+          jobOperationId: string
+          loadedAt: string
+          unloadedAt?: string | null
+          workCenterId: string
+        }
+        Update: {
+          companyId?: string
+          createdAt?: string
+          id?: string
+          jobOperationId?: string
+          loadedAt?: string
+          unloadedAt?: string | null
+          workCenterId?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workCenterLoad_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workCenterLoad_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workCenterLoad_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "customFieldTables"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "workCenterLoad_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "integrations"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "workCenterLoad_workCenterId_fkey"
+            columns: ["workCenterId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "workCenter"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "workCenterLoad_workCenterId_fkey"
+            columns: ["workCenterId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "workCenters"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "workCenterLoad_workCenterId_fkey"
+            columns: ["workCenterId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "workCentersWithBlockingStatus"
+            referencedColumns: ["id", "companyId"]
           }
         ]
       }
@@ -66159,6 +73533,136 @@ export type Database = {
       }
     }
     Views: {
+      abilities: {
+        Row: {
+          active: boolean | null
+          companyId: string | null
+          createdAt: string | null
+          createdBy: string | null
+          curve: Json | null
+          id: string | null
+          name: string | null
+          processId: string | null
+          recertifyEveryDays: number | null
+          shadowWeeks: number | null
+          updatedAt: string | null
+          updatedBy: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "abilities_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "abilities_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "abilities_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "customFieldTables"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "abilities_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "integrations"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "abilities_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "abilities_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "abilities_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "abilities_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "abilities_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "abilities_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "abilities_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "abilities_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "abilities_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "abilities_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "ability_processId_fkey"
+            columns: ["processId"]
+            isOneToOne: false
+            referencedRelation: "process"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ability_processId_fkey"
+            columns: ["processId"]
+            isOneToOne: false
+            referencedRelation: "processes"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       accounts: {
         Row: {
           accountType: Database["public"]["Enums"]["accountType"] | null
@@ -67772,6 +75276,339 @@ export type Database = {
           }
         ]
       }
+      customerContracts: {
+        Row: {
+          billedThrough: string | null
+          billingAlignment:
+            | Database["public"]["Enums"]["contractBillingAlignment"]
+            | null
+          billingFrequency:
+            | Database["public"]["Enums"]["contractBillingFrequency"]
+            | null
+          billingTiming:
+            | Database["public"]["Enums"]["contractBillingTiming"]
+            | null
+          cancellationReason: string | null
+          cancelledAt: string | null
+          closeDate: string | null
+          companyId: string | null
+          confirmedAt: string | null
+          confirmedBy: string | null
+          contractType:
+            | Database["public"]["Enums"]["customerContractType"]
+            | null
+          contractValue: number | null
+          createdAt: string | null
+          createdBy: string | null
+          currencyCode: string | null
+          customerContractId: string | null
+          customerId: string | null
+          customerName: string | null
+          customerReference: string | null
+          customFields: Json | null
+          effectiveInvoiceAutomation:
+            | Database["public"]["Enums"]["invoiceAutomation"]
+            | null
+          endDate: string | null
+          endedAt: string | null
+          exchangeRate: number | null
+          firstInvoiceDate: string | null
+          id: string | null
+          invoiceAutomation:
+            | Database["public"]["Enums"]["invoiceAutomation"]
+            | null
+          invoiceCustomerContactId: string | null
+          invoiceCustomerId: string | null
+          invoiceCustomerLocationId: string | null
+          invoicedToDate: number | null
+          lineCount: number | null
+          name: string | null
+          nextInvoiceDate: string | null
+          notes: Json | null
+          paymentTermId: string | null
+          projectId: string | null
+          recognizedToDate: number | null
+          recognizeRevenueFrom: string | null
+          renewal: Database["public"]["Enums"]["contractRenewal"] | null
+          renewalUplift: number | null
+          salesOrderId: string | null
+          salesPersonId: string | null
+          shipToCustomerLocationId: string | null
+          startDate: string | null
+          status: Database["public"]["Enums"]["customerContractStatus"] | null
+          termMonths: number | null
+          updatedAt: string | null
+          updatedBy: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customerContract_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContract_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContract_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "customFieldTables"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "customerContract_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "integrations"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "customerContract_confirmedBy_fkey"
+            columns: ["confirmedBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContract_confirmedBy_fkey"
+            columns: ["confirmedBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContract_confirmedBy_fkey"
+            columns: ["confirmedBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContract_confirmedBy_fkey"
+            columns: ["confirmedBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContract_confirmedBy_fkey"
+            columns: ["confirmedBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "customerContract_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContract_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContract_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContract_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContract_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "customerContract_customerId_fkey"
+            columns: ["customerId"]
+            isOneToOne: false
+            referencedRelation: "customer"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContract_customerId_fkey"
+            columns: ["customerId"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContract_customerId_fkey"
+            columns: ["customerId"]
+            isOneToOne: false
+            referencedRelation: "salesOrderCustomers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContract_invoiceCustomerContactId_fkey"
+            columns: ["invoiceCustomerContactId"]
+            isOneToOne: false
+            referencedRelation: "customerContact"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContract_invoiceCustomerId_fkey"
+            columns: ["invoiceCustomerId"]
+            isOneToOne: false
+            referencedRelation: "customer"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContract_invoiceCustomerId_fkey"
+            columns: ["invoiceCustomerId"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContract_invoiceCustomerId_fkey"
+            columns: ["invoiceCustomerId"]
+            isOneToOne: false
+            referencedRelation: "salesOrderCustomers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContract_invoiceCustomerLocationId_fkey"
+            columns: ["invoiceCustomerLocationId"]
+            isOneToOne: false
+            referencedRelation: "customerLocation"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContract_paymentTermId_fkey"
+            columns: ["paymentTermId"]
+            isOneToOne: false
+            referencedRelation: "paymentTerm"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContract_project_fkey"
+            columns: ["projectId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "project"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "customerContract_salesOrderId_fkey"
+            columns: ["salesOrderId"]
+            isOneToOne: false
+            referencedRelation: "salesOrder"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContract_salesOrderId_fkey"
+            columns: ["salesOrderId"]
+            isOneToOne: false
+            referencedRelation: "salesOrderLocations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContract_salesOrderId_fkey"
+            columns: ["salesOrderId"]
+            isOneToOne: false
+            referencedRelation: "salesOrders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContract_salesPersonId_fkey"
+            columns: ["salesPersonId"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContract_salesPersonId_fkey"
+            columns: ["salesPersonId"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContract_salesPersonId_fkey"
+            columns: ["salesPersonId"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContract_salesPersonId_fkey"
+            columns: ["salesPersonId"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContract_salesPersonId_fkey"
+            columns: ["salesPersonId"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "customerContract_shipToCustomerLocationId_fkey"
+            columns: ["shipToCustomerLocationId"]
+            isOneToOne: false
+            referencedRelation: "customerLocation"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContract_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContract_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContract_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContract_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customerContract_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          }
+        ]
+      }
       customers: {
         Row: {
           accountManagerId: string | null
@@ -68320,6 +76157,286 @@ export type Database = {
           type: string | null
         }
         Relationships: []
+      }
+      fleetAssets: {
+        Row: {
+          accumulatedDepreciation: number | null
+          accumulatedTaxDepreciation: number | null
+          acquisitionCost: number | null
+          acquisitionDate: string | null
+          assetLifetimeUsage: number | null
+          bonusDepreciationPercent: number | null
+          className: string | null
+          companyId: string | null
+          createdAt: string | null
+          createdBy: string | null
+          customerId: string | null
+          customerLocationId: string | null
+          customFields: Json | null
+          depreciationMethod:
+            | Database["public"]["Enums"]["depreciationMethod"]
+            | null
+          depreciationStartDate: string | null
+          description: string | null
+          disposalDate: string | null
+          disposalMethod: Database["public"]["Enums"]["disposalMethod"] | null
+          fixedAssetClassId: string | null
+          fixedAssetId: string | null
+          fleetStatus: string | null
+          id: string | null
+          isConstructionInProgress: boolean | null
+          itemId: string | null
+          itemName: string | null
+          itemReadableId: string | null
+          locationId: string | null
+          macrsConvention: Database["public"]["Enums"]["macrsConvention"] | null
+          macrsPropertyClass:
+            | Database["public"]["Enums"]["macrsPropertyClass"]
+            | null
+          name: string | null
+          netBookValue: number | null
+          notes: Json | null
+          outOfServiceReason: string | null
+          outOfServiceSince: string | null
+          quantity: number | null
+          rentalAgreementId: string | null
+          residualValuePercent: number | null
+          saleProceeds: number | null
+          serialNumber: string | null
+          status: Database["public"]["Enums"]["fixedAssetStatus"] | null
+          taxDepreciationMethod:
+            | Database["public"]["Enums"]["taxDepreciationMethod"]
+            | null
+          taxResidualValuePercent: number | null
+          taxUsefulLifeMonths: number | null
+          thumbnailPath: string | null
+          trackedEntityId: string | null
+          trackedEntityReadableId: string | null
+          updatedAt: string | null
+          updatedBy: string | null
+          usefulLifeMonths: number | null
+          workCenterId: string | null
+          workCenterName: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fixedAsset_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAsset_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAsset_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "customFieldTables"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "fixedAsset_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "integrations"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "fixedAsset_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAsset_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAsset_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAsset_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAsset_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "fixedAsset_fixedAssetClassId_fkey"
+            columns: ["fixedAssetClassId"]
+            isOneToOne: false
+            referencedRelation: "fixedAssetClass"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAsset_itemId_fkey"
+            columns: ["itemId"]
+            isOneToOne: false
+            referencedRelation: "consumables"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAsset_itemId_fkey"
+            columns: ["itemId"]
+            isOneToOne: false
+            referencedRelation: "item"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAsset_itemId_fkey"
+            columns: ["itemId"]
+            isOneToOne: false
+            referencedRelation: "materials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAsset_itemId_fkey"
+            columns: ["itemId"]
+            isOneToOne: false
+            referencedRelation: "parts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAsset_itemId_fkey"
+            columns: ["itemId"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAsset_itemId_fkey"
+            columns: ["itemId"]
+            isOneToOne: false
+            referencedRelation: "tools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAsset_locationId_fkey"
+            columns: ["locationId"]
+            isOneToOne: false
+            referencedRelation: "location"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAsset_trackedEntityId_fkey"
+            columns: ["trackedEntityId"]
+            isOneToOne: false
+            referencedRelation: "trackedEntity"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAsset_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAsset_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAsset_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAsset_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAsset_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "fixedAsset_workCenterId_fkey"
+            columns: ["workCenterId"]
+            isOneToOne: false
+            referencedRelation: "riskRegisters"
+            referencedColumns: ["workCenterId"]
+          },
+          {
+            foreignKeyName: "fixedAsset_workCenterId_fkey"
+            columns: ["workCenterId"]
+            isOneToOne: false
+            referencedRelation: "workCenter"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAsset_workCenterId_fkey"
+            columns: ["workCenterId"]
+            isOneToOne: false
+            referencedRelation: "workCenters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixedAsset_workCenterId_fkey"
+            columns: ["workCenterId"]
+            isOneToOne: false
+            referencedRelation: "workCentersWithBlockingStatus"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreement_customerId_fkey"
+            columns: ["customerId"]
+            isOneToOne: false
+            referencedRelation: "customer"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreement_customerId_fkey"
+            columns: ["customerId"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreement_customerId_fkey"
+            columns: ["customerId"]
+            isOneToOne: false
+            referencedRelation: "salesOrderCustomers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreement_customerLocationId_fkey"
+            columns: ["customerLocationId"]
+            isOneToOne: false
+            referencedRelation: "customerLocation"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       gaugeCalibrationRecords: {
         Row: {
@@ -71197,6 +79314,8 @@ export type Database = {
           description: string | null
           dueDate: string | null
           estimatedTime: number | null
+          fixedAssetClassId: string | null
+          fixedAssetId: string | null
           id: string | null
           itemId: string | null
           itemReadableIdWithRevision: string | null
@@ -71363,6 +79482,27 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "salesOrderCustomers"
             referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "job_fixedAssetClassId_fkey"
+            columns: ["fixedAssetClassId"]
+            isOneToOne: false
+            referencedRelation: "fixedAssetClass"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_fixedAssetId_fkey"
+            columns: ["fixedAssetId"]
+            isOneToOne: false
+            referencedRelation: "fixedAsset"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_fixedAssetId_fkey"
+            columns: ["fixedAssetId"]
+            isOneToOne: false
+            referencedRelation: "fleetAssets"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "job_itemId_fkey"
@@ -71726,6 +79866,7 @@ export type Database = {
       }
       journalLines: {
         Row: {
+          accountDefaultRole: string | null
           accountId: string | null
           accrual: boolean | null
           amount: number | null
@@ -71934,6 +80075,7 @@ export type Database = {
           purchaseUnitOfMeasureCode: string | null
           quantity: number | null
           readableIdWithRevision: string | null
+          replenishmentLevel: number | null
           replenishmentSystem:
             | Database["public"]["Enums"]["kanbanReplenishmentSystem"]
             | null
@@ -72151,6 +80293,255 @@ export type Database = {
           },
           {
             foreignKeyName: "kanban_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          }
+        ]
+      }
+      leases: {
+        Row: {
+          activatedAt: string | null
+          annualEscalationPercent: number | null
+          assetCount: number | null
+          assignee: string | null
+          classification: string | null
+          closedAt: string | null
+          commencementDate: string | null
+          commencementJournalId: string | null
+          companyId: string | null
+          createdAt: string | null
+          createdBy: string | null
+          currencyCode: string | null
+          currentLiability: number | null
+          customFields: Json | null
+          description: string | null
+          discountRate: number | null
+          endDate: string | null
+          endRemindedFor: string | null
+          id: string | null
+          invoiceFromDate: string | null
+          leaseId: string | null
+          locationId: string | null
+          name: string | null
+          nextDueDate: string | null
+          noticeDate: string | null
+          noticeRemindedFor: string | null
+          paymentAmount: number | null
+          paymentFrequency:
+            | Database["public"]["Enums"]["leasePaymentFrequency"]
+            | null
+          paymentTiming:
+            | Database["public"]["Enums"]["rentalBillingTiming"]
+            | null
+          status: Database["public"]["Enums"]["leaseStatus"] | null
+          supplierContactId: string | null
+          supplierId: string | null
+          supplierLocationId: string | null
+          supplierName: string | null
+          updatedAt: string | null
+          updatedBy: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lease_assignee_fkey"
+            columns: ["assignee"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lease_assignee_fkey"
+            columns: ["assignee"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lease_assignee_fkey"
+            columns: ["assignee"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lease_assignee_fkey"
+            columns: ["assignee"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lease_assignee_fkey"
+            columns: ["assignee"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "lease_commencementJournalId_fkey"
+            columns: ["commencementJournalId"]
+            isOneToOne: false
+            referencedRelation: "journal"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lease_commencementJournalId_fkey"
+            columns: ["commencementJournalId"]
+            isOneToOne: false
+            referencedRelation: "journalEntries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lease_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lease_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lease_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "customFieldTables"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "lease_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "integrations"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "lease_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lease_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lease_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lease_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lease_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "lease_locationId_fkey"
+            columns: ["locationId"]
+            isOneToOne: false
+            referencedRelation: "location"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lease_supplierContactId_fkey"
+            columns: ["supplierContactId"]
+            isOneToOne: false
+            referencedRelation: "supplierContact"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lease_supplierId_fkey"
+            columns: ["supplierId"]
+            isOneToOne: false
+            referencedRelation: "contractors"
+            referencedColumns: ["supplierId"]
+          },
+          {
+            foreignKeyName: "lease_supplierId_fkey"
+            columns: ["supplierId"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["supplierId"]
+          },
+          {
+            foreignKeyName: "lease_supplierId_fkey"
+            columns: ["supplierId"]
+            isOneToOne: false
+            referencedRelation: "purchaseOrderSuppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lease_supplierId_fkey"
+            columns: ["supplierId"]
+            isOneToOne: false
+            referencedRelation: "supplier"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lease_supplierId_fkey"
+            columns: ["supplierId"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lease_supplierLocationId_fkey"
+            columns: ["supplierLocationId"]
+            isOneToOne: false
+            referencedRelation: "supplierLocation"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lease_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lease_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lease_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lease_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lease_updatedBy_fkey"
             columns: ["updatedBy"]
             isOneToOne: false
             referencedRelation: "userDefaults"
@@ -72791,6 +81182,7 @@ export type Database = {
           leadTime: number | null
           locationId: string | null
           parentMaterialId: string | null
+          quantityPerParent: number | null
           quantityToIssue: number | null
           replenishmentSystem:
             | Database["public"]["Enums"]["itemReplenishmentSystem"]
@@ -73157,6 +81549,7 @@ export type Database = {
           locationId: string | null
           methodType: Database["public"]["Enums"]["methodType"] | null
           promisedDate: string | null
+          quantityToConsume: number | null
           quantityToSend: number | null
           replenishmentSystem:
             | Database["public"]["Enums"]["itemReplenishmentSystem"]
@@ -73256,10 +81649,18 @@ export type Database = {
           supplierId: string | null
           supplierLocationId: string | null
           supplierName: string | null
+          tags: string[] | null
           updatedAt: string | null
           updatedBy: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "partner_abilityId_fkey"
+            columns: ["abilityId"]
+            isOneToOne: false
+            referencedRelation: "abilities"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "partner_abilityId_fkey"
             columns: ["abilityId"]
@@ -73831,6 +82232,9 @@ export type Database = {
       }
       processes: {
         Row: {
+          abilityPolicy:
+            | Database["public"]["Enums"]["processAbilityPolicy"]
+            | null
           active: boolean | null
           batchable: boolean | null
           batchRules: Json | null
@@ -73978,9 +82382,14 @@ export type Database = {
           itemName: string | null
           itemReadableId: string | null
           jobOperationId: string | null
+          leaseId: string | null
+          leaseName: string | null
+          leasePaymentId: string | null
+          leaseReadableId: string | null
           locationId: string | null
           modelUploadId: string | null
           ownerId: string | null
+          projectId: string | null
           purchaseOrderId: string | null
           purchaseOrderLineId: string | null
           purchaseUnitOfMeasureCode: string | null
@@ -74056,6 +82465,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "purchaseInvoiceLine_leasePayment_fkey"
+            columns: ["leasePaymentId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "leasePayment"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "purchaseInvoiceLine_lease_fkey"
+            columns: ["leaseId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "lease"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "purchaseInvoiceLine_lease_fkey"
+            columns: ["leaseId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "leases"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
             foreignKeyName: "purchaseInvoiceLine_modelUploadId_fkey"
             columns: ["modelUploadId"]
             isOneToOne: false
@@ -74110,6 +82540,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "userDefaults"
             referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "purchaseInvoiceLine_projectId_fkey"
+            columns: ["projectId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "project"
+            referencedColumns: ["id", "companyId"]
           },
           {
             foreignKeyName: "purchaseInvoiceLine_storageUnitId_fkey"
@@ -74688,6 +83125,13 @@ export type Database = {
             columns: ["assetId"]
             isOneToOne: false
             referencedRelation: "fixedAsset"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchaseOrderLine_assetId_fkey"
+            columns: ["assetId"]
+            isOneToOne: false
+            referencedRelation: "fleetAssets"
             referencedColumns: ["id"]
           },
           {
@@ -78173,6 +86617,238 @@ export type Database = {
           }
         ]
       }
+      rentalAgreements: {
+        Row: {
+          activatedAt: string | null
+          billingCycle: Database["public"]["Enums"]["rentalBillingCycle"] | null
+          billingTiming:
+            | Database["public"]["Enums"]["rentalBillingTiming"]
+            | null
+          closedAt: string | null
+          companyId: string | null
+          createdAt: string | null
+          createdBy: string | null
+          currencyCode: string | null
+          customerContactId: string | null
+          customerId: string | null
+          customerLocationId: string | null
+          customerName: string | null
+          customFields: Json | null
+          depositAmount: number | null
+          discountRate: number | null
+          effectiveInvoiceAutomation:
+            | Database["public"]["Enums"]["invoiceAutomation"]
+            | null
+          endDate: string | null
+          exchangeRate: number | null
+          id: string | null
+          invoiceAutomation:
+            | Database["public"]["Enums"]["invoiceAutomation"]
+            | null
+          lineCount: number | null
+          locationId: string | null
+          nextDueOn: string | null
+          notes: string | null
+          onRentCount: number | null
+          ownershipTransfers: boolean | null
+          paymentTermId: string | null
+          purchaseOptionAmount: number | null
+          purchaseOptionReasonablyCertain: boolean | null
+          rentalAgreementId: string | null
+          salesPersonId: string | null
+          specializedAsset: boolean | null
+          startDate: string | null
+          status: Database["public"]["Enums"]["rentalAgreementStatus"] | null
+          taxPercent: number | null
+          unbilledAmount: number | null
+          updatedAt: string | null
+          updatedBy: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rentalAgreement_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreement_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreement_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "customFieldTables"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "rentalAgreement_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "integrations"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "rentalAgreement_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreement_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreement_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreement_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreement_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "rentalAgreement_customerContactId_fkey"
+            columns: ["customerContactId"]
+            isOneToOne: false
+            referencedRelation: "customerContact"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreement_customerId_fkey"
+            columns: ["customerId"]
+            isOneToOne: false
+            referencedRelation: "customer"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreement_customerId_fkey"
+            columns: ["customerId"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreement_customerId_fkey"
+            columns: ["customerId"]
+            isOneToOne: false
+            referencedRelation: "salesOrderCustomers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreement_customerLocationId_fkey"
+            columns: ["customerLocationId"]
+            isOneToOne: false
+            referencedRelation: "customerLocation"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreement_locationId_fkey"
+            columns: ["locationId"]
+            isOneToOne: false
+            referencedRelation: "location"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreement_paymentTermId_fkey"
+            columns: ["paymentTermId"]
+            isOneToOne: false
+            referencedRelation: "paymentTerm"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreement_salesPersonId_fkey"
+            columns: ["salesPersonId"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreement_salesPersonId_fkey"
+            columns: ["salesPersonId"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreement_salesPersonId_fkey"
+            columns: ["salesPersonId"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreement_salesPersonId_fkey"
+            columns: ["salesPersonId"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreement_salesPersonId_fkey"
+            columns: ["salesPersonId"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "rentalAgreement_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreement_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreement_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreement_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rentalAgreement_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          }
+        ]
+      }
       riskRegisters: {
         Row: {
           assignee: string | null
@@ -78346,15 +87022,20 @@ export type Database = {
           assetReadableId: string | null
           companyId: string | null
           convertedAddOnCost: number | null
+          convertedNetUnitPrice: number | null
           convertedNonTaxableAddOnCost: number | null
           convertedSetupPrice: number | null
           convertedShippingCost: number | null
           convertedUnitPrice: number | null
           createdAt: string | null
           createdBy: string | null
+          customerContractId: string | null
+          customerContractInvoiceLineId: string | null
+          customerContractLineId: string | null
           customerPartId: string | null
           customFields: Json | null
           description: string | null
+          discountPercent: number | null
           exchangeRate: number | null
           externalNotes: Json | null
           id: string | null
@@ -78370,11 +87051,22 @@ export type Database = {
           locationId: string | null
           methodType: Database["public"]["Enums"]["methodType"] | null
           modelUploadId: string | null
+          netUnitPrice: number | null
           nonTaxableAddOnCost: number | null
           opportunityId: string | null
+          projectId: string | null
           quantity: number | null
+          rentalAgreementChargeId: string | null
+          rentalAgreementId: string | null
+          rentalAgreementLineId: string | null
+          rentalBillingPeriodId: string | null
+          rentalLineType:
+            | Database["public"]["Enums"]["rentalInvoiceLineType"]
+            | null
           salesOrderId: string | null
           salesOrderLineId: string | null
+          serviceEndDate: string | null
+          serviceStartDate: string | null
           setupPrice: number | null
           shippingCost: number | null
           sortOrder: number | null
@@ -78407,6 +87099,13 @@ export type Database = {
             columns: ["assetId"]
             isOneToOne: false
             referencedRelation: "fixedAsset"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salesInvoiceLine_assetId_fkey"
+            columns: ["assetId"]
+            isOneToOne: false
+            referencedRelation: "fleetAssets"
             referencedColumns: ["id"]
           },
           {
@@ -78471,6 +87170,34 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "userDefaults"
             referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "salesInvoiceLine_customerContractInvoiceLine_fkey"
+            columns: ["customerContractInvoiceLineId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "customerContractInvoiceLine"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "salesInvoiceLine_customerContractLine_fkey"
+            columns: ["customerContractLineId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "customerContractLine"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "salesInvoiceLine_customerContract_fkey"
+            columns: ["customerContractId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "customerContract"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "salesInvoiceLine_customerContract_fkey"
+            columns: ["customerContractId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "customerContracts"
+            referencedColumns: ["id", "companyId"]
           },
           {
             foreignKeyName: "salesInvoiceLine_invoiceId_fkey"
@@ -78569,6 +87296,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "opportunity"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salesInvoiceLine_project_fkey"
+            columns: ["projectId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "project"
+            referencedColumns: ["id", "companyId"]
           },
           {
             foreignKeyName: "salesInvoiceLine_salesOrderId_fkey"
@@ -78714,6 +87448,7 @@ export type Database = {
       salesInvoices: {
         Row: {
           assignee: string | null
+          automationHoldReason: string | null
           balance: number | null
           baseStatus: Database["public"]["Enums"]["salesInvoiceStatus"] | null
           companyId: string | null
@@ -78739,10 +87474,14 @@ export type Database = {
           itemType: Database["public"]["Enums"]["itemType"] | null
           lines: Json[] | null
           locationId: string | null
+          needsReview: boolean | null
           opportunityId: string | null
           paymentTermId: string | null
           paymentTermName: string | null
           postingDate: string | null
+          sendError: string | null
+          sentAt: string | null
+          sentTo: string | null
           shipmentId: string | null
           status: string | null
           subtotal: number | null
@@ -78992,6 +87731,7 @@ export type Database = {
           assetReadableId: string | null
           autodeskUrn: string | null
           companyId: string | null
+          configuration: Json | null
           convertedAddOnCost: number | null
           convertedNonTaxableAddOnCost: number | null
           convertedShippingCost: number | null
@@ -79034,6 +87774,8 @@ export type Database = {
           salesOrderReadableId: string | null
           sentComplete: boolean | null
           sentDate: string | null
+          serviceEndDate: string | null
+          serviceStartDate: string | null
           setupPrice: number | null
           shippingCost: number | null
           sortOrder: number | null
@@ -79067,6 +87809,13 @@ export type Database = {
             columns: ["assetId"]
             isOneToOne: false
             referencedRelation: "fixedAsset"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salesOrderLine_assetId_fkey"
+            columns: ["assetId"]
+            isOneToOne: false
+            referencedRelation: "fleetAssets"
             referencedColumns: ["id"]
           },
           {
@@ -82444,8 +91193,151 @@ export type Database = {
             foreignKeyName: "training_grantsAbilityId_fkey"
             columns: ["grantsAbilityId"]
             isOneToOne: false
+            referencedRelation: "abilities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_grantsAbilityId_fkey"
+            columns: ["grantsAbilityId"]
+            isOneToOne: false
             referencedRelation: "ability"
             referencedColumns: ["id"]
+          }
+        ]
+      }
+      unattributedMachineTimes: {
+        Row: {
+          companyId: string | null
+          createdAt: string | null
+          createdBy: string | null
+          endDate: string | null
+          endTime: string | null
+          id: string | null
+          startDate: string | null
+          startTime: string | null
+          updatedAt: string | null
+          updatedBy: string | null
+          workCenterId: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "unattributedMachineTime_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "unattributedMachineTime_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "unattributedMachineTime_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "customFieldTables"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "unattributedMachineTime_companyId_fkey"
+            columns: ["companyId"]
+            isOneToOne: false
+            referencedRelation: "integrations"
+            referencedColumns: ["companyId"]
+          },
+          {
+            foreignKeyName: "unattributedMachineTime_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "unattributedMachineTime_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "unattributedMachineTime_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "unattributedMachineTime_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "unattributedMachineTime_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "unattributedMachineTime_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeeSummary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "unattributedMachineTime_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "unattributedMachineTime_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "employeesAcrossCompanies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "unattributedMachineTime_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "user"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "unattributedMachineTime_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "userDefaults"
+            referencedColumns: ["userId"]
+          },
+          {
+            foreignKeyName: "unattributedMachineTime_workCenterId_fkey"
+            columns: ["workCenterId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "workCenter"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "unattributedMachineTime_workCenterId_fkey"
+            columns: ["workCenterId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "workCenters"
+            referencedColumns: ["id", "companyId"]
+          },
+          {
+            foreignKeyName: "unattributedMachineTime_workCenterId_fkey"
+            columns: ["workCenterId", "companyId"]
+            isOneToOne: false
+            referencedRelation: "workCentersWithBlockingStatus"
+            referencedColumns: ["id", "companyId"]
           }
         ]
       }
@@ -82602,6 +91494,13 @@ export type Database = {
             foreignKeyName: "workCenter_requiredAbilityId_fkey"
             columns: ["requiredAbilityId"]
             isOneToOne: false
+            referencedRelation: "abilities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workCenter_requiredAbilityId_fkey"
+            columns: ["requiredAbilityId"]
+            isOneToOne: false
             referencedRelation: "ability"
             referencedColumns: ["id"]
           },
@@ -82659,6 +91558,7 @@ export type Database = {
           id: string | null
           isBlocked: boolean | null
           laborRate: number | null
+          loadedJobOperationId: string | null
           locationId: string | null
           locationName: string | null
           machineRate: number | null
@@ -82746,6 +91646,13 @@ export type Database = {
             columns: ["locationId"]
             isOneToOne: false
             referencedRelation: "location"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workCenter_requiredAbilityId_fkey"
+            columns: ["requiredAbilityId"]
+            isOneToOne: false
+            referencedRelation: "abilities"
             referencedColumns: ["id"]
           },
           {
@@ -82887,6 +91794,14 @@ export type Database = {
           netChange: number
         }[]
       }
+      assert_audit_log_access: {
+        Args: { p_company_id: string; p_permission: string }
+        Returns: undefined
+      }
+      assert_company_access: {
+        Args: { p_company_id: string; p_permission?: string }
+        Returns: undefined
+      }
       attach_audit_log_append_only: {
         Args: { p_table_name: string }
         Returns: undefined
@@ -82937,6 +91852,14 @@ export type Database = {
         Returns: boolean
       }
       company_today: { Args: { p_company_id: string }; Returns: string }
+      complete_job_remaining_quantities: {
+        Args: {
+          p_job_id: string
+          p_quantity_complete: number
+          p_user_id: string
+        }
+        Returns: undefined
+      }
       complete_job_to_inventory: {
         Args: {
           p_company_id?: string
@@ -82978,48 +91901,6 @@ export type Database = {
           table: string
         }[]
       }
-      create_rfq_from_model_v1: {
-        Args: {
-          company_id: string
-          customer_part_id: string
-          email: string
-          model_id: string
-          notes?: Json
-          sequence_number: string
-          unit_of_measure: string
-        }
-        Returns: {
-          rfq_id: string
-          rfq_line_id: string
-          rfq_readable_id: string
-        }[]
-      }
-      create_rfq_from_models_v1: {
-        Args: {
-          company_id: string
-          email: string
-          model_data: Json[]
-          sequence_number: string
-        }
-        Returns: {
-          rfq_id: string
-          rfq_line_ids: string[]
-          rfq_readable_id: string
-        }[]
-      }
-      create_rfq_from_models_v2: {
-        Args: {
-          company_id: string
-          email: string
-          model_data: Json[]
-          sequence_number: string
-        }
-        Returns: {
-          rfq_id: string
-          rfq_line_ids: string[]
-          rfq_readable_id: string
-        }[]
-      }
       create_search_subscriptions_for_company: {
         Args: { p_company_id: string }
         Returns: undefined
@@ -83047,6 +91928,10 @@ export type Database = {
       delete_old_audit_logs: {
         Args: { p_company_id: string; p_cutoff_date: string }
         Returns: number
+      }
+      delete_webhook_signing_secret: {
+        Args: { p_company_id: string; p_webhook_id: string }
+        Returns: undefined
       }
       drop_audit_log_table: {
         Args: { p_company_id: string }
@@ -83219,6 +92104,10 @@ export type Database = {
         }[]
       }
       get_api_key_scopes: { Args: never; Returns: Json }
+      get_app_shell: {
+        Args: { company_id: string; user_id: string }
+        Returns: Json
+      }
       get_ar_aging: {
         Args: {
           _aging_method?: string
@@ -83360,9 +92249,11 @@ export type Database = {
           p_exclude_allocated?: boolean
           p_exclude_line_id?: string
           p_exclude_lineside?: boolean
+          p_filter_storage_unit?: boolean
           p_item_id: string
           p_location_id: string
           p_sort_method?: string
+          p_storage_unit_id?: string
         }
         Returns: {
           availableQuantity: number
@@ -83385,15 +92276,19 @@ export type Database = {
           description: string
           id: string
           itemDescription: string
+          itemId: string
           itemReadableId: string
           jobDueDate: string
           jobId: string
           jobOperationBatchId: string
           jobReadableId: string
           jobStatus: Database["public"]["Enums"]["jobStatus"]
+          lotNumber: string
           materials: Json
           operationQuantity: number
+          requiresBatchTracking: boolean
           status: Database["public"]["Enums"]["jobOperationStatus"]
+          trackedEntityId: string
           workCenterId: string
         }[]
       }
@@ -83404,10 +92299,6 @@ export type Database = {
         Returns: string[]
       }
       get_companies_with_employee_role: { Args: never; Returns: string[] }
-      get_companies_with_permission: {
-        Args: { permission: string }
-        Returns: string[]
-      }
       get_company_groups_for_employee: { Args: never; Returns: string[] }
       get_company_groups_for_root_permission: {
         Args: { permission: string }
@@ -83417,6 +92308,42 @@ export type Database = {
       get_company_id_from_foreign_key: {
         Args: { foreign_key: string; tbl: string }
         Returns: string
+      }
+      get_completion_jobs: {
+        Args: {
+          company_id: string
+          location_id: string
+          search?: string
+          through_date?: string
+          time_zone: string
+        }
+        Returns: {
+          completionDate: string
+          customerId: string
+          customerName: string
+          customerReference: string
+          dropShipment: boolean
+          dueDate: string
+          id: string
+          itemName: string
+          itemReadableIdWithRevision: string
+          itemType: Database["public"]["Enums"]["itemType"]
+          jobId: string
+          jobOperations: Json
+          productionQuantity: number
+          projectedCompletionAt: string
+          promisedDate: string
+          quantityComplete: number
+          salesOrderId: string
+          salesOrderReadableId: string
+          shippingMethod: string
+          shipToCity: string
+          shipToCountryCode: string
+          shipToName: string
+          shipToState: string
+          status: Database["public"]["Enums"]["jobStatus"]
+          thumbnailPath: string
+        }[]
       }
       get_consumable_details: {
         Args: { item_id: string }
@@ -83468,7 +92395,7 @@ export type Database = {
         Returns: string[]
       }
       get_direct_ancestors_of_tracked_entities_strict: {
-        Args: { p_tracked_entity_ids: string[] }
+        Args: { p_company_id: string; p_tracked_entity_ids: string[] }
         Returns: {
           activityAttributes: Json
           attributes: Json
@@ -83514,7 +92441,7 @@ export type Database = {
         }[]
       }
       get_direct_descendants_of_tracked_entities_strict: {
-        Args: { p_tracked_entity_ids: string[] }
+        Args: { p_company_id: string; p_tracked_entity_ids: string[] }
         Returns: {
           activityAttributes: Json
           attributes: Json
@@ -83557,6 +92484,12 @@ export type Database = {
           sourceDocumentReadableId: string
           status: Database["public"]["Enums"]["trackedEntityStatus"]
           trackedActivityId: string
+        }[]
+      }
+      get_document_extensions: {
+        Args: { company_id: string }
+        Returns: {
+          extension: string
         }[]
       }
       get_effective_work_center_id: {
@@ -83711,6 +92644,30 @@ export type Database = {
           unitOfMeasureCode: string
         }[]
       }
+      get_item_change_notices: {
+        Args: {
+          company_id: string
+          item_id: string
+          statuses?: Database["public"]["Enums"]["changeOrderStatus"][]
+        }
+        Returns: {
+          changeOrderId: string
+          changeOrderTypeId: string
+          createdAt: string
+          id: string
+          name: string
+          status: Database["public"]["Enums"]["changeOrderStatus"]
+        }[]
+      }
+      get_item_ledger_balance: {
+        Args: {
+          company_id: string
+          entry_number?: number
+          item_id: string
+          location_id: string
+        }
+        Returns: number
+      }
       get_item_quantities_by_tracking_id: {
         Args: { company_id: string; item_id: string; location_id: string }
         Returns: {
@@ -83759,6 +92716,10 @@ export type Database = {
           type: Database["public"]["Enums"]["itemType"]
           unitOfMeasureCode: string
         }[]
+      }
+      get_item_used_in: {
+        Args: { company_id: string; item_id: string }
+        Returns: Json
       }
       get_job_method: {
         Args: { jid: string }
@@ -83850,7 +92811,7 @@ export type Database = {
         }[]
       }
       get_job_operation_step_records: {
-        Args: { p_job_id: string }
+        Args: { p_company_id: string; p_job_id: string }
         Returns: {
           booleanValue: boolean
           companyId: string
@@ -83965,6 +92926,25 @@ export type Database = {
           tags: string[]
           thumbnailPath: string
         }[]
+      }
+      get_kanban_projected_quantities: {
+        Args: { company_id: string; kanban_ids?: string[] }
+        Returns: {
+          kanbanId: string
+          projectedQuantity: number
+          replenishmentLevel: number
+        }[]
+      }
+      get_lineside_credit: {
+        Args: {
+          p_company_id: string
+          p_item_id: string
+          p_job_id: string
+          p_job_material_id: string
+          p_location_id: string
+          p_storage_unit_id: string
+        }
+        Returns: number
       }
       get_maintenance_dispatches_by_location: {
         Args: { p_company_id: string; p_location_id: string }
@@ -84200,7 +93180,6 @@ export type Database = {
       }
       get_period_end_date: { Args: { period: string }; Returns: string }
       get_period_start_date: { Args: { period: string }; Returns: string }
-      get_permission_companies: { Args: { claim: string }; Returns: string[] }
       get_picking_list_availability: {
         Args: { p_picking_list_id: string }
         Returns: {
@@ -84295,6 +93274,101 @@ export type Database = {
           replenishmentSystem: Database["public"]["Enums"]["itemReplenishmentSystem"]
           supersessionMode: string
           thumbnailPath: string
+          type: Database["public"]["Enums"]["itemType"]
+          unitOfMeasureCode: string
+          week1: number
+          week10: number
+          week11: number
+          week12: number
+          week13: number
+          week14: number
+          week15: number
+          week16: number
+          week17: number
+          week18: number
+          week19: number
+          week2: number
+          week20: number
+          week21: number
+          week22: number
+          week23: number
+          week24: number
+          week25: number
+          week26: number
+          week27: number
+          week28: number
+          week29: number
+          week3: number
+          week30: number
+          week31: number
+          week32: number
+          week33: number
+          week34: number
+          week35: number
+          week36: number
+          week37: number
+          week38: number
+          week39: number
+          week4: number
+          week40: number
+          week41: number
+          week42: number
+          week43: number
+          week44: number
+          week45: number
+          week46: number
+          week47: number
+          week48: number
+          week49: number
+          week5: number
+          week50: number
+          week51: number
+          week52: number
+          week6: number
+          week7: number
+          week8: number
+          week9: number
+        }[]
+      }
+      get_production_planning_grid: {
+        Args: {
+          action_assignees?: string[]
+          action_types?: string[]
+          as_of?: string
+          company_id: string
+          location_id: string
+          periods: string[]
+        }
+        Returns: {
+          active: boolean
+          demandAccumulationPeriod: number
+          demandAccumulationSafetyStock: number
+          firstNegativeDate: string
+          id: string
+          itemPostingGroupId: string
+          itemTrackingType: Database["public"]["Enums"]["itemTrackingType"]
+          latestOrderDate: string
+          leadTime: number
+          lotSize: number
+          manufacturingBlocked: boolean
+          maximumInventoryQuantity: number
+          maximumOrderQuantity: number
+          minimumOrderQuantity: number
+          minimumReserveQuantity: number
+          name: string
+          orderMultiple: number
+          orderQuantity: number
+          planningHorizonDays: number
+          quantityOnHand: number
+          quantityToOrder: number
+          readableIdWithRevision: string
+          reorderingPolicy: Database["public"]["Enums"]["itemReorderingPolicy"]
+          reorderPoint: number
+          reorderQuantity: number
+          replenishmentSystem: Database["public"]["Enums"]["itemReplenishmentSystem"]
+          supersessionMode: string
+          thumbnailPath: string
+          timeFenceDate: string
           type: Database["public"]["Enums"]["itemType"]
           unitOfMeasureCode: string
           week1: number
@@ -84460,6 +93534,105 @@ export type Database = {
           supersessionMode: string
           suppliers: Json
           thumbnailPath: string
+          type: Database["public"]["Enums"]["itemType"]
+          unitOfMeasureCode: string
+          week1: number
+          week10: number
+          week11: number
+          week12: number
+          week13: number
+          week14: number
+          week15: number
+          week16: number
+          week17: number
+          week18: number
+          week19: number
+          week2: number
+          week20: number
+          week21: number
+          week22: number
+          week23: number
+          week24: number
+          week25: number
+          week26: number
+          week27: number
+          week28: number
+          week29: number
+          week3: number
+          week30: number
+          week31: number
+          week32: number
+          week33: number
+          week34: number
+          week35: number
+          week36: number
+          week37: number
+          week38: number
+          week39: number
+          week4: number
+          week40: number
+          week41: number
+          week42: number
+          week43: number
+          week44: number
+          week45: number
+          week46: number
+          week47: number
+          week48: number
+          week49: number
+          week5: number
+          week50: number
+          week51: number
+          week52: number
+          week6: number
+          week7: number
+          week8: number
+          week9: number
+        }[]
+      }
+      get_purchasing_planning_grid: {
+        Args: {
+          action_assignees?: string[]
+          action_types?: string[]
+          as_of?: string
+          company_id: string
+          location_id: string
+          periods: string[]
+        }
+        Returns: {
+          active: boolean
+          conversionFactor: number
+          demandAccumulationPeriod: number
+          demandAccumulationSafetyStock: number
+          firstNegativeDate: string
+          id: string
+          itemPostingGroupId: string
+          itemTrackingType: Database["public"]["Enums"]["itemTrackingType"]
+          latestOrderDate: string
+          leadTime: number
+          lotSize: number
+          maximumInventoryQuantity: number
+          maximumOrderQuantity: number
+          minimumOrderQuantity: number
+          minimumReserveQuantity: number
+          name: string
+          orderMultiple: number
+          orderQuantity: number
+          planningHorizonDays: number
+          preferredSupplierId: string
+          purchasingBlocked: boolean
+          purchasingUnitOfMeasureCode: string
+          quantityOnHand: number
+          quantityToOrder: number
+          readableIdWithRevision: string
+          reorderingPolicy: Database["public"]["Enums"]["itemReorderingPolicy"]
+          reorderPoint: number
+          reorderQuantity: number
+          replenishmentSystem: Database["public"]["Enums"]["itemReplenishmentSystem"]
+          supersessionMode: string
+          suppliers: Json
+          thumbnailPath: string
+          timeFenceDate: string
           type: Database["public"]["Enums"]["itemType"]
           unitOfMeasureCode: string
           week1: number
@@ -84835,6 +94008,7 @@ export type Database = {
         Args: { p_company_id: string; p_employee_id?: string }
         Returns: {
           avatarUrl: string
+          certificatePath: string
           companyId: string
           completedAt: string
           completionId: number
@@ -84843,6 +94017,7 @@ export type Database = {
           employeeName: string
           employeeStartDate: string
           frequency: Database["public"]["Enums"]["trainingFrequency"]
+          isExternal: boolean
           status: string
           trainingAssignmentId: string
           trainingId: string
@@ -84857,9 +94032,11 @@ export type Database = {
           completionPercent: number
           currentPeriod: string
           frequency: Database["public"]["Enums"]["trainingFrequency"]
+          isExternal: boolean
           overdue: number
           pending: number
           totalAssigned: number
+          trainingAssignmentId: string
           trainingId: string
           trainingName: string
         }[]
@@ -84883,6 +94060,13 @@ export type Database = {
           updatedAt: string
           updatedBy: string
           version: number
+        }[]
+      }
+      get_unit_of_measure_usage: {
+        Args: { p_id: string }
+        Returns: {
+          count: number
+          tableName: string
         }[]
       }
       get_unscheduled_jobs: {
@@ -84940,6 +94124,10 @@ export type Database = {
           userCount: number
         }[]
       }
+      get_webhook_signing_secret: {
+        Args: { p_company_id: string; p_webhook_id: string }
+        Returns: string
+      }
       getConsolidationRates: {
         Args: {
           p_company_group_id: string
@@ -84982,14 +94170,6 @@ export type Database = {
         }[]
       }
       has_any_company_permission: { Args: { claim: string }; Returns: boolean }
-      has_company_permission: {
-        Args: { claim: string; company: string }
-        Returns: boolean
-      }
-      has_role: {
-        Args: { company: string; required_role: string }
-        Returns: boolean
-      }
       has_valid_api_key_for_company: {
         Args: { company: string }
         Returns: boolean
@@ -85012,19 +94192,6 @@ export type Database = {
       increment_webhook_success: {
         Args: { webhook_id: string }
         Returns: undefined
-      }
-      insert_audit_log: {
-        Args: {
-          p_actor_id: string
-          p_actor_name: string
-          p_company_id: string
-          p_diff?: Json
-          p_entity_id: string
-          p_entity_type: string
-          p_metadata?: Json
-          p_operation: string
-        }
-        Returns: string
       }
       insert_audit_log_batch: {
         Args: { p_company_id: string; p_entries: Json[] }
@@ -85057,6 +94224,10 @@ export type Database = {
           readableId: string
           similarity: number
         }[]
+      }
+      journal_posting_status: {
+        Args: { p_company_id: string }
+        Returns: Database["public"]["Enums"]["journalEntryStatus"]
       }
       journalDimensionPivot: {
         Args: {
@@ -85163,18 +94334,6 @@ export type Database = {
         Args: { p_company_id: string }
         Returns: undefined
       }
-      populate_sales_search_results: {
-        Args: { p_company_id: string }
-        Returns: undefined
-      }
-      portal_resolve_workforce_identity: {
-        Args: {
-          requested_company_id: string
-          requested_issuer: string
-          requested_subject: string
-        }
-        Returns: Json
-      }
       prevent_posted_purchase_invoice_deletion: {
         Args: { p_new: Json; p_old: Json; p_operation: string; p_table: string }
         Returns: undefined
@@ -85243,6 +94402,10 @@ export type Database = {
         Args: { p_item_id: string; p_receipt_id: string }
         Returns: string
       }
+      rotate_webhook_signing_secret: {
+        Args: { p_company_id: string; p_webhook_id: string }
+        Returns: string
+      }
       save_inspection_document_atomic: {
         Args: {
           p_balloons?: Json
@@ -85256,6 +94419,18 @@ export type Database = {
           p_user_id: string
         }
         Returns: Json
+      }
+      save_journal_entry_lines: {
+        Args: {
+          p_company_id: string
+          p_delete_ids: string[]
+          p_description?: string
+          p_journal_id: string
+          p_lines: Json
+          p_posting_date: string
+          p_user_id: string
+        }
+        Returns: string[]
       }
       search_company_index: {
         Args: {
@@ -85275,6 +94450,34 @@ export type Database = {
           title: string
         }[]
       }
+      secure_audit_log_table: {
+        Args: { p_company_id: string }
+        Returns: undefined
+      }
+      set_employee_pin: {
+        Args: {
+          p_company_id: string
+          p_employee_id: string
+          p_pin: string
+          p_updated_by: string
+        }
+        Returns: undefined
+      }
+      set_event_triggers: {
+        Args: {
+          after_functions?: string[]
+          before_functions?: string[]
+          queue_events?: boolean
+          statement_functions?: string[]
+          table_name_text: string
+        }
+        Returns: undefined
+      }
+      set_inngest_event_config: {
+        Args: { p_base_url: string; p_key: string }
+        Returns: undefined
+      }
+      set_inngest_event_url: { Args: { p_url: string }; Returns: undefined }
       set_shelf_life_for_operation: {
         Args: {
           p_event: Database["public"]["Enums"]["shelfLifeTriggerTiming"]
@@ -85340,6 +94543,10 @@ export type Database = {
           operation: string
           table_name: string
         }
+        Returns: undefined
+      }
+      sync_advance_document_sequence: {
+        Args: { p_new: Json; p_old: Json; p_operation: string; p_table: string }
         Returns: undefined
       }
       sync_archive_other_procedures: {
@@ -85419,24 +94626,18 @@ export type Database = {
         Args: { p_new: Json; p_old: Json; p_operation: string; p_table: string }
         Returns: undefined
       }
+      sync_delete_user_identity_group: {
+        Args: { p_new: Json; p_old: Json; p_operation: string; p_table: string }
+        Returns: undefined
+      }
       sync_edit_document_transaction: {
         Args: { p_new: Json; p_old: Json; p_operation: string; p_table: string }
         Returns: undefined
       }
-      sync_finish_job_operation:
-        | {
-            Args: { p_new: Json; p_old: Json; p_operation: string }
-            Returns: undefined
-          }
-        | {
-            Args: {
-              p_new: Json
-              p_old: Json
-              p_operation: string
-              p_table: string
-            }
-            Returns: undefined
-          }
+      sync_finish_job_operation: {
+        Args: { p_new: Json; p_old: Json; p_operation: string; p_table: string }
+        Returns: undefined
+      }
       sync_insert_company_related_records: {
         Args: { p_new: Json; p_old: Json; p_operation: string; p_table: string }
         Returns: undefined
@@ -85465,6 +94666,14 @@ export type Database = {
         Args: { p_new: Json; p_old: Json; p_operation: string; p_table: string }
         Returns: undefined
       }
+      sync_kanban_level_check: {
+        Args: { p_new: Json; p_old: Json; p_operation: string; p_table: string }
+        Returns: undefined
+      }
+      sync_load_work_center_operation: {
+        Args: { p_new: Json; p_old: Json; p_operation: string; p_table: string }
+        Returns: undefined
+      }
       sync_on_maintenance_dispatch_complete: {
         Args: { p_new: Json; p_old: Json; p_operation: string; p_table: string }
         Returns: undefined
@@ -85486,6 +94695,10 @@ export type Database = {
         Returns: undefined
       }
       sync_set_job_operation_in_progress: {
+        Args: { p_new: Json; p_old: Json; p_operation: string; p_table: string }
+        Returns: undefined
+      }
+      sync_unload_work_center_operation: {
         Args: { p_new: Json; p_old: Json; p_operation: string; p_table: string }
         Returns: undefined
       }
@@ -85561,6 +94774,23 @@ export type Database = {
         Args: { p_new: Json; p_old: Json; p_operation: string; p_table: string }
         Returns: undefined
       }
+      table_changes_since: {
+        Args: {
+          p_at?: string
+          p_company_id: string
+          p_epoch?: string
+          p_xid?: string
+        }
+        Returns: Json
+      }
+      terminal_job_operations: {
+        Args: { p_job_id: string }
+        Returns: {
+          id: string
+          quantityComplete: number
+          quantityReworked: number
+        }[]
+      }
       translateTrialBalance: {
         Args: {
           p_company_group_id: string
@@ -85616,6 +94846,19 @@ export type Database = {
         }
         Returns: undefined
       }
+      upsert_company_integration_patch: {
+        Args: {
+          p_active?: boolean
+          p_company_id: string
+          p_integration_id: string
+          p_metadata_patch?: Json
+          p_metadata_remove?: string[]
+          p_secret_patch?: Json
+          p_secret_remove?: string[]
+          p_updated_by?: string
+        }
+        Returns: Json
+      }
       upsert_integration_secret: {
         Args: { p_company_id: string; p_integration_id: string; p_secret: Json }
         Returns: string
@@ -85642,6 +94885,10 @@ export type Database = {
       }
       uuid_generate_v4: { Args: never; Returns: string }
       uuid_to_base58: { Args: { _uuid: string }; Returns: string }
+      verify_employee_pin: {
+        Args: { p_company_id: string; p_employee_id: string; p_pin: string }
+        Returns: boolean
+      }
       workflow_merge_custom_fields: {
         Args: {
           p_company_id: string
@@ -85683,7 +94930,11 @@ export type Database = {
         | "Other Expense"
         | "Tax"
         | "Investments"
-      approvalDocumentType: "purchaseOrder" | "qualityDocument" | "supplier"
+      approvalDocumentType:
+        | "purchaseOrder"
+        | "qualityDocument"
+        | "supplier"
+        | "changeOrder"
       approvalStatus: "Pending" | "Approved" | "Rejected" | "Cancelled"
       assemblyInstructionStatus: "Draft" | "Published" | "Archived"
       assemblyStepStatus: "Todo" | "Review" | "Done"
@@ -85703,6 +94954,8 @@ export type Database = {
         | "Cancelled"
       changeOrderTaskStatus: "Pending" | "In Progress" | "Completed" | "Skipped"
       changeOrderTypeEnum: "Engineering" | "Manufacturing" | "Documentation"
+      chargeStatus: "Draft" | "Posted" | "Voided"
+      chargeType: "Charge" | "Credit" | "Payment" | "Cashback" | "Repayment"
       configurationParameterDataType:
         | "text"
         | "numeric"
@@ -85710,6 +94963,22 @@ export type Database = {
         | "list"
         | "date"
         | "material"
+      contractAmendmentEffect: "Change Date" | "Next Period"
+      contractBillingAlignment: "Anniversary" | "Calendar"
+      contractBillingFrequency: "Week" | "Month" | "Quarter" | "Year"
+      contractBillingTiming: "Advance" | "Arrears"
+      contractInvoiceStatus: "Planned" | "Invoiced" | "Billed Externally"
+      contractLedgerEntryType:
+        | "Opening"
+        | "Invoice"
+        | "Recognition"
+        | "Credit Memo"
+        | "Void"
+      contractRateUnit: "Day" | "Week" | "Month" | "Quarter" | "Year"
+      contractRenewal: "Renew" | "End"
+      contractRevenueMethod: "Daily" | "Even Period"
+      contractRevenueStatus: "Planned" | "Recognized" | "Recognized Externally"
+      contractRevenueType: "One-time" | "Recurring"
       costLedgerType:
         | "Direct Cost"
         | "Revaluation"
@@ -85717,6 +94986,13 @@ export type Database = {
         | "Indirect Cost"
         | "Variance"
         | "Total"
+      customerContractStatus: "Draft" | "Active" | "Ended"
+      customerContractType:
+        | "New Sales"
+        | "Existing"
+        | "Expansion"
+        | "Reactivation"
+        | "Contraction"
       deadlineType: "No Deadline" | "ASAP" | "Soft Deadline" | "Hard Deadline"
       demandForecastSourceType:
         | "Job Material"
@@ -85743,7 +95019,8 @@ export type Database = {
         | "Supplier"
         | "Item"
         | "ScrapReason"
-      disposalMethod: "Sale" | "Scrapping"
+        | "Project"
+      disposalMethod: "Sale" | "Scrapping" | "Transfer to Inventory"
       disposition:
         | "Conditional Acceptance"
         | "Deviation Accepted"
@@ -85785,6 +95062,8 @@ export type Database = {
         | "Gauge Calibration Record"
         | "Purchasing Request for Quote"
         | "Supplier Quote"
+        | "Supplier"
+        | "Customer"
       documentthreadtype:
         | "nonConformance"
         | "quote"
@@ -85815,6 +95094,23 @@ export type Database = {
         | "Model"
       eliminationKind: "IC Balance" | "IC Revenue"
       employeeTypeSystemType: "Admin" | "Console Operator"
+      enforcementRuleFamily: "storage" | "sales"
+      enforcementRuleSurface:
+        | "receipt"
+        | "shipment"
+        | "stockTransfer"
+        | "warehouseTransfer"
+        | "inventoryAdjustment"
+        | "place"
+        | "pick"
+        | "operationStart"
+        | "operationFinish"
+        | "materialIssue"
+        | "materialReceive"
+        | "quoteLine"
+        | "salesOrderLine"
+        | "salesInvoiceLine"
+      enforcementRuleTargetType: "item" | "workCenter"
       externalLinkDocumentType:
         | "Quote"
         | "SupplierQuote"
@@ -85832,7 +95128,21 @@ export type Database = {
         | "Seconds/Piece"
         | "Total Hours"
         | "Total Minutes"
-      fixedAssetStatus: "Draft" | "Active" | "Fully Depreciated" | "Disposed"
+      fixedAssetStatus:
+        | "Draft"
+        | "Active"
+        | "Fully Depreciated"
+        | "Disposed"
+        | "Under Construction"
+      fixedAssetTransferSourceType:
+        | "Inventory"
+        | "Job"
+        | "Construction in Progress"
+        | "Manual"
+      fixedAssetTransferType:
+        | "Capitalization"
+        | "Return to Inventory"
+        | "Cost Adjustment"
       fulfillmentType: "Inventory" | "Job"
       gaugeCalibrationStatus:
         | "Pending"
@@ -85887,6 +95197,11 @@ export type Database = {
         | "COGS"
         | "Capitalization"
       inventoryCountStatus: "Draft" | "Pending" | "Posted"
+      invoiceAutomation:
+        | "Draft Only"
+        | "Post"
+        | "Post and Email"
+        | "Post and Send via Stripe"
       itemCostingMethod: "Standard" | "Average" | "LIFO" | "FIFO"
       itemLedgerDocumentType:
         | "Sales Shipment"
@@ -85916,6 +95231,9 @@ export type Database = {
         | "Inventory Count"
         | "Scrap"
         | "Sales Return Shipment"
+        | "Batch Merge"
+        | "Asset Transfer"
+        | "Rental Agreement"
       itemLedgerType:
         | "Purchase"
         | "Sale"
@@ -85992,7 +95310,19 @@ export type Database = {
         | "Sales Return Receipt"
         | "Sales Return Shipment"
         | "Purchase Return Shipment"
-      journalEntryStatus: "Draft" | "Posted" | "Reversed"
+        | "Charge"
+        | "Reimbursement"
+        | "Maintenance Event"
+        | "Revenue Recognition"
+        | "Asset Transfer"
+        | "Lease"
+        | "Lease Run"
+      journalEntryStatus:
+        | "Draft"
+        | "Posted"
+        | "Reversed"
+        | "Provisional"
+        | "Superseded"
       journalLineDocumentType:
         | "Receipt"
         | "Invoice"
@@ -86016,8 +95346,31 @@ export type Database = {
         | "Non-Conformance"
         | "Inbound Inspection"
         | "Scrap"
+        | "Batch Merge"
+        | "Charge"
+        | "Reimbursement"
+        | "Maintenance Event"
+        | "Asset Transfer"
+        | "Rental Agreement"
+        | "Contract"
+        | "Lease"
       kanbanOutput: "label" | "qrcode" | "url"
       kanbanReplenishmentSystem: "Buy" | "Make" | "Transfer"
+      leaseEventType: "Modification" | "Termination" | "Purchase"
+      leaseLineStatus: "Active" | "Terminated" | "Purchased" | "Expired"
+      leasePaymentFrequency: "Monthly" | "Quarterly" | "Annual"
+      leasePaymentStatus: "Pending" | "Invoiced" | "Skipped"
+      leasePaymentType: "Rent" | "Purchase Option" | "Termination Penalty"
+      leaseStatus:
+        | "Draft"
+        | "Active"
+        | "Expired"
+        | "Terminated"
+        | "Purchased"
+        | "Cancelled"
+      lesseeClassification: "Operating" | "Finance" | "Short-Term"
+      lessorClassification: "Rental" | "Sale" | "Financing"
+      machineState: "Running" | "Idle" | "Down" | "Offline"
       macrsConvention: "Half-Year" | "Mid-Quarter"
       macrsPropertyClass: "3" | "5" | "7" | "10" | "15" | "20" | "27.5" | "39"
       maintenanceDispatchPriority: "Low" | "Medium" | "High" | "Critical"
@@ -86117,6 +95470,7 @@ export type Database = {
         | "Service"
         | "Consumable"
         | "Fixture"
+        | "Lease"
       paymentStatus: "Draft" | "Posted" | "Voided"
       paymentTermCalculationMethod: "Net" | "End of Month" | "Day of Month"
       paymentType: "Receipt" | "Disbursement"
@@ -86130,8 +95484,18 @@ export type Database = {
         | "Cancelled"
         | "Partial"
       pickMethodSortMethod: "Default" | "FEFO" | "FIFO" | "LIFO"
+      planningActionStatus: "Open" | "Dismissed" | "Actioned"
+      planningActionType:
+        | "Order"
+        | "Make"
+        | "Expedite"
+        | "Defer"
+        | "Cancel"
+        | "Increase"
+        | "Decrease"
+        | "Release"
       pricingRuleAmountType: "Percentage" | "Fixed"
-      pricingRuleType: "Discount" | "Markup"
+      pricingRuleType: "Discount" | "Markup" | "Configuration"
       procedureStatus: "Draft" | "Active" | "Archived"
       procedureStepType:
         | "Value"
@@ -86143,6 +95507,7 @@ export type Database = {
         | "File"
         | "Task"
         | "Inspection"
+      processAbilityPolicy: "Warn" | "Block"
       productionEventType: "Setup" | "Labor" | "Machine"
       productionQuantityType: "Rework" | "Scrap" | "Production"
       purchaseInvoiceStatus:
@@ -86210,8 +95575,19 @@ export type Database = {
         | "Outbound Transfer"
         | "Manufacturing Consumption"
         | "Manufacturing Output"
+        | "Rental Agreement"
       receiptStatus: "Draft" | "Pending" | "Posted" | "Voided"
+      reimbursementStatus: "Draft" | "Posted" | "Voided"
+      rentalAgreementLineStatus: "Pending" | "On Rent" | "Returned" | "Sold"
+      rentalAgreementStatus: "Draft" | "Active" | "Closed" | "Cancelled"
+      rentalBillingCycle: "Calendar Month" | "28 Days" | "Monthly"
+      rentalBillingPeriodStatus: "Pending" | "Invoiced"
+      rentalBillingTiming: "Advance" | "Arrears"
+      rentalInvoiceLineType: "Rent" | "Charge" | "Purchase Option"
+      rentalRateUnit: "Day" | "Week" | "Month"
       reportViewVisibility: "Private" | "Company"
+      revenueScheduleStatus: "Planned" | "Posted"
+      revenueScheduleType: "Deferral" | "Accrual" | "Interest" | "Amortization"
       riskRegisterType: "Risk" | "Opportunity"
       riskSource:
         | "Customer"
@@ -86223,6 +95599,7 @@ export type Database = {
         | "Work Center"
       riskStatus: "Open" | "In Review" | "Mitigating" | "Closed" | "Accepted"
       role: "customer" | "employee" | "supplier"
+      runType: "Revenue Recognition" | "Lease"
       salesInvoiceLineType:
         | "Comment"
         | "Part"
@@ -86232,6 +95609,7 @@ export type Database = {
         | "Consumable"
         | "Fixture"
         | "Fixed Asset"
+        | "Rental"
       salesInvoiceStatus:
         | "Draft"
         | "Pending"
@@ -86287,12 +95665,12 @@ export type Database = {
         | "Purchase Return Order"
         | "Inbound Transfer"
         | "Outbound Transfer"
+        | "Rental Agreement"
       shipmentStatus: "Draft" | "Pending" | "Posted" | "Voided"
       shippingCarrier: "UPS" | "FedEx" | "USPS" | "DHL" | "Other"
       sourcingType: "Specified" | "Drop Ship" | "Ship from Inventory"
       ssoDomainStatus: "pending" | "verified"
       stockTransferStatus: "Draft" | "Released" | "In Progress" | "Completed"
-      storageRuleTargetType: "item" | "workCenter"
       supersessionMode:
         | "Consume First"
         | "Prefer New"
@@ -86352,18 +95730,6 @@ export type Database = {
         | "Numerical"
       trainingStatus: "Draft" | "Active" | "Archived"
       trainingType: "Mandatory" | "Optional"
-      transactionSurface:
-        | "receipt"
-        | "shipment"
-        | "stockTransfer"
-        | "warehouseTransfer"
-        | "inventoryAdjustment"
-        | "place"
-        | "pick"
-        | "operationStart"
-        | "operationFinish"
-        | "materialIssue"
-        | "materialReceive"
       warehouseTransferStatus:
         | "Draft"
         | "To Ship and Receive"
@@ -86385,15 +95751,12 @@ export type Database = {
           created_at: string | null
           file_size_limit: number | null
           id: string
-          lifecycle_configuration: Json | null
-          lifecycle_configuration_generation: string | null
           name: string
           owner: string | null
           owner_id: string | null
           public: boolean | null
           type: Database["storage"]["Enums"]["buckettype"]
           updated_at: string | null
-          versioning_status: string
         }
         Insert: {
           allowed_mime_types?: string[] | null
@@ -86401,15 +95764,12 @@ export type Database = {
           created_at?: string | null
           file_size_limit?: number | null
           id: string
-          lifecycle_configuration?: Json | null
-          lifecycle_configuration_generation?: string | null
           name: string
           owner?: string | null
           owner_id?: string | null
           public?: boolean | null
           type?: Database["storage"]["Enums"]["buckettype"]
           updated_at?: string | null
-          versioning_status?: string
         }
         Update: {
           allowed_mime_types?: string[] | null
@@ -86417,15 +95777,12 @@ export type Database = {
           created_at?: string | null
           file_size_limit?: number | null
           id?: string
-          lifecycle_configuration?: Json | null
-          lifecycle_configuration_generation?: string | null
           name?: string
           owner?: string | null
           owner_id?: string | null
           public?: boolean | null
           type?: Database["storage"]["Enums"]["buckettype"]
           updated_at?: string | null
-          versioning_status?: string
         }
         Relationships: []
       }
@@ -86598,12 +95955,9 @@ export type Database = {
       }
       objects: {
         Row: {
-          archived_at: string | null
           bucket_id: string | null
           created_at: string | null
           id: string
-          is_delete_marker: boolean
-          is_versioned: boolean
           last_accessed_at: string | null
           metadata: Json | null
           name: string | null
@@ -86615,12 +95969,9 @@ export type Database = {
           version: string | null
         }
         Insert: {
-          archived_at?: string | null
           bucket_id?: string | null
           created_at?: string | null
           id?: string
-          is_delete_marker?: boolean
-          is_versioned?: boolean
           last_accessed_at?: string | null
           metadata?: Json | null
           name?: string | null
@@ -86632,12 +95983,9 @@ export type Database = {
           version?: string | null
         }
         Update: {
-          archived_at?: string | null
           bucket_id?: string | null
           created_at?: string | null
           id?: string
-          is_delete_marker?: boolean
-          is_versioned?: boolean
           last_accessed_at?: string | null
           metadata?: Json | null
           name?: string | null
@@ -86828,7 +96176,7 @@ export type Database = {
         Returns: string
       }
       get_size_by_bucket: {
-        Args: { delete_markers?: string; noncurrent_versions?: string }
+        Args: never
         Returns: {
           bucket_id: string
           size: number
@@ -86842,7 +96190,6 @@ export type Database = {
           next_key_token?: string
           next_upload_token?: string
           prefix_param: string
-          raw_prefix_param?: string
         }
         Returns: {
           created_at: string
@@ -86853,38 +96200,28 @@ export type Database = {
       list_objects_with_delimiter: {
         Args: {
           _bucket_id: string
-          delete_markers?: string
           delimiter_param: string
           max_keys?: number
           next_token?: string
-          next_token_archived_at?: string
-          next_token_version?: string
-          noncurrent_versions?: string
           prefix_param: string
           sort_order?: string
           start_after?: string
         }
         Returns: {
-          archived_at: string
           created_at: string
           id: string
-          is_delete_marker: boolean
-          is_versioned: boolean
           last_accessed_at: string
           metadata: Json
           name: string
           updated_at: string
-          version: string
         }[]
       }
       operation: { Args: never; Returns: string }
       search: {
         Args: {
           bucketname: string
-          delete_markers?: string
           levels?: number
           limits?: number
-          noncurrent_versions?: string
           offsets?: number
           prefix: string
           search?: string
@@ -86892,22 +96229,16 @@ export type Database = {
           sortorder?: string
         }
         Returns: {
-          archived_at: string
           created_at: string
           id: string
-          is_delete_marker: boolean
-          is_versioned: boolean
           last_accessed_at: string
           metadata: Json
           name: string
           updated_at: string
-          version: string
         }[]
       }
       search_by_timestamp: {
         Args: {
-          delete_markers?: string
-          noncurrent_versions?: string
           p_bucket_id: string
           p_level: number
           p_limit: number
@@ -86916,50 +96247,36 @@ export type Database = {
           p_sort_column_after: string
           p_sort_order: string
           p_start_after: string
-          p_start_after_version?: string
         }
         Returns: {
-          archived_at: string
           created_at: string
           id: string
-          is_delete_marker: boolean
-          is_versioned: boolean
           key: string
           last_accessed_at: string
           metadata: Json
           name: string
           updated_at: string
-          version: string
         }[]
       }
       search_v2: {
         Args: {
           bucket_name: string
-          delete_markers?: string
           levels?: number
           limits?: number
-          noncurrent_versions?: string
           prefix: string
           sort_column?: string
           sort_column_after?: string
           sort_order?: string
           start_after?: string
-          start_after_archived_at?: string
-          start_after_is_continuation?: boolean
-          start_after_version?: string
         }
         Returns: {
-          archived_at: string
           created_at: string
           id: string
-          is_delete_marker: boolean
-          is_versioned: boolean
           key: string
           last_accessed_at: string
           metadata: Json
           name: string
           updated_at: string
-          version: string
         }[]
       }
     }
@@ -87119,7 +96436,12 @@ export const Constants = {
         "Tax",
         "Investments",
       ],
-      approvalDocumentType: ["purchaseOrder", "qualityDocument", "supplier"],
+      approvalDocumentType: [
+        "purchaseOrder",
+        "qualityDocument",
+        "supplier",
+        "changeOrder",
+      ],
       approvalStatus: ["Pending", "Approved", "Rejected", "Cancelled"],
       assemblyInstructionStatus: ["Draft", "Published", "Archived"],
       assemblyStepStatus: ["Todo", "Review", "Done"],
@@ -87141,6 +96463,8 @@ export const Constants = {
       ],
       changeOrderTaskStatus: ["Pending", "In Progress", "Completed", "Skipped"],
       changeOrderTypeEnum: ["Engineering", "Manufacturing", "Documentation"],
+      chargeStatus: ["Draft", "Posted", "Voided"],
+      chargeType: ["Charge", "Credit", "Payment", "Cashback", "Repayment"],
       configurationParameterDataType: [
         "text",
         "numeric",
@@ -87149,6 +96473,23 @@ export const Constants = {
         "date",
         "material",
       ],
+      contractAmendmentEffect: ["Change Date", "Next Period"],
+      contractBillingAlignment: ["Anniversary", "Calendar"],
+      contractBillingFrequency: ["Week", "Month", "Quarter", "Year"],
+      contractBillingTiming: ["Advance", "Arrears"],
+      contractInvoiceStatus: ["Planned", "Invoiced", "Billed Externally"],
+      contractLedgerEntryType: [
+        "Opening",
+        "Invoice",
+        "Recognition",
+        "Credit Memo",
+        "Void",
+      ],
+      contractRateUnit: ["Day", "Week", "Month", "Quarter", "Year"],
+      contractRenewal: ["Renew", "End"],
+      contractRevenueMethod: ["Daily", "Even Period"],
+      contractRevenueStatus: ["Planned", "Recognized", "Recognized Externally"],
+      contractRevenueType: ["One-time", "Recurring"],
       costLedgerType: [
         "Direct Cost",
         "Revaluation",
@@ -87156,6 +96497,14 @@ export const Constants = {
         "Indirect Cost",
         "Variance",
         "Total",
+      ],
+      customerContractStatus: ["Draft", "Active", "Ended"],
+      customerContractType: [
+        "New Sales",
+        "Existing",
+        "Expansion",
+        "Reactivation",
+        "Contraction",
       ],
       deadlineType: ["No Deadline", "ASAP", "Soft Deadline", "Hard Deadline"],
       demandForecastSourceType: [
@@ -87185,8 +96534,9 @@ export const Constants = {
         "Supplier",
         "Item",
         "ScrapReason",
+        "Project",
       ],
-      disposalMethod: ["Sale", "Scrapping"],
+      disposalMethod: ["Sale", "Scrapping", "Transfer to Inventory"],
       disposition: [
         "Conditional Acceptance",
         "Deviation Accepted",
@@ -87230,6 +96580,8 @@ export const Constants = {
         "Gauge Calibration Record",
         "Purchasing Request for Quote",
         "Supplier Quote",
+        "Supplier",
+        "Customer",
       ],
       documentthreadtype: [
         "nonConformance",
@@ -87264,6 +96616,24 @@ export const Constants = {
       ],
       eliminationKind: ["IC Balance", "IC Revenue"],
       employeeTypeSystemType: ["Admin", "Console Operator"],
+      enforcementRuleFamily: ["storage", "sales"],
+      enforcementRuleSurface: [
+        "receipt",
+        "shipment",
+        "stockTransfer",
+        "warehouseTransfer",
+        "inventoryAdjustment",
+        "place",
+        "pick",
+        "operationStart",
+        "operationFinish",
+        "materialIssue",
+        "materialReceive",
+        "quoteLine",
+        "salesOrderLine",
+        "salesInvoiceLine",
+      ],
+      enforcementRuleTargetType: ["item", "workCenter"],
       externalLinkDocumentType: [
         "Quote",
         "SupplierQuote",
@@ -87283,7 +96653,24 @@ export const Constants = {
         "Total Hours",
         "Total Minutes",
       ],
-      fixedAssetStatus: ["Draft", "Active", "Fully Depreciated", "Disposed"],
+      fixedAssetStatus: [
+        "Draft",
+        "Active",
+        "Fully Depreciated",
+        "Disposed",
+        "Under Construction",
+      ],
+      fixedAssetTransferSourceType: [
+        "Inventory",
+        "Job",
+        "Construction in Progress",
+        "Manual",
+      ],
+      fixedAssetTransferType: [
+        "Capitalization",
+        "Return to Inventory",
+        "Cost Adjustment",
+      ],
       fulfillmentType: ["Inventory", "Job"],
       gaugeCalibrationStatus: [
         "Pending",
@@ -87344,6 +96731,12 @@ export const Constants = {
         "Capitalization",
       ],
       inventoryCountStatus: ["Draft", "Pending", "Posted"],
+      invoiceAutomation: [
+        "Draft Only",
+        "Post",
+        "Post and Email",
+        "Post and Send via Stripe",
+      ],
       itemCostingMethod: ["Standard", "Average", "LIFO", "FIFO"],
       itemLedgerDocumentType: [
         "Sales Shipment",
@@ -87373,6 +96766,9 @@ export const Constants = {
         "Inventory Count",
         "Scrap",
         "Sales Return Shipment",
+        "Batch Merge",
+        "Asset Transfer",
+        "Rental Agreement",
       ],
       itemLedgerType: [
         "Purchase",
@@ -87456,8 +96852,21 @@ export const Constants = {
         "Sales Return Receipt",
         "Sales Return Shipment",
         "Purchase Return Shipment",
+        "Charge",
+        "Reimbursement",
+        "Maintenance Event",
+        "Revenue Recognition",
+        "Asset Transfer",
+        "Lease",
+        "Lease Run",
       ],
-      journalEntryStatus: ["Draft", "Posted", "Reversed"],
+      journalEntryStatus: [
+        "Draft",
+        "Posted",
+        "Reversed",
+        "Provisional",
+        "Superseded",
+      ],
       journalLineDocumentType: [
         "Receipt",
         "Invoice",
@@ -87481,9 +96890,33 @@ export const Constants = {
         "Non-Conformance",
         "Inbound Inspection",
         "Scrap",
+        "Batch Merge",
+        "Charge",
+        "Reimbursement",
+        "Maintenance Event",
+        "Asset Transfer",
+        "Rental Agreement",
+        "Contract",
+        "Lease",
       ],
       kanbanOutput: ["label", "qrcode", "url"],
       kanbanReplenishmentSystem: ["Buy", "Make", "Transfer"],
+      leaseEventType: ["Modification", "Termination", "Purchase"],
+      leaseLineStatus: ["Active", "Terminated", "Purchased", "Expired"],
+      leasePaymentFrequency: ["Monthly", "Quarterly", "Annual"],
+      leasePaymentStatus: ["Pending", "Invoiced", "Skipped"],
+      leasePaymentType: ["Rent", "Purchase Option", "Termination Penalty"],
+      leaseStatus: [
+        "Draft",
+        "Active",
+        "Expired",
+        "Terminated",
+        "Purchased",
+        "Cancelled",
+      ],
+      lesseeClassification: ["Operating", "Finance", "Short-Term"],
+      lessorClassification: ["Rental", "Sale", "Financing"],
+      machineState: ["Running", "Idle", "Down", "Offline"],
       macrsConvention: ["Half-Year", "Mid-Quarter"],
       macrsPropertyClass: ["3", "5", "7", "10", "15", "20", "27.5", "39"],
       maintenanceDispatchPriority: ["Low", "Medium", "High", "Critical"],
@@ -87593,6 +97026,7 @@ export const Constants = {
         "Service",
         "Consumable",
         "Fixture",
+        "Lease",
       ],
       paymentStatus: ["Draft", "Posted", "Voided"],
       paymentTermCalculationMethod: ["Net", "End of Month", "Day of Month"],
@@ -87608,8 +97042,19 @@ export const Constants = {
         "Partial",
       ],
       pickMethodSortMethod: ["Default", "FEFO", "FIFO", "LIFO"],
+      planningActionStatus: ["Open", "Dismissed", "Actioned"],
+      planningActionType: [
+        "Order",
+        "Make",
+        "Expedite",
+        "Defer",
+        "Cancel",
+        "Increase",
+        "Decrease",
+        "Release",
+      ],
       pricingRuleAmountType: ["Percentage", "Fixed"],
-      pricingRuleType: ["Discount", "Markup"],
+      pricingRuleType: ["Discount", "Markup", "Configuration"],
       procedureStatus: ["Draft", "Active", "Archived"],
       procedureStepType: [
         "Value",
@@ -87622,6 +97067,7 @@ export const Constants = {
         "Task",
         "Inspection",
       ],
+      processAbilityPolicy: ["Warn", "Block"],
       productionEventType: ["Setup", "Labor", "Machine"],
       productionQuantityType: ["Rework", "Scrap", "Production"],
       purchaseInvoiceStatus: [
@@ -87695,9 +97141,20 @@ export const Constants = {
         "Outbound Transfer",
         "Manufacturing Consumption",
         "Manufacturing Output",
+        "Rental Agreement",
       ],
       receiptStatus: ["Draft", "Pending", "Posted", "Voided"],
+      reimbursementStatus: ["Draft", "Posted", "Voided"],
+      rentalAgreementLineStatus: ["Pending", "On Rent", "Returned", "Sold"],
+      rentalAgreementStatus: ["Draft", "Active", "Closed", "Cancelled"],
+      rentalBillingCycle: ["Calendar Month", "28 Days", "Monthly"],
+      rentalBillingPeriodStatus: ["Pending", "Invoiced"],
+      rentalBillingTiming: ["Advance", "Arrears"],
+      rentalInvoiceLineType: ["Rent", "Charge", "Purchase Option"],
+      rentalRateUnit: ["Day", "Week", "Month"],
       reportViewVisibility: ["Private", "Company"],
+      revenueScheduleStatus: ["Planned", "Posted"],
+      revenueScheduleType: ["Deferral", "Accrual", "Interest", "Amortization"],
       riskRegisterType: ["Risk", "Opportunity"],
       riskSource: [
         "Customer",
@@ -87710,6 +97167,7 @@ export const Constants = {
       ],
       riskStatus: ["Open", "In Review", "Mitigating", "Closed", "Accepted"],
       role: ["customer", "employee", "supplier"],
+      runType: ["Revenue Recognition", "Lease"],
       salesInvoiceLineType: [
         "Comment",
         "Part",
@@ -87719,6 +97177,7 @@ export const Constants = {
         "Consumable",
         "Fixture",
         "Fixed Asset",
+        "Rental",
       ],
       salesInvoiceStatus: [
         "Draft",
@@ -87779,13 +97238,13 @@ export const Constants = {
         "Purchase Return Order",
         "Inbound Transfer",
         "Outbound Transfer",
+        "Rental Agreement",
       ],
       shipmentStatus: ["Draft", "Pending", "Posted", "Voided"],
       shippingCarrier: ["UPS", "FedEx", "USPS", "DHL", "Other"],
       sourcingType: ["Specified", "Drop Ship", "Ship from Inventory"],
       ssoDomainStatus: ["pending", "verified"],
       stockTransferStatus: ["Draft", "Released", "In Progress", "Completed"],
-      storageRuleTargetType: ["item", "workCenter"],
       supersessionMode: [
         "Consume First",
         "Prefer New",
@@ -87852,19 +97311,6 @@ export const Constants = {
       ],
       trainingStatus: ["Draft", "Active", "Archived"],
       trainingType: ["Mandatory", "Optional"],
-      transactionSurface: [
-        "receipt",
-        "shipment",
-        "stockTransfer",
-        "warehouseTransfer",
-        "inventoryAdjustment",
-        "place",
-        "pick",
-        "operationStart",
-        "operationFinish",
-        "materialIssue",
-        "materialReceive",
-      ],
       warehouseTransferStatus: [
         "Draft",
         "To Ship and Receive",

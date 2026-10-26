@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Carbon (github.com/crbnos/carbon). Modified or adapted versions of this file,
+// including ports, remain AGPLv3; serving them over a network requires releasing their source.
+
 /* Single source of truth for status enum → UI color across Carbon. The ERP renders
  * these via `@carbon/react`'s <Status color> (and Badge variants); the docs site renders
  * a colored dot from the same map, so the documentation can't drift from the app.
@@ -61,6 +65,22 @@ export const JOB_OPERATION_STATUS_COLOR_MAP = {
 // done=green) so a batch reads the same as the jobs it dispatches. "Released"
 // is a display alias for Active (BatchStatus rewrites the label) so consumers
 // that render the display name — the docs StatusFlow — resolve the same blue.
+/* assemblyInstruction statuses (AssemblyInstructionStatus.tsx): an editable Draft is gray, the
+ * active Published version green, a superseded Archived version red. */
+export const ASSEMBLY_INSTRUCTION_STATUS_COLOR_MAP = {
+  Draft: "gray",
+  Published: "green",
+  Archived: "red"
+} as const satisfies Record<string, StatusColor>;
+
+/* assemblyInstructionStep statuses (production.models.ts `assemblyStepStatuses`): a step
+ * not started yet is gray, one waiting on a reviewer is yellow, a finished one is green. */
+export const ASSEMBLY_STEP_STATUS_COLOR_MAP = {
+  Todo: "gray",
+  Review: "yellow",
+  Done: "green"
+} as const satisfies Record<string, StatusColor>;
+
 export const BATCH_STATUS_COLOR_MAP = {
   Planned: "yellow",
   Active: "blue",
@@ -147,9 +167,34 @@ export const MAINTENANCE_DISPATCH_STATUS_COLOR_MAP = {
 
 export const FIXED_ASSET_STATUS_COLOR_MAP = {
   Draft: "gray",
+  "Under Construction": "blue",
   Active: "green",
   "Fully Depreciated": "yellow",
   Disposed: "red"
+} as const satisfies Record<string, StatusColor>;
+
+// Customer contract badges. The palette has no muted token; an Ended
+// contract is gray like a Draft, matching the people table's Inactive.
+export const CUSTOMER_CONTRACT_STATUS_COLOR_MAP = {
+  Draft: "gray",
+  Active: "green",
+  Ended: "gray"
+} as const satisfies Record<string, StatusColor>;
+
+// A contract revenue month (contractRevenueStatus). Recognized externally is
+// blue like a contract invoice that was Billed Externally.
+export const CUSTOMER_CONTRACT_REVENUE_STATUS_COLOR_MAP = {
+  Planned: "gray",
+  Recognized: "green",
+  "Recognized Externally": "blue"
+} as const satisfies Record<string, StatusColor>;
+
+// Mirrors RentalStatus.tsx (sales/ui/Rentals) — the agreement header statuses.
+export const RENTAL_AGREEMENT_STATUS_COLOR_MAP = {
+  Draft: "gray",
+  Active: "blue",
+  Closed: "green",
+  Cancelled: "red"
 } as const satisfies Record<string, StatusColor>;
 
 export const TRACKED_ENTITY_STATUS_COLOR_MAP = {
@@ -214,7 +259,9 @@ export const ISSUE_STATUS_COLOR_MAP = {
 export const JOURNAL_ENTRY_STATUS_COLOR_MAP = {
   Draft: "gray",
   Posted: "green",
-  Reversed: "red"
+  Reversed: "red",
+  Provisional: "yellow",
+  Superseded: "gray"
 } as const satisfies Record<string, StatusColor>;
 
 export const PERIOD_CLOSE_STATUS_COLOR_MAP = {
@@ -358,6 +405,8 @@ export const statusColorMaps = {
   job: JOB_STATUS_COLOR_MAP,
   jobOperation: JOB_OPERATION_STATUS_COLOR_MAP,
   jobOperationBatch: BATCH_STATUS_COLOR_MAP,
+  assemblyInstruction: ASSEMBLY_INSTRUCTION_STATUS_COLOR_MAP,
+  assemblyStep: ASSEMBLY_STEP_STATUS_COLOR_MAP,
   quote: QUOTE_STATUS_COLOR_MAP,
   salesOrder: SALES_STATUS_COLOR_MAP,
   salesReturnOrder: SALES_RETURN_ORDER_STATUS_COLOR_MAP,
@@ -374,6 +423,8 @@ export const statusColorMaps = {
   pickingListLine: PICKING_LIST_LINE_STATUS_COLOR_MAP,
   maintenanceDispatch: MAINTENANCE_DISPATCH_STATUS_COLOR_MAP,
   fixedAsset: FIXED_ASSET_STATUS_COLOR_MAP,
+  customerContract: CUSTOMER_CONTRACT_STATUS_COLOR_MAP,
+  rentalAgreement: RENTAL_AGREEMENT_STATUS_COLOR_MAP,
   trackedEntity: TRACKED_ENTITY_STATUS_COLOR_MAP,
   salesInvoice: SALES_INVOICE_STATUS_COLOR_MAP,
   purchaseInvoice: PURCHASE_INVOICE_STATUS_COLOR_MAP,

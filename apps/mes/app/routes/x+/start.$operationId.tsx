@@ -1,25 +1,35 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Carbon (github.com/crbnos/carbon). Modified or adapted versions of this file,
+// including ports, remain AGPLv3; serving them over a network requires releasing their source.
+
 import { error } from "@carbon/auth";
 import { requirePermissions } from "@carbon/auth/auth.server";
 import { getCarbonServiceRole } from "@carbon/auth/client.server";
+import { rejectCrossSiteNavigation } from "@carbon/auth/middleware/security.server";
 import { flash } from "@carbon/auth/session.server";
 import { activeJobStatuses } from "@carbon/database";
-import {
-  evaluateLinesForSurface,
-  isBlocked
-} from "@carbon/ee/storage-rules.server";
-import { datetime } from "@carbon/utils";
+import { evaluateLinesForSurface, isBlocked } from "@carbon/ee/rules.server";
+import { getLogger } from "@carbon/logger";
+import { datetime, redirect } from "@carbon/utils";
 import type { LoaderFunctionArgs } from "react-router";
-import { redirect } from "react-router";
+import { getDatabaseClient } from "~/services/database.server";
 import { getWorkCenterWithBlockingStatus } from "~/services/maintenance.service";
 import {
+  abilityBlockRefusal,
   getNextIncompleteSerialEntity,
-  getOperationEligibility,
   getTrackedEntitiesByMakeMethodId,
+  postEndedProductionEvents,
+  startMachineProductionEvent,
   startProductionEvent
 } from "~/services/operations.service";
+import { OUTSIDE_PROCESSING_REFUSAL } from "~/utils/operationView";
 import { path } from "~/utils/path";
 
+const logger = getLogger("mes", "start-operation");
+
 export async function loader({ request, params }: LoaderFunctionArgs) {
+  // Writes on GET: a link on another site must not trigger it.
+  rejectCrossSiteNavigation(request);
   const { userId, companyId } = await requirePermissions(request, {});
   const { operationId } = params;
   if (!operationId) throw new Error("Operation ID is required");
@@ -40,6 +50,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
     .from("jobOperation")
     .select("*")
     .eq("id", operationId)
+    .eq("companyId", companyId)
     .maybeSingle();
 
   if (jobOperation.error || !jobOperation.data) {
@@ -53,12 +64,25 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
   }
 
   if (jobOperation.data?.companyId !== companyId) {
+    logger.warn("Job operation does not belong to company", {
+      companyId,
+      operationId
+    });
     throw redirect(
       path.to.operations,
       await flash(
         request,
         error("You are not authorized to start this operation", "Unauthorized")
       )
+    );
+  }
+
+  // Subcontracted work runs at the supplier and is never startable here. Like
+  // the floor rule below, this must run BEFORE the timer re-open.
+  if (jobOperation.data.operationType === "Outside Processing") {
+    throw redirect(
+      path.to.operations,
+      await flash(request, error(null, OUTSIDE_PROCESSING_REFUSAL))
     );
   }
 
@@ -138,20 +162,17 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
     }
   }
 
-  // Check if the operator is qualified for the operation's required abilities
-  const eligibility = await getOperationEligibility(serviceRole, {
+  // Refuse when the process requires an ability the operator lacks and its
+  // policy is Block
+  const abilityRefusal = await abilityBlockRefusal(serviceRole, {
     operationId,
     employeeId: userId,
     companyId
   });
-
-  if (!eligibility.eligible) {
+  if (abilityRefusal) {
     throw redirect(
       path.to.operation(operationId),
-      await flash(
-        request,
-        error(null, eligibility.reason ?? "Not qualified to start operation")
-      )
+      await flash(request, error(null, abilityRefusal))
     );
   }
 
@@ -159,7 +180,8 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
   if (!trackedEntityId && jobOperation.data.jobMakeMethodId) {
     const trackedEntities = await getTrackedEntitiesByMakeMethodId(
       serviceRole,
-      jobOperation.data.jobMakeMethodId
+      jobOperation.data.jobMakeMethodId,
+      companyId
     );
 
     // Start the next incomplete serial unit for this operation (createdAt asc),
@@ -218,37 +240,42 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
     }
   }
 
-  // If type is Machine, cancel all setup and labor production events for this operation
-  if (type === "Machine") {
-    const currentTime = datetime.timestamp();
-
-    await serviceRole
-      .from("productionEvent")
-      .update({
-        endTime: currentTime,
-        updatedAt: currentTime,
-        updatedBy: userId
-      })
-      .eq("jobOperationId", operationId)
-      .in("type", ["Setup", "Labor"])
-      .is("endTime", null);
+  // A machine has one machine time: a Machine start ends every open Machine
+  // event on the work center (from any operator or the sensor) and, with a
+  // device, the open unattributed time, in one transaction with the new
+  // event. That write skips RLS, so its permission is checked first.
+  const machineWorkCenterId =
+    type === "Machine" ? jobOperation.data.workCenterId : null;
+  if (machineWorkCenterId) {
+    await requirePermissions(request, { create: "production" });
   }
 
-  const startEvent = await startProductionEvent(
-    serviceRole,
-    {
-      type,
-      jobOperationId: operationId,
-      workCenterId: jobOperation.data.workCenterId!,
-      startTime: datetime.timestamp(),
-      employeeId: userId,
-      companyId,
-      createdBy: userId
-    },
-    trackedEntityId || undefined,
-    undefined,
-    "mes_qr"
-  );
+  const db = getDatabaseClient();
+  const event = {
+    type,
+    jobOperationId: operationId,
+    workCenterId: jobOperation.data.workCenterId!,
+    startTime: datetime.timestamp(),
+    employeeId: userId,
+    companyId,
+    createdBy: userId
+  };
+  const startEvent = machineWorkCenterId
+    ? await startMachineProductionEvent(
+        db,
+        serviceRole,
+        { ...event, workCenterId: machineWorkCenterId },
+        trackedEntityId || undefined,
+        undefined,
+        "mes_qr"
+      )
+    : await startProductionEvent(
+        serviceRole,
+        event,
+        trackedEntityId || undefined,
+        undefined,
+        "mes_qr"
+      );
 
   if (startEvent.error) {
     throw redirect(
@@ -256,6 +283,37 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
       await flash(request, error(startEvent.error, "Failed to start event"))
     );
   }
+
+  // A Machine start ends this operation's Setup and Labor timers, once the
+  // Machine time is running. Every event ended here is posted.
+  const ended =
+    startEvent.data && "endedEventIds" in startEvent.data
+      ? [...startEvent.data.endedEventIds]
+      : [];
+  if (type === "Machine") {
+    const endTime = datetime.timestamp();
+    const setupAndLabor = await serviceRole
+      .from("productionEvent")
+      .update({ endTime, updatedAt: endTime, updatedBy: userId })
+      .eq("jobOperationId", operationId)
+      .eq("companyId", companyId)
+      .in("type", ["Setup", "Labor"])
+      .is("endTime", null)
+      .select("id");
+    if (setupAndLabor.error) {
+      logger.error("Failed to end Setup and Labor at a Machine start", {
+        companyId,
+        operationId,
+        error: setupAndLabor.error
+      });
+    }
+    for (const row of setupAndLabor.data ?? []) ended.push(row.id);
+  }
+  await postEndedProductionEvents(serviceRole, {
+    companyId,
+    userId,
+    ids: ended
+  });
 
   throw redirect(path.to.operation(operationId));
 }

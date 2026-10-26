@@ -1,3 +1,8 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Carbon (github.com/crbnos/carbon). Modified or adapted versions of this file,
+// including ports, remain AGPLv3; serving them over a network requires releasing their source.
+
+import { useAction } from "@carbon/query";
 import {
   Badge,
   BottomSheet,
@@ -18,6 +23,7 @@ import {
   Spinner,
   useDisclosure,
   useMode,
+  useViewport,
   VStack
 } from "@carbon/react";
 import { Trans, useLingui } from "@lingui/react/macro";
@@ -46,11 +52,16 @@ import {
   LuX
 } from "react-icons/lu";
 import { useFetcher } from "react-router";
+import { AbilityWarning } from "~/components/AbilityWarning";
 import { QualityIssueModal } from "~/components/JobOperation/components/QualityIssueModal";
 import { QuantityModal } from "~/components/JobOperation/components/QuantityModal";
 import { ReworkModal } from "~/components/JobOperation/components/ReworkModal";
+import { MesAppBar } from "~/components/MesAppBar";
+import { useMesBottomBar } from "~/components/MesBottomBar";
 import { useUser } from "~/hooks";
+import type { AbilityShortfall } from "~/services/operations.service";
 import type {
+  InspectionGauge,
   InspectionMeasurement,
   Inspection as InspectionRow,
   InspectionSample,
@@ -61,6 +72,7 @@ import type {
   ProductionEvent,
   TrackedEntity
 } from "~/services/types";
+import { OriginInput, useOrigin } from "~/utils/origin";
 import { path } from "~/utils/path";
 import type { AllocatableUnit, FailedFeatureSummary } from "./DispositionModal";
 import DispositionModal from "./DispositionModal";
@@ -96,11 +108,16 @@ type DrawingBalloonRow = {
   pageNumber: number;
   xCoordinate: number;
   yCoordinate: number;
+  regionX: number;
+  regionY: number;
+  regionWidth: number;
+  regionHeight: number;
 };
 
 type WorkType = "Setup" | "Labor" | "Machine";
 
 type InspectionViewProps = {
+  abilityWarning?: AbilityShortfall | null;
   operationId: string;
   job: Job;
   operation: OperationWithDetails;
@@ -115,6 +132,10 @@ type InspectionViewProps = {
   samples: InspectionSample[];
   features: InspectionSamplingPlan[];
   measurements: InspectionMeasurement[];
+  // Active gauges, and the ones most recently recorded at this operation's
+  // work center, newest first.
+  gauges: InspectionGauge[];
+  recentGaugeIds: string[];
   balloons: DrawingBalloonRow[];
   documentName: string | null;
   pdfUrl: string | null;
@@ -137,6 +158,7 @@ type InspectionViewProps = {
 // Accept/Reject disposition) in the MES AssemblyView shell, with the standard
 // shop-floor actions (timer, complete, scrap, rework, quality issue).
 export function InspectionView({
+  abilityWarning,
   operationId,
   job,
   operation,
@@ -144,6 +166,8 @@ export function InspectionView({
   samples,
   features,
   measurements,
+  gauges,
+  recentGaugeIds,
   balloons,
   documentName,
   pdfUrl,
@@ -157,7 +181,10 @@ export function InspectionView({
   linkedProductionQuantity,
   jobId
 }: InspectionViewProps) {
+  const bottomBarRef = useMesBottomBar();
   const { t } = useLingui();
+  const origin = useOrigin();
+  const { isPhone } = useViewport();
   const user = useUser();
   const mode = useMode();
 
@@ -349,6 +376,11 @@ export function InspectionView({
       inspection.status === "Failed" ||
       inspection.status === "Partial");
 
+  // The process requires an ability this operator lacks and its policy is
+  // Block: the lot is read-only for them, as if closed. The routes refuse too.
+  const abilityBlocked = abilityWarning?.policy === "Block";
+  const isLocked = lotClosed || abilityBlocked;
+
   // Outcome bookkeeping, mirrored from the disposition route's server-side
   // buckets (which recompute and clamp — these drive the header affordances).
   const opAttrKey = `Operation ${operationId}`;
@@ -411,6 +443,7 @@ export function InspectionView({
         Math.max(0, passes - linkedProductionQuantity),
         Math.max(0, opRemaining)
       );
+  const showCompletePassed = !isLocked && completablePassed > 0;
 
   // What Accept will complete: the open remainder, minus failed units.
   const acceptRemaining = isSerial
@@ -446,7 +479,7 @@ export function InspectionView({
 
   // Partial is the terminal mixed close — only once every unit has a verdict.
   const canPartial =
-    !lotClosed && inspected >= inspection.lotSize && passes > 0 && fails > 0;
+    !isLocked && inspected >= inspection.lotSize && passes > 0 && fails > 0;
 
   // Serial lots build their sample columns by scanning tracked entities. The
   // header "Add Sample" button stays primary until the plan's sample size is
@@ -456,11 +489,11 @@ export function InspectionView({
   const hasAutoOpenedScanRef = useRef(false);
   useEffect(() => {
     if (hasAutoOpenedScanRef.current) return;
-    if (isSerial && samples.length === 0 && !lotClosed) {
+    if (isSerial && samples.length === 0 && !isLocked) {
       hasAutoOpenedScanRef.current = true;
       scannerDisclosure.onOpen();
     }
-  }, [isSerial, samples.length, lotClosed, scannerDisclosure]);
+  }, [isSerial, samples.length, isLocked, scannerDisclosure]);
 
   const maxSampleSize = hasFeatures
     ? Math.max(1, ...liveFeatures.map((f) => f.sampleSize))
@@ -486,14 +519,14 @@ export function InspectionView({
       const counts = featureCounts.get(feature.inspectionFeatureId);
       return counts != null && counts.failed >= feature.rejectionNumber;
     });
-    canAccept = !lotClosed && allFeaturesSatisfied;
-    canReject = !lotClosed && (anyFeatureRejectable || fails > 0);
+    canAccept = !isLocked && allFeaturesSatisfied;
+    canReject = !isLocked && (anyFeatureRejectable || fails > 0);
   } else {
     canAccept =
-      !lotClosed &&
+      !isLocked &&
       inspected >= inspection.sampleSize &&
       fails <= inspection.acceptanceNumber;
-    canReject = !lotClosed && fails > inspection.acceptanceNumber;
+    canReject = !isLocked && fails > inspection.acceptanceNumber;
   }
 
   const failedFeatureSummary = useMemo<FailedFeatureSummary[]>(() => {
@@ -536,6 +569,10 @@ export function InspectionView({
         pageNumber: b.pageNumber,
         xCoordinate: b.xCoordinate,
         yCoordinate: b.yCoordinate,
+        regionX: b.regionX,
+        regionY: b.regionY,
+        regionWidth: b.regionWidth,
+        regionHeight: b.regionHeight,
         label: labelByFeatureId.get(b.inspectionFeatureId) ?? ""
       }));
   }, [balloons, liveFeatures]);
@@ -592,244 +629,312 @@ export function InspectionView({
     mode === "dark" ? user.company.logoDarkIcon : user.company.logoLightIcon;
 
   return (
-    <div className="relative flex h-screen w-full flex-col overflow-hidden bg-background text-foreground">
+    <div className="relative flex h-dvh w-full flex-col overflow-hidden bg-background text-foreground">
       {/* ── HEADER ── */}
-      <header className="flex h-[52px] shrink-0 items-center bg-card border-b border-border">
-        <SidebarTrigger className="h-full w-auto shrink-0 rounded-none border-r border-border px-2 hover:bg-accent md:px-4" />
-        {companyLogo ? (
-          <div className="hidden h-full shrink-0 items-center border-r border-border px-4 sm:flex">
-            <img
-              src={companyLogo}
-              alt={`${user.company.name} logo`}
-              className="h-7 w-auto max-w-[140px] object-contain"
+      <MesAppBar
+        title={inspection.inspectionId}
+        subtitle={origin.label}
+        back={{ to: origin.to }}
+        actions={
+          <>
+            {workTypes.map((wt) => (
+              <TimerControl
+                key={wt}
+                operationId={operationId}
+                workCenterId={operation.workCenterId ?? undefined}
+                openEvent={openEventForWorkType(wt)}
+                workType={wt}
+                startDisabled={abilityBlocked}
+              />
+            ))}
+            <IconButton
+              aria-label={t`More actions`}
+              variant="ghost"
+              size="lg"
+              icon={<LuEllipsisVertical />}
+              onClick={actionsSheet.onOpen}
             />
-          </div>
-        ) : null}
-
-        <div className="flex h-full min-w-0 items-center gap-2 border-r border-border px-3 md:px-5">
-          <span className="truncate text-sm font-semibold">
-            {inspection.inspectionId}
-          </span>
-          <Badge variant={statusBadgeVariant}>{inspection.status}</Badge>
-          <span className="hidden text-muted-foreground md:inline">·</span>
-          <span className="hidden truncate text-sm text-foreground/90 md:inline">
-            {inspection.itemReadableId ?? job?.itemReadableIdWithRevision}
-          </span>
-          {operation?.description ? (
-            <>
-              <span className="hidden text-muted-foreground lg:inline">·</span>
-              <span className="hidden truncate text-sm text-foreground/90 lg:inline">
-                {operation.description}
-              </span>
-            </>
+          </>
+        }
+      />
+      {/* Phones use the app bar above; one header mounts so its timers do too. */}
+      {!isPhone && (
+        <header className="flex h-[52px] shrink-0 items-center bg-card border-b border-border max-md:hidden">
+          <SidebarTrigger className="h-full w-auto shrink-0 rounded-none border-r border-border px-2 hover:bg-accent md:px-4" />
+          {companyLogo ? (
+            <div className="hidden h-full shrink-0 items-center border-r border-border px-4 sm:flex">
+              <img
+                src={companyLogo}
+                alt={`${user.company.name} logo`}
+                className="h-7 w-auto max-w-[140px] object-contain"
+              />
+            </div>
           ) : null}
-        </div>
 
-        <div className="flex-1" />
+          <div className="flex h-full min-w-0 items-center gap-2 border-r border-border px-3 md:px-5">
+            <span className="truncate text-sm font-semibold">
+              {inspection.inspectionId}
+            </span>
+            <Badge variant={statusBadgeVariant}>{inspection.status}</Badge>
+            <span className="hidden text-muted-foreground md:inline">·</span>
+            <span className="hidden truncate text-sm text-foreground/90 md:inline">
+              {inspection.itemReadableId ?? job?.itemReadableIdWithRevision}
+            </span>
+            {operation?.description ? (
+              <>
+                <span className="hidden text-muted-foreground lg:inline">
+                  ·
+                </span>
+                <span className="hidden truncate text-sm text-foreground/90 lg:inline">
+                  {operation.description}
+                </span>
+              </>
+            ) : null}
+          </div>
 
-        {isSerial && !lotClosed ? (
+          <div className="flex-1" />
+
+          {isSerial && !isLocked ? (
+            <button
+              type="button"
+              onClick={scannerDisclosure.onOpen}
+              className={cn(
+                "hidden h-full shrink-0 items-center gap-1 border-l border-border px-2 text-sm font-medium transition-colors hover:bg-accent active:scale-[0.98] md:gap-2 md:px-4 lg:flex",
+                !allSamplesLoaded && "text-primary"
+              )}
+            >
+              <LuScan className="size-4" />
+              <Trans>Add Sample</Trans>
+            </button>
+          ) : null}
+          {!isLocked && completablePassed > 0 ? (
+            <CompletePassedButton
+              inspectionId={inspection.id}
+              operationId={operationId}
+              count={completablePassed}
+              eventIds={eventIds}
+            />
+          ) : null}
           <button
             type="button"
-            onClick={scannerDisclosure.onOpen}
-            className={cn(
-              "hidden h-full shrink-0 items-center gap-1 border-l border-border px-2 text-sm font-medium transition-colors hover:bg-accent active:scale-[0.98] md:gap-2 md:px-4 lg:flex",
-              !allSamplesLoaded && "text-primary"
-            )}
+            onClick={rejectDisclosure.onOpen}
+            disabled={!canReject}
+            className="flex h-full shrink-0 items-center gap-1 border-l border-border px-2 text-sm font-medium text-red-600 transition-colors hover:bg-accent active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 dark:text-red-400 md:gap-2 md:px-4"
           >
-            <LuScan className="size-4" />
-            <Trans>Add Sample</Trans>
-          </button>
-        ) : null}
-        {!lotClosed && completablePassed > 0 ? (
-          <CompletePassedButton
-            inspectionId={inspection.id}
-            operationId={operationId}
-            count={completablePassed}
-            eventIds={eventIds}
-          />
-        ) : null}
-        <button
-          type="button"
-          onClick={rejectDisclosure.onOpen}
-          disabled={!canReject}
-          className="flex h-full shrink-0 items-center gap-1 border-l border-border px-2 text-sm font-medium text-red-600 transition-colors hover:bg-accent active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 dark:text-red-400 md:gap-2 md:px-4"
-        >
-          <LuX className="size-4" />
-          <span className="hidden sm:inline">
-            <Trans>Reject</Trans>
-          </span>
-        </button>
-        {canPartial ? (
-          <button
-            type="button"
-            onClick={partialDisclosure.onOpen}
-            className="flex h-full shrink-0 items-center gap-1 border-l border-border px-2 text-sm font-medium text-amber-600 transition-colors hover:bg-accent active:scale-[0.98] dark:text-amber-400 md:gap-2 md:px-4"
-          >
-            <LuContrast className="size-4" />
+            <LuX className="size-4" />
             <span className="hidden sm:inline">
-              <Trans>Partial</Trans>
+              <Trans>Reject</Trans>
             </span>
           </button>
-        ) : null}
-        <button
-          type="button"
-          onClick={acceptDisclosure.onOpen}
-          disabled={!canAccept}
-          className="flex h-full shrink-0 items-center gap-1 border-l border-border px-2 text-sm font-medium text-emerald-600 transition-colors hover:bg-accent active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 dark:text-emerald-400 md:gap-2 md:px-4"
-        >
-          <LuCheck className="size-4" />
-          <span className="hidden sm:inline">
-            <Trans>Accept</Trans>
-          </span>
-        </button>
-        <button
-          type="button"
-          aria-label={t`More actions`}
-          onClick={actionsSheet.onOpen}
-          className="flex h-full shrink-0 items-center justify-center border-l border-border px-2 transition-colors hover:bg-accent active:scale-[0.98] md:px-4"
-        >
-          <LuEllipsisVertical className="size-4" />
-        </button>
-
-        {workTypes.map((wt) => (
-          <TimerControl
-            key={wt}
-            operationId={operationId}
-            workCenterId={operation.workCenterId ?? undefined}
-            openEvent={openEventForWorkType(wt)}
-            workType={wt}
-          />
-        ))}
-      </header>
-
-      {/* ── META BAR ── */}
-      <div className="flex h-9 shrink-0 items-center gap-3 overflow-x-auto bg-card border-b border-border px-5 scrollbar-hide">
-        <span className="whitespace-nowrap text-xs text-muted-foreground tabular-nums">
-          {inspected} / {inspection.sampleSize} <Trans>inspected</Trans> · Ac{" "}
-          {inspection.acceptanceNumber} · Re {inspection.rejectionNumber}
-          {inspection.codeLetter ? ` · ${inspection.codeLetter}` : ""}
-        </span>
-        <span className="whitespace-nowrap text-xs text-muted-foreground">
-          {planSummary}
-        </span>
-        <span className="whitespace-nowrap text-xs text-muted-foreground tabular-nums">
-          <Trans>Lot</Trans> {inspection.lotSize}
-        </span>
-        {documentName ? (
-          <span className="truncate text-xs text-muted-foreground">
-            {documentName}
-          </span>
-        ) : null}
-        <div className="flex-1" />
-        <span className="whitespace-nowrap text-xs text-muted-foreground tabular-nums">
-          <Trans>Completed</Trans> {productionQuantities.production} ·{" "}
-          <Trans>Scrap</Trans> {productionQuantities.scrap} ·{" "}
-          <Trans>Rework</Trans> {productionQuantities.rework}
-        </span>
-      </div>
-
-      {/* ── BODY ── */}
-      {showDrawing ? (
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 pb-4 pt-2">
-          <div
-            ref={stackRef}
-            className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden"
-          >
-            {/* PDF viewer — pinned height while the features table is expanded */}
-            <div
-              className={cn(
-                "flex min-h-0 min-w-full flex-col overflow-hidden rounded-lg border bg-muted",
-                gridExpanded ? "shrink-0" : "min-h-[220px] flex-1"
-              )}
-              style={{
-                ...(gridExpanded ? { height: pdfPaneHeightPx } : undefined),
-                minWidth: "100%"
-              }}
+          {canPartial ? (
+            <button
+              type="button"
+              onClick={partialDisclosure.onOpen}
+              className="flex h-full shrink-0 items-center gap-1 border-l border-border px-2 text-sm font-medium text-amber-600 transition-colors hover:bg-accent active:scale-[0.98] dark:text-amber-400 md:gap-2 md:px-4"
             >
-              <ClientOnly
-                fallback={
-                  <div className="flex h-full items-center justify-center">
-                    <Spinner />
-                  </div>
+              <LuContrast className="size-4" />
+              <span className="hidden sm:inline">
+                <Trans>Partial</Trans>
+              </span>
+            </button>
+          ) : null}
+          <button
+            type="button"
+            onClick={acceptDisclosure.onOpen}
+            disabled={!canAccept}
+            className="flex h-full shrink-0 items-center gap-1 border-l border-border px-2 text-sm font-medium text-emerald-600 transition-colors hover:bg-accent active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 dark:text-emerald-400 md:gap-2 md:px-4"
+          >
+            <LuCheck className="size-4" />
+            <span className="hidden sm:inline">
+              <Trans>Accept</Trans>
+            </span>
+          </button>
+          <button
+            type="button"
+            aria-label={t`More actions`}
+            onClick={actionsSheet.onOpen}
+            className="flex h-full shrink-0 items-center justify-center border-l border-border px-2 transition-colors hover:bg-accent active:scale-[0.98] md:px-4"
+          >
+            <LuEllipsisVertical className="size-4" />
+          </button>
+
+          {workTypes.map((wt) => (
+            <TimerControl
+              key={wt}
+              operationId={operationId}
+              workCenterId={operation.workCenterId ?? undefined}
+              openEvent={openEventForWorkType(wt)}
+              workType={wt}
+              startDisabled={abilityBlocked}
+            />
+          ))}
+        </header>
+      )}
+
+      {abilityWarning && (
+        <div className="shrink-0 px-4 pt-3">
+          <AbilityWarning warning={abilityWarning} />
+        </div>
+      )}
+
+      {/* Phones: the meta bar scrolls away with the body. */}
+      <div className="contents max-md:flex max-md:min-h-0 max-md:flex-1 max-md:flex-col max-md:overflow-y-auto">
+        {/* ── META BAR ── */}
+        <div className="flex h-9 shrink-0 items-center gap-3 overflow-x-auto bg-card border-b border-border px-5 scrollbar-hide max-md:h-auto max-md:flex-wrap max-md:gap-x-3 max-md:gap-y-1 max-md:px-4 max-md:py-1.5">
+          <Badge variant={statusBadgeVariant} className="shrink-0 md:hidden">
+            {inspection.status}
+          </Badge>
+          <span className="whitespace-nowrap text-xs text-muted-foreground tabular-nums">
+            {inspected} / {inspection.sampleSize} <Trans>inspected</Trans> · Ac{" "}
+            {inspection.acceptanceNumber} · Re {inspection.rejectionNumber}
+            {inspection.codeLetter ? ` · ${inspection.codeLetter}` : ""}
+          </span>
+          <span className="whitespace-nowrap text-xs text-muted-foreground">
+            {planSummary}
+          </span>
+          <span className="whitespace-nowrap text-xs text-muted-foreground tabular-nums">
+            <Trans>Lot</Trans> {inspection.lotSize}
+          </span>
+          {documentName ? (
+            <span className="truncate text-xs text-muted-foreground max-md:max-w-full">
+              {documentName}
+            </span>
+          ) : null}
+          <div className="flex-1 max-md:hidden" />
+          <span className="whitespace-nowrap text-xs text-muted-foreground tabular-nums max-md:order-first">
+            <Trans>Completed</Trans> {productionQuantities.production} ·{" "}
+            <Trans>Scrap</Trans> {productionQuantities.scrap} ·{" "}
+            <Trans>Rework</Trans> {productionQuantities.rework}
+          </span>
+        </div>
+
+        {/* ── BODY ── */}
+        {showDrawing ? (
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 pb-4 pt-2">
+            <div
+              ref={stackRef}
+              className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden"
+            >
+              {/* PDF viewer — pinned height while the features table is expanded */}
+              <div
+                className={cn(
+                  "flex min-h-0 min-w-full flex-col overflow-hidden rounded-lg border bg-muted",
+                  gridExpanded ? "shrink-0" : "min-h-[220px] flex-1"
+                )}
+                style={{
+                  ...(gridExpanded ? { height: pdfPaneHeightPx } : undefined),
+                  minWidth: "100%"
+                }}
+              >
+                <ClientOnly
+                  fallback={
+                    <div className="flex h-full items-center justify-center">
+                      <Spinner />
+                    </div>
+                  }
+                >
+                  {() => (
+                    <Suspense
+                      fallback={
+                        <div className="flex h-full items-center justify-center">
+                          <Spinner />
+                        </div>
+                      }
+                    >
+                      <InspectionDrawingPane
+                        pdfUrl={pdfUrl!}
+                        balloons={drawingBalloons}
+                        activeFeatureId={activeFeatureId}
+                        onBalloonClick={setActiveFeatureId}
+                      />
+                    </Suspense>
+                  )}
+                </ClientOnly>
+              </div>
+
+              {gridExpanded ? (
+                <div
+                  role="separator"
+                  aria-orientation="horizontal"
+                  aria-label={t`Drag to resize drawing and characteristics`}
+                  aria-valuenow={Math.round(pdfPaneHeightPx)}
+                  className={cn(
+                    "group flex h-2 shrink-0 cursor-row-resize touch-none items-center justify-center rounded-md px-2 hover:bg-muted/80",
+                    isResizingSplit && "bg-muted"
+                  )}
+                  onMouseDown={onSplitResizeMouseDown}
+                >
+                  <span className="h-1 w-14 shrink-0 rounded-full bg-muted-foreground/40 group-hover:bg-muted-foreground/65" />
+                </div>
+              ) : null}
+
+              {/* Features table — collapsible bottom panel */}
+              <div
+                className={cn(
+                  "flex min-w-0 flex-col overflow-hidden rounded-lg border bg-card",
+                  gridExpanded ? "min-h-0 flex-1" : "max-h-[14rem] shrink-0"
+                )}
+                style={
+                  gridExpanded && stackHeightPx > 0
+                    ? { minHeight: stackHeightPx * 0.5 }
+                    : undefined
                 }
               >
-                {() => (
-                  <Suspense
-                    fallback={
-                      <div className="flex h-full items-center justify-center">
-                        <Spinner />
-                      </div>
+                <div className="flex min-h-10 flex-shrink-0 items-center justify-between gap-2 border-b border-border px-3 py-2">
+                  <span className="truncate text-sm font-medium text-foreground">
+                    {t`Characteristics`}
+                  </span>
+                  <IconButton
+                    type="button"
+                    variant="ghost"
+                    aria-expanded={gridExpanded}
+                    aria-label={
+                      gridExpanded
+                        ? t`Collapse characteristics table`
+                        : t`Expand characteristics table`
                     }
-                  >
-                    <InspectionDrawingPane
-                      pdfUrl={pdfUrl!}
-                      balloons={drawingBalloons}
-                      activeFeatureId={activeFeatureId}
-                      onBalloonClick={setActiveFeatureId}
-                    />
-                  </Suspense>
-                )}
-              </ClientOnly>
-            </div>
-
-            {gridExpanded ? (
-              <div
-                role="separator"
-                aria-orientation="horizontal"
-                aria-label={t`Drag to resize drawing and features`}
-                aria-valuenow={Math.round(pdfPaneHeightPx)}
-                className={cn(
-                  "group flex h-2 shrink-0 cursor-row-resize touch-none items-center justify-center rounded-md px-2 hover:bg-muted/80",
-                  isResizingSplit && "bg-muted"
-                )}
-                onMouseDown={onSplitResizeMouseDown}
-              >
-                <span className="h-1 w-14 shrink-0 rounded-full bg-muted-foreground/40 group-hover:bg-muted-foreground/65" />
-              </div>
-            ) : null}
-
-            {/* Features table — collapsible bottom panel */}
-            <div
-              className={cn(
-                "flex min-w-0 flex-col overflow-hidden rounded-lg border bg-card",
-                gridExpanded ? "min-h-0 flex-1" : "max-h-[14rem] shrink-0"
-              )}
-              style={
-                gridExpanded && stackHeightPx > 0
-                  ? { minHeight: stackHeightPx * 0.5 }
-                  : undefined
-              }
-            >
-              <div className="flex min-h-10 flex-shrink-0 items-center justify-between gap-2 border-b border-border px-3 py-2">
-                <span className="truncate text-sm font-medium text-foreground">
-                  {t`Features`}
-                </span>
-                <IconButton
-                  type="button"
-                  variant="ghost"
-                  aria-expanded={gridExpanded}
-                  aria-label={
-                    gridExpanded
-                      ? t`Collapse features table`
-                      : t`Expand features table`
-                  }
-                  icon={
-                    gridExpanded ? (
-                      <LuChevronDown className="h-4 w-4" />
-                    ) : (
-                      <LuChevronUp className="h-4 w-4" />
-                    )
-                  }
-                  onClick={() => setGridExpanded((v) => !v)}
+                    icon={
+                      gridExpanded ? (
+                        <LuChevronDown className="h-4 w-4" />
+                      ) : (
+                        <LuChevronUp className="h-4 w-4" />
+                      )
+                    }
+                    onClick={() => setGridExpanded((v) => !v)}
+                  />
+                </div>
+                <InspectionMeasurementMatrix
+                  inspectionId={inspection.id}
+                  isReadOnly={isLocked}
+                  isSerial={isSerial}
+                  features={features}
+                  samples={samples}
+                  measurements={measurements}
+                  gauges={gauges}
+                  recentGaugeIds={recentGaugeIds}
+                  maxSampleSize={maxSampleSize}
+                  lotSize={inspection.lotSize}
+                  lotAcceptanceNumber={inspection.acceptanceNumber}
+                  lotRejectionNumber={inspection.rejectionNumber}
+                  activeFeatureId={activeFeatureId}
+                  onActiveFeatureChange={setActiveFeatureId}
+                  onMeasurementSaved={onMeasurementSaved}
                 />
               </div>
+            </div>
+          </div>
+        ) : (
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 pb-4 pt-2 max-md:flex-none max-md:overflow-visible">
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-lg border bg-card max-md:flex-initial">
               <InspectionMeasurementMatrix
                 inspectionId={inspection.id}
-                isReadOnly={lotClosed}
+                isReadOnly={isLocked}
                 isSerial={isSerial}
                 features={features}
                 samples={samples}
                 measurements={measurements}
+                gauges={gauges}
+                recentGaugeIds={recentGaugeIds}
                 maxSampleSize={maxSampleSize}
                 lotSize={inspection.lotSize}
                 lotAcceptanceNumber={inspection.acceptanceNumber}
@@ -840,26 +945,64 @@ export function InspectionView({
               />
             </div>
           </div>
-        </div>
-      ) : (
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 pb-4 pt-2">
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-lg border bg-card">
-            <InspectionMeasurementMatrix
-              inspectionId={inspection.id}
-              isReadOnly={lotClosed}
-              isSerial={isSerial}
-              features={features}
-              samples={samples}
-              measurements={measurements}
-              maxSampleSize={maxSampleSize}
-              lotSize={inspection.lotSize}
-              lotAcceptanceNumber={inspection.acceptanceNumber}
-              lotRejectionNumber={inspection.rejectionNumber}
-              activeFeatureId={activeFeatureId}
-              onActiveFeatureChange={setActiveFeatureId}
-              onMeasurementSaved={onMeasurementSaved}
-            />
-          </div>
+        )}
+      </div>
+
+      {/* Phones: the lot actions as labelled 48px buttons in thumb reach. */}
+      {isPhone && (
+        <div
+          ref={bottomBarRef}
+          data-mes-bottom-bar
+          className="flex shrink-0 flex-wrap gap-2 border-t border-border bg-card px-4 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] md:hidden [&>button]:min-w-0 [&>button]:flex-1"
+        >
+          {/* Its label carries a count, so it takes a row of its own. */}
+          {showCompletePassed ? (
+            <div className="basis-full [&>*]:w-full">
+              <CompletePassedButton
+                inspectionId={inspection.id}
+                operationId={operationId}
+                count={completablePassed}
+                eventIds={eventIds}
+                variant="bar"
+              />
+            </div>
+          ) : null}
+          <Button
+            size="lg"
+            variant="secondary"
+            leftIcon={<LuX />}
+            isDisabled={!canReject}
+            onClick={rejectDisclosure.onOpen}
+            className="h-12 text-red-600 dark:text-red-400"
+          >
+            <span className="truncate">
+              <Trans>Reject</Trans>
+            </span>
+          </Button>
+          {canPartial ? (
+            <Button
+              size="lg"
+              variant="secondary"
+              leftIcon={<LuContrast />}
+              onClick={partialDisclosure.onOpen}
+              className="h-12 text-amber-600 dark:text-amber-400"
+            >
+              <span className="truncate">
+                <Trans>Partial</Trans>
+              </span>
+            </Button>
+          ) : null}
+          <Button
+            size="lg"
+            leftIcon={<LuCheck />}
+            isDisabled={!canAccept}
+            onClick={acceptDisclosure.onOpen}
+            className="h-12"
+          >
+            <span className="truncate">
+              <Trans>Accept</Trans>
+            </span>
+          </Button>
         </div>
       )}
 
@@ -986,6 +1129,7 @@ export function InspectionView({
               <ActionSheetButton
                 icon={<LuTrash className="size-4 shrink-0" />}
                 label={t`Scrap`}
+                disabled={abilityBlocked}
                 onClick={() => {
                   actionsSheet.onClose();
                   scrapModal.onOpen();
@@ -994,6 +1138,7 @@ export function InspectionView({
               <ActionSheetButton
                 icon={<LuGitPullRequest className="size-4 shrink-0" />}
                 label={t`Rework`}
+                disabled={abilityBlocked}
                 onClick={() => {
                   actionsSheet.onClose();
                   reworkModal.onOpen();
@@ -1001,7 +1146,8 @@ export function InspectionView({
               />
               <ActionSheetButton
                 icon={<LuCheck className="size-4 shrink-0" />}
-                label={t`Finish`}
+                label={t`Mark as Done`}
+                disabled={abilityBlocked}
                 onClick={() => {
                   actionsSheet.onClose();
                   finishModal.onOpen();
@@ -1015,7 +1161,7 @@ export function InspectionView({
                   qualityModal.onOpen();
                 }}
               />
-              {isSerial && !lotClosed ? (
+              {isSerial && !isLocked ? (
                 <ActionSheetButton
                   icon={<LuScan className="size-4 shrink-0" />}
                   label={t`Add Sample`}
@@ -1034,16 +1180,18 @@ export function InspectionView({
           is running (any work type — the exclusive start would end it).
           Always on for inspections, independent of the company-level
           autoStartOperationTimer setting. */}
-      <AutoTimer
-        operationId={operationId}
-        workType={workTypes.includes("Labor") ? "Labor" : workTypes[0]}
-        workCenterId={operation.workCenterId ?? undefined}
-        openEvent={
-          (events.find((e) => !e.endTime) as
-            | { id: string; startTime: string }
-            | undefined) ?? null
-        }
-      />
+      {!abilityBlocked && (
+        <AutoTimer
+          operationId={operationId}
+          workType={workTypes.includes("Labor") ? "Labor" : workTypes[0]}
+          workCenterId={operation.workCenterId ?? undefined}
+          openEvent={
+            (events.find((e) => !e.endTime) as
+              | { id: string; startTime: string }
+              | undefined) ?? null
+          }
+        />
+      )}
     </div>
   );
 }
@@ -1087,15 +1235,43 @@ function CompletePassedButton({
   inspectionId,
   operationId,
   count,
-  eventIds
+  eventIds,
+  variant = "header"
 }: {
   inspectionId: string;
   operationId: string;
   count: number;
   eventIds: ProductionEventIdFields;
+  variant?: "header" | "bar";
 }) {
   const fetcher = useFetcher();
   const busy = fetcher.state !== "idle";
+
+  if (variant === "bar") {
+    return (
+      <fetcher.Form
+        method="post"
+        action={path.to.inspectionCompletePassed(inspectionId)}
+        className="flex min-w-0 flex-1"
+      >
+        <input type="hidden" name="operationId" value={operationId} />
+        <EventIdInputs eventIds={eventIds} />
+        <OriginInput />
+        <Button
+          type="submit"
+          size="lg"
+          variant="secondary"
+          isDisabled={busy}
+          leftIcon={<LuCheckCheck />}
+          className="h-12 w-full text-emerald-600 dark:text-emerald-400"
+        >
+          <span className="truncate">
+            <Trans>Complete passed</Trans> {count}
+          </span>
+        </Button>
+      </fetcher.Form>
+    );
+  }
 
   return (
     <fetcher.Form
@@ -1105,6 +1281,7 @@ function CompletePassedButton({
     >
       <input type="hidden" name="operationId" value={operationId} />
       <EventIdInputs eventIds={eventIds} />
+      <OriginInput />
       <button
         type="submit"
         disabled={busy}
@@ -1134,15 +1311,15 @@ function AcceptLotModal({
   eventIds: ProductionEventIdFields;
   onClose: () => void;
 }) {
-  const fetcher = useFetcher<{}>();
-  const submitted = useRef(false);
-
-  useEffect(() => {
-    if (fetcher.state === "idle" && submitted.current) {
-      onClose();
-      submitted.current = false;
+  const fetcher = useAction<{}>({
+    onSettled: () => {
+      if (submitted.current) {
+        onClose();
+        submitted.current = false;
+      }
     }
-  }, [fetcher.state, onClose]);
+  });
+  const submitted = useRef(false);
 
   return (
     <Modal
@@ -1188,6 +1365,7 @@ function AcceptLotModal({
             <input type="hidden" name="decision" value="Accept" />
             <input type="hidden" name="operationId" value={operationId} />
             <EventIdInputs eventIds={eventIds} />
+            <OriginInput />
             <Button
               type="submit"
               isLoading={fetcher.state !== "idle"}
@@ -1205,16 +1383,19 @@ function AcceptLotModal({
 function ActionSheetButton({
   icon,
   label,
-  onClick
+  onClick,
+  disabled = false
 }: {
   icon: React.ReactNode;
   label: string;
   onClick: () => void;
+  disabled?: boolean;
 }) {
   return (
     <button
       type="button"
-      className="flex items-center gap-3 rounded-lg bg-accent px-4 py-4 text-accent-foreground ring-1 ring-black/5 transition-transform active:scale-[0.98]"
+      disabled={disabled}
+      className="flex items-center gap-3 rounded-lg bg-accent px-4 py-4 text-accent-foreground ring-1 ring-black/5 transition-transform active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50"
       onClick={onClick}
     >
       {icon}
@@ -1291,13 +1472,18 @@ function TimerControl({
   operationId,
   workCenterId,
   openEvent,
-  workType
+  workType,
+  startDisabled = false
 }: {
   operationId: string;
   workCenterId?: string;
   openEvent: { id: string; startTime: string } | null;
   workType: WorkType;
+  // Starting is refused (ability policy Block); a running timer can still be
+  // paused.
+  startDisabled?: boolean;
 }) {
+  const { t } = useLingui();
   const fetcher = useFetcher();
 
   // Optimistic state: flip the moment Start/End is submitted instead of
@@ -1330,15 +1516,20 @@ function TimerControl({
         <input type="hidden" name="id" value={openEvent.id} />
       ) : null}
       <button
+        disabled={(startDisabled && !openEvent) || fetcher.state !== "idle"}
         type="submit"
-        aria-label={active ? "Pause timer" : "Start timer"}
-        className="flex h-full shrink-0 items-center gap-1 border-l border-border px-2 transition-colors hover:bg-accent active:scale-[0.98] md:gap-2 md:px-4"
+        aria-label={active ? t`Pause timer` : t`Start timer`}
+        className="flex h-full shrink-0 items-center gap-1 border-l border-border px-2 transition-colors hover:bg-accent active:scale-[0.98] max-md:border-l-0 md:gap-2 md:px-4"
       >
-        <span className="hidden flex-col items-end leading-none sm:flex">
+        <span className="flex flex-col items-end leading-none">
           <span className="text-sm font-medium tabular-nums">
-            {formatElapsed(elapsed)}
+            {/* The clock moves between the server render and hydration, so the
+                elapsed time is only rendered in the browser. */}
+            <ClientOnly fallback={formatElapsed(0)}>
+              {() => formatElapsed(elapsed)}
+            </ClientOnly>
           </span>
-          <span className="text-[9px] uppercase tracking-wider text-muted-foreground">
+          <span className="text-[9px] max-md:text-xs uppercase tracking-wider text-muted-foreground">
             {workType}
           </span>
         </span>

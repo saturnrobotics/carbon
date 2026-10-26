@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Carbon (github.com/crbnos/carbon). Modified or adapted versions of this file,
+// including ports, remain AGPLv3; serving them over a network requires releasing their source.
+
 import { ValidatedForm } from "@carbon/form";
 import {
   cn,
@@ -20,17 +24,17 @@ import {
   CustomFormFields,
   Hidden,
   Input,
-  InputControlled,
   ItemPostingGroup,
   Select,
   Submit,
-  TextArea,
-  UnitOfMeasure
+  TextArea
 } from "~/components/Form";
 import { ReplenishmentSystemIcon } from "~/components/Icons";
-import { useCompanySettings, useNextItemId, usePermissions } from "~/hooks";
+import { usePermissions } from "~/hooks";
 import { path } from "~/utils/path";
 import {
+  EACH_UNIT_OF_MEASURE_CODE,
+  SERVICE_NAME_MAX_LENGTH,
   serviceReplenishmentSystems,
   serviceValidator
 } from "../../items.models";
@@ -42,10 +46,6 @@ type ServiceFormProps = {
   /** Capture a validated proposal without writing a master record. */
   onPropose?: (values: Record<string, unknown>, formData: FormData) => void;
 };
-
-function startsWithLetter(value: string) {
-  return /^[A-Za-z]/.test(value);
-}
 
 const ServiceForm = ({
   initialValues,
@@ -67,11 +67,18 @@ const ServiceForm = ({
     }
   }, [fetcher.data, fetcher.state, onClose, type, t]);
 
-  const { id, onIdChange, loading } = useNextItemId("Service");
   const permissions = usePermissions();
+<<<<<<< HEAD
   const allowLowercaseItemIds =
     useCompanySettings()?.allowLowercaseItemIds === true;
   const isEditing = !onPropose && !!initialValues.id;
+||||||| 85d9006e1
+  const allowLowercaseItemIds =
+    useCompanySettings()?.allowLowercaseItemIds === true;
+  const isEditing = !!initialValues.id;
+=======
+  const isEditing = !!initialValues.id;
+>>>>>>> 2beccc9789c598823f9d9584cdeecce9c7ffac75
 
   const [replenishmentSystem, setReplenishmentSystem] = useState<string>(
     initialValues.replenishmentSystem ?? "Buy"
@@ -96,7 +103,7 @@ const ServiceForm = ({
   return (
     <ModalCardProvider type={type}>
       <ModalCard onClose={onClose}>
-        <ModalCardContent>
+        <ModalCardContent size="large">
           <ValidatedForm
             action={isEditing ? undefined : path.to.newService}
             method="post"
@@ -129,6 +136,12 @@ const ServiceForm = ({
               <Hidden name="type" value={type} />
               <Hidden name="itemTrackingType" value="Non-Inventory" />
               <Hidden name="defaultMethodType" value={defaultMethodType} />
+              {/* A service is always counted in Each — see upsertService. */}
+              <Hidden
+                name="unitOfMeasureCode"
+                value={EACH_UNIT_OF_MEASURE_CODE}
+              />
+              {isEditing && <Hidden name="id" />}
               <div
                 className={cn(
                   "grid w-full gap-x-8 gap-y-4",
@@ -137,35 +150,14 @@ const ServiceForm = ({
                     : "grid-cols-1 md:grid-cols-2"
                 )}
               >
-                {isEditing ? (
-                  <Input name="id" label={t`Service ID`} isReadOnly />
-                ) : (
-                  <InputControlled
-                    name="id"
-                    label={t`Service ID`}
-                    helperText={
-                      startsWithLetter(id)
-                        ? t`Use ... to get the next service ID`
-                        : undefined
-                    }
-                    value={id}
-                    onChange={onIdChange}
-                    isDisabled={loading}
-                    isUppercase={!allowLowercaseItemIds}
-                    autoFocus
+                <div className="md:col-span-2">
+                  <Input
+                    name="name"
+                    label={t`Name`}
+                    characterLimit={SERVICE_NAME_MAX_LENGTH}
+                    autoFocus={!isEditing}
                   />
-                )}
-                <Input
-                  name="revision"
-                  label={t`Revision`}
-                  isReadOnly={isEditing}
-                />
-
-                <Input
-                  name="name"
-                  label={t`Short Description`}
-                  characterLimit={40}
-                />
+                </div>
                 <Select
                   name="replenishmentSystem"
                   label={t`Replenishment System`}
@@ -174,10 +166,6 @@ const ServiceForm = ({
                   onChange={(newValue) =>
                     setReplenishmentSystem(newValue?.value ?? "Buy")
                   }
-                />
-                <UnitOfMeasure
-                  name="unitOfMeasureCode"
-                  label={t`Unit of Measure`}
                 />
                 {!isEditing && (
                   <ItemPostingGroup

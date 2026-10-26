@@ -1,31 +1,31 @@
 {
   "dependencies": {
     "@ai-sdk/openai": "catalog:",
+    "@carbon/api": "workspace:*",
     "@carbon/auth": "workspace:*",
     "@carbon/database": "workspace:*",
     "@carbon/documents": "workspace:*",
     "@carbon/ee": "workspace:*",
     "@carbon/env": "workspace:*",
+    "@carbon/files": "workspace:*",
     "@carbon/kv": "workspace:*",
     "@carbon/lib": "workspace:*",
     "@carbon/logger": "workspace:*",
     "@carbon/notifications": "workspace:*",
+    "@carbon/planning": "workspace:*",
     "@carbon/printing": "workspace:*",
     "@carbon/stripe": "workspace:*",
     "@carbon/utils": "workspace:*",
     "@carbon/viewer": "workspace:*",
-    "@carbon/workflows": "workspace:*",
     "@internationalized/date": "catalog:",
-    "@react-email/components": "catalog:",
     "@react-pdf/renderer": "catalog:",
     "@slack/web-api": "catalog:",
-    "@supabase/functions-js": "catalog:",
-    "@supabase/supabase-js": "catalog:",
-    "ai": "5.0.172",
+    "ai": "catalog:",
     "axios": "catalog:",
-    "inngest": "^3.52.7",
+    "inngest": "^3.54.2",
     "kysely": "catalog:",
     "nanoid": "catalog:",
+<<<<<<< HEAD
     "nodemailer": "10.1.7",
     "pdfjs-dist": "5.4.296",
     "react": "catalog:",
@@ -36,13 +36,43 @@
     "supabase": "catalog:",
     "tsup": "catalog:",
     "undici": "^8.12.2",
+||||||| 85d9006e1
+    "nodemailer": "9.0.1",
+    "pdfjs-dist": "5.4.296",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "react-pdf": "catalog:",
+    "resend": "3.5.0",
+    "sst": "catalog:",
+    "supabase": "catalog:",
+    "tsup": "catalog:",
+    "undici": "^8.10.0",
+=======
+    "react-email": "catalog:",
+    "undici": "^8.10.2",
+    "web-push": "^3.6.7",
+>>>>>>> 2beccc9789c598823f9d9584cdeecce9c7ffac75
     "zod": "catalog:"
   },
   "devDependencies": {
     "@carbon/config": "workspace:*",
+<<<<<<< HEAD
+||||||| 85d9006e1
+    "@types/nodemailer": "6.4.23",
+=======
+    "@supabase/functions-js": "catalog:",
+    "@supabase/supabase-js": "catalog:",
+>>>>>>> 2beccc9789c598823f9d9584cdeecce9c7ffac75
     "@types/pg": "8.15.6",
     "@types/react": "catalog:",
+    "@types/web-push": "^3.6.4",
     "pg": "8.20.0",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "react-pdf": "catalog:",
+    "sst": "catalog:",
+    "supabase": "catalog:",
+    "tsup": "catalog:",
     "tsx": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
@@ -51,16 +81,24 @@
     ".": "./src/index.ts",
     "./backups": "./src/backups/schema.ts",
     "./events": "./src/events.ts",
+<<<<<<< HEAD
     "./inngest": "./src/inngest/index.ts",
     "./invoice-intake": "./src/invoice-intake/index.ts",
     "./worker": "./src/inngest/worker.ts"
+||||||| 85d9006e1
+    "./inngest": "./src/inngest/index.ts",
+    "./worker": "./src/inngest/worker.ts"
+=======
+    "./inngest": "./src/inngest/index.ts"
+>>>>>>> 2beccc9789c598823f9d9584cdeecce9c7ffac75
   },
   "main": "./src/index.ts",
   "name": "@carbon/jobs",
   "private": true,
   "scripts": {
-    "db:check:backups": "tsx --env-file-if-exists=../../.env.local --env-file-if-exists=../../.env src/scripts/check-backups.ts",
+    "db:check:backups": "tsx --env-file-if-exists=../../.env --env-file-if-exists=../../.env.local src/scripts/check-backups.ts",
     "dev:jobs": "pnpm dlx inngest-cli@latest dev --no-discovery -u http://localhost:3000/api/inngest",
+    "plan:company": "tsx --env-file-if-exists=../../.env --env-file-if-exists=../../.env.local src/scripts/plan-company.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },

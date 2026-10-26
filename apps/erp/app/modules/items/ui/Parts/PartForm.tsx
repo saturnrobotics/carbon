@@ -1,4 +1,10 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Carbon (github.com/crbnos/carbon). Modified or adapted versions of this file,
+// including ports, remain AGPLv3; serving them over a network requires releasing their source.
+
 import { useCarbon } from "@carbon/auth";
+import { convertKbToString } from "@carbon/files";
+import { supportedModelTypes } from "@carbon/files/cad";
 import { ValidatedForm } from "@carbon/form";
 import {
   Button,
@@ -15,15 +21,9 @@ import {
   toast,
   VStack
 } from "@carbon/react";
-import {
-  convertKbToString,
-  getFileSizeLimit,
-  INPUT_FORMAT,
-  supportedModelTypes
-} from "@carbon/utils";
+import { getFileSizeLimit, INPUT_FORMAT } from "@carbon/utils";
 import { Trans, useLingui } from "@lingui/react/macro";
 import type { PostgrestResponse } from "@supabase/supabase-js";
-import { nanoid } from "nanoid";
 import { useEffect, useState } from "react";
 import { flushSync } from "react-dom";
 import { useDropzone } from "react-dropzone";
@@ -45,7 +45,10 @@ import {
   UnitOfMeasure
 } from "~/components/Form";
 import { ReplenishmentSystemIcon } from "~/components/Icons";
-import { ModelUploadProgress } from "~/components/ModelUploadProgress";
+import {
+  InterruptedUploadNotice,
+  UploadProgress
+} from "~/components/UploadProgress";
 import {
   useCompanySettings,
   useCurrencyDecimals,
@@ -93,9 +96,11 @@ const PartForm = ({
   const [modelIsUploading, setModelIsUploading] = useState(false);
   const [modelFile, setModelFile] = useState<File | null>(null);
   const { carbon } = useCarbon();
-  const { upload, runUpload } = useModelUpload();
+  const { upload, runUpload, interrupted, dismissInterrupted } =
+    useModelUpload("new-part");
   const {
-    company: { id: companyId }
+    company: { id: companyId },
+    id: userId
   } = useUser();
 
   const modelUpload = async (file: File) => {
@@ -104,25 +109,27 @@ const PartForm = ({
       setModelIsUploading(true);
     });
 
-    const modelId = nanoid();
-    const fileExtension = file.name.split(".").pop();
-    const fileName = `${companyId}/models/${modelId}.${fileExtension}`;
-
     // Resumable (TUS) upload — a standard buffered upload times out on multi-GB
-    // CAD files. Runs in parallel with the record insert.
-    const [{ error: uploadError }, recordInsert] = await Promise.all([
-      runUpload({ bucket: "temp-staging", path: fileName, file }),
-      carbon.from("modelUpload").insert({
-        id: modelId,
-        modelPath: fileName,
-        size: file.size,
-        name: file.name,
-        companyId: companyId,
-        createdBy: "system"
-      })
-    ]);
+    // CAD files. The record goes in after it: inserting it starts the
+    // optimise, which reads the file. The id and path are the upload's: a
+    // resumed upload keeps its own.
+    const {
+      error: uploadError,
+      modelId,
+      modelPath: fileName
+    } = await runUpload(file);
+    const recordInsert = uploadError
+      ? null
+      : await carbon.from("modelUpload").insert({
+          id: modelId,
+          modelPath: fileName,
+          size: file.size,
+          name: file.name,
+          companyId: companyId,
+          createdBy: userId
+        });
 
-    if (uploadError || recordInsert.error) {
+    if (uploadError || !recordInsert || recordInsert.error) {
       toast.error(t`Failed to upload model`);
     } else {
       setModelUploadId(modelId);
@@ -300,6 +307,7 @@ const PartForm = ({
                     onChange={onIdChange}
                     isDisabled={loading}
                     isUppercase={!allowLowercaseItemIds}
+                    autoFocus
                   />
                 )}
                 <Input
@@ -385,6 +393,7 @@ const PartForm = ({
               <div className="mt-4 w-full">
                 <TextArea name="description" label={t`Long Description`} />
               </div>
+<<<<<<< HEAD
               {!onPropose && (
                 <VStack spacing={2} className="mt-4 w-full">
                   <label
@@ -436,6 +445,117 @@ const PartForm = ({
                   </div>
                 </VStack>
               )}
+||||||| 85d9006e1
+              <VStack spacing={2} className="mt-4 w-full">
+                <label
+                  htmlFor="model-upload"
+                  className="text-xs font-medium text-muted-foreground"
+                >
+                  <Trans>CAD Model</Trans>
+                </label>
+                <div
+                  {...getRootProps()}
+                  className={`w-full border-2 border-dashed rounded-md p-6 text-center hover:border-primary hover:bg-primary/10 cursor-pointer ${
+                    isDragActive
+                      ? "border-primary bg-primary/10"
+                      : "border-muted"
+                  }`}
+                >
+                  <input id="model-upload" {...getInputProps()} />
+                  {upload !== null ? (
+                    <ModelUploadProgress
+                      percent={upload.percent}
+                      uploaded={upload.uploaded}
+                      total={upload.total}
+                    />
+                  ) : modelFile ? (
+                    <>
+                      <p className="text-sm font-semibold text-card-foreground">
+                        {modelFile.name}
+                      </p>
+                      <p className="text-xs text-muted-foreground group-hover:text-foreground">
+                        {convertKbToString(Math.ceil(modelFile.size / 1024))}
+                      </p>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        className="mt-2"
+                        onClick={removeModel}
+                      >
+                        <Trans>Remove</Trans>
+                      </Button>
+                    </>
+                  ) : (
+                    <Loading isLoading={modelIsUploading}>
+                      <LuCloudUpload className="mx-auto h-12 w-12 text-muted-foreground group-hover:text-primary-foreground" />
+                      <p className="text-xs text-muted-foreground group-hover:text-foreground">
+                        {t`Supports ${supportedModelTypes.join(", ")} files`}
+                      </p>
+                    </Loading>
+                  )}
+                </div>
+              </VStack>
+=======
+              <VStack spacing={2} className="mt-4 w-full">
+                <label
+                  htmlFor="model-upload"
+                  className="text-xs font-medium text-muted-foreground"
+                >
+                  <Trans>CAD Model</Trans>
+                </label>
+                <div
+                  {...getRootProps()}
+                  className={`w-full border-2 border-dashed rounded-md p-6 text-center hover:border-primary hover:bg-primary/10 cursor-pointer ${
+                    isDragActive
+                      ? "border-primary bg-primary/10"
+                      : "border-muted"
+                  }`}
+                >
+                  <input id="model-upload" {...getInputProps()} />
+                  {upload !== null ? (
+                    <UploadProgress
+                      label={t`Uploading model`}
+                      description={t`Uploading the CAD file`}
+                      percent={upload.percent}
+                      uploaded={upload.uploaded}
+                      total={upload.total}
+                    />
+                  ) : modelFile ? (
+                    <>
+                      <p className="text-sm font-semibold text-card-foreground">
+                        {modelFile.name}
+                      </p>
+                      <p className="text-xs text-muted-foreground group-hover:text-foreground">
+                        {convertKbToString(Math.ceil(modelFile.size / 1024))}
+                      </p>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        className="mt-2"
+                        onClick={removeModel}
+                      >
+                        <Trans>Remove</Trans>
+                      </Button>
+                    </>
+                  ) : (
+                    <Loading isLoading={modelIsUploading}>
+                      <LuCloudUpload className="mx-auto h-12 w-12 text-muted-foreground group-hover:text-primary-foreground" />
+                      <p className="text-xs text-muted-foreground group-hover:text-foreground">
+                        {t`Supports ${supportedModelTypes.join(", ")} files`}
+                      </p>
+                      {interrupted && (
+                        <InterruptedUploadNotice
+                          className="mt-3"
+                          name={interrupted.name}
+                          percent={interrupted.percent}
+                          onDismiss={dismissInterrupted}
+                        />
+                      )}
+                    </Loading>
+                  )}
+                </div>
+              </VStack>
+>>>>>>> 2beccc9789c598823f9d9584cdeecce9c7ffac75
             </ModalCardBody>
             <ModalCardFooter>
               <Submit

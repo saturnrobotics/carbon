@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Carbon (github.com/crbnos/carbon). Modified or adapted versions of this file,
+// including ports, remain AGPLv3; serving them over a network requires releasing their source.
+
 import { ValidatedForm } from "@carbon/form";
 import {
   cn,
@@ -34,11 +38,11 @@ import {
   usePermissions,
   useSupplierApprovalRequired
 } from "~/hooks";
-import type { Supplier } from "~/modules/purchasing";
 import {
   supplierApprovalValidator,
   supplierValidator
-} from "~/modules/purchasing";
+} from "~/modules/purchasing/purchasing.models";
+import type { Supplier } from "~/modules/purchasing/types";
 import { upsertIntoListStore, useSuppliers } from "~/stores";
 import { path } from "~/utils/path";
 
@@ -220,7 +224,7 @@ const SupplierForm = ({
                   <CustomFormFields table="supplier" />
                 </div>
               </ModalCardBody>
-              <ModalCardFooter>
+              <ModalCardFooter sticky={type === "card" && !isEditing}>
                 <HStack>
                   <Submit isDisabled={isDisabled}>
                     {onPropose ? (

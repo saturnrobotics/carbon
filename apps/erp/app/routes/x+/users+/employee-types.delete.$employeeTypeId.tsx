@@ -1,24 +1,41 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Carbon (github.com/crbnos/carbon). Modified or adapted versions of this file,
+// including ports, remain AGPLv3; serving them over a network requires releasing their source.
+
 import { error, notFound, success } from "@carbon/auth";
 import { requirePermissions } from "@carbon/auth/auth.server";
 import { flash } from "@carbon/auth/session.server";
+import { deleteEmployeeType } from "@carbon/ee/permissions.server";
+import { requireFeature } from "@carbon/ee/plan.server";
+import { redirect } from "@carbon/utils";
 import { useLingui } from "@lingui/react/macro";
-import type {
-  ActionFunctionArgs,
-  ClientActionFunctionArgs,
-  LoaderFunctionArgs
-} from "react-router";
-import { redirect, useLoaderData, useNavigate, useParams } from "react-router";
+import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
+import { useLoaderData, useNavigate, useParams } from "react-router";
 import { ConfirmDelete } from "~/components/Modals";
+<<<<<<< HEAD
 import { refuseWhileAuthzManaged } from "~/modules/saturn/saturn.server";
 import { deleteEmployeeType, getEmployeeType } from "~/modules/users";
+||||||| 85d9006e1
+import { deleteEmployeeType, getEmployeeType } from "~/modules/users";
+=======
+import { getEmployeeType } from "~/modules/users/users.service";
+>>>>>>> 2beccc9789c598823f9d9584cdeecce9c7ffac75
 import { path } from "~/utils/path";
-import { getCompanyId, invalidateUserSelectQueries } from "~/utils/react-query";
 
 export async function loader({ request, params }: LoaderFunctionArgs) {
-  const { client } = await requirePermissions(request, {
+  const { client, companyId } = await requirePermissions(request, {
     view: "users",
     role: "employee"
   });
+
+  await requireFeature({
+    request,
+    client,
+    companyId,
+    redirectTo: path.to.employeeAccounts,
+    feature: "PERMISSIONS"
+  });
+
   const { employeeTypeId } = params;
   if (!employeeTypeId) throw notFound("EmployeeTypeId not found");
 
@@ -39,10 +56,18 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 }
 
 export async function action({ request, params }: ActionFunctionArgs) {
-  const { client } = await requirePermissions(request, {
+  const { client, companyId } = await requirePermissions(request, {
     delete: "users"
   });
   await refuseWhileAuthzManaged(request, path.to.employeeTypes);
+
+  await requireFeature({
+    request,
+    client,
+    companyId,
+    redirectTo: path.to.employeeAccounts,
+    feature: "PERMISSIONS"
+  });
 
   const { employeeTypeId } = params;
   if (!employeeTypeId) {
@@ -54,7 +79,8 @@ export async function action({ request, params }: ActionFunctionArgs) {
 
   const { error: deleteTypeError } = await deleteEmployeeType(
     client,
-    employeeTypeId
+    employeeTypeId,
+    companyId
   );
   if (deleteTypeError) {
     throw redirect(
@@ -72,11 +98,6 @@ export async function action({ request, params }: ActionFunctionArgs) {
     path.to.employeeTypes,
     await flash(request, success("Successfully deleted employee type"))
   );
-}
-
-export async function clientAction({ serverAction }: ClientActionFunctionArgs) {
-  invalidateUserSelectQueries(getCompanyId());
-  return await serverAction();
 }
 
 export default function DeleteEmployeeTypeRoute() {

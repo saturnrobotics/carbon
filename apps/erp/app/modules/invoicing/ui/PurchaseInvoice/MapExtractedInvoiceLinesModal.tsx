@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import {
   Button,
   Modal,
@@ -12,6 +13,17 @@ import { useEffect } from "react";
 import { Link, useFetcher } from "react-router";
 import { PdfExtractor } from "~/components/Form/PdfExtractor";
 import { path } from "~/utils/path";
+||||||| 85d9006e1
+import { Trans } from "@lingui/react/macro";
+import SharedMapExtractedLinesModal from "~/components/MapExtractedLinesModal";
+=======
+// SPDX-License-Identifier: AGPL-3.0-only
+// Carbon (github.com/crbnos/carbon). Modified or adapted versions of this file,
+// including ports, remain AGPLv3; serving them over a network requires releasing their source.
+
+import { Trans } from "@lingui/react/macro";
+import SharedMapExtractedLinesModal from "~/components/MapExtractedLinesModal";
+>>>>>>> 2beccc9789c598823f9d9584cdeecce9c7ffac75
 
 export type MapExtractedInvoiceLinesModalProps = {
   invoiceId: string;

@@ -1,16 +1,20 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Carbon (github.com/crbnos/carbon). Modified or adapted versions of this file,
+// including ports, remain AGPLv3; serving them over a network requires releasing their source.
+
 import { assertIsPost, error } from "@carbon/auth";
 import { requirePermissions } from "@carbon/auth/auth.server";
 import { flash } from "@carbon/auth/session.server";
 import { validationError, validator } from "@carbon/form";
+import { redirect } from "@carbon/utils";
 import { msg } from "@lingui/core/macro";
 import type { ActionFunctionArgs } from "react-router";
-import { redirect } from "react-router";
+import { NewRecordPage } from "~/components/NewRecordPage";
 import { useCompanyToday, useUrlParams, useUser } from "~/hooks";
-import {
-  insertPurchaseReturnOrder,
-  purchaseReturnOrderValidator
-} from "~/modules/purchasing";
+import { purchaseReturnOrderValidator } from "~/modules/purchasing/purchasing.models";
+import { insertPurchaseReturnOrder } from "~/modules/purchasing/purchasing.service";
 import { PurchaseReturnOrderForm } from "~/modules/purchasing/ui/PurchaseReturnOrders";
+import { requireCompanyRecord } from "~/modules/shared/shared.service";
 import { setCustomFields } from "~/utils/form";
 import type { Handle } from "~/utils/handle";
 import { path } from "~/utils/path";
@@ -38,6 +42,34 @@ export async function action({ request }: ActionFunctionArgs) {
   }
 
   const { id: _id, status: _status, ...data } = validation.data;
+
+  // bypassRls hands back the service role, and insertPurchaseReturnOrder reads
+  // the supplier by this form id to copy its defaults.
+  await Promise.all([
+    requireCompanyRecord(client, "supplier", companyId, {
+      id: data.supplierId
+    }),
+    data.supplierLocationId
+      ? requireCompanyRecord(client, "supplierLocation", companyId, {
+          id: data.supplierLocationId
+        })
+      : null,
+    data.supplierContactId
+      ? requireCompanyRecord(client, "supplierContact", companyId, {
+          id: data.supplierContactId
+        })
+      : null,
+    data.locationId
+      ? requireCompanyRecord(client, "location", companyId, {
+          id: data.locationId
+        })
+      : null,
+    data.purchaseOrderId
+      ? requireCompanyRecord(client, "purchaseOrder", companyId, {
+          id: data.purchaseOrderId
+        })
+      : null
+  ]);
 
   const result = await insertPurchaseReturnOrder(client, {
     ...data,
@@ -81,8 +113,8 @@ export default function PurchaseReturnOrderNewRoute() {
   };
 
   return (
-    <div className="max-w-4xl w-full p-2 sm:p-0 mx-auto mt-0 md:mt-8">
+    <NewRecordPage>
       <PurchaseReturnOrderForm initialValues={initialValues} />
-    </div>
+    </NewRecordPage>
   );
 }

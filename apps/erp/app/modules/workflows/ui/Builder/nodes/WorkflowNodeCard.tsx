@@ -1,3 +1,9 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Carbon (github.com/crbnos/carbon). Modified or adapted versions of this file,
+// including ports, remain AGPLv3; serving them over a network requires releasing their source.
+
+import type { WorkflowNodeType } from "@carbon/ee/workflows";
+import { FAILURE_HANDLE } from "@carbon/ee/workflows";
 import {
   cn,
   IconButton,
@@ -5,8 +11,6 @@ import {
   TooltipContent,
   TooltipTrigger
 } from "@carbon/react";
-import type { WorkflowNodeType } from "@carbon/workflows";
-import { FAILURE_HANDLE } from "@carbon/workflows";
 import { Trans, useLingui } from "@lingui/react/macro";
 import type { NodeProps } from "@xyflow/react";
 import { useConnection } from "@xyflow/react";

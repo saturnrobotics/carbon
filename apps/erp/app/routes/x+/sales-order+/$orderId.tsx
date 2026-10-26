@@ -1,11 +1,16 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Carbon (github.com/crbnos/carbon). Modified or adapted versions of this file,
+// including ports, remain AGPLv3; serving them over a network requires releasing their source.
+
 import { error } from "@carbon/auth";
 import { requirePermissions } from "@carbon/auth/auth.server";
 import { getCarbonServiceRole } from "@carbon/auth/client.server";
 import { flash } from "@carbon/auth/session.server";
-import { VStack } from "@carbon/react";
+import { RecordOutlet, VStack } from "@carbon/react";
+import { redirect } from "@carbon/utils";
 import { msg } from "@lingui/core/macro";
 import type { LoaderFunctionArgs } from "react-router";
-import { Outlet, redirect, useParams } from "react-router";
+import { useParams } from "react-router";
 import { PanelProvider, ResizablePanels } from "~/components/Layout/Panels";
 import {
   getCustomer,
@@ -18,17 +23,44 @@ import {
   getSalesOrderInvoicesByIds,
   getSalesOrderLines,
   getSalesOrderRelatedItems
-} from "~/modules/sales";
+} from "~/modules/sales/sales.service";
+import {
+  type SalesOrderInvoiceSummary,
+  summarizeSalesOrderInvoices
+} from "~/modules/sales/sales.utils";
 import {
   SalesOrderExplorer,
   SalesOrderHeader,
   SalesOrderProperties
 } from "~/modules/sales/ui/SalesOrder";
-import { getCompanySettings } from "~/modules/settings";
+import { getCompanySettings } from "~/modules/settings/settings.service";
 import { detailBreadcrumb, type Handle } from "~/utils/handle";
 import { path } from "~/utils/path";
 
 export const handle: Handle = {
+  appBarSubtitle: msg`Sales Order`,
+  realtime: [
+    { table: "salesOrder", column: "id", param: "orderId" },
+    { table: "salesOrderLine", column: "salesOrderId", param: "orderId" },
+    {
+      // Shipments and invoices made from this order carry its opportunity
+      // (`getSalesOrderRelatedItems`, the convert function).
+      table: "shipment",
+      filter: ({ data }) =>
+        data?.opportunity?.id
+          ? `opportunityId=eq.${data.opportunity.id}`
+          : undefined
+    },
+    {
+      // Shipments and invoices made from this order carry its opportunity
+      // (`getSalesOrderRelatedItems`, the convert function).
+      table: "salesInvoice",
+      filter: ({ data }) =>
+        data?.opportunity?.id
+          ? `opportunityId=eq.${data.opportunity.id}`
+          : undefined
+    }
+  ],
   breadcrumb: detailBreadcrumb(
     { breadcrumb: msg`Orders`, to: path.to.salesOrders },
     (data) => data?.salesOrder?.salesOrderId
@@ -45,9 +77,15 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
   const { orderId } = params;
   if (!orderId) throw new Error("Could not find orderId");
 
-  const [salesOrder, lines] = await Promise.all([
+  // Three steps at most: what needs only the order id is read with the order,
+  // what needs the order's or the invoice lines' values follows together, and
+  // the originating quote waits for the opportunity.
+  const serviceRole = getCarbonServiceRole();
+  const [salesOrder, lines, companySettings, invoiceLines] = await Promise.all([
     getSalesOrder(client, orderId),
-    getSalesOrderLines(client, orderId)
+    getSalesOrderLines(client, orderId),
+    getCompanySettings(serviceRole, companyId),
+    getSalesOrderInvoiceLines(client, orderId)
   ]);
 
   if (salesOrder.error) {
@@ -57,14 +95,28 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
     );
   }
 
-  const opportunity = await getOpportunity(
-    client,
-    salesOrder.data?.opportunityId ?? null
-  );
-
   if (companyId !== salesOrder.data?.companyId) {
     throw redirect(path.to.salesOrders);
   }
+
+  const invoiceIds = Array.from(
+    new Set(
+      (invoiceLines.data ?? []).map((line) => line.invoiceId).filter(Boolean)
+    )
+  ) as string[];
+
+  const [opportunity, customer, invoices, payments] = await Promise.all([
+    getOpportunity(client, salesOrder.data?.opportunityId ?? null),
+    salesOrder.data?.customerId
+      ? getCustomer(client, salesOrder.data.customerId)
+      : null,
+    invoiceIds.length > 0
+      ? getSalesOrderInvoicesByIds(client, invoiceIds)
+      : null,
+    invoiceIds.length > 0
+      ? getSalesOrderInvoicePaymentsByIds(client, companyId, invoiceIds)
+      : null
+  ]);
 
   if (opportunity.error) {
     throw new Error(
@@ -86,18 +138,6 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
     );
   }
 
-  const serviceRole = getCarbonServiceRole();
-  const [quote, customer, companySettings, invoiceLines] = await Promise.all([
-    opportunity.data.quotes[0]?.id
-      ? getQuote(client, opportunity.data.quotes[0].id)
-      : Promise.resolve(null),
-    salesOrder.data?.customerId
-      ? getCustomer(client, salesOrder.data.customerId)
-      : Promise.resolve(null),
-    getCompanySettings(serviceRole, companyId),
-    getSalesOrderInvoiceLines(client, orderId)
-  ]);
-
   if (invoiceLines.error) {
     throw redirect(
       path.to.salesOrder(orderId),
@@ -108,22 +148,17 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
     );
   }
 
-  const invoiceIds = Array.from(
-    new Set(
-      (invoiceLines.data ?? []).map((line) => line.invoiceId).filter(Boolean)
-    )
-  ) as string[];
+  const quote = opportunity.data.quotes[0]?.id
+    ? await getQuote(client, opportunity.data.quotes[0].id)
+    : null;
 
-  let invoicedAmount = 0;
-  let paidAmount = 0;
-  let currencyMismatchCount = 0;
+  let invoiceSummary: SalesOrderInvoiceSummary = {
+    invoicedAmount: 0,
+    paidAmount: 0,
+    currencyMismatchCount: 0
+  };
 
-  if (invoiceIds.length > 0) {
-    const [invoices, payments] = await Promise.all([
-      getSalesOrderInvoicesByIds(client, invoiceIds),
-      getSalesOrderInvoicePaymentsByIds(client, companyId, invoiceIds)
-    ]);
-
+  if (invoices && payments) {
     if (invoices.error) {
       throw redirect(
         path.to.salesOrder(orderId),
@@ -144,47 +179,11 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
       );
     }
 
-    const paidByInvoiceId = new Map<string, number>();
-    for (const payment of payments.data ?? []) {
-      if (!payment.targetSalesInvoiceId) continue;
-      paidByInvoiceId.set(
-        payment.targetSalesInvoiceId,
-        (paidByInvoiceId.get(payment.targetSalesInvoiceId) ?? 0) +
-          (payment.sourceAmount ?? 0)
-      );
-    }
-
-    const orderCurrency = salesOrder.data?.currencyCode;
-
-    for (const invoice of invoices.data ?? []) {
-      // A voided invoice was never billed — it must not inflate the invoiced
-      // total, nor contribute any payments to the paid total.
-      if (invoice.status === "Voided") {
-        continue;
-      }
-
-      const invoiceTotal = invoice.invoiceTotal ?? 0;
-      const invoiceCurrency = invoice.currencyCode;
-
-      // Avoid mixing currencies in the same displayed number.
-      if (
-        orderCurrency &&
-        invoiceCurrency &&
-        invoiceCurrency !== orderCurrency
-      ) {
-        currencyMismatchCount += 1;
-        continue;
-      }
-
-      const invoiceTotalInOrderCurrency =
-        invoiceTotal * (invoice.exchangeRate ?? 1);
-      invoicedAmount += invoiceTotalInOrderCurrency;
-      if (invoice.baseStatus === "Paid") {
-        paidAmount += invoiceTotalInOrderCurrency;
-      } else if (invoice.id) {
-        paidAmount += paidByInvoiceId.get(invoice.id) ?? 0;
-      }
-    }
+    invoiceSummary = summarizeSalesOrderInvoices(
+      salesOrder.data?.currencyCode,
+      invoices.data ?? [],
+      payments.data ?? []
+    );
   }
 
   const defaultCc = customer?.data?.defaultCc?.length
@@ -203,11 +202,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
     opportunity: opportunity.data,
     customer: customer?.data ?? null,
     quote: quote?.data ?? null,
-    invoiceSummary: {
-      invoicedAmount,
-      paidAmount,
-      currencyMismatchCount
-    },
+    invoiceSummary,
     originatedFromQuote: !!opportunity.data.quotes[0]?.id,
     defaultCc
   };
@@ -227,9 +222,9 @@ export default function SalesOrderRoute() {
             <ResizablePanels
               explorer={<SalesOrderExplorer />}
               content={
-                <div className="bg-muted dark:bg-card h-[calc(100dvh-var(--topbar-height)-var(--header-height)-var(--content-inset))] overflow-y-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-accent w-full">
+                <div className="bg-card h-[calc(100dvh-var(--topbar-height)-var(--header-height)-var(--content-inset))] overflow-y-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-accent w-full">
                   <VStack spacing={4} className="p-4">
-                    <Outlet />
+                    <RecordOutlet />
                   </VStack>
                 </div>
               }
