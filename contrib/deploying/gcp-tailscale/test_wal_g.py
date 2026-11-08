@@ -321,7 +321,7 @@ class BootstrapTests(unittest.TestCase):
         start = source.index("if [[ $mode == private-lb ]]; then\n  # The owning platform's data plane")
         return source[start:source.index("touch /etc/carbon-bootstrap-v1", start)]
 
-    def run_block(self, mode, *, python_fails=False):
+    def run_block(self, mode, *, python_fails=False, config_current=False):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             log = root / "calls.jsonl"
@@ -334,8 +334,10 @@ if name == "python3" and sys.argv[2:3] == ["install"] and {python_fails!r}:
     sys.exit("Cannot install WAL-G: Downloaded WAL-G does not match its pinned sha256; refusing to install it")
 if name == "dpkg-query":
     print("install ok installed", end="")
+if name == "cmp":
+    sys.exit(0 if {config_current!r} else 1)
 """
-            for name in ("python3", "install", "chmod", "systemctl", "dpkg-query", "curl", "apt-get"):
+            for name in ("python3", "install", "chmod", "systemctl", "dpkg-query", "curl", "apt-get", "cmp"):
                 (root / name).write_text(stub)
                 (root / name).chmod(0o755)
             script = f"set -euo pipefail\nmode={mode}\nrelease=/var/lib/carbon/releases/{'a' * 40}\n" + self.block()
@@ -356,7 +358,25 @@ if name == "dpkg-query":
             ["systemctl", "daemon-reload"],
             ["systemctl", "enable", "--now", "carbon-wal-g-backup.timer"],
             ["dpkg-query", "--show", "--showformat=${Status}", "google-cloud-ops-agent"],
+            ["cmp", "-s", tooling + "/ops-agent.yaml", "/etc/google-cloud-ops-agent/config.yaml"],
+            ["install", "-D", "-m", "0644", tooling + "/ops-agent.yaml", "/etc/google-cloud-ops-agent/config.yaml"],
+            ["systemctl", "restart", "google-cloud-ops-agent"],
         ])
+
+    def test_a_current_ops_agent_configuration_is_left_running(self):
+        result, calls = self.run_block("private-lb", config_current=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(calls[-1][0], "cmp")
+        self.assertNotIn(["systemctl", "restart", "google-cloud-ops-agent"], calls)
+
+    def test_ops_agent_configuration_drops_only_process_metrics(self):
+        config = (HERE / "ops-agent.yaml").read_text()
+        self.assertIn("type: exclude_metrics", config)
+        patterns = [line.strip()[2:] for line in config.splitlines() if line.strip().startswith("- ")]
+        self.assertEqual(patterns, ["agent.googleapis.com/processes/*"])
+        self.assertIn("receivers: [hostmetrics]", config)
+        self.assertIn("processors: [metrics_filter]", config)
+        self.assertNotIn("logging:", config)
 
     def test_a_mismatched_release_stops_bootstrap(self):
         result, calls = self.run_block("private-lb", python_fails=True)

@@ -537,7 +537,9 @@ What changes in `private-lb` mode:
   container memory limit and the private listener's `ssl=on`. See
   [WAL-G archiving](#wal-g-archiving-and-base-backups).
 - **Host agents.** Bootstrap installs the pinned WAL-G release, a daily base-backup
-  timer and Google's Ops Agent (host metrics and logs, sent as `SERVICE_ACCOUNT`).
+  timer and Google's Ops Agent (host metrics and logs, sent as `SERVICE_ACCOUNT`),
+  configured by `ops-agent.yaml` without per-process metrics, which were most of
+  its billed metric ingestion and feed no alert.
 - **Labels.** A new instance gets the labels `app=hq,role=data`, which the owning
   platform's data-plane contract checks.
 - **Refused.** Managed cold backups (`backups.json`), invoice intake
