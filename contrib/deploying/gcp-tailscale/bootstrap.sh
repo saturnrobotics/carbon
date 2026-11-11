@@ -263,6 +263,12 @@ if [[ $mode == private-lb ]]; then
     apt-get update -qq
     DEBIAN_FRONTEND=noninteractive apt-get install -y google-cloud-ops-agent
   fi
+  # Without per-process metrics (ops-agent.yaml says why); restarted only when
+  # the installed configuration differs.
+  if ! cmp -s "$tooling/ops-agent.yaml" /etc/google-cloud-ops-agent/config.yaml; then
+    install -D -m 0644 "$tooling/ops-agent.yaml" /etc/google-cloud-ops-agent/config.yaml
+    systemctl restart google-cloud-ops-agent
+  fi
 fi
 touch /etc/carbon-bootstrap-v1
 if [[ $mode == private-lb ]]; then

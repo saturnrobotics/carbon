@@ -1,0 +1,17 @@
+# Google Ops Agent user configuration for the private-lb data VM, installed by
+# bootstrap.sh as /etc/google-cloud-ops-agent/config.yaml. It merges over the
+# agent's built-in configuration: logging and every host metric stay as built
+# in. Per-process metrics (agent.googleapis.com/processes/*) are dropped: one
+# series per process and metric, they were about 80% of the VM's chargeable
+# metric ingestion (226 of 278 MiB a month, 2026-11-08) and no alert reads them.
+metrics:
+  processors:
+    metrics_filter:
+      type: exclude_metrics
+      metrics_pattern:
+        - agent.googleapis.com/processes/*
+  service:
+    pipelines:
+      default_pipeline:
+        receivers: [hostmetrics]
+        processors: [metrics_filter]

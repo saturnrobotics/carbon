@@ -56,7 +56,10 @@ Choices:
 - **Ops Agent and labels.** Bootstrap installs `google-cloud-ops-agent` from
   Google's signed repository (major version 2) for the platform's disk alert. A
   created instance gets `app=hq,role=data`; an existing one is labeled once by
-  hand (README).
+  hand (README). *2026-11-08:* bootstrap also installs `ops-agent.yaml`, which
+  excludes `agent.googleapis.com/processes/*` (226 of the VM's 278 MiB a month of
+  chargeable metrics); logging and the other host metrics, the disk alert's
+  among them, are unchanged.
 
 Verification (local, 2026-10-19):
 
